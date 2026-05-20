@@ -4,38 +4,150 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tobacco Road Games</title>
-  <meta name="description" content="Tobacco Road Games crafts tabletop worlds by lantern light, old roads, and honest dread.">
+  <meta
+    name="description"
+    content="Tobacco Road Games publishes focused GM tools and tabletop writing. Browse current titles on DriveThruRPG."
+  >
   <meta name="theme-color" content="#120c08">
   <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="page-shell">
-    <main class="hero" aria-label="Landing page for Tobacco Road Games">
-      <div class="hero__panel">
-        <img class="hero__logo" src="assets/logo.png" alt="Tobacco Road Games logo">
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="assets/logo.png" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
+          <span class="brand__tag">Tabletop writing with teeth and heart</span>
+        </div>
+      </a>
 
-        <p class="hero__kicker">Lantern light. Long roads. Strange tales.</p>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#titles">Titles</a>
+        <a href="#store">Store</a>
+      </nav>
+    </header>
 
-        <h1>Tobacco Road Games</h1>
+    <main id="top">
+      <section class="hero" aria-label="Tobacco Road Games storefront">
+        <div class="hero__panel">
+          <p class="hero__kicker">Now on DriveThruRPG</p>
 
-        <p class="hero__lead">
-          Tabletop worlds with old dust on their boots and a little danger in their grin.
-          The full site is on the way. For now, this is the porch light.
-        </p>
+          <h1>Sharp GM advice, narrative tools, and tabletop material built to matter at the table.</h1>
 
-        <div class="hero__actions">
-          <a class="button button--primary" href="mailto:rvsawyer1967@gmail.com">rvsawyer1967@gmail.com</a>
+          <p class="hero__lead">
+            Tobacco Road Games is where I publish focused game writing for Game Masters who want stronger scenes,
+            better texture, and fewer forgettable sessions.
+          </p>
+
+          <div class="hero__actions">
+            <a class="button button--primary" href="https://www.drivethrurpg.com/en/publisher/13450/russell-sawyer" target="_blank" rel="noreferrer">
+              Visit the DriveThruRPG Store
+            </a>
+            <a class="button button--secondary" href="#titles">
+              Browse Current Titles
+            </a>
+          </div>
         </div>
 
-        <p class="hero__note">
-          Coming soon: games, settings, books, and the crooked little roads between them.
-        </p>
-      </div>
+        <aside class="hero__feature-list" aria-label="Featured titles">
+          <article class="feature-card">
+            <p class="feature-card__tag">Narrative tool</p>
+            <h2>Heirlooms &amp; Reveries</h2>
+            <p>Emotional landmarks, cherished objects, and subtle narrative magic for fantasy worlds.</p>
+          </article>
+
+          <article class="feature-card">
+            <p class="feature-card__tag">Combat guidance</p>
+            <h2>Monster Deaths and Making It Count</h2>
+            <p>Make monster injuries, morale, retreat, and final blows feel alive instead of procedural.</p>
+          </article>
+        </aside>
+      </section>
+
+      <section class="stats-strip" aria-label="Store highlights">
+        <div class="stat-card">
+          <span class="stat-card__number">2</span>
+          <span class="stat-card__label">Featured titles</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__number">1</span>
+          <span class="stat-card__label">DriveThruRPG storefront</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__number">100%</span>
+          <span class="stat-card__label">Available online</span>
+        </div>
+      </section>
+
+      <section class="catalog" id="titles">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Available now</p>
+          <h2>Current titles</h2>
+          <p>These releases are built for tables that want more feeling, more consequence, and less filler.</p>
+        </div>
+
+        <div class="catalog-grid">
+          <article class="title-card">
+            <p class="title-card__type">GM inspiration</p>
+            <h3>Heirlooms &amp; Reveries</h3>
+            <p class="title-card__body">
+              Some treasures do not grant bonuses or cast spells. Some carry memory. This title helps you bring
+              cherished objects, places, and traditions into your world as subtle narrative magic.
+            </p>
+            <ul class="title-card__list">
+              <li>Emotional worldbuilding for fantasy campaigns</li>
+              <li>Tools for atmosphere without stealing player choice</li>
+              <li>Built for GMs who want quieter moments to hit harder</li>
+            </ul>
+            <a class="button button--primary" href="https://www.drivethrurpg.com/en/search?keyword=Heirlooms%20and%20Reveries" target="_blank" rel="noreferrer">
+              View on DriveThruRPG
+            </a>
+          </article>
+
+          <article class="title-card">
+            <p class="title-card__type">Combat craft</p>
+            <h3>Monster Deaths and Making It Count</h3>
+            <p class="title-card__body">
+              Hit points should not turn monster death into bookkeeping. This title shows how to use visible wounds,
+              morale, retreat, and final blows to make combat feel like a living scene.
+            </p>
+            <ul class="title-card__list">
+              <li>Turn damage totals into on-screen consequence</li>
+              <li>Use morale and retreat to keep monsters honest</li>
+              <li>Help the table remember how the fight ended</li>
+            </ul>
+            <a class="button button--primary" href="https://www.drivethrurpg.com/en/search?keyword=Monster%20Deaths%20and%20Making%20It%20Count" target="_blank" rel="noreferrer">
+              View on DriveThruRPG
+            </a>
+          </article>
+        </div>
+      </section>
+
+      <section class="store-cta" id="store">
+        <div class="store-cta__copy">
+          <p class="section-heading__kicker">Full catalog</p>
+          <h2>Prefer to browse the whole shelf?</h2>
+          <p>
+            Head to the Tobacco Road Games DriveThruRPG storefront to see current releases in one place and catch new
+            titles as they go live.
+          </p>
+        </div>
+
+        <div class="store-cta__panel">
+          <p class="feature-card__tag">DriveThruRPG storefront</p>
+          <a class="button button--primary button--wide" href="https://www.drivethrurpg.com/en/publisher/13450/russell-sawyer" target="_blank" rel="noreferrer">
+            Open the Store
+          </a>
+          <p class="store-cta__note">Digital titles, direct download, and future releases in one place.</p>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer">
-      <p>© <span id="year-text">2026</span> Tobacco Road Games. Built for Cloudflare Pages.</p>
+      <p>&copy; <span id="year-text">2026</span> Tobacco Road Games.</p>
+      <p><a href="https://www.drivethrurpg.com/en/publisher/13450/russell-sawyer" target="_blank" rel="noreferrer">Visit the DriveThruRPG store</a></p>
     </footer>
   </div>
 </body>
