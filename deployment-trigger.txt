@@ -1,1 +1,2 @@
 Cloudflare deployment trigger
+Updated 2026-05-21 for release link fix refresh

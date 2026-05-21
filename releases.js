@@ -27,7 +27,7 @@ const trgReleases = [
     hook: "Character advancement with more personality than a simple level-up checkbox.",
     description:
       "A player-facing tool for growth, development, and earned progress, shaped for campaigns where character change should feel lived in.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/290255"
+    storeUrl: ""
   },
   {
     title: "Backyard Troopers - Basic",
@@ -54,7 +54,7 @@ const trgReleases = [
     hook: "Cherished objects, places, and traditions that carry emotional weight into play.",
     description:
       "A worldbuilding tool for bringing memory, inheritance, and subtle narrative magic into a fantasy campaign without flattening them into loot.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/566417"
+    storeUrl: ""
   },
   {
     title: "Thiefcraft",
