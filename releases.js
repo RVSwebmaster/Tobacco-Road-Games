@@ -36,7 +36,7 @@ const trgReleases = [
     hook: "A compact battlefield with toy-box energy and live-fire table instincts.",
     description:
       "A basic entry point for Backyard Troopers, aimed at groups who like action, pressure, and a little rough-edged imagination in the field kit.",
-    storeUrl: ""
+    storeUrl: "https://www.drivethrurpg.com/en/product/552690/backyard-troopers-basic"
   },
   {
     title: "Monster Deaths and Making It Count",
