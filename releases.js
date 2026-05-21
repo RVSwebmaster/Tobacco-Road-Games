@@ -45,7 +45,7 @@ const trgReleases = [
     hook: "Stop letting monster deaths land like bookkeeping receipts.",
     description:
       "A practical piece on visible wounds, morale, retreat, and final blows, for Game Masters who want combat endings to feel earned.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/552690"
+    storeUrl: "https://www.drivethrurpg.com/product/566183/Monster-Deaths-and-Making-It-Count"
   },
   {
     title: "Heirlooms & Reveries",
@@ -73,7 +73,7 @@ const trgReleases = [
     hook: "Rogue work with clearer procedure, sharper stakes, and consequences that actually bite.",
     description:
       "Player-facing material for tables that want thief characters to feel clever, specific, and mechanically alive instead of generically slippery.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/267904"
+    storeUrl: "https://www.drivethrurpg.com/product/567896/Thiefcraft"
   },
   {
     title: "The Yojimbo Fighter Martial Archetype",
@@ -82,7 +82,7 @@ const trgReleases = [
     hook: "A fighter path with a duelist's edge and a bodyguard's sense of duty.",
     description:
       "A martial archetype built for characters who live between service, steel, and hard choices, with a strong player-facing identity at the table.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/249802"
+    storeUrl: "https://www.drivethrurpg.com/product/568030/The-Yojimbo-Fighter-Martial-Archetype"
   }
 ];
 
@@ -143,8 +143,8 @@ function renderFeaturedRelease(release) {
         <p class="feature-card__body">${escapeHtml(release.featureDescription || release.description)}</p>
         ${release.featureSupport ? `<p class="feature-card__support">${escapeHtml(release.featureSupport)}</p>` : ""}
         <div class="feature-card__actions">
-          <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noreferrer">View ${escapeHtml(release.title)}</a>
-          <a class="button button--secondary" href="${escapeAttribute(trgStoreUrl)}" target="_blank" rel="noreferrer">Browse the Store</a>
+          <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noopener noreferrer">View ${escapeHtml(release.title)}</a>
+          <a class="button button--secondary" href="${escapeAttribute(trgStoreUrl)}" target="_blank" rel="noopener noreferrer">Browse the Store</a>
         </div>
       </div>
     </article>
@@ -174,7 +174,7 @@ function renderReleaseGroups(releases) {
               <h4>${escapeHtml(release.title)}</h4>
               <p class="release-card__hook">${escapeHtml(release.hook)}</p>
               <p class="release-card__body">${escapeHtml(release.description)}</p>
-              <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noreferrer">Store page</a>
+              <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noopener noreferrer">Store page</a>
             </article>
           `
         )
