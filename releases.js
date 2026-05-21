@@ -1,3 +1,6 @@
+const trgStoreUrl = "https://www.drivethrurpg.com/en/publisher/13450/russell-sawyer";
+
+// Mark exactly one release with featured: true to control the homepage spotlight.
 const trgReleases = [
   {
     title: "BDSF: Rolling the Bones",
@@ -55,9 +58,19 @@ const trgReleases = [
   },
   {
     title: "Thiefcraft",
+    featured: true,
     category: "Player option",
     group: "Player Options",
-    hook: "Roguish play with more intent than just 'I roll Stealth again.'",
+    image: "assets/releases/thiefcraft-cover.png",
+    imageAlt: "Thiefcraft cover art showing multiple rogue paths in a dark fantasy style.",
+    featureEyebrow: "Featured Product",
+    featureSubtitle: "A 5E-Compatible Rogue Supplement for 2014-Era Rules",
+    featureHook: "One task. One roll. Clear stakes. Real consequences.",
+    featureDescription:
+      "Thiefcraft gives rogues, burglars, scouts, cutpurses, infiltrators, and other shadow-working characters a sharper place at the table. It turns risky work into meaningful play with cleaner procedures, clearer consequences, and tools that make criminal expertise feel dangerous, deliberate, and worth doing.",
+    featureSupport:
+      "Built for 2014-era 5E play, Thiefcraft is for tables that want rogue work to matter without bogging the session down in mushy procedure.",
+    hook: "Rogue work with clearer procedure, sharper stakes, and consequences that actually bite.",
     description:
       "Player-facing material for tables that want thief characters to feel clever, specific, and mechanically alive instead of generically slippery.",
     storeUrl: "https://www.drivethrurpg.com/en/product/267904"
@@ -92,29 +105,48 @@ const releaseGroupOrder = [
   }
 ];
 
-function renderLatestRelease(release) {
-  const latestRoot = document.getElementById("latest-release");
+function getFeaturedRelease(releases) {
+  const featuredReleases = releases.filter((release) => release.featured);
 
-  if (!latestRoot || !release) {
+  if (featuredReleases.length > 1) {
+    console.warn("Only one release should be marked featured: true. Using the first one.");
+  }
+
+  return featuredReleases[0] || releases[0];
+}
+
+function renderFeaturedRelease(release) {
+  const featuredRoot = document.getElementById("featured-release");
+
+  if (!featuredRoot || !release) {
     return;
   }
 
-  latestRoot.innerHTML = `
-    <article class="latest-card">
-      <div class="latest-card__copy">
-        <p class="latest-card__meta">${escapeHtml(release.category)} | Latest release</p>
-        <h3>${escapeHtml(release.title)}</h3>
-        <p class="latest-card__hook">${escapeHtml(release.hook)}</p>
-        <p class="latest-card__body">${escapeHtml(release.description)}</p>
-        <div class="latest-card__actions">
-          <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noreferrer">Store page</a>
-          <a class="button button--secondary" href="#releases">View all releases</a>
+  const imageMarkup = release.image
+    ? `
+      <div class="feature-card__media">
+        <div class="feature-card__frame">
+          <img src="${escapeAttribute(release.image)}" alt="${escapeAttribute(release.imageAlt || release.title)}">
         </div>
       </div>
-      <aside class="latest-card__sidebar">
-        <p class="latest-card__sidebar-label">Why it belongs here</p>
-        <p>This section always pulls the first item from the release list, so updating the newest release means moving one entry to the top.</p>
-      </aside>
+    `
+    : "";
+
+  featuredRoot.innerHTML = `
+    <article class="feature-card">
+      ${imageMarkup}
+      <div class="feature-card__copy">
+        <p class="feature-card__eyebrow">${escapeHtml(release.featureEyebrow || "Featured Product")}</p>
+        <h3>${escapeHtml(release.title)}</h3>
+        <p class="feature-card__subtitle">${escapeHtml(release.featureSubtitle || release.category)}</p>
+        <p class="feature-card__hook">${escapeHtml(release.featureHook || release.hook)}</p>
+        <p class="feature-card__body">${escapeHtml(release.featureDescription || release.description)}</p>
+        ${release.featureSupport ? `<p class="feature-card__support">${escapeHtml(release.featureSupport)}</p>` : ""}
+        <div class="feature-card__actions">
+          <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noreferrer">View ${escapeHtml(release.title)}</a>
+          <a class="button button--secondary" href="${escapeAttribute(trgStoreUrl)}" target="_blank" rel="noreferrer">Browse the Store</a>
+        </div>
+      </div>
     </article>
   `;
 }
@@ -180,6 +212,6 @@ function escapeAttribute(value) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  renderLatestRelease(trgReleases[0]);
+  renderFeaturedRelease(getFeaturedRelease(trgReleases));
   renderReleaseGroups(trgReleases);
 });

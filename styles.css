@@ -58,7 +58,7 @@ a {
   position: relative;
   width: min(1200px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 24px 0 28px;
+  padding: 18px 0 28px;
 }
 
 .site-header,
@@ -77,7 +77,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
 
 .brand {
@@ -88,7 +88,7 @@ a {
 }
 
 .brand__logo {
-  width: 82px;
+  width: 74px;
   height: auto;
   filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.34));
 }
@@ -99,14 +99,14 @@ a {
 }
 
 .brand__name {
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   letter-spacing: 0.05em;
 }
 
 .brand__tag {
   color: var(--muted);
   font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
 }
 
 .site-nav {
@@ -121,12 +121,13 @@ a {
 }
 
 .site-nav a {
-  padding: 10px 14px;
+  padding: 9px 13px;
   border-radius: var(--radius-pill);
   color: var(--muted);
   text-decoration: none;
   font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
   font-weight: 700;
+  font-size: 0.95rem;
 }
 
 .site-nav a:hover,
@@ -161,12 +162,13 @@ a {
 .hero,
 .store-callout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(310px, 0.8fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.72fr);
+  gap: 16px;
 }
 
 .hero {
   margin-bottom: 18px;
+  align-items: start;
 }
 
 .hero__panel,
@@ -177,18 +179,18 @@ a {
 .releases,
 .store-callout,
 .site-footer {
-  padding: 30px;
+  padding: 26px;
 }
 
 .hero__bench {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   align-content: start;
 }
 
 .note-card,
 .pillar-card,
-.latest-card,
+.feature-card,
 .release-group,
 .release-card,
 .store-callout__panel {
@@ -202,6 +204,10 @@ a {
 .release-card,
 .store-callout__panel {
   padding: 20px;
+}
+
+.note-card {
+  padding: 18px;
 }
 
 .hero__eyebrow,
@@ -230,16 +236,18 @@ h4 {
 }
 
 h1 {
-  margin-top: 0.75rem;
-  font-size: clamp(3rem, 7vw, 5.5rem);
+  margin-top: 0.55rem;
+  max-width: 11ch;
+  font-size: clamp(2.7rem, 5vw, 4.6rem);
+  line-height: 0.98;
 }
 
 h2 {
-  font-size: clamp(2.1rem, 4vw, 3.2rem);
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
 }
 
 h3 {
-  font-size: 1.65rem;
+  font-size: 1.55rem;
 }
 
 h4 {
@@ -251,8 +259,10 @@ h4 {
 .section-heading p:last-child,
 .about__panel p,
 .pillar-card p:last-child,
-.latest-card__hook,
-.latest-card__body,
+.feature-card__subtitle,
+.feature-card__hook,
+.feature-card__body,
+.feature-card__support,
 .release-card__hook,
 .release-card__body,
 .release-group__intro,
@@ -263,17 +273,29 @@ h4 {
 }
 
 .hero__lead {
-  max-width: 48rem;
-  margin: 1.2rem 0 0;
-  font-size: 1.08rem;
+  max-width: 41rem;
+  margin: 0.95rem 0 0;
+  font-size: 1rem;
+  color: var(--text);
 }
 
 .hero__actions,
-.latest-card__actions {
+.feature-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 1.6rem;
+  margin-top: 1.25rem;
+}
+
+.note-card h2 {
+  margin-top: 0.42rem;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  line-height: 1.02;
+}
+
+.note-card p:last-child {
+  font-size: 0.97rem;
+  line-height: 1.65;
 }
 
 .button {
@@ -334,8 +356,9 @@ h4 {
 .note-card p:last-child,
 .about__panel p,
 .pillar-card p:last-child,
-.latest-card__hook,
-.latest-card__body,
+.feature-card__subtitle,
+.feature-card__body,
+.feature-card__support,
 .release-card__hook,
 .release-card__body,
 .release-group__intro,
@@ -353,44 +376,84 @@ h4 {
   margin-bottom: 18px;
 }
 
-.latest-card {
+.feature-card {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
-  gap: 18px;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  gap: 22px;
   padding: 22px;
+  align-items: center;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(24, 14, 10, 0.12)),
+    rgba(255, 255, 255, 0.02);
 }
 
-.latest-card__copy {
+.feature-card__media {
+  position: relative;
+}
+
+.feature-card__media::before {
+  content: "";
+  position: absolute;
+  inset: 8% 10% auto;
+  height: 72%;
+  border-radius: 24px;
+  background: radial-gradient(circle, rgba(126, 108, 199, 0.28), transparent 62%);
+  filter: blur(16px);
+  pointer-events: none;
+}
+
+.feature-card__frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 5.2;
+  border: 1px solid rgba(242, 216, 170, 0.22);
+  border-radius: 24px;
+  background: rgba(13, 9, 6, 0.85);
+  box-shadow: 0 24px 44px rgba(0, 0, 0, 0.34);
+}
+
+.feature-card__frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.feature-card__copy {
   display: grid;
   gap: 14px;
 }
 
-.latest-card__meta {
+.feature-card__eyebrow {
+  margin: 0;
   color: var(--accent-strong);
-}
-
-.latest-card__hook {
-  color: var(--text);
-  font-size: 1.12rem;
-}
-
-.latest-card__sidebar {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-  padding: 18px;
-  border: 1px solid rgba(242, 216, 170, 0.14);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.latest-card__sidebar-label {
-  color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
+}
+
+.feature-card__subtitle {
+  margin: -2px 0 0;
+  font-size: 0.98rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.feature-card__hook {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.feature-card__body {
+  color: var(--text);
+}
+
+.feature-card__support {
+  font-size: 0.98rem;
 }
 
 .about__panel {
@@ -478,31 +541,46 @@ h4 {
 @media (max-width: 980px) {
   .hero,
   .store-callout,
-  .latest-card,
+  .feature-card,
   .pillar-grid,
   .release-grid {
     grid-template-columns: 1fr;
+  }
+
+  h1 {
+    max-width: none;
+    font-size: clamp(2.5rem, 7vw, 4rem);
   }
 }
 
 @media (max-width: 640px) {
   .page-shell {
     width: min(100% - 20px, 1200px);
-    padding-top: 16px;
+    padding-top: 12px;
   }
 
   .site-header,
   .site-footer {
     flex-direction: column;
     align-items: flex-start;
+    gap: 14px;
   }
 
   .brand {
-    align-items: flex-start;
+    align-items: center;
+    gap: 12px;
   }
 
   .brand__logo {
-    width: 68px;
+    width: 56px;
+  }
+
+  .brand__name {
+    font-size: 1.2rem;
+  }
+
+  .brand__tag {
+    font-size: 0.8rem;
   }
 
   .hero__panel,
@@ -517,12 +595,44 @@ h4 {
     padding: 18px;
   }
 
-  .button,
+  .site-nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px;
+  }
+
   .site-nav a {
+    width: auto;
+    flex: 1 1 40%;
+    text-align: center;
+    font-size: 0.92rem;
+    padding: 10px 8px;
+  }
+
+  .button {
     width: 100%;
   }
 
-  .site-nav {
-    width: 100%;
+  .feature-card {
+    gap: 18px;
+  }
+
+  .feature-card__frame {
+    aspect-ratio: 4 / 4.8;
+  }
+
+  h1 {
+    max-width: none;
+    font-size: clamp(2.2rem, 8vw, 3.25rem);
+    line-height: 1;
+  }
+
+  .hero__lead {
+    font-size: 0.98rem;
+  }
+
+  .note-card h2 {
+    font-size: 1.6rem;
   }
 }
