@@ -9,7 +9,7 @@ const trgReleases = [
     hook: "A BDSF release for tables that like risk, momentum, and a little grit in the machine.",
     description:
       "Part of the BDSF line, built for play that wants motion, consequence, and a system that earns its bruises at the table.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/568410"
+    storeUrl: ""
   },
   {
     title: "BDSF: Core Rules Omnibus",
@@ -18,7 +18,7 @@ const trgReleases = [
     hook: "The omnibus spine of the BDSF line, gathered for people who want the engine in one place.",
     description:
       "A core-rules release meant to put the larger line on firmer footing, with the workshop's system-minded design out in the open.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/568030"
+    storeUrl: ""
   },
   {
     title: "Personal Milestones",
@@ -27,7 +27,7 @@ const trgReleases = [
     hook: "Character advancement with more personality than a simple level-up checkbox.",
     description:
       "A player-facing tool for growth, development, and earned progress, shaped for campaigns where character change should feel lived in.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/567896"
+    storeUrl: "https://www.drivethrurpg.com/en/product/290255"
   },
   {
     title: "Backyard Troopers - Basic",
@@ -36,7 +36,7 @@ const trgReleases = [
     hook: "A compact battlefield with toy-box energy and live-fire table instincts.",
     description:
       "A basic entry point for Backyard Troopers, aimed at groups who like action, pressure, and a little rough-edged imagination in the field kit.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/566417"
+    storeUrl: ""
   },
   {
     title: "Monster Deaths and Making It Count",
@@ -54,7 +54,7 @@ const trgReleases = [
     hook: "Cherished objects, places, and traditions that carry emotional weight into play.",
     description:
       "A worldbuilding tool for bringing memory, inheritance, and subtle narrative magic into a fantasy campaign without flattening them into loot.",
-    storeUrl: "https://www.drivethrurpg.com/en/product/290255"
+    storeUrl: "https://www.drivethrurpg.com/en/product/566417"
   },
   {
     title: "Thiefcraft",
@@ -143,7 +143,7 @@ function renderFeaturedRelease(release) {
         <p class="feature-card__body">${escapeHtml(release.featureDescription || release.description)}</p>
         ${release.featureSupport ? `<p class="feature-card__support">${escapeHtml(release.featureSupport)}</p>` : ""}
         <div class="feature-card__actions">
-          <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noopener noreferrer">View ${escapeHtml(release.title)}</a>
+          ${renderStoreButton(release.storeUrl, `View ${release.title}`)}
           <a class="button button--secondary" href="${escapeAttribute(trgStoreUrl)}" target="_blank" rel="noopener noreferrer">Browse the Store</a>
         </div>
       </div>
@@ -174,7 +174,7 @@ function renderReleaseGroups(releases) {
               <h4>${escapeHtml(release.title)}</h4>
               <p class="release-card__hook">${escapeHtml(release.hook)}</p>
               <p class="release-card__body">${escapeHtml(release.description)}</p>
-              <a class="button button--primary" href="${escapeAttribute(release.storeUrl)}" target="_blank" rel="noopener noreferrer">Store page</a>
+              ${renderStoreButton(release.storeUrl, "Store page")}
             </article>
           `
         )
@@ -209,6 +209,16 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
   return escapeHtml(value);
+}
+
+function renderStoreButton(storeUrl, label) {
+  const normalizedUrl = String(storeUrl || "").trim();
+
+  if (!normalizedUrl) {
+    return `<span class="button button--secondary button--pending" aria-disabled="true">Store link pending</span>`;
+  }
+
+  return `<a class="button button--primary" href="${escapeAttribute(normalizedUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
 }
 
 window.addEventListener("DOMContentLoaded", () => {
