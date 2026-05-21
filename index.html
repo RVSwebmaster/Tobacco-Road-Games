@@ -145,5 +145,29 @@
       <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
     </footer>
   </div>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const body = document.body;
+      const hero = document.querySelector(".hero");
+
+      if (!hero || !("IntersectionObserver" in window)) {
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          const heroStillLeading = entry.isIntersecting && entry.intersectionRatio > 0.38;
+          body.classList.toggle("view-section", !heroStillLeading);
+        },
+        {
+          threshold: [0.2, 0.38, 0.55],
+          rootMargin: "-8% 0px -28% 0px"
+        }
+      );
+
+      observer.observe(hero);
+    });
+  </script>
 </body>
 </html>
