@@ -9,7 +9,7 @@ const trgReleases = [
     hook: "A BDSF release for tables that like risk, momentum, and a little grit in the machine.",
     description:
       "Part of the BDSF line, built for play that wants motion, consequence, and a system that earns its bruises at the table.",
-    storeUrl: ""
+    storeUrl: "https://www.drivethrurpg.com/en/product/249802/bdsf-rolling-the-bones"
   },
   {
     title: "BDSF: Core Rules Omnibus",
@@ -18,7 +18,7 @@ const trgReleases = [
     hook: "The omnibus spine of the BDSF line, gathered for people who want the engine in one place.",
     description:
       "A core-rules release meant to put the larger line on firmer footing, with the workshop's system-minded design out in the open.",
-    storeUrl: ""
+    storeUrl: "https://www.drivethrurpg.com/en/product/267904/bdsf-core-rules-omnibus"
   },
   {
     title: "Personal Milestones",
@@ -27,7 +27,7 @@ const trgReleases = [
     hook: "Character advancement with more personality than a simple level-up checkbox.",
     description:
       "A player-facing tool for growth, development, and earned progress, shaped for campaigns where character change should feel lived in.",
-    storeUrl: ""
+    storeUrl: "https://www.drivethrurpg.com/en/product/290255/personal-milestones"
   },
   {
     title: "Backyard Troopers - Basic",
@@ -54,7 +54,7 @@ const trgReleases = [
     hook: "Cherished objects, places, and traditions that carry emotional weight into play.",
     description:
       "A worldbuilding tool for bringing memory, inheritance, and subtle narrative magic into a fantasy campaign without flattening them into loot.",
-    storeUrl: ""
+    storeUrl: "https://www.drivethrurpg.com/en/product/566417/heirlooms-reveries"
   },
   {
     title: "Thiefcraft",
