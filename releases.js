@@ -57,8 +57,26 @@ const trgReleases = [
     storeUrl: "https://www.drivethrurpg.com/en/product/566417/heirlooms-reveries"
   },
   {
-    title: "Thiefcraft",
+    title: "Ringbound - Character Class",
     featured: true,
+    category: "Character class",
+    group: "Player Options",
+    image: "assets/releases/ringbound-cover.webp",
+    imageAlt: "Ringbound cover art showing a martial champion holding the line while allies face monsters in a ruined arena.",
+    featureEyebrow: "New Release",
+    featureSubtitle: "A 21-page 5E-compatible character class for 2014-era play",
+    featureHook: "Claim ground. Break momentum. Make the battlefield admit where the fight is happening.",
+    featureDescription:
+      "Ringbound is an original martial class built around weight, balance, sacred contest, and battlefield control. It protects allies, interrupts movement, turns positioning into pressure, and rewards players who want to hold the line instead of chasing damage alone.",
+    featureSupport:
+      "Includes five subclass paths: Driving Palm, Iron Clinch, Salt Bearer, Thunder Hand, and Turning Step.",
+    hook: "A defender-style class for players who want to control space, protect allies, and make movement matter.",
+    description:
+      "Built for 5E-compatible 2014-era play, Ringbound brings grapples, pressure, sacred ground, and crowd-moving force to the center of the fight.",
+    storeUrl: "https://www.drivethrurpg.com/en/product/568980/ringbound-character-class"
+  },
+  {
+    title: "Thiefcraft",
     category: "Player option",
     group: "Player Options",
     image: "assets/releases/thiefcraft-cover.png",
