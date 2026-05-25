@@ -95,6 +95,7 @@ a {
 .about,
 .pillars,
 .releases,
+.statement-page,
 .store-callout,
 .site-footer {
   animation: rise-in 620ms ease both;
@@ -166,11 +167,17 @@ a {
   outline: none;
 }
 
+.site-nav a[aria-current="page"] {
+  background: rgba(242, 216, 170, 0.14);
+  color: var(--text);
+}
+
 .hero,
 .latest,
 .about,
 .pillars,
 .releases,
+.statement-page,
 .store-callout,
 .site-footer {
   border: 1px solid var(--panel-border);
@@ -184,6 +191,7 @@ a {
 .about,
 .pillars,
 .releases,
+.statement-page,
 .store-callout {
   border-radius: var(--radius-xl);
   background:
@@ -208,6 +216,7 @@ a {
 .about,
 .pillars,
 .releases,
+.statement-page,
 .store-callout,
 .site-footer {
   padding: 26px;
@@ -501,6 +510,42 @@ h4 {
   gap: 14px;
 }
 
+.statement-page {
+  max-width: 880px;
+  margin: 0 auto 18px;
+}
+
+.statement-page h1 {
+  max-width: none;
+  font-size: clamp(2.4rem, 4.2vw, 3.5rem);
+}
+
+.statement-content {
+  display: grid;
+  gap: 18px;
+}
+
+.statement-content p {
+  margin: 0;
+  color: var(--text);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.8;
+}
+
+.statement-seal {
+  margin: 26px 0 0;
+  display: flex;
+  justify-content: center;
+}
+
+.statement-seal img {
+  display: block;
+  width: min(260px, 100%);
+  height: auto;
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.3));
+}
+
 .pillar-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -575,6 +620,7 @@ body.view-section .latest,
 body.view-section .about,
 body.view-section .pillars,
 body.view-section .releases,
+body.view-section .statement-page,
 body.view-section .store-callout {
   background:
     linear-gradient(180deg, rgba(23, 15, 10, 0.62), rgba(15, 10, 7, 0.7));
@@ -655,6 +701,7 @@ body.view-section .site-footer {
   .about,
   .pillars,
   .releases,
+  .statement-page,
   .store-callout,
   .site-footer,
   .release-group {
