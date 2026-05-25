@@ -611,6 +611,20 @@ h4 {
   background: rgba(20, 13, 9, 0.46);
 }
 
+.footer-link {
+  color: var(--accent-strong);
+  text-decoration: none;
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-weight: 700;
+}
+
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+  outline: none;
+}
+
 body.view-section .site-nav {
   background: rgba(20, 13, 9, 0.48);
 }
