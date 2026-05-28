@@ -611,6 +611,33 @@ h4 {
   background: rgba(20, 13, 9, 0.46);
 }
 
+.footer-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 6px;
+  border: 1px solid rgba(242, 216, 170, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.footer-mark img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.footer-mark:hover,
+.footer-mark:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(242, 216, 170, 0.28);
+  transform: translateY(-1px);
+  outline: none;
+}
+
 .footer-link {
   display: inline-flex;
   align-items: center;
