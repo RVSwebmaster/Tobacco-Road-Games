@@ -43,7 +43,7 @@ body::before {
   background-image:
     radial-gradient(circle at 55% 22%, rgba(246, 194, 95, 0.16), transparent 28%),
     linear-gradient(rgba(10, 7, 5, 0.02), rgba(10, 7, 5, 0.18)),
-    url("assets/wallpaper.png");
+    url("assets/wallpaper.png?v=20260528");
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;
