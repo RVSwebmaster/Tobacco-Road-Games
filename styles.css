@@ -117,7 +117,7 @@ a {
 }
 
 .brand__logo {
-  width: 82px;
+  width: 94px;
   height: auto;
   filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.34));
 }
@@ -736,7 +736,7 @@ body.view-section .site-footer {
   }
 
   .brand__logo {
-    width: 62px;
+    width: 71px;
   }
 
   .brand__name {
