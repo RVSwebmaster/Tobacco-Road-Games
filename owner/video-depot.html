@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tobacco Road Games Video Depot</title>
+  <meta
+    name="description"
+    content="Unlisted Tobacco Road Games owner reference page for hosted promo video URLs."
+  >
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    .depot-page {
+      padding: 26px;
+    }
+
+    .depot-page,
+    .depot-card {
+      display: grid;
+      gap: 18px;
+    }
+
+    .depot-warning {
+      color: #f7d7d1;
+      background:
+        linear-gradient(180deg, rgba(58, 23, 18, 0.76), rgba(26, 12, 10, 0.82));
+      border-color: rgba(242, 166, 145, 0.22);
+    }
+
+    .depot-status {
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    }
+
+    .depot-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .depot-card {
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+      align-items: start;
+    }
+
+    .depot-copy,
+    .depot-preview {
+      display: grid;
+      gap: 14px;
+    }
+
+    .depot-copy p,
+    .depot-preview p,
+    .depot-status p,
+    .depot-empty p {
+      margin: 0;
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      line-height: 1.7;
+    }
+
+    .depot-copy .depot-title,
+    .depot-preview .depot-title {
+      color: var(--text);
+    }
+
+    .depot-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .depot-field-label {
+      margin: 0;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .depot-field-value {
+      margin: 0;
+      padding: 14px 16px;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.94rem;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+    }
+
+    .depot-field-value a {
+      text-decoration: none;
+    }
+
+    .depot-field-value a:hover,
+    .depot-field-value a:focus-visible {
+      text-decoration: underline;
+      outline: none;
+    }
+
+    .depot-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .depot-action-status {
+      min-height: 1.5em;
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.94rem;
+    }
+
+    .depot-video-shell {
+      padding: 16px;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .depot-video {
+      display: block;
+      width: 100%;
+      border-radius: 14px;
+      background: rgba(12, 8, 6, 0.42);
+    }
+
+    .depot-video[hidden] {
+      display: none;
+    }
+
+    .depot-empty {
+      padding: 22px;
+    }
+
+    @media (max-width: 980px) {
+      .depot-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .depot-page {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body class="view-section">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="../index.html" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="../assets/logo.png" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
+          <span class="brand__tag">Owner video depot</span>
+        </div>
+      </a>
+    </header>
+
+    <main id="top">
+      <section class="statement-page depot-page" aria-labelledby="video-depot-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Owner Reference</p>
+          <h1 id="video-depot-heading">Advertising Video Depot</h1>
+          <p>Unlisted owner-facing index for hosted promo MP4 files and their stable public URLs.</p>
+        </div>
+
+        <article class="note-card depot-warning">
+          <p>This page is unlisted, not private. Anything in /media/ads/ is publicly accessible if someone has the URL.</p>
+        </article>
+
+        <article id="depot-status" class="note-card depot-status" aria-live="polite">
+          <p>Loading video manifest...</p>
+        </article>
+
+        <section id="depot-list" class="depot-list" hidden aria-live="polite"></section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; 2026 Tobacco Road Games.</p>
+      <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
+    </footer>
+  </div>
+
+  <template id="video-card-template">
+    <article class="release-card depot-card">
+      <section class="depot-copy">
+        <div>
+          <p class="release-card__meta">Ad video</p>
+          <h3 class="depot-title"></h3>
+        </div>
+        <p class="depot-product"></p>
+        <p class="depot-notes"></p>
+
+        <div class="depot-field">
+          <p class="depot-field-label">Filename</p>
+          <div class="depot-field-value depot-filename"></div>
+        </div>
+
+        <div class="depot-field">
+          <p class="depot-field-label">Public URL</p>
+          <div class="depot-field-value">
+            <a class="depot-link" target="_blank" rel="noopener noreferrer"></a>
+          </div>
+        </div>
+
+        <div class="depot-actions">
+          <button type="button" class="button button--secondary depot-copy-button">Copy URL</button>
+          <span class="depot-action-status" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <section class="depot-preview">
+        <div>
+          <p class="release-card__meta">Preview</p>
+          <h3 class="depot-title">MP4 preview</h3>
+        </div>
+        <div class="depot-video-shell">
+          <video class="depot-video" controls preload="metadata" playsinline></video>
+        </div>
+        <p class="depot-preview-status">Checking preview availability...</p>
+      </section>
+    </article>
+  </template>
+
+  <script>
+    const DEFAULT_PUBLIC_BASE_URL = "https://tobaccoroadgames.com/";
+    const MANIFEST_PATH = "../data/ad-videos.json";
+    const MEDIA_FOLDER = "media/ads/";
+
+    function getPublicBaseUrl() {
+      const host = window.location.hostname;
+      const isLocalPreview = host === "127.0.0.1" || host === "localhost" || host === "";
+
+      if (window.location.protocol.startsWith("http") && !isLocalPreview) {
+        return new URL("/", window.location.href).toString();
+      }
+
+      return DEFAULT_PUBLIC_BASE_URL;
+    }
+
+    function sanitizeFileName(fileName) {
+      return String(fileName || "")
+        .replace(/^\/+/, "")
+        .replace(/\\/g, "/")
+        .split("/")
+        .filter((segment) => segment && segment !== "." && segment !== "..")
+        .join("/");
+    }
+
+    function toUrlPath(fileName) {
+      return fileName
+        .split("/")
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {}
+      }
+
+      const helper = document.createElement("textarea");
+      helper.value = text;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "absolute";
+      helper.style.left = "-9999px";
+      document.body.appendChild(helper);
+      window.focus();
+      helper.focus();
+      helper.select();
+      helper.setSelectionRange(0, helper.value.length);
+      const copied = document.execCommand("copy");
+      helper.remove();
+      return copied;
+    }
+
+    function selectText(node) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function buildCard(entry, publicBaseUrl) {
+      const template = document.getElementById("video-card-template");
+      const card = template.content.firstElementChild.cloneNode(true);
+      const safeFile = sanitizeFileName(entry.file);
+      const encodedMediaPath = MEDIA_FOLDER + toUrlPath(safeFile);
+      const publicUrl = new URL(encodedMediaPath, publicBaseUrl).toString();
+      const previewUrl = "../" + encodedMediaPath;
+
+      card.querySelector(".depot-copy .depot-title").textContent = entry.title || safeFile || "Untitled video";
+      card.querySelector(".depot-product").textContent = entry.product || "Unassigned product";
+      card.querySelector(".depot-notes").textContent = entry.notes || "No notes provided.";
+      card.querySelector(".depot-filename").textContent = safeFile || "(missing filename)";
+
+      const link = card.querySelector(".depot-link");
+      link.href = publicUrl;
+      link.textContent = publicUrl;
+
+      const status = card.querySelector(".depot-action-status");
+      const linkContainer = link.parentElement;
+      const copyButton = card.querySelector(".depot-copy-button");
+      copyButton.addEventListener("click", async () => {
+        const copied = await copyText(publicUrl);
+
+        if (copied) {
+          status.textContent = "Copied.";
+        } else {
+          selectText(linkContainer);
+          status.textContent = "Clipboard blocked. URL selected; press Ctrl+C.";
+        }
+
+        window.setTimeout(() => {
+          status.textContent = "";
+        }, 1800);
+      });
+
+      const video = card.querySelector(".depot-video");
+      const previewStatus = card.querySelector(".depot-preview-status");
+
+      if (!safeFile) {
+        video.hidden = true;
+        previewStatus.textContent = "Preview unavailable until a valid MP4 filename is added.";
+        return card;
+      }
+
+      video.src = previewUrl;
+      video.setAttribute("aria-label", (entry.title || safeFile) + " preview");
+
+      video.addEventListener("loadeddata", () => {
+        previewStatus.textContent = "Preview ready.";
+      }, { once: true });
+
+      video.addEventListener("error", () => {
+        video.hidden = true;
+        previewStatus.textContent = "Preview unavailable until this MP4 is added to /media/ads/.";
+      }, { once: true });
+
+      return card;
+    }
+
+    async function init() {
+      const status = document.getElementById("depot-status");
+      const list = document.getElementById("depot-list");
+      const publicBaseUrl = getPublicBaseUrl();
+
+      try {
+        const response = await fetch(MANIFEST_PATH, { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error("Manifest request failed with status " + response.status + ".");
+        }
+
+        const entries = await response.json();
+        status.innerHTML = "<p>Manifest loaded from <code>" + MANIFEST_PATH + "</code>. Public base URL: <code>" + publicBaseUrl + "</code></p>";
+
+        if (!Array.isArray(entries) || entries.length === 0) {
+          list.hidden = false;
+          list.innerHTML = '<article class="note-card depot-empty"><p>No ad videos are listed yet. Add MP4 files to <code>/media/ads/</code> and register them in <code>/data/ad-videos.json</code>.</p></article>';
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        entries.forEach((entry) => fragment.appendChild(buildCard(entry, publicBaseUrl)));
+        list.appendChild(fragment);
+        list.hidden = false;
+      } catch (error) {
+        status.innerHTML = '<p>Unable to load <code>../data/ad-videos.json</code>. Use an HTTP server for local preview and confirm the JSON file is present.</p>';
+        console.error(error);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
