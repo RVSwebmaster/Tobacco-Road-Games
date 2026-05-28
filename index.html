@@ -3,22 +3,69 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Cache-bust version: 20260528. Bump this value when replacing CSS, JS, JSON, images, or media files that may be cached. -->
+  <!-- Cache-bust version: 20260528a. Bump this value when replacing CSS, JS, JSON, images, or media files that may be cached. -->
   <title>Tobacco Road Games</title>
   <meta
     name="description"
     content="Tobacco Road Games is the tabletop publishing workshop of RV Sawyer, a Game Master with 46 years behind the screen."
   >
   <meta name="theme-color" content="#120c08">
-  <link rel="icon" type="image/png" href="assets/logo.png?v=20260528">
-  <link rel="stylesheet" href="styles.css?v=20260528">
-  <script src="releases.js?v=20260528" defer></script>
+  <script>
+    (() => {
+      const introKey = "trgWallpaperIntroSeen";
+
+      const hasWindowNameFlag = () =>
+        typeof window.name === "string" && window.name.split("|").includes(`${introKey}=1`);
+
+      const markIntroSeen = () => {
+        try {
+          window.sessionStorage.setItem(introKey, "1");
+        } catch {}
+
+        if (!hasWindowNameFlag()) {
+          window.name = window.name ? `${window.name}|${introKey}=1` : `${introKey}=1`;
+        }
+      };
+
+      try {
+        const introSeen = window.sessionStorage.getItem(introKey) === "1" || hasWindowNameFlag();
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (!introSeen && !prefersReducedMotion) {
+          document.documentElement.classList.add("trg-intro-pending");
+          markIntroSeen();
+        } else if (prefersReducedMotion) {
+          markIntroSeen();
+        }
+      } catch {
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (!hasWindowNameFlag() && !prefersReducedMotion) {
+          document.documentElement.classList.add("trg-intro-pending");
+          markIntroSeen();
+        } else if (prefersReducedMotion) {
+          markIntroSeen();
+        }
+      }
+    })();
+  </script>
+  <link rel="icon" type="image/png" href="assets/logo.png?v=20260528a">
+  <link rel="stylesheet" href="styles.css?v=20260528a">
+  <script src="releases.js?v=20260528a" defer></script>
 </head>
 <body>
+  <div class="site-intro" aria-hidden="true">
+    <div class="site-intro__panel">
+      <p class="site-intro__kicker">Tobacco Road Games</p>
+      <p class="site-intro__copy">Enter when you're ready.</p>
+      <button type="button" class="button button--secondary site-intro__button">Enter Site</button>
+    </div>
+  </div>
+
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="#top" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="assets/logo.png?v=20260528" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="assets/logo.png?v=20260528a" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
           <span class="brand__tag">A working GM's bench for strange tables and long campaigns</span>
@@ -144,7 +191,7 @@
 
     <footer class="site-footer">
       <a class="footer-mark" href="ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="assets/logo.png?v=20260528" alt="">
+        <img src="assets/logo.png?v=20260528a" alt="">
       </a>
       <p>&copy; <span id="year-text">2026</span> Tobacco Road Games.</p>
       <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
@@ -154,6 +201,20 @@
 
   <script>
     window.addEventListener("DOMContentLoaded", () => {
+      const introRoot = document.documentElement;
+      const introButton = document.querySelector(".site-intro__button");
+      const introIsActive = introRoot.classList.contains("trg-intro-pending");
+      const introDelayMs = 12000;
+
+      if (introIsActive) {
+        const dismissIntro = () => {
+          introRoot.classList.remove("trg-intro-pending");
+        };
+
+        introButton?.addEventListener("click", dismissIntro, { once: true });
+        window.setTimeout(dismissIntro, introDelayMs);
+      }
+
       const body = document.body;
       const hero = document.querySelector(".hero");
 

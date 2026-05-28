@@ -1,4 +1,4 @@
-// Cache-bust version: 20260528. Bump this value when replacing local image files that may be cached.
+// Cache-bust version: 20260528a. Bump this value when replacing local image files that may be cached.
 const trgStoreUrl = "https://www.drivethrurpg.com/en/publisher/13450/russell-sawyer";
 
 // Mark exactly one release with featured: true to control the homepage spotlight.
@@ -62,7 +62,7 @@ const trgReleases = [
     featured: true,
     category: "Character class",
     group: "Player Options",
-    image: "assets/releases/ringbound-cover.webp?v=20260528",
+    image: "assets/releases/ringbound-cover.webp?v=20260528a",
     imageAlt: "Ringbound cover art showing a martial champion holding the line while allies face monsters in a ruined arena.",
     featureEyebrow: "New Release",
     featureSubtitle: "A 21-page 5E-compatible character class for 2014-era play",
@@ -80,7 +80,7 @@ const trgReleases = [
     title: "Thiefcraft",
     category: "Player option",
     group: "Player Options",
-    image: "assets/releases/thiefcraft-cover.png?v=20260528",
+    image: "assets/releases/thiefcraft-cover.png?v=20260528a",
     imageAlt: "Thiefcraft cover art showing multiple rogue paths in a dark fantasy style.",
     featureEyebrow: "Featured Product",
     featureSubtitle: "A 5E-Compatible Rogue Supplement for 2014-Era Rules",
