@@ -60,7 +60,7 @@
       <p class="site-intro__kicker">Tobacco Road Games</p>
       <p class="site-intro__copy">Enter when you're ready.</p>
       <button type="button" class="button button--secondary site-intro__button">Enter Site</button>
-      <p class="site-intro__countdown" aria-live="polite">Auto-entering in 30 seconds.</p>
+      <p class="site-intro__countdown" aria-live="polite">Auto-entering in 20 seconds.</p>
     </div>
   </div>
 
@@ -207,7 +207,7 @@
       const introButton = document.querySelector(".site-intro__button");
       const introCountdown = document.querySelector(".site-intro__countdown");
       const introIsActive = introRoot.classList.contains("trg-intro-pending");
-      const introDelayMs = 30000;
+      const introDelayMs = 20000;
 
       if (introIsActive) {
         let dismissTimeoutId = 0;
