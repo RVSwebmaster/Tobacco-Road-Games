@@ -140,6 +140,13 @@ a {
   color: var(--muted);
 }
 
+.site-intro__countdown {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 0.92rem;
+}
+
 html.trg-intro-pending .site-intro {
   opacity: 1;
   pointer-events: auto;

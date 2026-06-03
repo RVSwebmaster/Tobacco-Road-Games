@@ -60,6 +60,7 @@
       <p class="site-intro__kicker">Tobacco Road Games</p>
       <p class="site-intro__copy">Enter when you're ready.</p>
       <button type="button" class="button button--secondary site-intro__button">Enter Site</button>
+      <p class="site-intro__countdown" aria-live="polite">Auto-entering in 30 seconds.</p>
     </div>
   </div>
 
@@ -204,16 +205,34 @@
     window.addEventListener("DOMContentLoaded", () => {
       const introRoot = document.documentElement;
       const introButton = document.querySelector(".site-intro__button");
+      const introCountdown = document.querySelector(".site-intro__countdown");
       const introIsActive = introRoot.classList.contains("trg-intro-pending");
-      const introDelayMs = 7000;
+      const introDelayMs = 30000;
 
       if (introIsActive) {
+        let dismissTimeoutId = 0;
+        let countdownIntervalId = 0;
+        const introDeadline = Date.now() + introDelayMs;
+
+        const renderCountdown = () => {
+          if (!introCountdown) {
+            return;
+          }
+
+          const remainingSeconds = Math.max(0, Math.ceil((introDeadline - Date.now()) / 1000));
+          introCountdown.textContent = `Auto-entering in ${remainingSeconds} second${remainingSeconds === 1 ? "" : "s"}.`;
+        };
+
         const dismissIntro = () => {
+          window.clearTimeout(dismissTimeoutId);
+          window.clearInterval(countdownIntervalId);
           introRoot.classList.remove("trg-intro-pending");
         };
 
+        renderCountdown();
         introButton?.addEventListener("click", dismissIntro, { once: true });
-        window.setTimeout(dismissIntro, introDelayMs);
+        dismissTimeoutId = window.setTimeout(dismissIntro, introDelayMs);
+        countdownIntervalId = window.setInterval(renderCountdown, 250);
       }
 
       const body = document.body;
