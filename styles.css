@@ -95,10 +95,12 @@ a {
   inset: 0;
   z-index: 2;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-end;
   padding: 24px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.14) 70%, rgba(0, 0, 0, 0.34));
+  background:
+    radial-gradient(circle at top right, rgba(255, 222, 163, 0.08), transparent 22%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.14) 70%, rgba(0, 0, 0, 0.34));
   opacity: 0;
   pointer-events: none;
   transition: opacity 420ms ease;
@@ -106,16 +108,17 @@ a {
 
 .site-intro__panel {
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: 12px;
-  width: min(420px, 100%);
+  width: min(360px, calc(100% - 24px));
+  margin-top: 8px;
   padding: 18px 20px;
   border: 1px solid rgba(242, 216, 170, 0.14);
   border-radius: var(--radius-lg);
-  background: rgba(20, 13, 9, 0.22);
-  backdrop-filter: blur(6px);
+  background: rgba(20, 13, 9, 0.3);
+  backdrop-filter: blur(8px);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.26);
-  text-align: center;
+  text-align: left;
 }
 
 .site-intro__kicker,
@@ -778,6 +781,7 @@ body.view-section .site-footer {
 
 @media (max-width: 640px) {
   .site-intro {
+    justify-content: center;
     padding: 16px;
   }
 
@@ -803,7 +807,11 @@ body.view-section .site-footer {
   }
 
   .site-intro__panel {
+    justify-items: center;
+    width: min(420px, 100%);
+    margin-top: 0;
     padding: 16px 18px;
+    text-align: center;
   }
 
   .brand__name {
