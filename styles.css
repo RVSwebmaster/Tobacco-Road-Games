@@ -582,6 +582,24 @@ h4 {
   font-size: clamp(2.4rem, 4.2vw, 3.5rem);
 }
 
+.statement-intro {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.statement-block {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid rgba(242, 216, 170, 0.14);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.035);
+}
+
 .statement-content {
   display: grid;
   gap: 18px;
@@ -593,6 +611,21 @@ h4 {
   font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
   font-size: 1.02rem;
   line-height: 1.8;
+}
+
+.statement-list {
+  display: grid;
+  gap: 8px;
+  margin: -2px 0 0;
+  padding-left: 1.2rem;
+  color: var(--text);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.8;
+}
+
+.statement-list li::marker {
+  color: var(--accent);
 }
 
 .statement-seal {
@@ -723,6 +756,52 @@ h4 {
 .store-hero__aside {
   display: grid;
   gap: 12px;
+}
+
+.creation-standard-placard {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid rgba(242, 216, 170, 0.22);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(70, 46, 22, 0.48), rgba(34, 22, 12, 0.72)),
+    radial-gradient(circle at top left, rgba(242, 215, 165, 0.1), transparent 42%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 232, 191, 0.08),
+    0 18px 34px rgba(0, 0, 0, 0.22);
+}
+
+.creation-standard-title,
+.creation-standard-copy,
+.creation-standard-motto {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
+.creation-standard-title {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.creation-standard-copy {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.creation-standard-motto {
+  color: var(--accent-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.creation-standard-placard--statement {
+  margin-top: 2px;
 }
 
 .breadcrumbs {
@@ -1159,6 +1238,8 @@ body.view-section .pillar-card,
 body.view-section .feature-card,
 body.view-section .release-group,
 body.view-section .release-card,
+body.view-section .statement-block,
+body.view-section .creation-standard-placard,
 body.view-section .store-callout__panel,
 body.view-section .site-footer {
   background: rgba(18, 12, 9, 0.18);

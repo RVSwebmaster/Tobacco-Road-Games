@@ -5,7 +5,7 @@ const ROOT = path.resolve(__dirname, "..");
 const DATA_PATH = path.join(ROOT, "data", "products.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260604c";
+const CACHE_BUST = "20260604d";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 
@@ -274,6 +274,12 @@ function renderStoreHome(products, indexes) {
               <p class="note-card__label">Next Up</p>
               <h2>Direct purchase links</h2>
               <p>Payment and fulfillment links can be attached product by product without tearing the shelf apart again.</p>
+            </article>
+            <article class="creation-standard-placard">
+              <p class="creation-standard-title">Our Creation Standard</p>
+              <p class="creation-standard-copy">Tobacco Road Games is not anti AI or pro AI. We are pro honesty, pro rights, pro quality, and pro customer choice.</p>
+              <p class="creation-standard-copy">We do not reject tools. We reject deception, theft, spam, and lazy shovelware.</p>
+              <p class="creation-standard-motto">Tell the truth. Own your work. Respect the buyer. Make something worth buying.</p>
             </article>
           </aside>
         </section>
@@ -653,7 +659,7 @@ function renderLayout({
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
-      <a class="footer-link" href="/ai-statement.html">Read the Generative AI Statement</a>
+      <a class="footer-link" href="/ai-statement.html">Read the AI Statement</a>
     </footer>
   </div>
 </body>
