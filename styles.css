@@ -663,6 +663,36 @@ h4 {
   padding: 22px;
 }
 
+.coming-soon__panel {
+  display: grid;
+  gap: 14px;
+}
+
+.coming-soon__video-shell {
+  overflow: hidden;
+  border: 1px solid rgba(242, 216, 170, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(32, 20, 14, 0.9), rgba(10, 7, 5, 0.94));
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.coming-soon__video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: #0d0906;
+}
+
+.coming-soon__caption {
+  margin: 0;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
 .site-footer {
   display: flex;
   flex-wrap: wrap;
