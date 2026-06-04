@@ -886,6 +886,7 @@ h4 {
 
 .status-badge--coming-soon,
 .status-badge--preview-available,
+.status-badge--preview-only,
 .status-badge--pay-what-you-want {
   border-color: rgba(242, 216, 170, 0.34);
   background: rgba(186, 112, 64, 0.18);
@@ -893,7 +894,8 @@ h4 {
 }
 
 .status-badge--revised-edition-pending,
-.status-badge--legacy-edition {
+.status-badge--legacy-edition,
+.status-badge--legacy-not-for-sale {
   border-color: rgba(162, 146, 111, 0.38);
   background: rgba(109, 88, 56, 0.22);
   color: #dfc89f;
@@ -926,7 +928,7 @@ h4 {
 }
 
 .product-card:hover,
-.product-card:focus-visible,
+.product-card:focus-within,
 .browse-card:hover,
 .browse-card:focus-visible {
   transform: translateY(-2px);
@@ -956,6 +958,14 @@ h4 {
   display: grid;
   gap: 10px;
   padding: 18px;
+}
+
+.product-card__actions {
+  margin-top: auto;
+}
+
+.product-card__button {
+  width: 100%;
 }
 
 .product-card__topline {
@@ -1000,7 +1010,7 @@ h4 {
 
 .catalog-controls {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -1087,6 +1097,13 @@ h4 {
   margin: 0;
 }
 
+.product-support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
 .identity-strip__item {
   padding: 16px;
   border: 1px solid rgba(242, 216, 170, 0.12);
@@ -1117,6 +1134,18 @@ h4 {
 .preview-panel {
   display: grid;
   gap: 16px;
+}
+
+.inline-link {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.inline-link:hover,
+.inline-link:focus-visible {
+  color: var(--text);
+  outline: none;
 }
 
 .preview-grid {
@@ -1268,6 +1297,7 @@ body.view-section .site-footer {
   .pillar-grid,
   .release-grid,
   .product-card-grid,
+  .product-support-grid,
   .browse-card-grid,
   .preview-grid {
     grid-template-columns: 1fr;

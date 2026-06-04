@@ -3,25 +3,46 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const DATA_PATH = path.join(ROOT, "data", "products.json");
+const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260604d";
+const CACHE_BUST = "20260604e";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
+const SUPPORT_URL = "/support.html";
 
 const STATUS_LABELS = {
   "available-direct": "Available Direct",
   "coming-soon": "Coming Soon",
   "preview-available": "Preview Available",
+  "preview-only": "Preview Only",
   "revised-edition-pending": "Revised Edition Pending",
   "legacy-edition": "Legacy Edition",
+  "legacy-not-for-sale": "Legacy Not For Sale",
   retired: "Retired",
   "free-download": "Free Download",
   "pay-what-you-want": "Pay What You Want"
 };
 
+const PRICE_TYPE_LABELS = {
+  "fixed-price": "Fixed Price",
+  "free-download": "Free Download",
+  "pay-what-you-want": "Pay What You Want",
+  "manual-invoice": "Manual Invoice",
+  "coming-soon": "Coming Soon",
+  "preview-only": "Preview Only",
+  retired: "Retired"
+};
+
+const LEGACY_BUY_MODE_MAP = {
+  "paypal-manual": "manual-invoice",
+  "external-link": "fixed-price",
+  none: "coming-soon"
+};
+
 function main() {
   const products = loadProducts();
+  const bundleRules = loadBundleRules();
   const indexes = buildIndexes(products);
 
   fs.rmSync(STORE_DIR, { recursive: true, force: true });
@@ -37,12 +58,13 @@ function main() {
   for (const author of indexes.authors) {
     writeFile(`store/authors/${author.slug}/index.html`, renderCollectionPage({
       title: author.name,
-      kicker: "Author Shelf",
-      description: `Titles in the Tobacco Road Games catalog by ${author.name}.`,
+      kicker: "Author",
+      description: `Browse Tobacco Road Games titles by ${author.name}.`,
       canonicalPath: `/store/authors/${author.slug}/`,
       breadcrumbs: [
         { label: "Store", href: "/store/" },
-        { label: "Authors", href: "/store/catalog/" },
+        { label: "Catalog", href: "/store/catalog/" },
+        { label: "Author" },
         { label: author.name }
       ],
       cards: author.products.map((product) => renderProductCard(product))
@@ -53,11 +75,12 @@ function main() {
     writeFile(`store/systems/${system.slug}/index.html`, renderCollectionPage({
       title: system.name,
       kicker: "Game System",
-      description: `Products built for ${system.name}.`,
+      description: `Browse Tobacco Road Games titles built for ${system.name}.`,
       canonicalPath: `/store/systems/${system.slug}/`,
       breadcrumbs: [
         { label: "Store", href: "/store/" },
-        { label: "Systems", href: "/store/catalog/" },
+        { label: "Catalog", href: "/store/catalog/" },
+        { label: "Game System" },
         { label: system.name }
       ],
       cards: system.products.map((product) => renderProductCard(product))
@@ -68,11 +91,12 @@ function main() {
     writeFile(`store/lines/${line.slug}/index.html`, renderCollectionPage({
       title: line.name,
       kicker: "Product Line",
-      description: `Titles filed under ${line.name}.`,
+      description: `Browse Tobacco Road Games titles filed under ${line.name}.`,
       canonicalPath: `/store/lines/${line.slug}/`,
       breadcrumbs: [
         { label: "Store", href: "/store/" },
-        { label: "Product Lines", href: "/store/catalog/" },
+        { label: "Catalog", href: "/store/catalog/" },
+        { label: "Product Line" },
         { label: line.name }
       ],
       cards: line.products.map((product) => renderProductCard(product))
@@ -82,19 +106,25 @@ function main() {
   for (const status of indexes.statuses) {
     writeFile(`store/status/${status.slug}/index.html`, renderCollectionPage({
       title: status.label,
-      kicker: "Catalog Status",
-      description: `Products currently marked ${status.label.toLowerCase()}.`,
+      kicker: "Release Status",
+      description: `Browse Tobacco Road Games titles currently marked ${status.label.toLowerCase()}.`,
       canonicalPath: `/store/status/${status.slug}/`,
       breadcrumbs: [
         { label: "Store", href: "/store/" },
-        { label: "Status", href: "/store/catalog/" },
+        { label: "Catalog", href: "/store/catalog/" },
+        { label: "Status" },
         { label: status.label }
       ],
       cards: status.products.map((product) => renderProductCard(product))
     }));
   }
 
-  writeFile("store/sitemap.xml", renderStoreSitemap(products, indexes));
+  writeFile(
+    "store/bundles/bundle-what-you-want/index.html",
+    renderBundlePlanningPage(bundleRules, products)
+  );
+  writeFile("store/sitemap.xml", renderStoreSitemap(products, indexes, bundleRules));
+
   console.log(`Storefront generated for ${products.length} products.`);
 }
 
@@ -105,20 +135,74 @@ function loadProducts() {
       ...product,
       authors: ensureArray(product.authors),
       format: ensureArray(product.format),
+      fileList: ensureArray(product.fileList),
       previewImages: ensureArray(product.previewImages),
       features: ensureArray(product.features),
       tags: ensureArray(product.tags),
       relatedProducts: ensureArray(product.relatedProducts),
       currency: product.currency || "USD",
-      statusLabel: product.statusLabel || STATUS_LABELS[product.status] || "Unavailable"
+      status: product.status || "coming-soon",
+      statusLabel: product.statusLabel || STATUS_LABELS[product.status] || "Unavailable",
+      price: product.price || "",
+      priceCents: normalizeCents(product.priceCents, product.price),
+      minimumPrice: product.minimumPrice || "",
+      minimumPriceCents: normalizeCents(product.minimumPriceCents, product.minimumPrice),
+      suggestedPrice: product.suggestedPrice || "",
+      suggestedPriceCents: normalizeCents(product.suggestedPriceCents, product.suggestedPrice),
+      libraryEligible: Boolean(product.libraryEligible),
+      updateEligible: Boolean(product.updateEligible),
+      bundleEligible: Boolean(product.bundleEligible),
+      bundleMinPriceCents: normalizeInteger(product.bundleMinPriceCents, 100),
+      bundleGroup: product.bundleGroup || "standard-digital",
+      allowSeasonalBundle: Boolean(product.allowSeasonalBundle),
+      excludeFromBundles: Boolean(product.excludeFromBundles),
+      buyMode: normalizeBuyMode(product.buyMode || inferBuyMode(product)),
+      fulfillmentNote: product.fulfillmentNote || "",
+      creationMethod: product.creationMethod || "",
+      legalNote: product.legalNote || "",
+      version: product.version || "",
+      releaseDate: product.releaseDate || "",
+      lastUpdated: product.lastUpdated || ""
     };
+
     normalized.url = `/store/products/${normalized.slug}/`;
     normalized.authorSlugs = normalized.authors.map((author) => slugify(author));
     normalized.assetSet = resolveProductAssets(normalized);
     normalized.releaseStamp = parseDate(normalized.releaseDate);
     normalized.updatedStamp = parseDate(normalized.lastUpdated);
+    normalized.priceType = resolvePriceType(normalized);
+    normalized.priceTypeLabel = PRICE_TYPE_LABELS[normalized.priceType] || "Not For Sale";
+    normalized.availabilityLabel = normalized.statusLabel;
+
     return normalized;
   });
+}
+
+function loadBundleRules() {
+  if (!fs.existsSync(BUNDLE_RULES_PATH)) {
+    return {
+      bundleName: "Bundle What You Want",
+      shortName: "BWYW",
+      active: false,
+      seasonalOnly: true,
+      season: "pre-christmas",
+      minItems: 2,
+      maxItems: 5,
+      minimumEligiblePriceCents: 100,
+      discounts: { "2": 10, "3": 15, "4": 20, "5": 25 },
+      excludedStatuses: [
+        "coming-soon",
+        "preview-only",
+        "retired",
+        "legacy-not-for-sale",
+        "free-download",
+        "pay-what-you-want"
+      ],
+      allowCouponStacking: false
+    };
+  }
+
+  return JSON.parse(fs.readFileSync(BUNDLE_RULES_PATH, "utf8"));
 }
 
 function buildIndexes(products) {
@@ -126,6 +210,8 @@ function buildIndexes(products) {
   const systemMap = new Map();
   const lineMap = new Map();
   const statusMap = new Map();
+  const formatMap = new Map();
+  const priceTypeMap = new Map();
 
   for (const product of products) {
     for (const author of product.authors) {
@@ -136,115 +222,42 @@ function buildIndexes(products) {
       authorMap.get(slug).products.push(product);
     }
 
-    if (!systemMap.has(product.gameSystemSlug)) {
-      systemMap.set(product.gameSystemSlug, {
-        slug: product.gameSystemSlug,
-        name: product.gameSystem,
-        products: []
-      });
-    }
-    systemMap.get(product.gameSystemSlug).products.push(product);
+    collectIndex(systemMap, product.gameSystemSlug, product.gameSystem, product);
+    collectIndex(lineMap, product.productLineSlug, product.productLine, product);
+    collectIndex(statusMap, product.status, product.statusLabel, product, "label");
+    collectIndex(priceTypeMap, product.priceType, product.priceTypeLabel, product, "label");
 
-    if (!lineMap.has(product.productLineSlug)) {
-      lineMap.set(product.productLineSlug, {
-        slug: product.productLineSlug,
-        name: product.productLine,
-        products: []
-      });
+    for (const format of product.format) {
+      const slug = slugify(format);
+      collectIndex(formatMap, slug, format, product);
     }
-    lineMap.get(product.productLineSlug).products.push(product);
-
-    if (!statusMap.has(product.status)) {
-      statusMap.set(product.status, {
-        slug: product.status,
-        label: product.statusLabel,
-        products: []
-      });
-    }
-    statusMap.get(product.status).products.push(product);
   }
 
   return {
     authors: sortByName([...authorMap.values()]),
     systems: sortByName([...systemMap.values()]),
     lines: sortByName([...lineMap.values()]),
-    statuses: sortByName([...statusMap.values()], "label")
+    statuses: sortByName([...statusMap.values()], "label"),
+    formats: sortByName([...formatMap.values()]),
+    priceTypes: sortByName([...priceTypeMap.values()], "label")
   };
 }
 
 function renderStoreHome(products, indexes) {
   const featured = chooseFeaturedProduct(products);
-  const newest = sortProducts(products, "newest").slice(0, 3);
-  const comingSoon = products.filter((product) => product.status === "coming-soon");
-  const availableDirect = products.filter((product) => product.status === "available-direct");
-  const newestSection = newest.length
-    ? `
-        <section class="store-section" aria-labelledby="newest-products-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Newest on the Shelf</p>
-            <h2 id="newest-products-heading">Freshest catalog pages</h2>
-          </div>
-          <div class="product-card-grid">
-            ${newest.map((product) => renderProductCard(product)).join("")}
-          </div>
-        </section>
-      `
-    : "";
-  const comingSoonSection = comingSoon.length
-    ? `
-        <section class="store-section" aria-labelledby="coming-soon-products-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Coming Soon</p>
-            <h2 id="coming-soon-products-heading">Titles preparing to step onto the shelf</h2>
-          </div>
-          <div class="product-card-grid">
-            ${comingSoon.map((product) => renderProductCard(product)).join("")}
-          </div>
-        </section>
-      `
-    : "";
-  const availableDirectSection = availableDirect.length
-    ? `
-        <section class="store-section" aria-labelledby="available-direct-products-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Available Direct</p>
-            <h2 id="available-direct-products-heading">Direct-sale ready titles</h2>
-          </div>
-          <div class="product-card-grid">
-            ${availableDirect.map((product) => renderProductCard(product)).join("")}
-          </div>
-        </section>
-      `
-    : "";
-
-  const browseBlocks = [
-    {
-      title: "Browse by System",
-      items: indexes.systems.map((system) => renderBrowseCard(system.name, `${system.products.length} title${system.products.length === 1 ? "" : "s"}`, `/store/systems/${system.slug}/`))
-    },
-    {
-      title: "Browse by Author",
-      items: indexes.authors.map((author) => renderBrowseCard(author.name, `${author.products.length} title${author.products.length === 1 ? "" : "s"}`, `/store/authors/${author.slug}/`))
-    },
-    {
-      title: "Browse by Product Line",
-      items: indexes.lines.map((line) => renderBrowseCard(line.name, `${line.products.length} title${line.products.length === 1 ? "" : "s"}`, `/store/lines/${line.slug}/`))
-    },
-    {
-      title: "Browse by Status",
-      items: indexes.statuses.map((status) => renderBrowseCard(status.label, `${status.products.length} title${status.products.length === 1 ? "" : "s"}`, `/store/status/${status.slug}/`))
-    }
-  ];
+  const availableDirect = filterByStatus(products, "available-direct");
+  const previewAvailable = filterByStatus(products, "preview-available");
+  const comingSoon = filterByStatus(products, "coming-soon");
 
   return renderLayout({
-    pageTitle: `${STORE_TITLE} | Publisher-Owned Digital Shelf`,
-    description: "A publisher-owned digital shelf for Tobacco Road Games titles, previews, status pages, and direct-release catalog browsing.",
+    pageTitle: `${STORE_TITLE} | Digital Roleplaying Titles and Previews`,
+    description: "Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games.",
     canonicalPath: "/store/",
-    ogImage: featured.assetSet.cover,
+    ogImage: featured?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
     structuredData: renderWebPageSchema({
       name: STORE_TITLE,
-      description: "A publisher-owned Tobacco Road Games catalog and direct storefront staging area.",
+      description: "Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games.",
       url: `${BASE_URL}/store/`
     }),
     content: `
@@ -253,27 +266,19 @@ function renderStoreHome(products, indexes) {
 
         <section class="store-hero store-section" aria-labelledby="store-home-heading">
           <div class="store-hero__copy">
-            <p class="section-heading__kicker">Publisher-Owned Shelf</p>
-            <h1 id="store-home-heading">The Tobacco Road Games store is taking shape.</h1>
-            <p class="hero__lead">
-              This storefront is built to keep the catalog, the voice, and the delivery under the same roof. The first
-              release focuses on durable product pages, catalog browsing, and a shelf that feels like the workshop it came from.
-            </p>
+            <p class="section-heading__kicker">Store</p>
+            <h1 id="store-home-heading">Tobacco Road Games Store</h1>
+            <p class="hero__lead">Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games. New direct-release titles will appear here first as the catalog is rebuilt.</p>
             <div class="hero__actions">
-              <a class="button button--primary" href="/store/catalog/">Browse Full Catalog</a>
-              <a class="button button--secondary" href="/store/products/sirrocans/">See Sirrocans</a>
+              <a class="button button--primary" href="/store/catalog/">Browse the Catalog</a>
+              ${featured ? `<a class="button button--secondary" href="${featured.url}">Meet ${escapeHtml(featured.title)}</a>` : ""}
             </div>
           </div>
           <aside class="store-hero__aside">
             <article class="note-card">
-              <p class="note-card__label">Build Status</p>
-              <h2>Direct catalog online</h2>
-              <p>Product pages, previews, status badges, and browsing surfaces now live off a central registry instead of hand-edited cards.</p>
-            </article>
-            <article class="note-card">
-              <p class="note-card__label">Next Up</p>
-              <h2>Direct purchase links</h2>
-              <p>Payment and fulfillment links can be attached product by product without tearing the shelf apart again.</p>
+              <p class="note-card__label">Direct Storefront</p>
+              <h2>Digital titles, previews, and releases</h2>
+              <p>Product pages lead the store, with clear buyer facts, useful previews, and direct-release titles added as the catalog returns.</p>
             </article>
             <article class="creation-standard-placard">
               <p class="creation-standard-title">Our Creation Standard</p>
@@ -284,40 +289,47 @@ function renderStoreHome(products, indexes) {
           </aside>
         </section>
 
-        <section class="store-feature store-section" aria-labelledby="featured-product-heading">
+        ${featured ? `
+          <section class="store-feature store-section" aria-labelledby="featured-product-heading">
+            <div class="section-heading">
+              <p class="section-heading__kicker">Featured Title</p>
+              <h2 id="featured-product-heading">${escapeHtml(featured.title)}</h2>
+              <p>${escapeHtml(featured.shortDescription)}</p>
+            </div>
+            ${renderFeatureSpotlight(featured)}
+          </section>
+        ` : ""}
+
+        <section class="store-section" aria-labelledby="purchase-promise-heading">
           <div class="section-heading">
-            <p class="section-heading__kicker">Featured Product</p>
-            <h2 id="featured-product-heading">${escapeHtml(featured.title)}</h2>
-            <p>${escapeHtml(featured.shortDescription)}</p>
+            <p class="section-heading__kicker">Store Policy</p>
+            <h2 id="purchase-promise-heading">Digital Purchase Promise</h2>
           </div>
-          ${renderFeatureSpotlight(featured)}
+          <div class="about__panel">
+            <p>Tobacco Road Games sells digital roleplaying material for personal tabletop use.</p>
+            <p>Files are provided without DRM.</p>
+            <p>Product pages show format, version, and update information.</p>
+            <p>If something goes wrong with delivery, contact Tobacco Road Games for help.</p>
+          </div>
         </section>
 
-        ${newestSection}
-        ${comingSoonSection}
-        ${availableDirectSection}
+        ${renderStoreSection("available-direct-products-heading", "Available Direct", "Available Direct", availableDirect)}
+        ${renderStoreSection("preview-available-products-heading", "Preview Available", "Preview Available", previewAvailable)}
+        ${renderStoreSection("coming-soon-products-heading", "Coming Soon", "Coming Soon", comingSoon)}
 
-        ${browseBlocks.map((block) => `
-          <section class="store-section" aria-labelledby="${slugify(block.title)}-heading">
-            <div class="section-heading">
-              <p class="section-heading__kicker">Browse</p>
-              <h2 id="${slugify(block.title)}-heading">${escapeHtml(block.title)}</h2>
-            </div>
-            <div class="browse-card-grid">
-              ${block.items.join("")}
-            </div>
-          </section>
-        `).join("")}
+        ${renderBrowseSection("Browse by Game System", indexes.systems, "systems")}
+        ${renderBrowseSection("Browse by Product Line", indexes.lines, "lines")}
+        ${renderBrowseSection("Browse by Author", indexes.authors, "authors")}
 
         <section class="store-section store-callout" aria-labelledby="catalog-link-heading">
           <div class="store-callout__copy">
-            <p class="section-heading__kicker">Full Shelf</p>
-            <h2 id="catalog-link-heading">Need the whole catalog at once?</h2>
-            <p>The catalog page carries every product in the registry, plus title search, filters, and sort controls.</p>
+            <p class="section-heading__kicker">Catalog</p>
+            <h2 id="catalog-link-heading">Search and browse the full Tobacco Road Games catalog.</h2>
+            <p>Search titles by author, game system, product line, status, format, and price type from one clean catalog page.</p>
           </div>
           <div class="store-callout__panel">
             <p class="note-card__label">Catalog Access</p>
-            <a class="button button--primary button--wide" href="/store/catalog/">Open the Full Catalog</a>
+            <a class="button button--primary button--wide" href="/store/catalog/">Open the Catalog</a>
           </div>
         </section>
       </main>
@@ -330,15 +342,15 @@ function renderCatalogPage(products, indexes) {
   const initials = buildTitleIndex(sortedProducts);
 
   return renderLayout({
-    pageTitle: `${STORE_TITLE} Catalog | Search, Sort, and Browse`,
-    description: "Browse the Tobacco Road Games catalog by title, author, game system, product line, and status.",
+    pageTitle: `${STORE_TITLE} Catalog | Search and Browse Titles`,
+    description: "Search and browse Tobacco Road Games titles by author, game system, product line, release status, and title.",
     canonicalPath: "/store/catalog/",
-    ogImage: sortedProducts[0].assetSet.cover,
+    ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
     extraScripts: ["/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
-      description: "A browseable Tobacco Road Games catalog with search and filters.",
+      description: "Search and browse Tobacco Road Games titles by author, game system, product line, release status, and title.",
       url: `${BASE_URL}/store/catalog/`
     }),
     content: `
@@ -347,14 +359,14 @@ function renderCatalogPage(products, indexes) {
 
         <section class="store-section" aria-labelledby="catalog-heading">
           <div class="section-heading">
-            <p class="section-heading__kicker">Full Catalog</p>
-            <h1 id="catalog-heading">Every title in the registry</h1>
-            <p>Search by title, scan by line, sort by freshness, and filter the shelf without hardcoded cards.</p>
+            <p class="section-heading__kicker">Catalog</p>
+            <h1 id="catalog-heading">Search and browse Tobacco Road Games titles.</h1>
+            <p>Browse by author, game system, product line, release status, format, and price type.</p>
           </div>
 
           <div class="catalog-controls" id="catalog-controls">
             <label class="catalog-control">
-              <span>Search</span>
+              <span>Title Search</span>
               <input id="catalog-search" class="dock-input" type="search" placeholder="Search titles, authors, systems, tags">
             </label>
 
@@ -369,7 +381,7 @@ function renderCatalogPage(products, indexes) {
             <label class="catalog-control">
               <span>Game System</span>
               <select id="catalog-system" class="dock-input">
-                <option value="">All Systems</option>
+                <option value="">All Game Systems</option>
                 ${indexes.systems.map((system) => `<option value="${escapeAttribute(system.slug)}">${escapeHtml(system.name)}</option>`).join("")}
               </select>
             </label>
@@ -391,17 +403,35 @@ function renderCatalogPage(products, indexes) {
             </label>
 
             <label class="catalog-control">
+              <span>Format</span>
+              <select id="catalog-format" class="dock-input">
+                <option value="">All Formats</option>
+                ${indexes.formats.map((format) => `<option value="${escapeAttribute(format.slug)}">${escapeHtml(format.name)}</option>`).join("")}
+              </select>
+            </label>
+
+            <label class="catalog-control">
+              <span>Price Type</span>
+              <select id="catalog-price-type" class="dock-input">
+                <option value="">All Price Types</option>
+                ${indexes.priceTypes.map((entry) => `<option value="${escapeAttribute(entry.slug)}">${escapeHtml(entry.label)}</option>`).join("")}
+              </select>
+            </label>
+
+            <label class="catalog-control">
               <span>Sort</span>
               <select id="catalog-sort" class="dock-input">
-                <option value="title">Title</option>
+                <option value="title">Title A to Z</option>
                 <option value="newest">Newest</option>
-                <option value="updated">Last Updated</option>
+                <option value="updated">Recently Updated</option>
+                <option value="price-low">Price Low to High</option>
+                <option value="price-high">Price High to Low</option>
               </select>
             </label>
           </div>
 
           <div class="catalog-tools">
-            <p id="catalog-count" class="catalog-count">${sortedProducts.length} titles on the shelf</p>
+            <p id="catalog-count" class="catalog-count">${sortedProducts.length} titles in the catalog</p>
             <div class="title-index" aria-label="Title index">
               ${initials.map((entry) => `<a class="title-index__link" href="#product-${escapeAttribute(entry.slug)}">${escapeHtml(entry.letter)}</a>`).join("")}
             </div>
@@ -422,12 +452,60 @@ function renderProductPage(product, products) {
   const relatedProducts = resolveRelatedProducts(product, products);
   const buyUi = renderBuyUi(product);
   const previewSection = renderPreviewSection(product);
+  const detailsItems = [
+    renderIdentityItem("Author", product.authors.join(", ")),
+    renderIdentityItem("Game System", product.gameSystem),
+    renderIdentityItem("Product Line", product.productLine),
+    renderIdentityItem("Format", product.format.join(", ") || "TBD"),
+    renderIdentityItem("Pages", product.pageCount ? String(product.pageCount) : "TBD"),
+    renderIdentityItem("Status", product.statusLabel),
+    renderIdentityItem("Version", product.version || "TBD"),
+    renderIdentityItem("Last Updated", product.lastUpdated || "TBD"),
+    renderIdentityItem("Delivery", renderDeliveryLabel(product)),
+    renderIdentityItem("Price", renderDisplayPrice(product))
+  ];
+
+  const detailPanels = [
+    renderFactCard("What You Are Getting", renderPurchaseSummary(product)),
+    renderFactCard("Files Included", renderFileListSummary(product)),
+    renderDigitalPurchasePromise()
+  ];
+
+  const afterPurchaseSection = buyUi.afterPurchase
+    ? `
+      <section class="store-section" aria-labelledby="after-purchase-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">After Purchase</p>
+          <h2 id="after-purchase-heading">After Purchase</h2>
+        </div>
+        <div class="product-support-grid">
+          ${buyUi.afterPurchase}
+          ${renderSupportCard()}
+        </div>
+      </section>
+    `
+    : "";
+
+  const creationSection = product.creationMethod
+    ? `
+      <section class="store-section" aria-labelledby="creation-notes-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Creation Notes</p>
+          <h2 id="creation-notes-heading">Creation Notes</h2>
+        </div>
+        <div class="about__panel">
+          <p>${escapeHtml(product.creationMethod)}</p>
+        </div>
+      </section>
+    `
+    : "";
+
   const legalSection = product.legalNote
     ? `
-      <section class="store-section" aria-labelledby="legal-note-heading">
+      <section class="store-section" aria-labelledby="legal-notes-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Legal Note</p>
-          <h2 id="legal-note-heading">System and publication note</h2>
+          <p class="section-heading__kicker">Legal Notes</p>
+          <h2 id="legal-notes-heading">Legal Notes</h2>
         </div>
         <div class="about__panel">
           <p>${escapeHtml(product.legalNote)}</p>
@@ -436,34 +514,20 @@ function renderProductPage(product, products) {
     `
     : "";
 
-  const structuredData = [
-    renderBreadcrumbSchema([
-      { label: "Store", href: "/store/" },
-      { label: "Catalog", href: "/store/catalog/" },
-      { label: product.title, href: product.url }
-    ]),
-    renderProductSchema(product)
-  ].filter(Boolean);
-
-  const relatedMarkup = relatedProducts.length
-    ? `
-          <div class="product-card-grid">
-            ${relatedProducts.map((relatedProduct) => renderProductCard(relatedProduct)).join("")}
-          </div>
-      `
-    : `
-          <div class="about__panel">
-            <p>More shelfmates are still being staged. This title will gain company as the catalog grows.</p>
-          </div>
-      `;
-
   return renderLayout({
     pageTitle: `${product.title} | ${STORE_TITLE}`,
     description: product.shortDescription,
     canonicalPath: product.url,
     ogImage: product.assetSet.cover,
     currentNav: "store",
-    structuredData,
+    structuredData: [
+      renderBreadcrumbSchema([
+        { label: "Store", href: "/store/" },
+        { label: "Catalog", href: "/store/catalog/" },
+        { label: product.title, href: product.url }
+      ]),
+      renderProductSchema(product)
+    ],
     content: `
       <main id="top">
         ${renderBreadcrumbs([
@@ -481,62 +545,60 @@ function renderProductPage(product, products) {
             <p class="section-heading__kicker">${escapeHtml(product.gameSystem)}</p>
             <h1 id="product-title">${escapeHtml(product.title)}</h1>
             <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
-            <p class="hero__lead">${escapeHtml(product.shortDescription)}</p>
             <div class="product-hero__meta">
-              ${product.price ? `<span>${escapeHtml(formatPrice(product))}</span>` : `<span>${escapeHtml(product.statusLabel)}</span>`}
-              ${product.pageCount ? `<span>${escapeHtml(String(product.pageCount))} pages</span>` : ""}
-              ${product.format.length ? `<span>${escapeHtml(product.format.join(", "))}</span>` : ""}
+              <span>${escapeHtml(renderDisplayPrice(product))}</span>
+              <span>${escapeHtml(product.format.join(", ") || "Format TBD")}</span>
+              <span>${escapeHtml(product.pageCount ? `${product.pageCount} pages` : "Page count TBD")}</span>
+              <span>${escapeHtml(product.productLine)}</span>
+              <span>${escapeHtml(product.version || "Version TBD")}</span>
+              <span>${escapeHtml(product.lastUpdated || "Update date TBD")}</span>
             </div>
             <div class="hero__actions">
               ${buyUi.primary}
-              ${product.assetSet.previewPdf ? `<a class="button button--secondary" href="${escapeAttribute(product.assetSet.previewPdf)}" target="_blank" rel="noopener noreferrer">Preview PDF</a>` : ""}
+              ${product.assetSet.previewPdf ? `<a class="button button--secondary" href="${escapeAttribute(product.assetSet.previewPdf)}" target="_blank" rel="noopener noreferrer">Open Preview PDF</a>` : ""}
             </div>
-            ${buyUi.note}
+            <p class="fulfillment-note">${escapeHtml(product.shortDescription)}</p>
           </div>
         </section>
 
-        <section class="store-section" aria-labelledby="identity-strip-heading">
+        <section class="store-section" aria-labelledby="details-heading">
           <div class="section-heading">
-            <p class="section-heading__kicker">Product Identity</p>
-            <h2 id="identity-strip-heading">At-a-glance details</h2>
+            <p class="section-heading__kicker">Details</p>
+            <h2 id="details-heading">Details</h2>
           </div>
           <dl class="identity-strip">
-            ${renderIdentityItem("Author", product.authors.join(", "))}
-            ${renderIdentityItem("Publisher", product.publisher)}
-            ${renderIdentityItem("Game System", product.gameSystem)}
-            ${renderIdentityItem("Product Line", product.productLine)}
-            ${renderIdentityItem("Format", product.format.join(", ") || "TBD")}
-            ${renderIdentityItem("Version", product.version || "TBD")}
-            ${renderIdentityItem("Release Date", product.releaseDate || "TBD")}
-            ${renderIdentityItem("Last Updated", product.lastUpdated || "TBD")}
+            ${detailsItems.join("")}
           </dl>
+          <div class="product-support-grid">
+            ${detailPanels.join("")}
+          </div>
         </section>
 
-        <section class="store-section" aria-labelledby="short-pitch-heading">
+        <section class="store-section" aria-labelledby="overview-heading">
           <div class="section-heading">
-            <p class="section-heading__kicker">Short Pitch</p>
-            <h2 id="short-pitch-heading">Why this title belongs on the table</h2>
+            <p class="section-heading__kicker">Overview</p>
+            <h2 id="overview-heading">Overview</h2>
           </div>
           <div class="about__panel">
             <p>${escapeHtml(product.shortDescription)}</p>
           </div>
         </section>
 
-        <section class="store-section" aria-labelledby="long-description-heading">
+        <section class="store-section" aria-labelledby="about-book-heading">
           <div class="section-heading">
-            <p class="section-heading__kicker">Long Description</p>
-            <h2 id="long-description-heading">What this book is built to do</h2>
+            <p class="section-heading__kicker">About This Book</p>
+            <h2 id="about-book-heading">About This Book</h2>
           </div>
           <div class="about__panel">
-            <p>${escapeHtml(product.longDescription)}</p>
+            <p>${escapeHtml(product.longDescription || product.shortDescription)}</p>
           </div>
         </section>
 
         ${product.features.length ? `
-          <section class="store-section" aria-labelledby="features-heading">
+          <section class="store-section" aria-labelledby="contents-heading">
             <div class="section-heading">
               <p class="section-heading__kicker">What's Inside</p>
-              <h2 id="features-heading">Shelf contents</h2>
+              <h2 id="contents-heading">What's Inside</h2>
             </div>
             <ul class="feature-list">
               ${product.features.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}
@@ -545,27 +607,16 @@ function renderProductPage(product, products) {
         ` : ""}
 
         ${previewSection}
-
-        ${buyUi.fulfillment}
-
-        <section class="store-section" aria-labelledby="creation-method-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Creation and Disclosure</p>
-            <h2 id="creation-method-heading">How this title is made</h2>
-          </div>
-          <div class="about__panel">
-            <p>${escapeHtml(product.creationMethod)}</p>
-          </div>
-        </section>
-
+        ${afterPurchaseSection}
+        ${creationSection}
         ${legalSection}
 
         <section class="store-section" aria-labelledby="related-titles-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Related Titles</p>
-            <h2 id="related-titles-heading">More from the same shelf-road</h2>
+            <h2 id="related-titles-heading">Related Titles</h2>
           </div>
-          ${relatedMarkup}
+          ${renderRelatedProducts(relatedProducts)}
         </section>
       </main>
     `
@@ -598,6 +649,41 @@ function renderCollectionPage({ title, kicker, description, canonicalPath, bread
   });
 }
 
+function renderBundlePlanningPage(bundleRules, products) {
+  const eligibleProducts = products.filter((product) => isBundleEligible(product, bundleRules));
+  return renderLayout({
+    pageTitle: `${bundleRules.bundleName} | ${STORE_TITLE}`,
+    description: `${bundleRules.bundleName} planning page for future Tobacco Road Games seasonal bundle events.`,
+    canonicalPath: "/store/bundles/bundle-what-you-want/",
+    ogImage: "/assets/logo.png",
+    currentNav: "store",
+    metaRobots: "noindex, nofollow",
+    content: `
+      <main id="top">
+        ${renderBreadcrumbs([
+          { label: "Store", href: "/store/" },
+          { label: "Bundles" },
+          { label: bundleRules.bundleName }
+        ])}
+
+        <section class="store-section" aria-labelledby="bundle-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Seasonal Bundle Planning</p>
+            <h1 id="bundle-heading">${escapeHtml(bundleRules.bundleName)}</h1>
+            <p>This planning page is kept off the public store navigation until the seasonal bundle is activated.</p>
+          </div>
+          <div class="about__panel">
+            <p>Active now: ${bundleRules.active ? "Yes" : "No"}</p>
+            <p>Eligible item count: ${eligibleProducts.length}</p>
+            <p>Discount ladder: ${Object.entries(bundleRules.discounts).map(([count, discount]) => `${count} items, ${discount} percent off`).join(" | ")}</p>
+            <p>Season: ${escapeHtml(bundleRules.season || "seasonal")}</p>
+          </div>
+        </section>
+      </main>
+    `
+  });
+}
+
 function renderLayout({
   pageTitle,
   description,
@@ -606,6 +692,7 @@ function renderLayout({
   currentNav,
   structuredData,
   extraScripts = [],
+  metaRobots = "",
   content
 }) {
   const canonicalUrl = `${BASE_URL}${canonicalPath}`;
@@ -632,6 +719,7 @@ function renderLayout({
   <meta property="og:url" content="${escapeAttribute(canonicalUrl)}">
   <meta property="og:image" content="${escapeAttribute(resolvedOgImage)}">
   <meta name="theme-color" content="#120c08">
+  ${metaRobots ? `<meta name="robots" content="${escapeAttribute(metaRobots)}">` : ""}
   <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
   <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
@@ -644,7 +732,7 @@ function renderLayout({
         <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Publisher-owned digital shelf and workshop catalog</span>
+          <span class="brand__tag">Publisher-owned store and workshop catalog</span>
         </div>
       </a>
 
@@ -669,7 +757,7 @@ function renderLayout({
 function renderStoreNav(currentNav) {
   const items = [
     { key: "home", href: "/", label: "Home" },
-    { key: "store", href: "/store/", label: "Storefront" },
+    { key: "store", href: "/store/", label: "Store" },
     { key: "catalog", href: "/store/catalog/", label: "Catalog" },
     { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
   ];
@@ -691,10 +779,10 @@ function renderFeatureSpotlight(product) {
         <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(product.statusLabel)}</span>
         <h3>${escapeHtml(product.title)}</h3>
         <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
-        <p>${escapeHtml(product.longDescription)}</p>
+        <p>${escapeHtml(product.shortDescription)}</p>
         <div class="hero__actions">
           <a class="button button--primary" href="${product.url}">Open Product Page</a>
-          <a class="button button--secondary" href="/store/catalog/">Browse the Shelf</a>
+          <a class="button button--secondary" href="/store/catalog/">Open the Catalog</a>
         </div>
       </div>
     </article>
@@ -710,7 +798,8 @@ function renderProductCard(product, options = {}) {
     product.gameSystem,
     product.productLine,
     product.tags.join(" "),
-    product.statusLabel
+    product.statusLabel,
+    product.priceTypeLabel
   ].join(" ").toLowerCase();
 
   const dataset = withDataset
@@ -721,6 +810,9 @@ function renderProductCard(product, options = {}) {
         `data-system="${escapeAttribute(product.gameSystemSlug)}"`,
         `data-line="${escapeAttribute(product.productLineSlug)}"`,
         `data-status="${escapeAttribute(product.status)}"`,
+        `data-format="${escapeAttribute(product.format.map(slugify).join("|"))}"`,
+        `data-price-type="${escapeAttribute(slugify(product.priceTypeLabel))}"`,
+        `data-price-cents="${escapeAttribute(String(product.priceCents ?? -1))}"`,
         `data-release="${escapeAttribute(String(product.releaseStamp))}"`,
         `data-updated="${escapeAttribute(String(product.updatedStamp))}"`,
         `data-search="${escapeAttribute(searchText)}"`
@@ -729,22 +821,25 @@ function renderProductCard(product, options = {}) {
   const cardId = includeAnchorId ? `id="product-${escapeAttribute(product.slug)}"` : "";
 
   return `
-    <a class="product-card" ${cardId} href="${product.url}" ${dataset}>
+    <article class="product-card" ${cardId} ${dataset}>
       <div class="product-card__media">
         <img src="${escapeAttribute(product.assetSet.thumb)}" alt="${escapeAttribute(product.title)} thumbnail">
       </div>
       <div class="product-card__body">
         <div class="product-card__topline">
           <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(product.statusLabel)}</span>
-          ${product.price ? `<span class="product-card__price">${escapeHtml(formatPrice(product))}</span>` : ""}
+          <span class="product-card__price">${escapeHtml(renderCardPrice(product))}</span>
         </div>
         <h3 class="product-card__title">${escapeHtml(product.title)}</h3>
         <p class="product-card__subtitle">${escapeHtml(product.subtitle)}</p>
         <p class="product-card__meta">${escapeHtml(product.authors.join(", "))}</p>
         <p class="product-card__meta">${escapeHtml(product.gameSystem)} | ${escapeHtml(product.productLine)}</p>
         <p class="product-card__meta">${escapeHtml(product.format.join(", ") || "Format TBD")}</p>
+        <div class="product-card__actions">
+          <a class="button button--secondary product-card__button" href="${product.url}">View Product</a>
+        </div>
       </div>
-    </a>
+    </article>
   `;
 }
 
@@ -754,6 +849,42 @@ function renderBrowseCard(title, note, href) {
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(note)}</p>
     </a>
+  `;
+}
+
+function renderStoreSection(id, kicker, title, products) {
+  if (!products.length) {
+    return "";
+  }
+
+  return `
+    <section class="store-section" aria-labelledby="${id}">
+      <div class="section-heading">
+        <p class="section-heading__kicker">${escapeHtml(kicker)}</p>
+        <h2 id="${id}">${escapeHtml(title)}</h2>
+      </div>
+      <div class="product-card-grid">
+        ${products.map((product) => renderProductCard(product)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderBrowseSection(title, entries, segment) {
+  if (!entries.length) {
+    return "";
+  }
+
+  return `
+    <section class="store-section" aria-labelledby="${slugify(title)}-heading">
+      <div class="section-heading">
+        <p class="section-heading__kicker">Browse</p>
+        <h2 id="${slugify(title)}-heading">${escapeHtml(title)}</h2>
+      </div>
+      <div class="browse-card-grid">
+        ${entries.map((entry) => renderBrowseCard(entry.name, `${entry.products.length} title${entry.products.length === 1 ? "" : "s"}`, `/store/${segment}/${entry.slug}/`)).join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -770,7 +901,7 @@ function renderPreviewSection(product) {
     <section class="store-section" aria-labelledby="preview-heading">
       <div class="section-heading">
         <p class="section-heading__kicker">Preview</p>
-        <h2 id="preview-heading">See inside before the shelf closes</h2>
+        <h2 id="preview-heading">Preview</h2>
       </div>
       <div class="preview-panel">
         ${teaser ? `
@@ -792,7 +923,7 @@ function renderPreviewSection(product) {
         ` : ""}
         ${sample ? `
           <div class="hero__actions">
-            <a class="button button--secondary" href="${escapeAttribute(sample)}" target="_blank" rel="noopener noreferrer">Open Sample PDF</a>
+            <a class="button button--secondary" href="${escapeAttribute(sample)}" target="_blank" rel="noopener noreferrer">Open Preview PDF</a>
           </div>
         ` : ""}
       </div>
@@ -801,76 +932,72 @@ function renderPreviewSection(product) {
 }
 
 function renderBuyUi(product) {
-  const note = product.fulfillmentNote
-    ? `<p class="fulfillment-note">${escapeHtml(product.fulfillmentNote)}</p>`
-    : "";
+  const active = isBuyModeActive(product.buyMode);
+  const supportLink = `<a class="inline-link" href="${SUPPORT_URL}">Questions about an order? Contact Tobacco Road Games.</a>`;
 
-  if (product.buyMode === "paypal-manual" && product.buyUrl) {
+  if (product.buyMode === "fixed-price" && product.buyUrl) {
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Buy PDF</a>`,
-      note,
-      fulfillment: note ? `
-        <section class="store-section" aria-labelledby="fulfillment-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Fulfillment</p>
-            <h2 id="fulfillment-heading">How delivery works</h2>
-          </div>
-          <div class="about__panel">
-            ${note}
-          </div>
-        </section>
-      ` : ""
+      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Buy Now</a>`,
+      afterPurchase: `
+        <article class="note-card">
+          <p class="note-card__label">After Purchase</p>
+          <p>Digital orders are currently fulfilled by email after payment confirmation. You will receive the listed files or download link at the email address associated with your order.</p>
+          <p>${supportLink}</p>
+        </article>
+      `,
+      active
+    };
+  }
+
+  if (product.buyMode === "manual-invoice" && product.buyUrl) {
+    return {
+      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Order Direct</a>`,
+      afterPurchase: `
+        <article class="note-card">
+          <p class="note-card__label">After Purchase</p>
+          <p>Digital orders are currently fulfilled by email after payment confirmation. You will receive the listed files or download link at the email address associated with your order.</p>
+          <p>${escapeHtml(product.fulfillmentNote || "Manual fulfillment details will be confirmed when the order is received.")}</p>
+          <p>${supportLink}</p>
+        </article>
+      `,
+      active
     };
   }
 
   if (product.buyMode === "free-download" && product.buyUrl) {
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}">Download</a>`,
-      note,
-      fulfillment: ""
+      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}">Download Free</a>`,
+      afterPurchase: `
+        <article class="note-card">
+          <p class="note-card__label">After Purchase</p>
+          <p>Your download should begin immediately from the product page or linked file. Version and update information remain listed here for future reference.</p>
+          <p>${supportLink}</p>
+        </article>
+      `,
+      active
     };
   }
 
-  if (product.buyMode === "external-link" && product.buyUrl) {
+  if (product.buyMode === "pay-what-you-want" && product.buyUrl) {
+    const guidance = renderPayWhatYouWantGuidance(product);
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Visit Product Page</a>`,
-      note,
-      fulfillment: note ? `
-        <section class="store-section" aria-labelledby="fulfillment-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Fulfillment</p>
-            <h2 id="fulfillment-heading">Delivery note</h2>
-          </div>
-          <div class="about__panel">
-            ${note}
-          </div>
-        </section>
-      ` : ""
-    };
-  }
-
-  if (product.buyMode === "paypal-manual" && !product.buyUrl) {
-    return {
-      primary: `<span class="button button--secondary button--pending" aria-disabled="true">Purchase Setup Pending</span>`,
-      note,
-      fulfillment: note ? `
-        <section class="store-section" aria-labelledby="fulfillment-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Fulfillment</p>
-            <h2 id="fulfillment-heading">Direct delivery plan</h2>
-          </div>
-          <div class="about__panel">
-            ${note}
-          </div>
-        </section>
-      ` : ""
+      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Pay What You Want</a>`,
+      afterPurchase: `
+        <article class="note-card">
+          <p class="note-card__label">After Purchase</p>
+          <p>Digital orders are currently fulfilled by email after payment confirmation. You will receive the listed files or download link at the email address associated with your order.</p>
+          ${guidance ? `<p>${escapeHtml(guidance)}</p>` : ""}
+          <p>${supportLink}</p>
+        </article>
+      `,
+      active
     };
   }
 
   return {
     primary: `<span class="button button--secondary button--pending" aria-disabled="true">${escapeHtml(product.statusLabel)}</span>`,
-    note: "",
-    fulfillment: ""
+    afterPurchase: "",
+    active
   };
 }
 
@@ -947,12 +1074,12 @@ function renderProductSchema(product) {
     url: `${BASE_URL}${product.url}`
   };
 
-  if (product.price && product.currency && product.buyUrl) {
+  if (product.priceCents !== null && product.currency && product.buyUrl && isBuyModeActive(product.buyMode)) {
     schema.offers = {
       "@type": "Offer",
-      price: product.price,
+      price: centsToDecimal(product.priceCents),
       priceCurrency: product.currency,
-      availability: "https://schema.org/InStock",
+      availability: product.status === "available-direct" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
       url: product.buyUrl
     };
   }
@@ -960,7 +1087,7 @@ function renderProductSchema(product) {
   return JSON.stringify(schema);
 }
 
-function renderStoreSitemap(products, indexes) {
+function renderStoreSitemap(products, indexes, bundleRules) {
   const urls = [
     "/store/",
     "/store/catalog/",
@@ -970,6 +1097,10 @@ function renderStoreSitemap(products, indexes) {
     ...indexes.lines.map((line) => `/store/lines/${line.slug}/`),
     ...indexes.statuses.map((status) => `/store/status/${status.slug}/`)
   ];
+
+  if (bundleRules.active) {
+    urls.push("/store/bundles/bundle-what-you-want/");
+  }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -996,17 +1127,29 @@ function resolveRelatedProducts(product, products) {
 }
 
 function chooseFeaturedProduct(products) {
-  return products.find((product) => product.status === "available-direct") || sortProducts(products, "newest")[0];
+  return products.find((product) => product.status === "available-direct")
+    || products.find((product) => product.status === "preview-available")
+    || sortProducts(products, "updated")[0]
+    || null;
 }
 
 function sortProducts(products, mode) {
   const list = [...products];
+
   if (mode === "newest") {
     return list.sort((a, b) => (b.releaseStamp || b.updatedStamp) - (a.releaseStamp || a.updatedStamp));
   }
 
   if (mode === "updated") {
     return list.sort((a, b) => b.updatedStamp - a.updatedStamp);
+  }
+
+  if (mode === "price-low") {
+    return list.sort((a, b) => comparePriceCents(a.priceCents, b.priceCents));
+  }
+
+  if (mode === "price-high") {
+    return list.sort((a, b) => comparePriceCents(b.priceCents, a.priceCents));
   }
 
   return list.sort((a, b) => a.title.localeCompare(b.title));
@@ -1061,13 +1204,259 @@ function parseDate(value) {
 }
 
 function formatPrice(product) {
-  if (!product.price) {
-    return "";
+  if (product.priceCents !== null) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: product.currency || "USD"
+    }).format(centsToDecimal(product.priceCents));
   }
+
+  if (product.price) {
+    return product.price;
+  }
+
+  return "";
+}
+
+function renderCardPrice(product) {
+  if (product.buyMode === "pay-what-you-want") {
+    return "Pay What You Want";
+  }
+  if (product.buyMode === "free-download") {
+    return "Free Download";
+  }
+  if (product.priceCents !== null) {
+    return formatPrice(product);
+  }
+  return product.statusLabel;
+}
+
+function renderDisplayPrice(product) {
+  if (product.buyMode === "pay-what-you-want") {
+    const minimum = product.minimumPriceCents !== null ? `Minimum ${formatCents(product.minimumPriceCents, product.currency)}` : "";
+    const suggested = product.suggestedPriceCents !== null ? `Suggested ${formatCents(product.suggestedPriceCents, product.currency)}` : "";
+    return [product.statusLabel, minimum, suggested].filter(Boolean).join(" | ");
+  }
+
+  if (product.buyMode === "free-download") {
+    return "Free Download";
+  }
+
+  if (product.priceCents !== null) {
+    return formatPrice(product);
+  }
+
+  return product.statusLabel;
+}
+
+function renderDeliveryLabel(product) {
+  if (product.buyMode === "free-download") {
+    return "Direct download from the product page";
+  }
+  if (isBuyModeActive(product.buyMode)) {
+    return "Email delivery after payment confirmation";
+  }
+  if (product.buyMode === "preview-only") {
+    return "Preview only";
+  }
+  return "Not yet available for direct purchase";
+}
+
+function renderFileListSummary(product) {
+  if (product.fileList.length) {
+    return product.fileList.join(", ");
+  }
+  if (product.format.length) {
+    return `Files will be listed with the final ${product.format.join(", ")} release.`;
+  }
+  return "File list will be posted with the final release.";
+}
+
+function renderPurchaseSummary(product) {
+  if (product.buyMode === "preview-only") {
+    return `${product.title} is currently presented as a preview page with the listed digital format and preview assets.`;
+  }
+  if (product.buyMode === "coming-soon") {
+    return `${product.title} is listed here with current format, status, and update information while direct ordering is being prepared.`;
+  }
+  return `You are buying ${product.title} in the listed digital format${product.pageCount ? `, currently ${product.pageCount} pages` : ""}, for personal tabletop use.`;
+}
+
+function renderFactCard(title, body) {
+  return `
+    <article class="note-card">
+      <p class="note-card__label">${escapeHtml(title)}</p>
+      <p>${escapeHtml(body)}</p>
+    </article>
+  `;
+}
+
+function renderDigitalPurchasePromise() {
+  return `
+    <article class="note-card">
+      <p class="note-card__label">Digital Purchase Promise</p>
+      <p>When you buy a digital title directly from Tobacco Road Games, you are buying access to the listed files for personal use at your table. If a file is updated, the product page will show the current version and update date.</p>
+    </article>
+  `;
+}
+
+function renderSupportCard() {
+  return `
+    <article class="note-card">
+      <p class="note-card__label">Order Support</p>
+      <p>If something goes wrong with delivery, contact Tobacco Road Games for help.</p>
+      <p><a class="inline-link" href="${SUPPORT_URL}">Questions about an order? Contact Tobacco Road Games.</a></p>
+    </article>
+  `;
+}
+
+function renderRelatedProducts(products) {
+  if (!products.length) {
+    return `
+      <div class="about__panel">
+        <p>More related titles will appear here as the catalog grows.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="product-card-grid">
+      ${products.map((product) => renderProductCard(product)).join("")}
+    </div>
+  `;
+}
+
+function renderPayWhatYouWantGuidance(product) {
+  const pieces = [];
+  if (product.minimumPriceCents !== null) {
+    pieces.push(`Minimum price ${formatCents(product.minimumPriceCents, product.currency)}`);
+  }
+  if (product.suggestedPriceCents !== null) {
+    pieces.push(`Suggested price ${formatCents(product.suggestedPriceCents, product.currency)}`);
+  }
+  return pieces.join(". ");
+}
+
+function filterByStatus(products, status) {
+  return products.filter((product) => product.status === status);
+}
+
+function collectIndex(map, slug, name, product, nameField = "name") {
+  if (!slug || !name) {
+    return;
+  }
+  if (!map.has(slug)) {
+    map.set(slug, { slug, [nameField]: name, name, products: [] });
+  }
+  map.get(slug).products.push(product);
+}
+
+function resolvePriceType(product) {
+  if (product.buyMode && PRICE_TYPE_LABELS[product.buyMode]) {
+    return product.buyMode;
+  }
+  if (product.priceCents !== null) {
+    return "fixed-price";
+  }
+  return product.status;
+}
+
+function isBuyModeActive(buyMode) {
+  return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
+}
+
+function inferBuyMode(product) {
+  if (product.status === "available-direct" && product.buyUrl) {
+    return "fixed-price";
+  }
+  if (product.status === "free-download") {
+    return "free-download";
+  }
+  if (product.status === "pay-what-you-want") {
+    return "pay-what-you-want";
+  }
+  if (product.status === "preview-available") {
+    return "preview-only";
+  }
+  if (product.status === "retired" || product.status === "legacy-not-for-sale") {
+    return "retired";
+  }
+  return "coming-soon";
+}
+
+function normalizeBuyMode(value) {
+  if (!value) {
+    return "coming-soon";
+  }
+  return LEGACY_BUY_MODE_MAP[value] || value;
+}
+
+function isBundleEligible(product, bundleRules) {
+  if (!bundleRules.active && !product.allowSeasonalBundle) {
+    return false;
+  }
+  if (!product.bundleEligible || product.excludeFromBundles) {
+    return false;
+  }
+  if (!product.allowSeasonalBundle) {
+    return false;
+  }
+  if (bundleRules.excludedStatuses.includes(product.status)) {
+    return false;
+  }
+  if (product.priceCents === null) {
+    return false;
+  }
+  return product.priceCents >= bundleRules.minimumEligiblePriceCents;
+}
+
+function comparePriceCents(left, right) {
+  const leftValue = left === null ? Number.POSITIVE_INFINITY : left;
+  const rightValue = right === null ? Number.POSITIVE_INFINITY : right;
+  return leftValue - rightValue;
+}
+
+function formatCents(cents, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: product.currency || "USD"
-  }).format(Number(product.price));
+    currency
+  }).format(centsToDecimal(cents));
+}
+
+function centsToDecimal(cents) {
+  return Number(cents) / 100;
+}
+
+function normalizeCents(centsValue, priceValue) {
+  if (Number.isInteger(centsValue)) {
+    return centsValue;
+  }
+  if (typeof centsValue === "string" && centsValue.trim() !== "") {
+    const asInt = Number.parseInt(centsValue, 10);
+    if (!Number.isNaN(asInt)) {
+      return asInt;
+    }
+  }
+  if (typeof priceValue === "string" && priceValue.trim() !== "") {
+    const asNumber = Number(priceValue);
+    if (!Number.isNaN(asNumber)) {
+      return Math.round(asNumber * 100);
+    }
+  }
+  return null;
+}
+
+function normalizeInteger(value, fallback) {
+  if (Number.isInteger(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
 }
 
 function ensureArray(value) {

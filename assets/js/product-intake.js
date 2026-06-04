@@ -3,8 +3,10 @@
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
     "preview-available": "Preview Available",
+    "preview-only": "Preview Only",
     "revised-edition-pending": "Revised Edition Pending",
     "legacy-edition": "Legacy Edition",
+    "legacy-not-for-sale": "Legacy Not For Sale",
     retired: "Retired",
     "free-download": "Free Download",
     "pay-what-you-want": "Pay What You Want"
@@ -93,6 +95,8 @@
     const productLine = fields.line.value.trim();
     const pageCountRaw = fields.pageCount.value.trim();
     const priceRaw = fields.price.value.trim();
+    const priceCents = priceRaw ? Math.round(Number(priceRaw) * 100) : null;
+    const formats = parseList(fields.format.value);
     const previewImagePaths = fields.previewFiles.files.length
       ? Array.from(fields.previewFiles.files).map((_file, index) => `/assets/products/${slug}/preview-${String(index + 1).padStart(2, "0")}.webp`)
       : [
@@ -111,9 +115,15 @@
       gameSystemSlug: slugify(gameSystem),
       productLine,
       productLineSlug: slugify(productLine),
-      format: parseList(fields.format.value),
+      format: formats,
+      fileList: formats.map((formatName) => `${title || "Untitled Product"} ${formatName}`),
       pageCount: pageCountRaw ? Number(pageCountRaw) : null,
       price: priceRaw,
+      priceCents,
+      minimumPrice: "",
+      minimumPriceCents: null,
+      suggestedPrice: "",
+      suggestedPriceCents: null,
       currency: fields.currency.value.trim() || "USD",
       status: fields.status.value,
       statusLabel: statusLabels[fields.status.value] || "Unavailable",
@@ -134,7 +144,14 @@
       version: fields.version.value.trim(),
       releaseDate: fields.releaseDate.value,
       lastUpdated: fields.lastUpdated.value,
-      relatedProducts: parseList(fields.related.value)
+      relatedProducts: parseList(fields.related.value),
+      libraryEligible: true,
+      updateEligible: true,
+      bundleEligible: false,
+      bundleMinPriceCents: 100,
+      bundleGroup: "standard-digital",
+      allowSeasonalBundle: false,
+      excludeFromBundles: true
     };
   };
 
@@ -299,7 +316,7 @@
     fields.price.value = "";
     fields.currency.value = "USD";
     fields.status.value = "coming-soon";
-    fields.buyMode.value = "none";
+    fields.buyMode.value = "coming-soon";
     fields.buyUrl.value = "";
     fields.shortDescription.value = "";
     fields.longDescription.value = "";

@@ -1,0 +1,25 @@
+{
+  "bundleName": "Bundle What You Want",
+  "shortName": "BWYW",
+  "active": false,
+  "seasonalOnly": true,
+  "season": "pre-christmas",
+  "minItems": 2,
+  "maxItems": 5,
+  "minimumEligiblePriceCents": 100,
+  "discounts": {
+    "2": 10,
+    "3": 15,
+    "4": 20,
+    "5": 25
+  },
+  "excludedStatuses": [
+    "coming-soon",
+    "preview-only",
+    "retired",
+    "legacy-not-for-sale",
+    "free-download",
+    "pay-what-you-want"
+  ],
+  "allowCouponStacking": false
+}
