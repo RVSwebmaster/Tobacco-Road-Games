@@ -467,7 +467,7 @@ function renderProductPage(product, products) {
 
   const detailPanels = [
     renderFactCard("What You Are Getting", renderPurchaseSummary(product)),
-    renderFactCard("Files Included", renderFileListSummary(product)),
+    renderFactCard(product.buyMode === "preview-only" ? "Planned Release Format" : "Files Included", renderFileListSummary(product)),
     renderDigitalPurchasePromise()
   ];
 
@@ -1263,6 +1263,10 @@ function renderDeliveryLabel(product) {
 }
 
 function renderFileListSummary(product) {
+  if (product.buyMode === "preview-only") {
+    const plannedFormat = product.format.length ? product.format.join(", ") : "digital file";
+    return `No downloadable file is included on this preview page. Planned release format: ${plannedFormat}.`;
+  }
   if (product.fileList.length) {
     return product.fileList.join(", ");
   }
@@ -1274,7 +1278,7 @@ function renderFileListSummary(product) {
 
 function renderPurchaseSummary(product) {
   if (product.buyMode === "preview-only") {
-    return `${product.title} is currently presented as a preview page with the listed digital format and preview assets.`;
+    return `${product.title} is currently presented as a preview page with artwork, product details, and preview assets only.`;
   }
   if (product.buyMode === "coming-soon") {
     return `${product.title} is listed here with current format, status, and update information while direct ordering is being prepared.`;
