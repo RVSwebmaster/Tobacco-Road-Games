@@ -177,6 +177,45 @@ function renderStoreHome(products, indexes) {
   const newest = sortProducts(products, "newest").slice(0, 3);
   const comingSoon = products.filter((product) => product.status === "coming-soon");
   const availableDirect = products.filter((product) => product.status === "available-direct");
+  const newestSection = newest.length
+    ? `
+        <section class="store-section" aria-labelledby="newest-products-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Newest on the Shelf</p>
+            <h2 id="newest-products-heading">Freshest catalog pages</h2>
+          </div>
+          <div class="product-card-grid">
+            ${newest.map((product) => renderProductCard(product)).join("")}
+          </div>
+        </section>
+      `
+    : "";
+  const comingSoonSection = comingSoon.length
+    ? `
+        <section class="store-section" aria-labelledby="coming-soon-products-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Coming Soon</p>
+            <h2 id="coming-soon-products-heading">Titles preparing to step onto the shelf</h2>
+          </div>
+          <div class="product-card-grid">
+            ${comingSoon.map((product) => renderProductCard(product)).join("")}
+          </div>
+        </section>
+      `
+    : "";
+  const availableDirectSection = availableDirect.length
+    ? `
+        <section class="store-section" aria-labelledby="available-direct-products-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Available Direct</p>
+            <h2 id="available-direct-products-heading">Direct-sale ready titles</h2>
+          </div>
+          <div class="product-card-grid">
+            ${availableDirect.map((product) => renderProductCard(product)).join("")}
+          </div>
+        </section>
+      `
+    : "";
 
   const browseBlocks = [
     {
@@ -248,35 +287,9 @@ function renderStoreHome(products, indexes) {
           ${renderFeatureSpotlight(featured)}
         </section>
 
-        <section class="store-section" aria-labelledby="newest-products-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Newest on the Shelf</p>
-            <h2 id="newest-products-heading">Freshest catalog pages</h2>
-          </div>
-          <div class="product-card-grid">
-            ${newest.map((product) => renderProductCard(product)).join("")}
-          </div>
-        </section>
-
-        <section class="store-section" aria-labelledby="coming-soon-products-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Coming Soon</p>
-            <h2 id="coming-soon-products-heading">Titles preparing to step onto the shelf</h2>
-          </div>
-          <div class="product-card-grid">
-            ${comingSoon.map((product) => renderProductCard(product)).join("")}
-          </div>
-        </section>
-
-        <section class="store-section" aria-labelledby="available-direct-products-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Available Direct</p>
-            <h2 id="available-direct-products-heading">Direct-sale ready titles</h2>
-          </div>
-          <div class="product-card-grid">
-            ${availableDirect.map((product) => renderProductCard(product)).join("")}
-          </div>
-        </section>
+        ${newestSection}
+        ${comingSoonSection}
+        ${availableDirectSection}
 
         ${browseBlocks.map((block) => `
           <section class="store-section" aria-labelledby="${slugify(block.title)}-heading">
@@ -426,6 +439,18 @@ function renderProductPage(product, products) {
     renderProductSchema(product)
   ].filter(Boolean);
 
+  const relatedMarkup = relatedProducts.length
+    ? `
+          <div class="product-card-grid">
+            ${relatedProducts.map((relatedProduct) => renderProductCard(relatedProduct)).join("")}
+          </div>
+      `
+    : `
+          <div class="about__panel">
+            <p>More shelfmates are still being staged. This title will gain company as the catalog grows.</p>
+          </div>
+      `;
+
   return renderLayout({
     pageTitle: `${product.title} | ${STORE_TITLE}`,
     description: product.shortDescription,
@@ -534,9 +559,7 @@ function renderProductPage(product, products) {
             <p class="section-heading__kicker">Related Titles</p>
             <h2 id="related-titles-heading">More from the same shelf-road</h2>
           </div>
-          <div class="product-card-grid">
-            ${relatedProducts.map((relatedProduct) => renderProductCard(relatedProduct)).join("")}
-          </div>
+          ${relatedMarkup}
         </section>
       </main>
     `

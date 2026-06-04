@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tobacco Road Games Product Intake</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../assets/logo.png?v=20260604c">
+  <link rel="stylesheet" href="../styles.css?v=20260604c">
+  <style>
+    .intake-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+      gap: 18px;
+    }
+
+    .intake-form,
+    .intake-preview,
+    .intake-output {
+      display: grid;
+      gap: 14px;
+    }
+
+    .intake-form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .intake-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .intake-field--full {
+      grid-column: 1 / -1;
+    }
+
+    .intake-field label,
+    .intake-output label {
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .intake-help,
+    .intake-list,
+    .intake-output textarea,
+    .intake-output pre,
+    .intake-preview-copy,
+    .intake-file-list {
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    }
+
+    .intake-help,
+    .intake-preview-copy,
+    .intake-file-list {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .intake-list {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .intake-file-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .intake-file-list span {
+      padding: 0.65rem 0.8rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .intake-preview-card {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .intake-preview-cover {
+      overflow: hidden;
+      border: 1px solid rgba(242, 216, 170, 0.18);
+      border-radius: 16px;
+      background: rgba(17, 11, 8, 0.85);
+      aspect-ratio: 4 / 5;
+    }
+
+    .intake-preview-cover img,
+    .intake-preview-video video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .intake-preview-video {
+      overflow: hidden;
+      border: 1px solid rgba(242, 216, 170, 0.18);
+      border-radius: 16px;
+      background: rgba(17, 11, 8, 0.85);
+      aspect-ratio: 16 / 9;
+    }
+
+    .intake-output textarea,
+    .intake-output pre {
+      width: 100%;
+      min-height: 260px;
+      margin: 0;
+      padding: 14px;
+      border: 1px solid rgba(242, 216, 170, 0.16);
+      border-radius: 16px;
+      background: rgba(10, 7, 5, 0.72);
+      color: var(--text);
+      font-size: 0.94rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .intake-output textarea {
+      resize: vertical;
+    }
+
+    .intake-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .intake-status {
+      min-height: 1.4rem;
+      margin: 0;
+      color: var(--accent-strong);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 980px) {
+      .intake-grid,
+      .intake-form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="view-section">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="../index.html" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="../assets/logo.png?v=20260604c" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
+          <span class="brand__tag">Owner intake bench for storefront product pages</span>
+        </div>
+      </a>
+
+      <nav class="site-nav" aria-label="Owner navigation">
+        <a href="../index.html">Home</a>
+        <a href="../store/">Store</a>
+        <a href="product-intake.html" aria-current="page">Product Intake</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="store-section" aria-labelledby="intake-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Owner Tool</p>
+          <h1 id="intake-heading">Product Intake Bench</h1>
+          <p>Use this page to stage a new storefront entry, preview local assets, and generate the JSON block for <code>data/products.json</code>. It does not upload to the server by itself.</p>
+        </div>
+
+        <div class="intake-grid">
+          <section class="intake-form" aria-labelledby="intake-form-heading">
+            <div class="section-heading">
+              <p class="section-heading__kicker">Metadata</p>
+              <h2 id="intake-form-heading">Product details</h2>
+            </div>
+
+            <div class="intake-form-grid">
+              <div class="intake-field">
+                <label for="product-title">Title</label>
+                <input id="product-title" class="dock-input" type="text" placeholder="Sirrocans">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-slug">Slug</label>
+                <input id="product-slug" class="dock-input" type="text" placeholder="sirrocans">
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-subtitle">Subtitle</label>
+                <input id="product-subtitle" class="dock-input" type="text" placeholder="A 5E-compatible ancestry title">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-authors">Authors</label>
+                <input id="product-authors" class="dock-input" type="text" value="RV Sawyer" placeholder="RV Sawyer, Another Author">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-publisher">Publisher</label>
+                <input id="product-publisher" class="dock-input" type="text" value="Tobacco Road Games">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-system">Game System</label>
+                <input id="product-system" class="dock-input" type="text" value="5E Compatible">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-line">Product Line</label>
+                <input id="product-line" class="dock-input" type="text" value="Fifth Edition Fantasy Roleplaying">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-format">Format</label>
+                <input id="product-format" class="dock-input" type="text" value="PDF" placeholder="PDF, EPUB">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-page-count">Page Count</label>
+                <input id="product-page-count" class="dock-input" type="number" min="0" placeholder="92">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-price">Price</label>
+                <input id="product-price" class="dock-input" type="text" placeholder="12.95">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-currency">Currency</label>
+                <input id="product-currency" class="dock-input" type="text" value="USD">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-status">Status</label>
+                <select id="product-status" class="dock-input">
+                  <option value="coming-soon">Coming Soon</option>
+                  <option value="available-direct">Available Direct</option>
+                  <option value="preview-available">Preview Available</option>
+                  <option value="revised-edition-pending">Revised Edition Pending</option>
+                  <option value="legacy-edition">Legacy Edition</option>
+                  <option value="retired">Retired</option>
+                  <option value="free-download">Free Download</option>
+                  <option value="pay-what-you-want">Pay What You Want</option>
+                </select>
+              </div>
+
+              <div class="intake-field">
+                <label for="product-buy-mode">Buy Mode</label>
+                <select id="product-buy-mode" class="dock-input">
+                  <option value="none">none</option>
+                  <option value="paypal-manual">paypal-manual</option>
+                  <option value="free-download">free-download</option>
+                  <option value="external-link">external-link</option>
+                </select>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-buy-url">Buy URL</label>
+                <input id="product-buy-url" class="dock-input" type="text" placeholder="https://...">
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-short-description">Short Description</label>
+                <textarea id="product-short-description" class="dock-input" rows="3" placeholder="A sharp one-paragraph pitch."></textarea>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-long-description">Long Description</label>
+                <textarea id="product-long-description" class="dock-input" rows="6" placeholder="Longer storefront copy."></textarea>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-features">Features</label>
+                <textarea id="product-features" class="dock-input" rows="5" placeholder="One feature per line"></textarea>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-tags">Tags</label>
+                <input id="product-tags" class="dock-input" type="text" placeholder="5E, Ancestry, Desert">
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-fulfillment-note">Fulfillment Note</label>
+                <textarea id="product-fulfillment-note" class="dock-input" rows="3" placeholder="Digital PDF delivered by email after payment confirmation."></textarea>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-creation-method">Creation Method</label>
+                <textarea id="product-creation-method" class="dock-input" rows="4">Human-authored by RV Sawyer.</textarea>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-legal-note">Legal Note</label>
+                <textarea id="product-legal-note" class="dock-input" rows="4" placeholder="Legal and SRD note if needed."></textarea>
+              </div>
+
+              <div class="intake-field">
+                <label for="product-version">Version</label>
+                <input id="product-version" class="dock-input" type="text" placeholder="1.0">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-release-date">Release Date</label>
+                <input id="product-release-date" class="dock-input" type="date">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-last-updated">Last Updated</label>
+                <input id="product-last-updated" class="dock-input" type="date">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-related">Related Products</label>
+                <input id="product-related" class="dock-input" type="text" placeholder="sirrocans, some-other-slug">
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-cover-file">Cover Preview File</label>
+                <input id="product-cover-file" class="dock-input" type="file" accept="image/*">
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-preview-files">Preview Image Files</label>
+                <input id="product-preview-files" class="dock-input" type="file" accept="image/*" multiple>
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-sample-file">Sample PDF File</label>
+                <input id="product-sample-file" class="dock-input" type="file" accept=".pdf,application/pdf">
+              </div>
+
+              <div class="intake-field intake-field--full">
+                <label for="product-video-file">Teaser Video File</label>
+                <input id="product-video-file" class="dock-input" type="file" accept="video/*">
+              </div>
+            </div>
+          </section>
+
+          <aside class="intake-preview" aria-labelledby="intake-preview-heading">
+            <div class="section-heading">
+              <p class="section-heading__kicker">Shelf Preview</p>
+              <h2 id="intake-preview-heading">Live product card + asset paths</h2>
+            </div>
+
+            <article class="intake-preview-card">
+              <span id="preview-status" class="status-badge status-badge--coming-soon">Coming Soon</span>
+              <div class="intake-preview-cover">
+                <img id="preview-cover-image" src="../assets/logo.png" alt="Selected product cover preview">
+              </div>
+              <h3 id="preview-title">Untitled Product</h3>
+              <p id="preview-subtitle" class="product-subtitle">Subtitle will appear here.</p>
+              <p id="preview-copy" class="intake-preview-copy">Short description preview will appear here.</p>
+              <div class="intake-preview-video" id="preview-video-wrap" hidden>
+                <video id="preview-video" controls preload="metadata" playsinline></video>
+              </div>
+            </article>
+
+            <div class="about__panel">
+              <p class="note-card__label">Suggested asset folder</p>
+              <p id="asset-folder-output" class="intake-preview-copy">/assets/products/untitled-product/</p>
+            </div>
+
+            <div class="about__panel">
+              <p class="note-card__label">Suggested files</p>
+              <div id="asset-file-list" class="intake-file-list"></div>
+            </div>
+
+            <div class="about__panel">
+              <p class="note-card__label">How to use this</p>
+              <ol class="intake-list">
+                <li>Fill in the product details and choose local preview files if you want a visual check.</li>
+                <li>Copy or download the generated JSON entry.</li>
+                <li>Place final assets under the suggested product folder.</li>
+                <li>Paste the JSON into <code>data/products.json</code> and run <code>node scripts/build-store.js</code>.</li>
+              </ol>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="store-section intake-output" aria-labelledby="intake-output-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Generated Output</p>
+          <h2 id="intake-output-heading">Registry entry + asset checklist</h2>
+        </div>
+
+        <div class="intake-actions">
+          <button id="copy-json-button" class="button button--primary" type="button">Copy JSON Entry</button>
+          <button id="download-json-button" class="button button--secondary" type="button">Download JSON</button>
+          <button id="reset-intake-button" class="button button--secondary" type="button">Reset Form</button>
+        </div>
+        <p id="intake-status" class="intake-status" aria-live="polite"></p>
+
+        <div class="intake-output">
+          <label for="generated-json">Generated products.json entry</label>
+          <textarea id="generated-json" spellcheck="false" aria-label="Generated JSON entry"></textarea>
+        </div>
+
+        <div class="intake-output">
+          <label for="asset-checklist">Asset checklist</label>
+          <pre id="asset-checklist"></pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; 2026 Tobacco Road Games.</p>
+      <p>Owner staging tool for catalog work in progress.</p>
+    </footer>
+  </div>
+
+  <script src="../assets/js/product-intake.js?v=20260604c"></script>
+</body>
+</html>
