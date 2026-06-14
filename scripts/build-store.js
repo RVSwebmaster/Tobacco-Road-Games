@@ -1,6 +1,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+// Product source of truth lives in data/products.json and data/authors.js.
+// releases.js is deprecated in this site and is kept only as a warning stub.
 const ROOT = path.resolve(__dirname, "..");
 const DATA_PATH = path.join(ROOT, "data", "products.json");
 const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
