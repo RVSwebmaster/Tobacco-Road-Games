@@ -3,10 +3,11 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const DATA_PATH = path.join(ROOT, "data", "products.json");
+const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260604e";
+const CACHE_BUST = "20260614a";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -41,34 +42,46 @@ const LEGACY_BUY_MODE_MAP = {
 };
 
 function main() {
-  const products = loadProducts();
+  const authors = loadAuthors();
+  const authorLookup = buildAuthorLookup(authors);
+  const products = loadProducts(authorLookup);
   const bundleRules = loadBundleRules();
-  const indexes = buildIndexes(products);
+  const indexes = buildIndexes(products, authors);
 
   fs.rmSync(STORE_DIR, { recursive: true, force: true });
   fs.mkdirSync(STORE_DIR, { recursive: true });
+  fs.rmSync(path.join(ROOT, "authors"), { recursive: true, force: true });
+
+  writeFile("authors.html", renderAuthorsIndexPage(indexes.authors));
+  writeFile("store/authors/index.html", renderAliasPage({
+    pageTitle: `Authors | ${STORE_TITLE}`,
+    description: "Public author profiles live on the main Tobacco Road Games site.",
+    canonicalPath: "/authors.html",
+    currentNav: "authors",
+    targetPath: "/authors.html",
+    kicker: "Authors",
+    title: "Public author profiles now live outside the catalog.",
+    body: "Use the main Authors page to browse public profiles, workshop notes, and linked products."
+  }));
+  for (const author of indexes.authors) {
+    writeFile(`authors/${author.slug}/index.html`, renderAuthorProfilePage(author));
+    writeFile(`store/authors/${author.slug}/index.html`, renderAliasPage({
+      pageTitle: `${author.name} | ${STORE_TITLE}`,
+      description: `Public author profile for ${author.name}.`,
+      canonicalPath: author.url,
+      currentNav: "authors",
+      targetPath: author.url,
+      kicker: "Author",
+      title: author.name,
+      body: "This public author profile has moved to the main Tobacco Road Games author section so workshop pages and store pages can point to the same place."
+    }));
+  }
 
   writeFile("store/index.html", renderStoreHome(products, indexes));
   writeFile("store/catalog/index.html", renderCatalogPage(products, indexes));
 
   for (const product of products) {
     writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, products));
-  }
-
-  for (const author of indexes.authors) {
-    writeFile(`store/authors/${author.slug}/index.html`, renderCollectionPage({
-      title: author.name,
-      kicker: "Author",
-      description: `Browse Tobacco Road Games titles by ${author.name}.`,
-      canonicalPath: `/store/authors/${author.slug}/`,
-      breadcrumbs: [
-        { label: "Store", href: "/store/" },
-        { label: "Catalog", href: "/store/catalog/" },
-        { label: "Author" },
-        { label: author.name }
-      ],
-      cards: author.products.map((product) => renderProductCard(product))
-    }));
   }
 
   for (const system of indexes.systems) {
@@ -124,16 +137,66 @@ function main() {
     renderBundlePlanningPage(bundleRules, products)
   );
   writeFile("store/sitemap.xml", renderStoreSitemap(products, indexes, bundleRules));
+  writeFile("sitemap.xml", renderRootSitemap(indexes.authors));
 
   console.log(`Storefront generated for ${products.length} products.`);
 }
 
-function loadProducts() {
+function loadAuthors() {
+  if (!fs.existsSync(AUTHORS_PATH)) {
+    return [];
+  }
+
+  const raw = requireFresh(AUTHORS_PATH);
+  return ensureArray(raw).map((author) => {
+    const slug = author.slug || slugify(author.displayName || author.name || "author");
+    const blogPosts = ensureArray(author.blogPosts).map((post, index) => {
+      const postSlug = post.slug || slugify(post.title || `${slug}-note-${index + 1}`);
+      return {
+        slug: postSlug,
+        title: post.title || "Untitled Post",
+        date: post.date || "",
+        excerpt: post.excerpt || "",
+        body: ensureArray(post.body || post.content),
+        link: post.link || "",
+        authorSlug: slug,
+        url: post.link || `/authors/${slug}/#post-${postSlug}`
+      };
+    }).sort((left, right) => parseDate(right.date) - parseDate(left.date));
+
+    return {
+      slug,
+      name: author.displayName || author.name || slug,
+      displayName: author.displayName || author.name || slug,
+      title: author.title || author.tagline || "",
+      shortBio: author.shortBio || "",
+      longBio: author.longBio || "",
+      imagePath: author.imagePath || author.avatar || "",
+      links: ensureArray(author.links).map((link) => ({
+        label: link.label || link.title || link.name || "Link",
+        url: link.url || link.href || ""
+      })).filter((link) => link.url),
+      blogPosts,
+      url: `/authors/${slug}/`,
+      storeUrl: `/store/authors/${slug}/`,
+      products: []
+    };
+  });
+}
+
+function buildAuthorLookup(authors) {
+  return new Map(authors.map((author) => [author.slug, author]));
+}
+
+function loadProducts(authorLookup) {
   const raw = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
   return raw.map((product) => {
+    const authorSlugs = resolveProductAuthorSlugs(product);
+    const authors = resolveProductAuthorNames(product, authorSlugs, authorLookup);
     const normalized = {
       ...product,
-      authors: ensureArray(product.authors),
+      authors,
+      authorSlugs,
       format: ensureArray(product.format),
       fileList: ensureArray(product.fileList),
       previewImages: ensureArray(product.previewImages),
@@ -149,6 +212,14 @@ function loadProducts() {
       minimumPriceCents: normalizeCents(product.minimumPriceCents, product.minimumPrice),
       suggestedPrice: product.suggestedPrice || "",
       suggestedPriceCents: normalizeCents(product.suggestedPriceCents, product.suggestedPrice),
+      regularPrice: product.regularPrice || "",
+      regularPriceCents: normalizeCents(product.regularPriceCents, product.regularPrice),
+      salePrice: product.salePrice || "",
+      salePriceCents: normalizeCents(product.salePriceCents, product.salePrice),
+      saleStart: product.saleStart || "",
+      saleEnd: product.saleEnd || "",
+      saleLabel: product.saleLabel || "",
+      saleEnabled: Boolean(product.saleEnabled),
       libraryEligible: Boolean(product.libraryEligible),
       updateEligible: Boolean(product.updateEligible),
       bundleEligible: Boolean(product.bundleEligible),
@@ -166,13 +237,21 @@ function loadProducts() {
     };
 
     normalized.url = `/store/products/${normalized.slug}/`;
-    normalized.authorSlugs = normalized.authors.map((author) => slugify(author));
     normalized.assetSet = resolveProductAssets(normalized);
     normalized.releaseStamp = parseDate(normalized.releaseDate);
     normalized.updatedStamp = parseDate(normalized.lastUpdated);
     normalized.priceType = resolvePriceType(normalized);
     normalized.priceTypeLabel = PRICE_TYPE_LABELS[normalized.priceType] || "Not For Sale";
     normalized.availabilityLabel = normalized.statusLabel;
+    normalized.authorLinks = normalized.authorSlugs.map((slug, index) => {
+      const author = authorLookup.get(slug);
+      const name = author?.name || normalized.authors[index] || slug;
+      return {
+        slug,
+        name,
+        url: author?.url || `/authors/${slug}/`
+      };
+    });
 
     return normalized;
   });
@@ -205,7 +284,7 @@ function loadBundleRules() {
   return JSON.parse(fs.readFileSync(BUNDLE_RULES_PATH, "utf8"));
 }
 
-function buildIndexes(products) {
+function buildIndexes(products, authors) {
   const authorMap = new Map();
   const systemMap = new Map();
   const lineMap = new Map();
@@ -213,11 +292,31 @@ function buildIndexes(products) {
   const formatMap = new Map();
   const priceTypeMap = new Map();
 
+  for (const author of authors) {
+    authorMap.set(author.slug, {
+      ...author,
+      products: []
+    });
+  }
+
   for (const product of products) {
-    for (const author of product.authors) {
-      const slug = slugify(author);
+    for (const author of product.authorLinks) {
+      const slug = author.slug;
       if (!authorMap.has(slug)) {
-        authorMap.set(slug, { slug, name: author, products: [] });
+        authorMap.set(slug, {
+          slug,
+          name: author.name,
+          displayName: author.name,
+          title: "",
+          shortBio: "",
+          longBio: "",
+          imagePath: "",
+          links: [],
+          blogPosts: [],
+          url: author.url || `/authors/${slug}/`,
+          storeUrl: `/store/authors/${slug}/`,
+          products: []
+        });
       }
       authorMap.get(slug).products.push(product);
     }
@@ -234,7 +333,10 @@ function buildIndexes(products) {
   }
 
   return {
-    authors: sortByName([...authorMap.values()]),
+    authors: sortByName([...authorMap.values()]).map((author) => ({
+      ...author,
+      products: sortProducts(author.products, "updated")
+    })),
     systems: sortByName([...systemMap.values()]),
     lines: sortByName([...lineMap.values()]),
     statuses: sortByName([...statusMap.values()], "label"),
@@ -317,9 +419,9 @@ function renderStoreHome(products, indexes) {
         ${renderStoreSection("preview-available-products-heading", "Preview Available", "Preview Available", previewAvailable)}
         ${renderStoreSection("coming-soon-products-heading", "Coming Soon", "Coming Soon", comingSoon)}
 
-        ${renderBrowseSection("Browse by Game System", indexes.systems, "systems")}
-        ${renderBrowseSection("Browse by Product Line", indexes.lines, "lines")}
-        ${renderBrowseSection("Browse by Author", indexes.authors, "authors")}
+        ${renderBrowseSection("Browse by Game System", indexes.systems, (entry) => `/store/systems/${entry.slug}/`)}
+        ${renderBrowseSection("Browse by Product Line", indexes.lines, (entry) => `/store/lines/${entry.slug}/`)}
+        ${renderBrowseSection("Browse by Author", indexes.authors, (entry) => entry.url)}
 
         <section class="store-section store-callout" aria-labelledby="catalog-link-heading">
           <div class="store-callout__copy">
@@ -329,7 +431,10 @@ function renderStoreHome(products, indexes) {
           </div>
           <div class="store-callout__panel">
             <p class="note-card__label">Catalog Access</p>
-            <a class="button button--primary button--wide" href="/store/catalog/">Open the Catalog</a>
+            <div class="hero__actions">
+              <a class="button button--primary" href="/store/catalog/">Open the Catalog</a>
+              <a class="button button--secondary" href="/authors.html">Meet the Authors</a>
+            </div>
           </div>
         </section>
       </main>
@@ -452,6 +557,7 @@ function renderProductPage(product, products) {
   const relatedProducts = resolveRelatedProducts(product, products);
   const buyUi = renderBuyUi(product);
   const previewSection = renderPreviewSection(product);
+  const authorByline = renderAuthorByline(product);
   const detailsItems = [
     renderIdentityItem("Author", product.authors.join(", ")),
     renderIdentityItem("Game System", product.gameSystem),
@@ -545,6 +651,7 @@ function renderProductPage(product, products) {
             <p class="section-heading__kicker">${escapeHtml(product.gameSystem)}</p>
             <h1 id="product-title">${escapeHtml(product.title)}</h1>
             <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
+            ${authorByline ? `<p class="product-byline">${authorByline}</p>` : ""}
             <div class="product-hero__meta">
               <span>${escapeHtml(renderDisplayPrice(product))}</span>
               <span>${escapeHtml(product.format.join(", ") || "Format TBD")}</span>
@@ -757,6 +864,7 @@ function renderLayout({
 function renderStoreNav(currentNav) {
   const items = [
     { key: "home", href: "/", label: "Home" },
+    { key: "authors", href: "/authors.html", label: "Authors" },
     { key: "store", href: "/store/", label: "Store" },
     { key: "catalog", href: "/store/catalog/", label: "Catalog" },
     { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
@@ -770,6 +878,7 @@ function renderStoreNav(currentNav) {
 }
 
 function renderFeatureSpotlight(product) {
+  const authorByline = renderAuthorByline(product);
   return `
     <article class="store-spotlight">
       <div class="store-spotlight__media">
@@ -779,6 +888,7 @@ function renderFeatureSpotlight(product) {
         <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(product.statusLabel)}</span>
         <h3>${escapeHtml(product.title)}</h3>
         <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
+        ${authorByline ? `<p class="product-byline">${authorByline}</p>` : ""}
         <p>${escapeHtml(product.shortDescription)}</p>
         <div class="hero__actions">
           <a class="button button--primary" href="${product.url}">Open Product Page</a>
@@ -791,6 +901,7 @@ function renderFeatureSpotlight(product) {
 
 function renderProductCard(product, options = {}) {
   const { withDataset = false, includeAnchorId = false } = options;
+  const authorByline = renderAuthorByline(product);
   const searchText = [
     product.title,
     product.subtitle,
@@ -832,7 +943,7 @@ function renderProductCard(product, options = {}) {
         </div>
         <h3 class="product-card__title">${escapeHtml(product.title)}</h3>
         <p class="product-card__subtitle">${escapeHtml(product.subtitle)}</p>
-        <p class="product-card__meta">${escapeHtml(product.authors.join(", "))}</p>
+        ${authorByline ? `<p class="product-card__meta product-card__meta--byline">${authorByline}</p>` : ""}
         <p class="product-card__meta">${escapeHtml(product.gameSystem)} | ${escapeHtml(product.productLine)}</p>
         <p class="product-card__meta">${escapeHtml(product.format.join(", ") || "Format TBD")}</p>
         <div class="product-card__actions">
@@ -870,7 +981,7 @@ function renderStoreSection(id, kicker, title, products) {
   `;
 }
 
-function renderBrowseSection(title, entries, segment) {
+function renderBrowseSection(title, entries, hrefBuilder) {
   if (!entries.length) {
     return "";
   }
@@ -882,10 +993,294 @@ function renderBrowseSection(title, entries, segment) {
         <h2 id="${slugify(title)}-heading">${escapeHtml(title)}</h2>
       </div>
       <div class="browse-card-grid">
-        ${entries.map((entry) => renderBrowseCard(entry.name, `${entry.products.length} title${entry.products.length === 1 ? "" : "s"}`, `/store/${segment}/${entry.slug}/`)).join("")}
+        ${entries.map((entry) => renderBrowseCard(entry.name, `${entry.products.length} title${entry.products.length === 1 ? "" : "s"}`, hrefBuilder(entry))).join("")}
       </div>
     </section>
   `;
+}
+
+function renderAuthorsIndexPage(authors) {
+  return renderPublicLayout({
+    pageTitle: "Authors | Tobacco Road Games",
+    description: "Meet the public authors writing tabletop tools, adventures, essays, and workshop material for Tobacco Road Games.",
+    canonicalPath: "/authors.html",
+    currentNav: "authors",
+    structuredData: renderBreadcrumbSchema([
+      { label: "Home", href: "/" },
+      { label: "Authors", href: "/authors.html" }
+    ]),
+    content: `
+      <main id="top">
+        ${renderBreadcrumbs([
+          { label: "Home", href: "/" },
+          { label: "Authors" }
+        ])}
+        <section class="store-section" aria-labelledby="authors-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Authors</p>
+            <h1 id="authors-heading">The people behind the work.</h1>
+            <p>Meet the public authors writing from the working side of the screen at Tobacco Road Games.</p>
+          </div>
+          <div class="author-card-grid">
+            ${authors.map((author) => renderAuthorCard(author)).join("")}
+          </div>
+        </section>
+      </main>
+    `
+  });
+}
+
+function renderAuthorProfilePage(author) {
+  return renderPublicLayout({
+    pageTitle: `${author.name} | Tobacco Road Games`,
+    description: author.shortBio || `Meet ${author.name} at Tobacco Road Games.`,
+    canonicalPath: author.url,
+    currentNav: "authors",
+    structuredData: [
+      renderBreadcrumbSchema([
+        { label: "Home", href: "/" },
+        { label: "Authors", href: "/authors.html" },
+        { label: author.name, href: author.url }
+      ]),
+      renderPersonSchema(author)
+    ],
+    content: `
+      <main id="top">
+        ${renderBreadcrumbs([
+          { label: "Home", href: "/" },
+          { label: "Authors", href: "/authors.html" },
+          { label: author.name }
+        ])}
+
+        <section class="author-hero store-section" aria-labelledby="${escapeAttribute(author.slug)}-heading">
+          <div class="author-hero__copy">
+            <p class="section-heading__kicker">Author</p>
+            <h1 id="${escapeAttribute(author.slug)}-heading">${escapeHtml(author.name)}</h1>
+            ${author.title ? `<p class="product-subtitle">${escapeHtml(author.title)}</p>` : ""}
+            ${author.shortBio ? `<p class="hero__lead">${escapeHtml(author.shortBio)}</p>` : ""}
+            ${author.links.length ? `<div class="author-link-list">${author.links.map(renderAuthorLink).join("")}</div>` : ""}
+          </div>
+          <aside class="author-hero__aside">
+            <article class="note-card">
+              <p class="note-card__label">Catalog Work</p>
+              <h2>${author.products.length} title${author.products.length === 1 ? "" : "s"} in the public catalog</h2>
+              <p>The catalog links back here so readers can move from a book to the person building it.</p>
+            </article>
+            <article class="note-card">
+              <p class="note-card__label">Workshop Notes</p>
+              <h2>${author.blogPosts.length} published note${author.blogPosts.length === 1 ? "" : "s"}</h2>
+              <p>Short field notes, essays, and workshop updates live here without pretending to be a full portal.</p>
+            </article>
+          </aside>
+        </section>
+
+        <section class="store-section" aria-labelledby="author-bio-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Biography</p>
+            <h2 id="author-bio-heading">From the working side of the screen</h2>
+          </div>
+          <div class="about__panel">
+            <p>${escapeHtml(author.longBio || author.shortBio || "")}</p>
+          </div>
+        </section>
+
+        <section class="store-section" aria-labelledby="author-products-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Products</p>
+            <h2 id="author-products-heading">Author Products</h2>
+          </div>
+          ${author.products.length ? `
+            <div class="product-card-grid">
+              ${author.products.map((product) => renderProductCard(product)).join("")}
+            </div>
+          ` : `
+            <div class="about__panel">
+              <p>Public catalog titles will appear here as they are added to the store.</p>
+            </div>
+          `}
+        </section>
+
+        <section class="store-section" aria-labelledby="author-posts-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">News and Notes</p>
+            <h2 id="author-posts-heading">Author Blog and Workshop Posts</h2>
+          </div>
+          ${author.blogPosts.length ? `
+            <div class="author-post-grid">
+              ${author.blogPosts.map((post) => renderAuthorPost(post)).join("")}
+            </div>
+          ` : `
+            <div class="about__panel">
+              <p>Workshop notes will appear here when they are ready to be shared publicly.</p>
+            </div>
+          `}
+        </section>
+      </main>
+    `
+  });
+}
+
+function renderPublicLayout({
+  pageTitle,
+  description,
+  canonicalPath,
+  currentNav,
+  structuredData,
+  content
+}) {
+  const canonicalUrl = `${BASE_URL}${canonicalPath}`;
+  const structuredDataBlocks = Array.isArray(structuredData)
+    ? structuredData.filter(Boolean)
+    : structuredData
+      ? [structuredData]
+      : [];
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(pageTitle)}</title>
+  <meta name="description" content="${escapeAttribute(description)}">
+  <link rel="canonical" href="${escapeAttribute(canonicalUrl)}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${escapeAttribute(SITE_NAME)}">
+  <meta property="og:title" content="${escapeAttribute(pageTitle)}">
+  <meta property="og:description" content="${escapeAttribute(description)}">
+  <meta property="og:url" content="${escapeAttribute(canonicalUrl)}">
+  <meta property="og:image" content="${BASE_URL}/assets/logo.png">
+  <meta name="theme-color" content="#120c08">
+  <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
+  <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
+  ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
+</head>
+<body class="view-section">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
+          <span class="brand__tag">A working GM's bench for strange tables and long campaigns</span>
+        </div>
+      </a>
+
+      ${renderPublicNav(currentNav)}
+    </header>
+
+    ${content}
+
+    <footer class="site-footer">
+      <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">
+        <img src="/assets/logo.png?v=${CACHE_BUST}" alt="">
+      </a>
+      <p>&copy; 2026 Tobacco Road Games.</p>
+      <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
+      <a class="footer-link" href="/ai-statement.html">Read the AI Statement</a>
+    </footer>
+  </div>
+</body>
+</html>`;
+}
+
+function renderAliasPage({
+  pageTitle,
+  description,
+  canonicalPath,
+  currentNav,
+  targetPath,
+  kicker,
+  title,
+  body
+}) {
+  return renderLayout({
+    pageTitle,
+    description,
+    canonicalPath,
+    ogImage: "/assets/logo.png",
+    currentNav,
+    content: `
+      <main id="top">
+        ${renderBreadcrumbs([
+          { label: "Store", href: "/store/" },
+          { label: title }
+        ])}
+        <section class="store-section" aria-labelledby="${slugify(title)}-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">${escapeHtml(kicker)}</p>
+            <h1 id="${slugify(title)}-heading">${escapeHtml(title)}</h1>
+            <p>${escapeHtml(body)}</p>
+          </div>
+          <div class="hero__actions">
+            <a class="button button--primary" href="${escapeAttribute(targetPath)}">Open Public Author Page</a>
+            <a class="button button--secondary" href="/store/catalog/">Back to Catalog</a>
+          </div>
+        </section>
+      </main>
+    `
+  });
+}
+
+function renderPublicNav(currentNav) {
+  const items = [
+    { key: "home", href: "/", label: "Home" },
+    { key: "authors", href: "/authors.html", label: "Authors" },
+    { key: "store", href: "/store/", label: "Store" },
+    { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
+  ];
+
+  return `
+    <nav class="site-nav" aria-label="Primary">
+      ${items.map((item) => `<a href="${item.href}"${currentNav === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
+    </nav>
+  `;
+}
+
+function renderAuthorCard(author) {
+  return `
+    <article class="author-card">
+      <p class="note-card__label">Author</p>
+      <h2>${escapeHtml(author.name)}</h2>
+      ${author.title ? `<p class="author-card__tagline">${escapeHtml(author.title)}</p>` : ""}
+      ${author.shortBio ? `<p class="author-card__bio">${escapeHtml(author.shortBio)}</p>` : ""}
+      <div class="author-card__meta">
+        <span>${author.products.length} title${author.products.length === 1 ? "" : "s"}</span>
+        <span>${author.blogPosts.length} note${author.blogPosts.length === 1 ? "" : "s"}</span>
+      </div>
+      <div class="hero__actions">
+        <a class="button button--secondary" href="${author.url}">Open Profile</a>
+      </div>
+    </article>
+  `;
+}
+
+function renderAuthorPost(post) {
+  return `
+    <article class="author-post" id="post-${escapeAttribute(post.slug)}">
+      <p class="note-card__label">Workshop Note</p>
+      <h3>${escapeHtml(post.title)}</h3>
+      ${post.date ? `<p class="author-post__date">${escapeHtml(formatDateLabel(post.date))}</p>` : ""}
+      ${post.excerpt ? `<p class="author-post__excerpt">${escapeHtml(post.excerpt)}</p>` : ""}
+      ${post.body.length ? `
+        <div class="author-post__body">
+          ${post.body.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("")}
+        </div>
+      ` : ""}
+      ${post.link ? `<div class="hero__actions"><a class="button button--secondary" href="${escapeAttribute(post.link)}">Read More</a></div>` : ""}
+    </article>
+  `;
+}
+
+function renderAuthorLink(link) {
+  return `<a class="author-link-pill" href="${escapeAttribute(link.url)}">${escapeHtml(link.label)}</a>`;
+}
+
+function renderAuthorByline(product) {
+  if (!product.authorLinks.length) {
+    return "";
+  }
+
+  return `By ${product.authorLinks.map((author) => `<a class="author-link" href="${escapeAttribute(author.url)}">${escapeHtml(author.name)}</a>`).join(", ")}`;
 }
 
 function renderPreviewSection(product) {
@@ -1069,6 +1464,11 @@ function renderProductSchema(product) {
       "@type": "Brand",
       name: product.publisher
     },
+    author: product.authorLinks.map((author) => ({
+      "@type": "Person",
+      name: author.name,
+      url: `${BASE_URL}${author.url}`
+    })),
     sku: product.slug,
     category: product.productLine,
     url: `${BASE_URL}${product.url}`
@@ -1092,7 +1492,6 @@ function renderStoreSitemap(products, indexes, bundleRules) {
     "/store/",
     "/store/catalog/",
     ...products.map((product) => product.url),
-    ...indexes.authors.map((author) => `/store/authors/${author.slug}/`),
     ...indexes.systems.map((system) => `/store/systems/${system.slug}/`),
     ...indexes.lines.map((line) => `/store/lines/${line.slug}/`),
     ...indexes.statuses.map((status) => `/store/status/${status.slug}/`)
@@ -1101,6 +1500,22 @@ function renderStoreSitemap(products, indexes, bundleRules) {
   if (bundleRules.active) {
     urls.push("/store/bundles/bundle-what-you-want/");
   }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((url) => `  <url><loc>${BASE_URL}${url}</loc></url>`).join("\n")}
+</urlset>`;
+}
+
+function renderRootSitemap(authors) {
+  const urls = [
+    "/",
+    "/authors.html",
+    ...authors.map((author) => author.url),
+    "/ai-statement.html",
+    "/support.html",
+    "/store/"
+  ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -1475,6 +1890,67 @@ function ensureArray(value) {
 
 function sortByName(list, field = "name") {
   return [...list].sort((a, b) => a[field].localeCompare(b[field]));
+}
+
+function requireFresh(modulePath) {
+  delete require.cache[require.resolve(modulePath)];
+  return require(modulePath);
+}
+
+function resolveProductAuthorSlugs(product) {
+  const explicit = ensureArray(product.authorSlugs).map((value) => slugify(value)).filter(Boolean);
+  if (explicit.length) {
+    return explicit;
+  }
+  return ensureArray(product.authors).map((author) => slugify(author)).filter(Boolean);
+}
+
+function resolveProductAuthorNames(product, authorSlugs, authorLookup) {
+  if (authorSlugs.length) {
+    const resolved = authorSlugs.map((slug) => authorLookup.get(slug)?.name).filter(Boolean);
+    if (resolved.length === authorSlugs.length) {
+      return resolved;
+    }
+  }
+  return ensureArray(product.authors);
+}
+
+function renderPersonSchema(author) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: author.name,
+    description: author.shortBio || author.longBio,
+    url: `${BASE_URL}${author.url}`
+  };
+
+  if (author.title) {
+    schema.jobTitle = author.title;
+  }
+
+  return JSON.stringify(schema);
+}
+
+function formatDateLabel(value) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map((part) => Number(part));
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(new Date(year, month - 1, day));
+  }
+
+  const stamp = parseDate(value);
+  if (!stamp) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  }).format(stamp);
 }
 
 function slugify(value) {
