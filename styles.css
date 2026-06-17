@@ -1060,6 +1060,8 @@ h4 {
 }
 
 .bookshelf-grid {
+  --bookshelf-spine-width: clamp(78px, 7vw, 104px);
+  --bookshelf-cover-width: clamp(188px, 16vw, 236px);
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -1078,17 +1080,22 @@ h4 {
 
 .bookshelf-book {
   display: block;
-  flex: 0 0 clamp(78px, 7vw, 104px);
-  width: clamp(78px, 7vw, 104px);
+  position: relative;
+  z-index: 0;
+  flex: 0 0 var(--bookshelf-spine-width);
+  width: var(--bookshelf-spine-width);
   min-height: 310px;
   text-decoration: none;
   perspective: 1200px;
+  transition: flex-basis 260ms ease, width 260ms ease, z-index 0ms linear 130ms;
 }
 
 .bookshelf-book__scene {
   position: relative;
   display: block;
+  width: 100%;
   min-height: 310px;
+  transition: width 260ms ease;
 }
 
 .bookshelf-book__spine,
@@ -1185,6 +1192,19 @@ h4 {
   opacity: 0.08;
   transform: rotateY(-88deg) scaleX(0.74);
   border-color: rgba(242, 216, 170, 0.28);
+}
+
+.bookshelf-book:hover,
+.bookshelf-book:focus-visible {
+  z-index: 3;
+  flex-basis: var(--bookshelf-cover-width);
+  width: var(--bookshelf-cover-width);
+  transition-delay: 0ms;
+}
+
+.bookshelf-book:hover .bookshelf-book__scene,
+.bookshelf-book:focus-visible .bookshelf-book__scene {
+  width: var(--bookshelf-cover-width);
 }
 
 .bookshelf-book:hover .bookshelf-book__cover-frame,
