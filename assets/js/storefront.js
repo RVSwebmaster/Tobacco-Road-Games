@@ -1,50 +1,41 @@
 (() => {
-  const grid = document.getElementById("catalog-grid");
-  const controls = document.getElementById("catalog-controls");
+  const browsers = Array.from(document.querySelectorAll("[data-store-browser]"));
 
-  if (!grid || !controls) {
+  if (!browsers.length) {
     return;
   }
-
-  const searchField = document.getElementById("catalog-search");
-  const authorField = document.getElementById("catalog-author");
-  const systemField = document.getElementById("catalog-system");
-  const lineField = document.getElementById("catalog-line");
-  const statusField = document.getElementById("catalog-status");
-  const formatField = document.getElementById("catalog-format");
-  const priceTypeField = document.getElementById("catalog-price-type");
-  const sortField = document.getElementById("catalog-sort");
-  const countField = document.getElementById("catalog-count");
-  const emptyState = document.getElementById("catalog-empty");
-  const cards = Array.from(grid.querySelectorAll("[data-product-card]"));
 
   const normalizePrice = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed >= 0 ? parsed : Number.POSITIVE_INFINITY;
   };
 
-  const applyFilters = () => {
-    const query = (searchField?.value || "").trim().toLowerCase();
-    const author = authorField?.value || "";
-    const system = systemField?.value || "";
-    const line = lineField?.value || "";
-    const status = statusField?.value || "";
-    const format = formatField?.value || "";
-    const priceType = priceTypeField?.value || "";
-    const sortMode = sortField?.value || "title";
+  const matchesFilters = (item, state) => {
+    const searchText = item.dataset.search || "";
+    const authors = (item.dataset.author || "").split("|").filter(Boolean);
+    const formats = (item.dataset.format || "").split("|").filter(Boolean);
 
-    const visibleCards = cards.filter((card) => {
-      const matchesQuery = !query || card.dataset.search.includes(query);
-      const matchesAuthor = !author || card.dataset.author.split("|").includes(author);
-      const matchesSystem = !system || card.dataset.system === system;
-      const matchesLine = !line || card.dataset.line === line;
-      const matchesStatus = !status || card.dataset.status === status;
-      const matchesFormat = !format || card.dataset.format.split("|").includes(format);
-      const matchesPriceType = !priceType || card.dataset.priceType === priceType;
-      return matchesQuery && matchesAuthor && matchesSystem && matchesLine && matchesStatus && matchesFormat && matchesPriceType;
-    });
+    const matchesQuery = !state.query || searchText.includes(state.query);
+    const matchesAuthor = !state.author || authors.includes(state.author);
+    const matchesSystem = !state.system || item.dataset.system === state.system;
+    const matchesLine = !state.line || item.dataset.line === state.line;
+    const matchesStatus = !state.status || item.dataset.status === state.status;
+    const matchesFormat = !state.format || formats.includes(state.format);
+    const matchesPriceType = !state.priceType || item.dataset.priceType === state.priceType;
+    const matchesSale = !state.saleOnly || item.dataset.saleActive === "true";
 
-    visibleCards.sort((left, right) => {
+    return matchesQuery
+      && matchesAuthor
+      && matchesSystem
+      && matchesLine
+      && matchesStatus
+      && matchesFormat
+      && matchesPriceType
+      && matchesSale;
+  };
+
+  const sortItems = (items, sortMode) => {
+    return [...items].sort((left, right) => {
       if (sortMode === "newest") {
         return Number(right.dataset.release || 0) - Number(left.dataset.release || 0);
       }
@@ -63,23 +54,58 @@
 
       return (left.dataset.title || "").localeCompare(right.dataset.title || "");
     });
+  };
 
-    cards.forEach((card) => {
-      card.hidden = !visibleCards.includes(card);
-    });
+  const collectState = (root) => ({
+    query: (root.querySelector("[data-filter-search]")?.value || "").trim().toLowerCase(),
+    author: root.querySelector("[data-filter-author]")?.value || "",
+    system: root.querySelector("[data-filter-system]")?.value || "",
+    line: root.querySelector("[data-filter-line]")?.value || "",
+    status: root.querySelector("[data-filter-status]")?.value || "",
+    format: root.querySelector("[data-filter-format]")?.value || "",
+    priceType: root.querySelector("[data-filter-price-type]")?.value || "",
+    sortMode: root.querySelector("[data-filter-sort]")?.value || "title",
+    saleOnly: Boolean(root.querySelector("[data-filter-sale]")?.checked)
+  });
 
-    visibleCards.forEach((card) => grid.appendChild(card));
+  const applyBrowser = (root) => {
+    const state = collectState(root);
+    const shelf = root.querySelector("[data-store-shelf]");
+    const grid = root.querySelector("[data-store-grid]");
+    const count = root.querySelector("[data-store-count]");
+    const empty = root.querySelector("[data-store-empty]");
+    const shelfItems = shelf ? Array.from(shelf.querySelectorAll("[data-product-card]")) : [];
+    const gridItems = grid ? Array.from(grid.querySelectorAll("[data-product-card]")) : [];
+    const sortedGridItems = sortItems(gridItems.filter((item) => matchesFilters(item, state)), state.sortMode);
+    const visibleSlugs = new Set(sortedGridItems.map((item) => item.dataset.slug));
 
-    if (countField) {
-      countField.textContent = `${visibleCards.length} title${visibleCards.length === 1 ? "" : "s"} in the catalog`;
+    if (shelf) {
+      const sortedShelfItems = sortItems(shelfItems.filter((item) => visibleSlugs.has(item.dataset.slug)), state.sortMode);
+      shelfItems.forEach((item) => {
+        item.hidden = !visibleSlugs.has(item.dataset.slug);
+      });
+      sortedShelfItems.forEach((item) => shelf.appendChild(item));
     }
 
-    if (emptyState) {
-      emptyState.hidden = visibleCards.length !== 0;
+    if (grid) {
+      gridItems.forEach((item) => {
+        item.hidden = !visibleSlugs.has(item.dataset.slug);
+      });
+      sortedGridItems.forEach((item) => grid.appendChild(item));
+    }
+
+    if (count) {
+      count.textContent = `${sortedGridItems.length} title${sortedGridItems.length === 1 ? "" : "s"} currently shown`;
+    }
+
+    if (empty) {
+      empty.hidden = sortedGridItems.length !== 0;
     }
   };
 
-  controls.addEventListener("input", applyFilters);
-  controls.addEventListener("change", applyFilters);
-  applyFilters();
+  browsers.forEach((root) => {
+    root.addEventListener("input", () => applyBrowser(root));
+    root.addEventListener("change", () => applyBrowser(root));
+    applyBrowser(root);
+  });
 })();

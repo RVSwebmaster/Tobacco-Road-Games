@@ -49,87 +49,93 @@
           <div class="section-heading">
             <p class="section-heading__kicker">Catalog</p>
             <h1 id="catalog-heading">Search and browse Tobacco Road Games titles.</h1>
-            <p>Browse by author, game system, product line, release status, format, and price type.</p>
+            <p>Browse by author, game system, category or line, release status, format, and price type.</p>
           </div>
+          
+    <div class="store-browser" data-store-browser="catalog-browser">
+      
+    <div class="catalog-controls" data-store-controls>
+      <label class="catalog-control">
+        <span>Title Search</span>
+        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, tags" data-filter-search>
+      </label>
 
-          <div class="catalog-controls" id="catalog-controls">
-            <label class="catalog-control">
-              <span>Title Search</span>
-              <input id="catalog-search" class="dock-input" type="search" placeholder="Search titles, authors, systems, tags">
-            </label>
+      <label class="catalog-control">
+        <span>Author</span>
+        <select class="dock-input" data-filter-author>
+          <option value="">All Authors</option>
+          <option value="rv-sawyer">RV Sawyer</option>
+        </select>
+      </label>
 
-            <label class="catalog-control">
-              <span>Author</span>
-              <select id="catalog-author" class="dock-input">
-                <option value="">All Authors</option>
-                <option value="rv-sawyer">RV Sawyer</option>
-              </select>
-            </label>
+      <label class="catalog-control">
+        <span>Game System</span>
+        <select class="dock-input" data-filter-system>
+          <option value="">All Game Systems</option>
+          <option value="5e-compatible">5E Compatible</option>
+        </select>
+      </label>
 
-            <label class="catalog-control">
-              <span>Game System</span>
-              <select id="catalog-system" class="dock-input">
-                <option value="">All Game Systems</option>
-                <option value="5e-compatible">5E Compatible</option><option value="tabletop-roleplaying">Tabletop Roleplaying</option>
-              </select>
-            </label>
+      <label class="catalog-control">
+        <span>Category / Line</span>
+        <select class="dock-input" data-filter-line>
+          <option value="">All Categories and Lines</option>
+          <option value="fifth-edition-fantasy-roleplaying">Fifth Edition Fantasy Roleplaying</option>
+        </select>
+      </label>
 
-            <label class="catalog-control">
-              <span>Product Line</span>
-              <select id="catalog-line" class="dock-input">
-                <option value="">All Product Lines</option>
-                <option value="fifth-edition-fantasy-roleplaying">Fifth Edition Fantasy Roleplaying</option><option value="strange-roads">Strange Roads</option>
-              </select>
-            </label>
+      <label class="catalog-control">
+        <span>Status</span>
+        <select class="dock-input" data-filter-status>
+          <option value="">All Statuses</option>
+          <option value="preview-available">Preview Available</option>
+        </select>
+      </label>
 
-            <label class="catalog-control">
-              <span>Status</span>
-              <select id="catalog-status" class="dock-input">
-                <option value="">All Statuses</option>
-                <option value="preview-available">Preview Available</option>
-              </select>
-            </label>
+      <label class="catalog-control">
+        <span>Format</span>
+        <select class="dock-input" data-filter-format>
+          <option value="">All Formats</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </label>
 
-            <label class="catalog-control">
-              <span>Format</span>
-              <select id="catalog-format" class="dock-input">
-                <option value="">All Formats</option>
-                <option value="pdf">PDF</option>
-              </select>
-            </label>
+      <label class="catalog-control">
+        <span>Price Type</span>
+        <select class="dock-input" data-filter-price-type>
+          <option value="">All Price Types</option>
+          <option value="preview-only">Preview Only</option>
+        </select>
+      </label>
 
-            <label class="catalog-control">
-              <span>Price Type</span>
-              <select id="catalog-price-type" class="dock-input">
-                <option value="">All Price Types</option>
-                <option value="preview-only">Preview Only</option>
-              </select>
-            </label>
+      
 
-            <label class="catalog-control">
-              <span>Sort</span>
-              <select id="catalog-sort" class="dock-input">
-                <option value="title">Title A to Z</option>
-                <option value="newest">Newest</option>
-                <option value="updated">Recently Updated</option>
-                <option value="price-low">Price Low to High</option>
-                <option value="price-high">Price High to Low</option>
-              </select>
-            </label>
+      <label class="catalog-control">
+        <span>Sort</span>
+        <select class="dock-input" data-filter-sort>
+          <option value="title" selected>Title A to Z</option>
+          <option value="newest">Newest</option>
+          <option value="updated">Recently Updated</option>
+          <option value="price-low">Price Low to High</option>
+          <option value="price-high">Price High to Low</option>
+        </select>
+      </label>
+    </div>
+  
+      <div class="catalog-tools">
+        <p class="catalog-count" data-store-count>1 titles currently shown</p>
+        
+          <div class="title-index" aria-label="Title index">
+            <a class="title-index__link" href="#product-sirrocans">S</a>
           </div>
-
-          <div class="catalog-tools">
-            <p id="catalog-count" class="catalog-count">2 titles in the catalog</p>
-            <div class="title-index" aria-label="Title index">
-              <a class="title-index__link" href="#product-sirrocans">S</a><a class="title-index__link" href="#product-thiefcraft">T</a>
-            </div>
-          </div>
-
-          <div id="catalog-empty" class="initiative-empty" hidden>No titles match the current search and filters.</div>
-
-          <div id="catalog-grid" class="product-card-grid">
-            
-    <article class="product-card" id="product-sirrocans" data-product-card="true" data-title="sirrocans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1779840000000" data-updated="1779840000000" data-search="sirrocans a 5e-compatible character race of giant-blooded desert nomads rv sawyer 5e compatible fifth edition fantasy roleplaying 5e ancestry desert character race giant-blooded preview preview available preview only">
+        
+      </div>
+      <div class="initiative-empty" data-store-empty hidden>No titles match the current search and filters.</div>
+      
+      
+      <div class="product-card-grid" data-store-grid>
+        
+    <article class="product-card" id="product-sirrocans" data-product-card="true" data-slug="sirrocans" data-title="sirrocans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1779840000000" data-updated="1779840000000" data-sale-active="false" data-search="sirrocans a 5e-compatible character race of giant-blooded desert nomads rv sawyer 5e compatible fifth edition fantasy roleplaying 5e ancestry desert character race giant-blooded preview preview available preview only">
       <div class="product-card__media">
         <img src="/assets/products/sirrocans/thumb.webp" alt="Sirrocans thumbnail">
       </div>
@@ -149,27 +155,9 @@
       </div>
     </article>
   
-    <article class="product-card" id="product-thiefcraft" data-product-card="true" data-title="thiefcraft" data-author="rv-sawyer" data-system="tabletop-roleplaying" data-line="strange-roads" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781395200000" data-updated="1781395200000" data-search="thiefcraft a tobacco road games storefront preview title rv sawyer tabletop roleplaying strange roads preview strange roads featured preview available preview only">
-      <div class="product-card__media">
-        <img src="/assets/releases/thiefcraft-cover.png" alt="Thiefcraft thumbnail">
       </div>
-      <div class="product-card__body">
-        <div class="product-card__topline">
-          <span class="status-badge status-badge--preview-available">Preview Available</span>
-          <span class="product-card__price">Preview Available</span>
-        </div>
-        <h3 class="product-card__title">Thiefcraft</h3>
-        <p class="product-card__subtitle">A Tobacco Road Games storefront preview title</p>
-        <p class="product-card__meta product-card__meta--byline">By <a class="author-link" href="/authors/rv-sawyer/">RV Sawyer</a></p>
-        <p class="product-card__meta">Tabletop Roleplaying | Strange Roads</p>
-        <p class="product-card__meta">PDF</p>
-        <div class="product-card__actions">
-          <a class="button button--secondary product-card__button" href="/store/products/thiefcraft/">View Product</a>
-        </div>
-      </div>
-    </article>
+    </div>
   
-          </div>
         </section>
       </main>
     

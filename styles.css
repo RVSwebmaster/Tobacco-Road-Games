@@ -1034,6 +1034,168 @@ h4 {
   font-size: 1.35rem;
 }
 
+.store-browser,
+.bookshelf-browser {
+  display: grid;
+  gap: 18px;
+}
+
+.bookshelf-browser__header,
+.catalog-browser__header {
+  display: grid;
+  gap: 8px;
+}
+
+.bookshelf-browser__header h3,
+.catalog-browser__header h3 {
+  font-size: 1.45rem;
+}
+
+.bookshelf-browser__header p,
+.catalog-browser__header p {
+  margin: 0;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  line-height: 1.7;
+}
+
+.bookshelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+  gap: 14px;
+  align-items: end;
+  padding: 16px 18px 20px;
+  border: 1px solid rgba(242, 216, 170, 0.14);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(42, 26, 17, 0.74), rgba(16, 10, 7, 0.9));
+  box-shadow:
+    inset 0 -10px 0 rgba(59, 34, 20, 0.92),
+    inset 0 -14px 0 rgba(136, 88, 52, 0.25),
+    0 18px 34px rgba(0, 0, 0, 0.2);
+}
+
+.bookshelf-book {
+  display: block;
+  min-height: 310px;
+  text-decoration: none;
+  perspective: 1200px;
+}
+
+.bookshelf-book__scene {
+  position: relative;
+  display: block;
+  min-height: 310px;
+}
+
+.bookshelf-book__spine,
+.bookshelf-book__cover-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgba(242, 216, 170, 0.18);
+  border-radius: 16px 10px 10px 16px;
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.3);
+  backface-visibility: hidden;
+  transform-origin: left center;
+  transition: transform 260ms ease, opacity 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.bookshelf-book__spine {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 10px;
+  padding: 14px 8px;
+  background:
+    linear-gradient(180deg, rgba(125, 77, 42, 0.95), rgba(66, 39, 22, 0.98)),
+    linear-gradient(90deg, rgba(255, 240, 216, 0.12), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.24));
+}
+
+.bookshelf-book:nth-child(3n + 2) .bookshelf-book__spine {
+  background:
+    linear-gradient(180deg, rgba(90, 60, 33, 0.95), rgba(44, 28, 17, 0.98)),
+    linear-gradient(90deg, rgba(255, 240, 216, 0.12), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.24));
+}
+
+.bookshelf-book:nth-child(4n + 3) .bookshelf-book__spine {
+  background:
+    linear-gradient(180deg, rgba(112, 48, 34, 0.95), rgba(57, 24, 17, 0.98)),
+    linear-gradient(90deg, rgba(255, 240, 216, 0.12), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.24));
+}
+
+.bookshelf-book__status,
+.bookshelf-book__title,
+.bookshelf-book__author {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+}
+
+.bookshelf-book__status,
+.bookshelf-book__author,
+.bookshelf-book__mobile-subtitle,
+.bookshelf-book__mobile-meta {
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
+.bookshelf-book__status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bookshelf-book__title {
+  color: #fff4df;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.bookshelf-book__author {
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.bookshelf-book__cover-frame {
+  opacity: 0;
+  transform: rotateY(88deg) scale(0.96);
+  background:
+    linear-gradient(180deg, rgba(24, 16, 12, 0.96), rgba(8, 6, 5, 0.98));
+}
+
+.bookshelf-book__cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bookshelf-book__mobile {
+  display: none;
+}
+
+.bookshelf-book:hover .bookshelf-book__spine,
+.bookshelf-book:focus-visible .bookshelf-book__spine {
+  opacity: 0.08;
+  transform: rotateY(-88deg) scaleX(0.74);
+  border-color: rgba(242, 216, 170, 0.28);
+}
+
+.bookshelf-book:hover .bookshelf-book__cover-frame,
+.bookshelf-book:focus-visible .bookshelf-book__cover-frame {
+  opacity: 1;
+  transform: rotateY(0deg) scale(1);
+  border-color: rgba(242, 216, 170, 0.34);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.34);
+}
+
+.bookshelf-book:focus-visible {
+  outline: none;
+}
+
 .catalog-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1057,6 +1219,39 @@ h4 {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.catalog-control--toggle {
+  align-content: end;
+}
+
+.catalog-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid rgba(242, 216, 170, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.catalog-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.catalog-toggle span {
+  color: var(--text);
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .catalog-tools {
@@ -1160,6 +1355,24 @@ h4 {
 .preview-panel {
   display: grid;
   gap: 16px;
+}
+
+.preview-feature {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(242, 216, 170, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.preview-feature img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.preview-note {
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .inline-link {
@@ -1456,6 +1669,61 @@ body.view-section .site-footer {
   h1 {
     max-width: none;
     font-size: clamp(2.5rem, 7vw, 4rem);
+  }
+
+  .bookshelf-grid {
+    grid-template-columns: 1fr;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .bookshelf-book,
+  .bookshelf-book__scene {
+    min-height: auto;
+  }
+
+  .bookshelf-book__spine,
+  .bookshelf-book__cover-frame {
+    display: none;
+  }
+
+  .bookshelf-book__mobile {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid rgba(242, 216, 170, 0.14);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.045);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.2);
+  }
+
+  .bookshelf-book__mobile-media {
+    overflow: hidden;
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgba(30, 19, 13, 0.94), rgba(11, 8, 6, 0.98));
+    aspect-ratio: 4 / 5;
+  }
+
+  .bookshelf-book__mobile-copy {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+  }
+
+  .bookshelf-book__mobile-title {
+    color: var(--text);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .bookshelf-book__mobile-subtitle,
+  .bookshelf-book__mobile-meta {
+    line-height: 1.65;
   }
 }
 

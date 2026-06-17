@@ -47,6 +47,7 @@ function main() {
   const authors = loadAuthors();
   const authorLookup = buildAuthorLookup(authors);
   const products = loadProducts(authorLookup);
+  const assetWarnings = collectAssetWarnings(products);
   const bundleRules = loadBundleRules();
   const indexes = buildIndexes(products, authors);
 
@@ -142,6 +143,12 @@ function main() {
   writeFile("sitemap.xml", renderRootSitemap(indexes.authors));
 
   console.log(`Storefront generated for ${products.length} products.`);
+  if (assetWarnings.length) {
+    console.log(`Asset cleanup needed for ${assetWarnings.length} product${assetWarnings.length === 1 ? "" : "s"}:`);
+    for (const warning of assetWarnings) {
+      console.log(`- ${warning}`);
+    }
+  }
 }
 
 function loadAuthors() {
@@ -205,6 +212,9 @@ function loadProducts(authorLookup) {
       features: ensureArray(product.features),
       tags: ensureArray(product.tags),
       relatedProducts: ensureArray(product.relatedProducts),
+      featured: Boolean(product.featured),
+      coverImage: product.coverImage || "",
+      previewImage: product.previewImage || "",
       currency: product.currency || "USD",
       status: product.status || "coming-soon",
       statusLabel: product.statusLabel || STATUS_LABELS[product.status] || "Unavailable",
@@ -239,6 +249,7 @@ function loadProducts(authorLookup) {
     };
 
     normalized.url = `/store/products/${normalized.slug}/`;
+    normalized.saleActive = isSaleActive(normalized);
     normalized.assetSet = resolveProductAssets(normalized);
     normalized.releaseStamp = parseDate(normalized.releaseDate);
     normalized.updatedStamp = parseDate(normalized.lastUpdated);
@@ -343,15 +354,16 @@ function buildIndexes(products, authors) {
     lines: sortByName([...lineMap.values()]),
     statuses: sortByName([...statusMap.values()], "label"),
     formats: sortByName([...formatMap.values()]),
-    priceTypes: sortByName([...priceTypeMap.values()], "label")
+    priceTypes: sortByName([...priceTypeMap.values()], "label"),
+    hasActiveSales: products.some((product) => product.saleActive)
   };
 }
 
 function renderStoreHome(products, indexes) {
   const featured = chooseFeaturedProduct(products);
-  const availableDirect = filterByStatus(products, "available-direct");
-  const previewAvailable = filterByStatus(products, "preview-available");
-  const comingSoon = filterByStatus(products, "coming-soon");
+  const featuredShelf = chooseFeaturedProducts(products);
+  const newReleases = chooseNewReleases(products);
+  const browserProducts = sortProducts(products, "newest");
 
   return renderLayout({
     pageTitle: `${STORE_TITLE} | Digital Roleplaying Titles and Previews`,
@@ -359,6 +371,7 @@ function renderStoreHome(products, indexes) {
     canonicalPath: "/store/",
     ogImage: featured?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
+    extraScripts: ["/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: STORE_TITLE,
       description: "Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games.",
@@ -372,9 +385,10 @@ function renderStoreHome(products, indexes) {
           <div class="store-hero__copy">
             <p class="section-heading__kicker">Store</p>
             <h1 id="store-home-heading">Tobacco Road Games Store</h1>
-            <p class="hero__lead">Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games. New direct-release titles will appear here first as the catalog is rebuilt.</p>
+            <p class="hero__lead">Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games. On desktop, the front of the store opens as a shelf of spines first and a practical catalog below it.</p>
             <div class="hero__actions">
-              <a class="button button--primary" href="/store/catalog/">Browse the Catalog</a>
+              <a class="button button--primary" href="#store-bookshelf">Browse the Bookshelf</a>
+              <a class="button button--secondary" href="/store/catalog/">Open the Full Catalog</a>
               ${featured ? `<a class="button button--secondary" href="${featured.url}">Meet ${escapeHtml(featured.title)}</a>` : ""}
             </div>
           </div>
@@ -382,7 +396,7 @@ function renderStoreHome(products, indexes) {
             <article class="note-card">
               <p class="note-card__label">Direct Storefront</p>
               <h2>Digital titles, previews, and releases</h2>
-              <p>Product pages lead the store, with clear buyer facts, useful previews, and direct-release titles added as the catalog returns.</p>
+              <p>Product pages lead the store, with clear buyer facts, useful previews, and a desktop bookshelf that can still fall back to a normal catalog grid on any device.</p>
             </article>
             <article class="creation-standard-placard">
               <p class="creation-standard-title">Our Creation Standard</p>
@@ -404,6 +418,41 @@ function renderStoreHome(products, indexes) {
           </section>
         ` : ""}
 
+        ${featuredShelf.length ? renderBookshelfSection({
+          id: "featured-bookshelf-heading",
+          kicker: "Featured",
+          title: "Featured Shelf",
+          description: "Manually chosen titles stay at eye level here so the shelf can spotlight work Tobacco Road Games wants front and center.",
+          products: featuredShelf
+        }) : ""}
+
+        ${newReleases.length ? renderBookshelfSection({
+          id: "new-releases-bookshelf-heading",
+          kicker: "New Releases",
+          title: "New Releases",
+          description: "Newest books are shelved by release date first so recent work is easy to scan.",
+          products: newReleases
+        }) : ""}
+
+        <section class="store-section" id="store-bookshelf" aria-labelledby="bookshelf-browser-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Bookshelf</p>
+            <h2 id="bookshelf-browser-heading">Shelf first, catalog second.</h2>
+            <p>Use the shelf filters to browse by category or line, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
+          </div>
+          ${renderStoreBrowser(browserProducts, indexes, {
+            browserId: "store-home-browser",
+            showShelf: true,
+            includeTitleIndex: false,
+            defaultSort: "newest",
+            countLabel: "titles currently shown",
+            shelfHeading: "Desktop Bookshelf",
+            shelfDescription: "Hover or focus a spine to turn it toward the cover, then open the full product page.",
+            gridHeading: "Catalog Fallback",
+            gridDescription: "The practical card grid stays below the shelf for touch devices, scanning, and no-hover browsing."
+          })}
+        </section>
+
         <section class="store-section" aria-labelledby="purchase-promise-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Store Policy</p>
@@ -416,10 +465,6 @@ function renderStoreHome(products, indexes) {
             <p>If something goes wrong with delivery, contact Tobacco Road Games for help.</p>
           </div>
         </section>
-
-        ${renderStoreSection("available-direct-products-heading", "Available Direct", "Available Direct", availableDirect)}
-        ${renderStoreSection("preview-available-products-heading", "Preview Available", "Preview Available", previewAvailable)}
-        ${renderStoreSection("coming-soon-products-heading", "Coming Soon", "Coming Soon", comingSoon)}
 
         ${renderBrowseSection("Browse by Game System", indexes.systems, (entry) => `/store/systems/${entry.slug}/`)}
         ${renderBrowseSection("Browse by Product Line", indexes.lines, (entry) => `/store/lines/${entry.slug}/`)}
@@ -446,7 +491,6 @@ function renderStoreHome(products, indexes) {
 
 function renderCatalogPage(products, indexes) {
   const sortedProducts = sortProducts(products, "title");
-  const initials = buildTitleIndex(sortedProducts);
 
   return renderLayout({
     pageTitle: `${STORE_TITLE} Catalog | Search and Browse Titles`,
@@ -468,87 +512,17 @@ function renderCatalogPage(products, indexes) {
           <div class="section-heading">
             <p class="section-heading__kicker">Catalog</p>
             <h1 id="catalog-heading">Search and browse Tobacco Road Games titles.</h1>
-            <p>Browse by author, game system, product line, release status, format, and price type.</p>
+            <p>Browse by author, game system, category or line, release status, format, and price type.</p>
           </div>
-
-          <div class="catalog-controls" id="catalog-controls">
-            <label class="catalog-control">
-              <span>Title Search</span>
-              <input id="catalog-search" class="dock-input" type="search" placeholder="Search titles, authors, systems, tags">
-            </label>
-
-            <label class="catalog-control">
-              <span>Author</span>
-              <select id="catalog-author" class="dock-input">
-                <option value="">All Authors</option>
-                ${indexes.authors.map((author) => `<option value="${escapeAttribute(author.slug)}">${escapeHtml(author.name)}</option>`).join("")}
-              </select>
-            </label>
-
-            <label class="catalog-control">
-              <span>Game System</span>
-              <select id="catalog-system" class="dock-input">
-                <option value="">All Game Systems</option>
-                ${indexes.systems.map((system) => `<option value="${escapeAttribute(system.slug)}">${escapeHtml(system.name)}</option>`).join("")}
-              </select>
-            </label>
-
-            <label class="catalog-control">
-              <span>Product Line</span>
-              <select id="catalog-line" class="dock-input">
-                <option value="">All Product Lines</option>
-                ${indexes.lines.map((line) => `<option value="${escapeAttribute(line.slug)}">${escapeHtml(line.name)}</option>`).join("")}
-              </select>
-            </label>
-
-            <label class="catalog-control">
-              <span>Status</span>
-              <select id="catalog-status" class="dock-input">
-                <option value="">All Statuses</option>
-                ${indexes.statuses.map((status) => `<option value="${escapeAttribute(status.slug)}">${escapeHtml(status.label)}</option>`).join("")}
-              </select>
-            </label>
-
-            <label class="catalog-control">
-              <span>Format</span>
-              <select id="catalog-format" class="dock-input">
-                <option value="">All Formats</option>
-                ${indexes.formats.map((format) => `<option value="${escapeAttribute(format.slug)}">${escapeHtml(format.name)}</option>`).join("")}
-              </select>
-            </label>
-
-            <label class="catalog-control">
-              <span>Price Type</span>
-              <select id="catalog-price-type" class="dock-input">
-                <option value="">All Price Types</option>
-                ${indexes.priceTypes.map((entry) => `<option value="${escapeAttribute(entry.slug)}">${escapeHtml(entry.label)}</option>`).join("")}
-              </select>
-            </label>
-
-            <label class="catalog-control">
-              <span>Sort</span>
-              <select id="catalog-sort" class="dock-input">
-                <option value="title">Title A to Z</option>
-                <option value="newest">Newest</option>
-                <option value="updated">Recently Updated</option>
-                <option value="price-low">Price Low to High</option>
-                <option value="price-high">Price High to Low</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="catalog-tools">
-            <p id="catalog-count" class="catalog-count">${sortedProducts.length} titles in the catalog</p>
-            <div class="title-index" aria-label="Title index">
-              ${initials.map((entry) => `<a class="title-index__link" href="#product-${escapeAttribute(entry.slug)}">${escapeHtml(entry.letter)}</a>`).join("")}
-            </div>
-          </div>
-
-          <div id="catalog-empty" class="initiative-empty" hidden>No titles match the current search and filters.</div>
-
-          <div id="catalog-grid" class="product-card-grid">
-            ${sortedProducts.map((product) => renderProductCard(product, { withDataset: true, includeAnchorId: true })).join("")}
-          </div>
+          ${renderStoreBrowser(sortedProducts, indexes, {
+            browserId: "catalog-browser",
+            showShelf: false,
+            includeTitleIndex: true,
+            defaultSort: "title",
+            countLabel: "titles currently shown",
+            gridHeading: "",
+            gridDescription: ""
+          })}
         </section>
       </main>
     `
@@ -563,7 +537,7 @@ function renderProductPage(product, products) {
   const detailsItems = [
     renderIdentityItem("Author", product.authors.join(", ")),
     renderIdentityItem("Game System", product.gameSystem),
-    renderIdentityItem("Product Line", product.productLine),
+    renderIdentityItem("Product Line", renderProductLineValue(product)),
     renderIdentityItem("Format", product.format.join(", ") || "TBD"),
     renderIdentityItem("Pages", product.pageCount ? String(product.pageCount) : "TBD"),
     renderIdentityItem("Status", product.statusLabel),
@@ -622,6 +596,15 @@ function renderProductPage(product, products) {
     `
     : "";
 
+  const heroMetaItems = [
+    renderDisplayPrice(product),
+    product.format.join(", ") || "Format TBD",
+    product.pageCount ? `${product.pageCount} pages` : "Page count TBD",
+    product.productLine,
+    product.version || "Version TBD",
+    product.lastUpdated || "Update date TBD"
+  ].filter(Boolean);
+
   return renderLayout({
     pageTitle: `${product.title} | ${STORE_TITLE}`,
     description: product.shortDescription,
@@ -655,12 +638,7 @@ function renderProductPage(product, products) {
             <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
             ${authorByline ? `<p class="product-byline">${authorByline}</p>` : ""}
             <div class="product-hero__meta">
-              <span>${escapeHtml(renderDisplayPrice(product))}</span>
-              <span>${escapeHtml(product.format.join(", ") || "Format TBD")}</span>
-              <span>${escapeHtml(product.pageCount ? `${product.pageCount} pages` : "Page count TBD")}</span>
-              <span>${escapeHtml(product.productLine)}</span>
-              <span>${escapeHtml(product.version || "Version TBD")}</span>
-              <span>${escapeHtml(product.lastUpdated || "Update date TBD")}</span>
+              ${heroMetaItems.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
             </div>
             <div class="hero__actions">
               ${buyUi.primary}
@@ -901,6 +879,193 @@ function renderFeatureSpotlight(product) {
   `;
 }
 
+function renderBookshelfSection({ id, kicker, title, description, products }) {
+  if (!products.length) {
+    return "";
+  }
+
+  return `
+    <section class="store-section" aria-labelledby="${escapeAttribute(id)}">
+      <div class="section-heading">
+        <p class="section-heading__kicker">${escapeHtml(kicker)}</p>
+        <h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2>
+        <p>${escapeHtml(description)}</p>
+      </div>
+      <div class="bookshelf-grid">
+        ${products.map((product) => renderBookshelfBook(product)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderStoreBrowser(products, indexes, options = {}) {
+  const {
+    browserId = "store-browser",
+    showShelf = false,
+    includeTitleIndex = false,
+    defaultSort = "title",
+    countLabel = "titles currently shown",
+    shelfHeading = "",
+    shelfDescription = "",
+    gridHeading = "",
+    gridDescription = ""
+  } = options;
+  const initials = includeTitleIndex ? buildTitleIndex(products) : [];
+
+  return `
+    <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}">
+      ${renderStoreBrowserControls(indexes, defaultSort)}
+      <div class="catalog-tools">
+        <p class="catalog-count" data-store-count>${products.length} ${escapeHtml(countLabel)}</p>
+        ${includeTitleIndex ? `
+          <div class="title-index" aria-label="Title index">
+            ${initials.map((entry) => `<a class="title-index__link" href="#product-${escapeAttribute(entry.slug)}">${escapeHtml(entry.letter)}</a>`).join("")}
+          </div>
+        ` : ""}
+      </div>
+      <div class="initiative-empty" data-store-empty hidden>No titles match the current search and filters.</div>
+      ${showShelf ? `
+        <section class="bookshelf-browser" aria-label="Desktop bookshelf view">
+          ${shelfHeading || shelfDescription ? `
+            <div class="bookshelf-browser__header">
+              ${shelfHeading ? `<h3>${escapeHtml(shelfHeading)}</h3>` : ""}
+              ${shelfDescription ? `<p>${escapeHtml(shelfDescription)}</p>` : ""}
+            </div>
+          ` : ""}
+          <div class="bookshelf-grid" data-store-shelf>
+            ${products.map((product) => renderBookshelfBook(product, { withDataset: true })).join("")}
+          </div>
+        </section>
+      ` : ""}
+      ${gridHeading || gridDescription ? `
+        <div class="catalog-browser__header">
+          ${gridHeading ? `<h3>${escapeHtml(gridHeading)}</h3>` : ""}
+          ${gridDescription ? `<p>${escapeHtml(gridDescription)}</p>` : ""}
+        </div>
+      ` : ""}
+      <div class="product-card-grid" data-store-grid>
+        ${products.map((product) => renderProductCard(product, { withDataset: true, includeAnchorId: includeTitleIndex })).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderStoreBrowserControls(indexes, defaultSort = "title") {
+  const saleToggle = indexes.hasActiveSales
+    ? `
+      <label class="catalog-control catalog-control--toggle">
+        <span>Sale Filter</span>
+        <span class="catalog-toggle">
+          <input type="checkbox" data-filter-sale>
+          <span>On Sale Only</span>
+        </span>
+      </label>
+    `
+    : "";
+
+  return `
+    <div class="catalog-controls" data-store-controls>
+      <label class="catalog-control">
+        <span>Title Search</span>
+        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, tags" data-filter-search>
+      </label>
+
+      <label class="catalog-control">
+        <span>Author</span>
+        <select class="dock-input" data-filter-author>
+          <option value="">All Authors</option>
+          ${indexes.authors.map((author) => `<option value="${escapeAttribute(author.slug)}">${escapeHtml(author.name)}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Game System</span>
+        <select class="dock-input" data-filter-system>
+          <option value="">All Game Systems</option>
+          ${indexes.systems.map((system) => `<option value="${escapeAttribute(system.slug)}">${escapeHtml(system.name)}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Category / Line</span>
+        <select class="dock-input" data-filter-line>
+          <option value="">All Categories and Lines</option>
+          ${indexes.lines.map((line) => `<option value="${escapeAttribute(line.slug)}">${escapeHtml(line.name)}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Status</span>
+        <select class="dock-input" data-filter-status>
+          <option value="">All Statuses</option>
+          ${indexes.statuses.map((status) => `<option value="${escapeAttribute(status.slug)}">${escapeHtml(status.label)}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Format</span>
+        <select class="dock-input" data-filter-format>
+          <option value="">All Formats</option>
+          ${indexes.formats.map((format) => `<option value="${escapeAttribute(format.slug)}">${escapeHtml(format.name)}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Price Type</span>
+        <select class="dock-input" data-filter-price-type>
+          <option value="">All Price Types</option>
+          ${indexes.priceTypes.map((entry) => `<option value="${escapeAttribute(entry.slug)}">${escapeHtml(entry.label)}</option>`).join("")}
+        </select>
+      </label>
+
+      ${saleToggle}
+
+      <label class="catalog-control">
+        <span>Sort</span>
+        <select class="dock-input" data-filter-sort>
+          <option value="title"${defaultSort === "title" ? " selected" : ""}>Title A to Z</option>
+          <option value="newest"${defaultSort === "newest" ? " selected" : ""}>Newest</option>
+          <option value="updated"${defaultSort === "updated" ? " selected" : ""}>Recently Updated</option>
+          <option value="price-low"${defaultSort === "price-low" ? " selected" : ""}>Price Low to High</option>
+          <option value="price-high"${defaultSort === "price-high" ? " selected" : ""}>Price High to Low</option>
+        </select>
+      </label>
+    </div>
+  `;
+}
+
+function renderBookshelfBook(product, options = {}) {
+  const { withDataset = false } = options;
+  const dataset = withDataset ? renderProductDatasetAttributes(product) : "";
+  const authorName = product.authors.join(", ") || product.publisher;
+
+  return `
+    <a class="bookshelf-book" href="${product.url}" ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
+      <span class="bookshelf-book__scene">
+        <span class="bookshelf-book__spine">
+          <span class="bookshelf-book__status">${escapeHtml(product.statusLabel)}</span>
+          <span class="bookshelf-book__title">${escapeHtml(product.title)}</span>
+          <span class="bookshelf-book__author">${escapeHtml(authorName)}</span>
+        </span>
+        <span class="bookshelf-book__cover-frame">
+          <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover">
+        </span>
+        <span class="bookshelf-book__mobile">
+          <span class="bookshelf-book__mobile-media">
+            <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="">
+          </span>
+          <span class="bookshelf-book__mobile-copy">
+            <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(product.statusLabel)}</span>
+            <span class="bookshelf-book__mobile-title">${escapeHtml(product.title)}</span>
+            <span class="bookshelf-book__mobile-subtitle">${escapeHtml(product.subtitle)}</span>
+            <span class="bookshelf-book__mobile-meta">${escapeHtml(renderCatalogMeta(product))}</span>
+          </span>
+        </span>
+      </span>
+    </a>
+  `;
+}
+
 function renderProductCard(product, options = {}) {
   const { withDataset = false, includeAnchorId = false } = options;
   const authorByline = renderAuthorByline(product);
@@ -914,23 +1079,7 @@ function renderProductCard(product, options = {}) {
     product.statusLabel,
     product.priceTypeLabel
   ].join(" ").toLowerCase();
-
-  const dataset = withDataset
-    ? [
-        `data-product-card="true"`,
-        `data-title="${escapeAttribute(product.title.toLowerCase())}"`,
-        `data-author="${escapeAttribute(product.authorSlugs.join("|"))}"`,
-        `data-system="${escapeAttribute(product.gameSystemSlug)}"`,
-        `data-line="${escapeAttribute(product.productLineSlug)}"`,
-        `data-status="${escapeAttribute(product.status)}"`,
-        `data-format="${escapeAttribute(product.format.map(slugify).join("|"))}"`,
-        `data-price-type="${escapeAttribute(slugify(product.priceTypeLabel))}"`,
-        `data-price-cents="${escapeAttribute(String(product.priceCents ?? -1))}"`,
-        `data-release="${escapeAttribute(String(product.releaseStamp))}"`,
-        `data-updated="${escapeAttribute(String(product.updatedStamp))}"`,
-        `data-search="${escapeAttribute(searchText)}"`
-      ].join(" ")
-    : "";
+  const dataset = withDataset ? renderProductDatasetAttributes(product, searchText) : "";
   const cardId = includeAnchorId ? `id="product-${escapeAttribute(product.slug)}"` : "";
 
   return `
@@ -946,7 +1095,7 @@ function renderProductCard(product, options = {}) {
         <h3 class="product-card__title">${escapeHtml(product.title)}</h3>
         <p class="product-card__subtitle">${escapeHtml(product.subtitle)}</p>
         ${authorByline ? `<p class="product-card__meta product-card__meta--byline">${authorByline}</p>` : ""}
-        <p class="product-card__meta">${escapeHtml(product.gameSystem)} | ${escapeHtml(product.productLine)}</p>
+        <p class="product-card__meta">${escapeHtml(renderCatalogMeta(product))}</p>
         <p class="product-card__meta">${escapeHtml(product.format.join(", ") || "Format TBD")}</p>
         <div class="product-card__actions">
           <a class="button button--secondary product-card__button" href="${product.url}">View Product</a>
@@ -1286,11 +1435,13 @@ function renderAuthorByline(product) {
 }
 
 function renderPreviewSection(product) {
-  const previews = product.assetSet.previewImages;
+  const previewFeature = product.assetSet.previewFeature;
+  const previews = product.assetSet.previewImages.filter((preview) => preview !== previewFeature);
   const teaser = product.assetSet.teaserVideo;
   const sample = product.assetSet.previewPdf;
+  const previewNotice = product.assetSet.previewNotice;
 
-  if (!previews.length && !teaser && !sample) {
+  if (!previewFeature && !previews.length && !teaser && !sample && !previewNotice) {
     return "";
   }
 
@@ -1301,6 +1452,17 @@ function renderPreviewSection(product) {
         <h2 id="preview-heading">Preview</h2>
       </div>
       <div class="preview-panel">
+        ${previewFeature ? `
+          <figure class="preview-feature">
+            <img src="${escapeAttribute(previewFeature)}" alt="${escapeAttribute(product.title)} preview image">
+          </figure>
+        ` : ""}
+        ${previewNotice ? `
+          <article class="note-card preview-note">
+            <p class="note-card__label">Preview Image</p>
+            <p>${escapeHtml(previewNotice)}</p>
+          </article>
+        ` : ""}
         ${teaser ? `
           <div class="preview-video">
             <video controls preload="metadata" playsinline>
@@ -1453,8 +1615,9 @@ function renderBreadcrumbSchema(items) {
 function renderProductSchema(product) {
   const imageList = [
     product.assetSet.cover,
+    product.assetSet.previewFeature,
     ...product.assetSet.previewImages
-  ].filter(Boolean).map((sitePath) => `${BASE_URL}${sitePath}`);
+  ].filter(Boolean).filter((sitePath, index, list) => list.indexOf(sitePath) === index).map((sitePath) => `${BASE_URL}${sitePath}`);
 
   const schema = {
     "@context": "https://schema.org",
@@ -1472,7 +1635,7 @@ function renderProductSchema(product) {
       url: `${BASE_URL}${author.url}`
     })),
     sku: product.slug,
-    category: product.productLine,
+    category: product.productLine || product.gameSystem,
     url: `${BASE_URL}${product.url}`
   };
 
@@ -1544,10 +1707,19 @@ function resolveRelatedProducts(product, products) {
 }
 
 function chooseFeaturedProduct(products) {
-  return products.find((product) => product.status === "available-direct")
+  return chooseFeaturedProducts(products)[0]
+    || products.find((product) => product.status === "available-direct")
     || products.find((product) => product.status === "preview-available")
     || sortProducts(products, "updated")[0]
     || null;
+}
+
+function chooseFeaturedProducts(products) {
+  return sortProducts(products.filter((product) => product.featured), "updated");
+}
+
+function chooseNewReleases(products) {
+  return sortProducts(products, "newest").slice(0, 8);
 }
 
 function sortProducts(products, mode) {
@@ -1586,22 +1758,38 @@ function buildTitleIndex(products) {
 }
 
 function resolveProductAssets(product) {
-  const cover = pickExisting(product.frontCoverImage, product.thumbnailImage, "/assets/logo.png");
-  const thumb = pickExisting(product.thumbnailImage, product.frontCoverImage, "/assets/logo.png");
+  const coverSource = pickExistingPath(product.coverImage, product.frontCoverImage, product.thumbnailImage);
+  const thumbSource = pickExistingPath(product.thumbnailImage, product.coverImage, product.frontCoverImage, coverSource);
   const previewImages = product.previewImages.filter((sitePath) => sitePath && sitePathExists(sitePath));
+  const previewFeature = pickExistingPath(product.previewImage, previewImages[0]);
   const previewPdf = sitePathExists(product.previewPdf) ? product.previewPdf : "";
   const teaserVideo = sitePathExists(product.teaserVideo) ? product.teaserVideo : "";
+  const coverAudit = !coverSource
+    ? (product.coverImage ? `coverImage missing file ${product.coverImage}` : "coverImage field missing")
+    : "";
+  const previewAudit = buildPreviewAudit(product, previewFeature, previewImages, previewPdf, teaserVideo);
+  const previewNotice = buildPreviewNotice(product, previewFeature, previewImages, previewPdf, teaserVideo);
 
-  return { cover, thumb, previewImages, previewPdf, teaserVideo };
+  return {
+    cover: coverSource || "/assets/logo.png",
+    thumb: thumbSource || coverSource || "/assets/logo.png",
+    previewFeature: previewFeature || "",
+    previewImages,
+    previewPdf,
+    teaserVideo,
+    coverAudit,
+    previewAudit,
+    previewNotice
+  };
 }
 
-function pickExisting(...pathsToTry) {
+function pickExistingPath(...pathsToTry) {
   for (const sitePath of pathsToTry) {
     if (sitePath && sitePathExists(sitePath)) {
       return sitePath;
     }
   }
-  return "/assets/logo.png";
+  return "";
 }
 
 function sitePathExists(sitePath) {
@@ -1610,6 +1798,41 @@ function sitePathExists(sitePath) {
   }
   const localPath = path.join(ROOT, sitePath.replace(/^\/+/, ""));
   return fs.existsSync(localPath);
+}
+
+function buildPreviewAudit(product, previewFeature, previewImages, previewPdf, teaserVideo) {
+  if (product.previewImage && !sitePathExists(product.previewImage)) {
+    return `previewImage missing file ${product.previewImage}`;
+  }
+  if (!product.previewImage && !previewFeature && !previewImages.length && !previewPdf && !teaserVideo) {
+    return "previewImage field missing";
+  }
+  return "";
+}
+
+function buildPreviewNotice(product, previewFeature, previewImages, previewPdf, teaserVideo) {
+  if (product.previewImage && !sitePathExists(product.previewImage)) {
+    return previewImages.length
+      ? "The dedicated back-cover preview image is still missing, so this page is showing the first available sample image instead."
+      : "The dedicated back-cover preview image has not been added yet.";
+  }
+  if (!product.previewImage && !previewFeature && !previewImages.length && !previewPdf && !teaserVideo) {
+    return "A back-cover preview image has not been added yet.";
+  }
+  return "";
+}
+
+function collectAssetWarnings(products) {
+  return products.flatMap((product) => {
+    const warnings = [];
+    if (product.assetSet.coverAudit) {
+      warnings.push(`${product.slug}: ${product.assetSet.coverAudit}`);
+    }
+    if (product.assetSet.previewAudit) {
+      warnings.push(`${product.slug}: ${product.assetSet.previewAudit}`);
+    }
+    return warnings;
+  });
 }
 
 function parseDate(value) {
@@ -1677,6 +1900,44 @@ function renderDeliveryLabel(product) {
     return "Preview only";
   }
   return "Not yet available for direct purchase";
+}
+
+function renderProductLineValue(product) {
+  return product.productLine || "Not assigned";
+}
+
+function renderCatalogMeta(product) {
+  return [product.gameSystem, product.productLine].filter(Boolean).join(" | ") || product.gameSystem;
+}
+
+function renderProductDatasetAttributes(product, searchText) {
+  const resolvedSearchText = (searchText || [
+    product.title,
+    product.subtitle,
+    product.authors.join(" "),
+    product.gameSystem,
+    product.productLine,
+    product.tags.join(" "),
+    product.statusLabel,
+    product.priceTypeLabel
+  ].join(" ")).toLowerCase();
+
+  return [
+    `data-product-card="true"`,
+    `data-slug="${escapeAttribute(product.slug)}"`,
+    `data-title="${escapeAttribute(product.title.toLowerCase())}"`,
+    `data-author="${escapeAttribute(product.authorSlugs.join("|"))}"`,
+    `data-system="${escapeAttribute(product.gameSystemSlug)}"`,
+    `data-line="${escapeAttribute(product.productLineSlug)}"`,
+    `data-status="${escapeAttribute(product.status)}"`,
+    `data-format="${escapeAttribute(product.format.map(slugify).join("|"))}"`,
+    `data-price-type="${escapeAttribute(slugify(product.priceTypeLabel))}"`,
+    `data-price-cents="${escapeAttribute(String(product.priceCents ?? -1))}"`,
+    `data-release="${escapeAttribute(String(product.releaseStamp))}"`,
+    `data-updated="${escapeAttribute(String(product.updatedStamp))}"`,
+    `data-sale-active="${product.saleActive ? "true" : "false"}"`,
+    `data-search="${escapeAttribute(resolvedSearchText)}"`
+  ].join(" ");
 }
 
 function renderFileListSummary(product) {
@@ -1784,6 +2045,25 @@ function resolvePriceType(product) {
 
 function isBuyModeActive(buyMode) {
   return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
+}
+
+function isSaleActive(product) {
+  if (!product.saleEnabled || product.salePriceCents === null) {
+    return false;
+  }
+
+  const now = Date.now();
+  const start = parseDate(product.saleStart);
+  const end = parseDate(product.saleEnd);
+
+  if (start && now < start) {
+    return false;
+  }
+  if (end && now > end + 86400000 - 1) {
+    return false;
+  }
+
+  return true;
 }
 
 function inferBuyMode(product) {
