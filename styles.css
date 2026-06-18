@@ -1060,7 +1060,7 @@ h4 {
 }
 
 .bookshelf-grid {
-  --bookshelf-spine-width: clamp(78px, 7vw, 104px);
+  --bookshelf-spine-width: clamp(70px, 6.3vw, 94px);
   --bookshelf-cover-width: clamp(188px, 16vw, 236px);
   display: flex;
   flex-wrap: wrap;
