@@ -18,11 +18,6 @@ export const onRequestGet = (context) => serveProductAsset(context, false);
 export const onRequestHead = (context) => serveProductAsset(context, true);
 
 async function serveProductAsset(context, headOnly) {
-  const staticResponse = await context.next();
-  if (staticResponse.status !== 404) {
-    return staticResponse;
-  }
-
   const slug = normalizeParam(context.params.slug);
   const assetName = normalizeParam(context.params.asset);
   const objectKey = buildObjectKey(slug, assetName);
