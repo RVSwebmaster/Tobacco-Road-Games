@@ -42,19 +42,19 @@ The function first calls `context.next()` so any repo-hosted asset already prese
 
 ## Slug to R2 folder mapping
 
-Public store slugs map to exact R2 folder names:
+Public store slugs map to exact R2 object key prefixes:
 
-- `tablecraft-primer` -> `Tablecraft Primer`
-- `circle-of-cinder` -> `circleofcinder`
-- `final-flame` -> `finalflame`
-- `mouthy-monsters` -> `mouthy-monsters`
-- `path-of-the-janky` -> `path of the janky`
-- `ringbound` -> `ringbound`
-- `sirrocans` -> `sirrocans`
-- `spriggans` -> `spriggans`
-- `yojimbo` -> `yojimbo`
+- `tablecraft-primer` -> `trg-products/Tablecraft Primer`
+- `circle-of-cinder` -> `trg-products/circleofcinder`
+- `final-flame` -> `trg-products/finalflame`
+- `mouthy-monsters` -> `trg-products/mouthy-monsters`
+- `path-of-the-janky` -> `trg-products/path of the janky`
+- `ringbound` -> `trg-products/ringbound`
+- `sirrocans` -> `trg-products/sirrocans`
+- `spriggans` -> `trg-products/spriggans`
+- `yojimbo` -> `trg-products/yojimbo`
 
-That preserves existing bucket keys, including spaces and mixed casing, without renaming R2 folders.
+That preserves existing object keys, including the `trg-products/` prefix, spaces, and mixed casing, without renaming R2 folders.
 
 ## Scope guardrails
 
