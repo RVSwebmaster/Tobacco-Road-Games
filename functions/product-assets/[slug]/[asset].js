@@ -27,17 +27,22 @@ async function serveProductAsset(context, headOnly) {
   const assetName = normalizeParam(context.params.asset);
   const objectKey = buildObjectKey(slug, assetName);
   if (!objectKey) {
-    return staticResponse;
+    return notFound();
   }
 
   const bucket = context.env?.[R2_PRODUCT_BUCKET_BINDING];
   if (!bucket) {
-    return staticResponse;
+    return new Response("R2 binding missing: TRG_PRODUCTS", {
+      status: 500,
+      headers: {
+        "content-type": "text/plain; charset=utf-8"
+      }
+    });
   }
 
   const object = await bucket.get(objectKey);
   if (!object) {
-    return staticResponse;
+    return notFound();
   }
 
   const headers = new Headers();
@@ -77,4 +82,13 @@ function contentTypeFor(assetName) {
     return "image/webp";
   }
   return "application/octet-stream";
+}
+
+function notFound() {
+  return new Response("Not found", {
+    status: 404,
+    headers: {
+      "content-type": "text/plain; charset=utf-8"
+    }
+  });
 }
