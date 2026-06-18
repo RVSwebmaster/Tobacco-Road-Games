@@ -1248,10 +1248,6 @@ h4 {
   align-content: end;
 }
 
-.catalog-control--shortcut {
-  min-width: 0;
-}
-
 .catalog-toggle {
   display: inline-flex;
   align-items: center;
@@ -1279,10 +1275,6 @@ h4 {
   font-weight: 700;
   letter-spacing: 0;
   text-transform: none;
-}
-
-.catalog-control--shortcut .catalog-toggle {
-  justify-content: space-between;
 }
 
 .catalog-tools {

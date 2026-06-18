@@ -56,19 +56,6 @@
     });
   };
 
-  const getDefaultSort = (root) => root.dataset.defaultSort || "title";
-
-  const syncShelfAlphaToggle = (root) => {
-    const toggle = root.querySelector("[data-filter-shelf-alpha]");
-    const sortSelect = root.querySelector("[data-filter-sort]");
-
-    if (!toggle || !sortSelect) {
-      return;
-    }
-
-    toggle.checked = sortSelect.value === "title";
-  };
-
   const collectState = (root) => ({
     query: (root.querySelector("[data-filter-search]")?.value || "").trim().toLowerCase(),
     author: root.querySelector("[data-filter-author]")?.value || "",
@@ -77,7 +64,7 @@
     status: root.querySelector("[data-filter-status]")?.value || "",
     format: root.querySelector("[data-filter-format]")?.value || "",
     priceType: root.querySelector("[data-filter-price-type]")?.value || "",
-    sortMode: root.querySelector("[data-filter-sort]")?.value || getDefaultSort(root),
+    sortMode: root.querySelector("[data-filter-sort]")?.value || "title",
     saleOnly: Boolean(root.querySelector("[data-filter-sale]")?.checked)
   });
 
@@ -117,38 +104,8 @@
   };
 
   browsers.forEach((root) => {
-    const shelfAlphaToggle = root.querySelector("[data-filter-shelf-alpha]");
-    const sortSelect = root.querySelector("[data-filter-sort]");
-
-    if (shelfAlphaToggle && sortSelect) {
-      shelfAlphaToggle.addEventListener("change", () => {
-        sortSelect.value = shelfAlphaToggle.checked ? "title" : getDefaultSort(root);
-        syncShelfAlphaToggle(root);
-        applyBrowser(root);
-      });
-    }
-
-    root.addEventListener("input", (event) => {
-      if (event.target === shelfAlphaToggle) {
-        return;
-      }
-
-      applyBrowser(root);
-    });
-
-    root.addEventListener("change", (event) => {
-      if (event.target === shelfAlphaToggle) {
-        return;
-      }
-
-      if (event.target === sortSelect) {
-        syncShelfAlphaToggle(root);
-      }
-
-      applyBrowser(root);
-    });
-
-    syncShelfAlphaToggle(root);
+    root.addEventListener("input", () => applyBrowser(root));
+    root.addEventListener("change", () => applyBrowser(root));
     applyBrowser(root);
   });
 })();

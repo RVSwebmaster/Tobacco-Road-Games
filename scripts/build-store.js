@@ -9,7 +9,7 @@ const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260618a";
+const CACHE_BUST = "20260618b";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -913,8 +913,8 @@ function renderStoreBrowser(products, indexes, options = {}) {
   const initials = includeTitleIndex ? buildTitleIndex(products) : [];
 
   return `
-    <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}" data-default-sort="${escapeAttribute(defaultSort)}">
-      ${renderStoreBrowserControls(indexes, defaultSort, { showShelf })}
+    <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}">
+      ${renderStoreBrowserControls(indexes, defaultSort)}
       <div class="catalog-tools">
         <p class="catalog-count" data-store-count>${products.length} ${escapeHtml(countLabel)}</p>
         ${includeTitleIndex ? `
@@ -950,8 +950,7 @@ function renderStoreBrowser(products, indexes, options = {}) {
   `;
 }
 
-function renderStoreBrowserControls(indexes, defaultSort = "title", options = {}) {
-  const { showShelf = false } = options;
+function renderStoreBrowserControls(indexes, defaultSort = "title") {
   const saleToggle = indexes.hasActiveSales
     ? `
       <label class="catalog-control catalog-control--toggle">
@@ -964,26 +963,12 @@ function renderStoreBrowserControls(indexes, defaultSort = "title", options = {}
     `
     : "";
 
-  const shelfAlphabeticalToggle = showShelf
-    ? `
-      <label class="catalog-control catalog-control--toggle catalog-control--shortcut">
-        <span>Shelf Order</span>
-        <span class="catalog-toggle">
-          <input type="checkbox" data-filter-shelf-alpha${defaultSort === "title" ? " checked" : ""}>
-          <span>Alphabetical A to Z</span>
-        </span>
-      </label>
-    `
-    : "";
-
   return `
     <div class="catalog-controls" data-store-controls>
       <label class="catalog-control">
         <span>Title Search</span>
         <input class="dock-input" type="search" placeholder="Search titles, authors, systems, tags" data-filter-search>
       </label>
-
-      ${shelfAlphabeticalToggle}
 
       <label class="catalog-control">
         <span>Author</span>
