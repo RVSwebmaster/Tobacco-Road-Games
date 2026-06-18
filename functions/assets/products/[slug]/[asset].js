@@ -1,5 +1,5 @@
 const PUBLIC_PRODUCT_ASSET_FOLDERS = {
-  "tablecraft-primer": "Tablecraft Primer",
+  "tablecraft-primer": "Trablecraft Primer",
   "circle-of-cinder": "circleofcinder",
   "final-flame": "finalflame",
   "mouthy-monsters": "mouthy-monsters",
@@ -12,7 +12,6 @@ const PUBLIC_PRODUCT_ASSET_FOLDERS = {
 
 const PUBLIC_ASSET_FILES = new Set(["cover.webp", "preview.webp"]);
 const R2_PRODUCT_BUCKET_BINDING = "TRG_PRODUCTS";
-const R2_PRODUCT_KEY_PREFIX = "trg-products";
 const DEFAULT_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 
 export const onRequestGet = (context) => serveProductAsset(context, false);
@@ -70,7 +69,7 @@ function buildObjectKey(slug, assetName) {
     return "";
   }
 
-  return `${R2_PRODUCT_KEY_PREFIX}/${folder}/${assetName}`;
+  return `${folder}/${assetName}`;
 }
 
 function contentTypeFor(assetName) {
