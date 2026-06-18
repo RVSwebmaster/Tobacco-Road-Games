@@ -31,10 +31,10 @@
     "currency": "USD",
     "status": "preview-available",
     "statusLabel": "Preview Available",
-    "coverImage": "/product-assets/sirrocans/cover.webp",
+    "coverImage": "/assets/products/sirrocans/cover.webp",
     "previewImage": "/product-assets/sirrocans/preview.webp",
     "thumbnailImage": "/assets/products/sirrocans/thumb.webp",
-    "frontCoverImage": "/product-assets/sirrocans/cover.webp",
+    "frontCoverImage": "/assets/products/sirrocans/cover.webp",
     "previewImages": [
       "/assets/products/sirrocans/preview-01.webp",
       "/assets/products/sirrocans/preview-02.webp"
