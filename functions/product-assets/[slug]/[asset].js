@@ -1,5 +1,5 @@
 const PUBLIC_PRODUCT_ASSET_FOLDERS = {
-  "tablecraft-primer": "Trablecraft Primer",
+  "tablecraft-primer": "Tablecraft Primer",
   "circle-of-cinder": "circleofcinder",
   "final-flame": "finalflame",
   "mouthy-monsters": "mouthy-monsters",

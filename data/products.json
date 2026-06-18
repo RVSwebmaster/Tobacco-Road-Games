@@ -31,10 +31,10 @@
     "currency": "USD",
     "status": "preview-available",
     "statusLabel": "Preview Available",
-    "coverImage": "/assets/products/sirrocans/cover.webp",
-    "previewImage": "",
+    "coverImage": "/product-assets/sirrocans/cover.webp",
+    "previewImage": "/product-assets/sirrocans/preview.webp",
     "thumbnailImage": "/assets/products/sirrocans/thumb.webp",
-    "frontCoverImage": "/assets/products/sirrocans/cover.webp",
+    "frontCoverImage": "/product-assets/sirrocans/cover.webp",
     "previewImages": [
       "/assets/products/sirrocans/preview-01.webp",
       "/assets/products/sirrocans/preview-02.webp"
@@ -107,10 +107,10 @@
     "currency": "USD",
     "status": "preview-available",
     "statusLabel": "Preview Available",
-    "coverImage": "/assets/products/spriggans/cover.webp",
-    "previewImage": "",
+    "coverImage": "/product-assets/spriggans/cover.webp",
+    "previewImage": "/product-assets/spriggans/preview.webp",
     "thumbnailImage": "/assets/products/spriggans/thumb.webp",
-    "frontCoverImage": "/assets/products/spriggans/cover.webp",
+    "frontCoverImage": "/product-assets/spriggans/cover.webp",
     "previewImages": [
       "/assets/products/spriggans/preview-01.webp",
       "/assets/products/spriggans/preview-02.webp",

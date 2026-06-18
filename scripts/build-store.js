@@ -1796,8 +1796,15 @@ function sitePathExists(sitePath) {
   if (!sitePath) {
     return false;
   }
+  if (isR2BackedProductAssetPath(sitePath)) {
+    return true;
+  }
   const localPath = path.join(ROOT, sitePath.replace(/^\/+/, ""));
   return fs.existsSync(localPath);
+}
+
+function isR2BackedProductAssetPath(sitePath) {
+  return /^\/product-assets\/[a-z0-9-]+\/(?:cover|preview)\.webp$/i.test(sitePath);
 }
 
 function buildPreviewAudit(product, previewFeature, previewImages, previewPdf, teaserVideo) {

@@ -31,12 +31,12 @@ Reference:
 
 The Pages Function lives at:
 
-- `functions/assets/products/[slug]/[asset].js`
+- `functions/product-assets/[slug]/[asset].js`
 
 It serves only these public display assets:
 
-- `/assets/products/<slug>/cover.webp`
-- `/assets/products/<slug>/preview.webp`
+- `/product-assets/<slug>/cover.webp`
+- `/product-assets/<slug>/preview.webp`
 
 The function first calls `context.next()` so any repo-hosted asset already present at that path still wins. If the static asset is missing, it falls back to the bound R2 bucket.
 
@@ -44,7 +44,7 @@ The function first calls `context.next()` so any repo-hosted asset already prese
 
 Public store slugs map to exact object keys inside the `trg-products` bucket:
 
-- `tablecraft-primer` -> `Trablecraft Primer`
+- `tablecraft-primer` -> `Tablecraft Primer`
 - `circle-of-cinder` -> `circleofcinder`
 - `final-flame` -> `finalflame`
 - `mouthy-monsters` -> `mouthy-monsters`
