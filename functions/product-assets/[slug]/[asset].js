@@ -5,6 +5,7 @@ const PUBLIC_PRODUCT_ASSET_FOLDERS = {
   "mouthy-monsters": "mouthy-monsters",
   "path-of-the-janky": "path of the janky",
   ringbound: "ringbound",
+  "silence-and-the-spotlight": "silenceandthespotlight",
   sirrocans: "sirrocans",
   spriggans: "spriggans",
   yojimbo: "yojimbo"

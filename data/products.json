@@ -4,15 +4,23 @@
     "title": "Sirrocans",
     "subtitle": "A 5E-compatible character race of giant-blooded desert nomads",
     "featured": true,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "5E Compatible",
     "gameSystemSlug": "5e-compatible",
     "productLine": "Fifth Edition Fantasy Roleplaying",
     "productLineSlug": "fifth-edition-fantasy-roleplaying",
-    "format": ["PDF"],
-    "fileList": ["Sirrocans PDF"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "Sirrocans PDF"
+    ],
     "pageCount": 10,
     "price": "",
     "priceCents": null,
@@ -80,15 +88,23 @@
     "title": "Spriggans",
     "subtitle": "A 5E-compatible fantasy roleplaying supplement",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "5E Compatible",
     "gameSystemSlug": "5e-compatible",
     "productLine": "Fifth Edition Fantasy Roleplaying",
     "productLineSlug": "fifth-edition-fantasy-roleplaying",
-    "format": ["PDF"],
-    "fileList": ["Spriggans PDF"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "Spriggans PDF"
+    ],
     "pageCount": 8,
     "price": "",
     "priceCents": null,
@@ -150,15 +166,23 @@
     "title": "Tablecraft Primer",
     "subtitle": "A Tablecraft catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System Neutral",
     "gameSystemSlug": "system-neutral",
     "productLine": "Tablecraft",
     "productLineSlug": "tablecraft",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -213,15 +237,23 @@
     "title": "Circle of Cinder",
     "subtitle": "A Tobacco Road Games catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
     "productLineSlug": "other-games-and-experiments",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -275,15 +307,23 @@
     "title": "Final Flame",
     "subtitle": "A Tobacco Road Games catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
     "productLineSlug": "other-games-and-experiments",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -337,15 +377,23 @@
     "title": "Mouthy Monsters",
     "subtitle": "A Tobacco Road Games catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
     "productLineSlug": "other-games-and-experiments",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -399,15 +447,23 @@
     "title": "Path of the Janky",
     "subtitle": "A Tobacco Road Games catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
     "productLineSlug": "other-games-and-experiments",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -461,15 +517,23 @@
     "title": "Ringbound",
     "subtitle": "A Tobacco Road Games catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
     "productLineSlug": "other-games-and-experiments",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -523,15 +587,23 @@
     "title": "Yojimbo",
     "subtitle": "A Tobacco Road Games catalog preview",
     "featured": false,
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
     "productLineSlug": "other-games-and-experiments",
-    "format": ["PDF"],
-    "fileList": ["PDF details coming soon"],
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "PDF details coming soon"
+    ],
     "pageCount": null,
     "price": "",
     "priceCents": null,
@@ -571,6 +643,76 @@
     "version": "2026 catalog preview",
     "releaseDate": "2026-06-17",
     "lastUpdated": "2026-06-17",
+    "relatedProducts": [],
+    "libraryEligible": true,
+    "updateEligible": true,
+    "bundleEligible": false,
+    "bundleMinPriceCents": 100,
+    "bundleGroup": "standard-digital",
+    "allowSeasonalBundle": false,
+    "excludeFromBundles": true
+  },
+  {
+    "slug": "silence-and-the-spotlight",
+    "title": "Silence and the Spotlight",
+    "subtitle": "A Tobacco Road Games catalog preview",
+    "featured": false,
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
+    "publisher": "Tobacco Road Games",
+    "gameSystem": "System TBD",
+    "gameSystemSlug": "system-tbd",
+    "productLine": "Other Games & Experiments",
+    "productLineSlug": "other-games-and-experiments",
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "Silence and the Spotlight PDF"
+    ],
+    "pageCount": null,
+    "price": "",
+    "priceCents": null,
+    "minimumPrice": "",
+    "minimumPriceCents": null,
+    "suggestedPrice": "",
+    "suggestedPriceCents": null,
+    "regularPrice": "",
+    "regularPriceCents": null,
+    "salePrice": "",
+    "salePriceCents": null,
+    "saleStart": "",
+    "saleEnd": "",
+    "saleLabel": "",
+    "saleEnabled": false,
+    "currency": "USD",
+    "status": "preview-available",
+    "statusLabel": "Preview Available",
+    "coverImage": "/product-assets/silence-and-the-spotlight/cover.webp",
+    "previewImage": "/product-assets/silence-and-the-spotlight/preview.webp",
+    "thumbnailImage": "",
+    "frontCoverImage": "/product-assets/silence-and-the-spotlight/cover.webp",
+    "previewImages": [],
+    "previewPdf": "",
+    "teaserVideo": "",
+    "buyMode": "preview-only",
+    "buyUrl": "",
+    "fulfillmentNote": "",
+    "shortDescription": "Product summary coming soon.",
+    "longDescription": "Product summary coming soon.",
+    "features": [],
+    "tags": [
+      "Preview"
+    ],
+    "creationMethod": "Human-authored by RV Sawyer.",
+    "legalNote": "",
+    "version": "2026 catalog preview",
+    "releaseDate": "2026-06-20",
+    "lastUpdated": "2026-06-20",
     "relatedProducts": [],
     "libraryEligible": true,
     "updateEligible": true,

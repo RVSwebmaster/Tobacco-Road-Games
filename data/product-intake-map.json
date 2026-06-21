@@ -144,6 +144,21 @@
       "tags": ["Preview"]
     },
     {
+      "slug": "silence-and-the-spotlight",
+      "folder": "silenceandthespotlight",
+      "title": "Silence and the Spotlight",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": ["PDF"],
+      "tags": ["Preview"],
+      "releaseDate": "2026-06-20",
+      "lastUpdated": "2026-06-20"
+    },
+    {
       "slug": "yojimbo",
       "folder": "yojimbo",
       "title": "Yojimbo",
