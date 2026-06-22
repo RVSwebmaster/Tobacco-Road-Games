@@ -171,6 +171,7 @@
         <a href="../index.html">Home</a>
         <a href="../store/">Store</a>
         <a href="product-intake.html" aria-current="page">Product Intake</a>
+        <a href="/owner/logout">Logout</a>
       </nav>
     </header>
 
@@ -179,8 +180,8 @@
         <div class="section-heading">
           <p class="section-heading__kicker">Owner Tool</p>
           <h1 id="intake-heading">Product Intake Bench</h1>
-          <p>Use this page to stage a single storefront entry, preview local assets, and generate the JSON block for <code>data/products.json</code>. It does not upload to the server by itself.</p>
-          <p>For bulk bucket-to-listing sync, use <code>node scripts/sync-r2-products.js &lt;manifest&gt; --build</code>.</p>
+          <p>Use this page to publish one storefront product at a time. It uploads the required files to R2, then sends the metadata through the normal GitHub build path.</p>
+          <p>Required files: <code>cover.webp</code>, <code>preview.webp</code>, and <code>product.pdf</code>. Cover and preview become public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
         <div class="intake-grid">
@@ -201,6 +202,11 @@
                 <input id="product-slug" class="dock-input" type="text" placeholder="sirrocans">
               </div>
 
+              <div class="intake-field">
+                <label for="product-folder">R2 Folder Name</label>
+                <input id="product-folder" class="dock-input" type="text" placeholder="sirrocans">
+              </div>
+
               <div class="intake-field intake-field--full">
                 <label for="product-subtitle">Subtitle</label>
                 <input id="product-subtitle" class="dock-input" type="text" placeholder="A 5E-compatible ancestry title">
@@ -208,12 +214,12 @@
 
               <div class="intake-field">
                 <label for="product-authors">Authors</label>
-                <input id="product-authors" class="dock-input" type="text" value="RV Sawyer" placeholder="RV Sawyer, Another Author">
+                <input id="product-authors" class="dock-input" type="text" value="RV Sawyer" readonly>
               </div>
 
               <div class="intake-field">
                 <label for="product-publisher">Publisher</label>
-                <input id="product-publisher" class="dock-input" type="text" value="Tobacco Road Games">
+                <input id="product-publisher" class="dock-input" type="text" value="Tobacco Road Games" readonly>
               </div>
 
               <div class="intake-field">
@@ -336,23 +342,18 @@
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-cover-file">Cover Preview File</label>
-                <input id="product-cover-file" class="dock-input" type="file" accept="image/*">
+                <label for="product-cover-file">Cover File</label>
+                <input id="product-cover-file" class="dock-input" type="file" accept="image/webp,.webp">
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-preview-files">Preview Image Files</label>
-                <input id="product-preview-files" class="dock-input" type="file" accept="image/*" multiple>
+                <label for="product-preview-file">Preview File</label>
+                <input id="product-preview-file" class="dock-input" type="file" accept="image/webp,.webp">
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-sample-file">Sample PDF File</label>
-                <input id="product-sample-file" class="dock-input" type="file" accept=".pdf,application/pdf">
-              </div>
-
-              <div class="intake-field intake-field--full">
-                <label for="product-video-file">Teaser Video File</label>
-                <input id="product-video-file" class="dock-input" type="file" accept="video/*">
+                <label for="product-pdf-file">Product PDF File</label>
+                <input id="product-pdf-file" class="dock-input" type="file" accept=".pdf,application/pdf">
               </div>
             </div>
           </section>
@@ -378,7 +379,7 @@
 
             <div class="about__panel">
               <p class="note-card__label">Suggested asset folder</p>
-              <p id="asset-folder-output" class="intake-preview-copy">/assets/products/untitled-product/</p>
+              <p id="asset-folder-output" class="intake-preview-copy">R2 folder: untitled-product</p>
             </div>
 
             <div class="about__panel">
@@ -389,10 +390,10 @@
             <div class="about__panel">
               <p class="note-card__label">How to use this</p>
               <ol class="intake-list">
-                <li>Fill in the product details and choose local preview files if you want a visual check.</li>
-                <li>Copy or download the generated JSON entry.</li>
-                <li>Place final assets under the suggested product folder.</li>
-                <li>Paste the JSON into <code>data/products.json</code> and run <code>node scripts/build-store.js</code>.</li>
+                <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
+                <li>Choose the three required files using their real final names: <code>cover.webp</code>, <code>preview.webp</code>, and <code>product.pdf</code>.</li>
+                <li>Use the generated metadata preview below as a final sanity check.</li>
+                <li>Click Publish. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
               </ol>
             </div>
           </aside>
@@ -402,12 +403,11 @@
       <section class="store-section intake-output" aria-labelledby="intake-output-heading">
         <div class="section-heading">
           <p class="section-heading__kicker">Generated Output</p>
-          <h2 id="intake-output-heading">Registry entry + asset checklist</h2>
+          <h2 id="intake-output-heading">Publish preview + asset checklist</h2>
         </div>
 
         <div class="intake-actions">
-          <button id="copy-json-button" class="button button--primary" type="button">Copy JSON Entry</button>
-          <button id="download-json-button" class="button button--secondary" type="button">Download JSON</button>
+          <button id="publish-button" class="button button--primary" type="button">Publish Product</button>
           <button id="reset-intake-button" class="button button--secondary" type="button">Reset Form</button>
         </div>
         <p id="intake-status" class="intake-status" aria-live="polite"></p>

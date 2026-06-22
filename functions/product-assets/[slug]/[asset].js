@@ -1,15 +1,4 @@
-const PUBLIC_PRODUCT_ASSET_FOLDERS = {
-  "tablecraft-primer": "Tablecraft Primer",
-  "circle-of-cinder": "circleofcinder",
-  "final-flame": "finalflame",
-  "mouthy-monsters": "mouthy-monsters",
-  "path-of-the-janky": "path of the janky",
-  ringbound: "ringbound",
-  "silence-and-the-spotlight": "silenceandthespotlight",
-  sirrocans: "sirrocans",
-  spriggans: "spriggans",
-  yojimbo: "yojimbo"
-};
+import { getFolderForSlug } from "../../../shared/product-folder-map.mjs";
 
 const PUBLIC_ASSET_FILES = new Set(["cover.webp", "preview.webp"]);
 const R2_PRODUCT_BUCKET_BINDING = "TRG_PRODUCTS";
@@ -65,7 +54,7 @@ function buildObjectKey(slug, assetName) {
     return "";
   }
 
-  const folder = PUBLIC_PRODUCT_ASSET_FOLDERS[slug];
+  const folder = getFolderForSlug(slug);
   if (!folder) {
     return "";
   }

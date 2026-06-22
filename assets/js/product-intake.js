@@ -15,6 +15,7 @@
   const fields = {
     title: document.getElementById("product-title"),
     slug: document.getElementById("product-slug"),
+    folder: document.getElementById("product-folder"),
     subtitle: document.getElementById("product-subtitle"),
     authors: document.getElementById("product-authors"),
     publisher: document.getElementById("product-publisher"),
@@ -39,9 +40,8 @@
     lastUpdated: document.getElementById("product-last-updated"),
     related: document.getElementById("product-related"),
     coverFile: document.getElementById("product-cover-file"),
-    previewFiles: document.getElementById("product-preview-files"),
-    sampleFile: document.getElementById("product-sample-file"),
-    videoFile: document.getElementById("product-video-file")
+    previewFile: document.getElementById("product-preview-file"),
+    pdfFile: document.getElementById("product-pdf-file")
   };
 
   const outputs = {
@@ -54,20 +54,18 @@
     previewTitle: document.getElementById("preview-title"),
     previewSubtitle: document.getElementById("preview-subtitle"),
     previewCopy: document.getElementById("preview-copy"),
-    previewCoverImage: document.getElementById("preview-cover-image"),
-    previewVideoWrap: document.getElementById("preview-video-wrap"),
-    previewVideo: document.getElementById("preview-video")
+    previewCoverImage: document.getElementById("preview-cover-image")
   };
 
   const buttons = {
-    copy: document.getElementById("copy-json-button"),
-    download: document.getElementById("download-json-button"),
+    publish: document.getElementById("publish-button"),
     reset: document.getElementById("reset-intake-button")
   };
 
   let coverObjectUrl = "";
-  let videoObjectUrl = "";
   let slugTouched = false;
+  let folderTouched = false;
+  let publishBusy = false;
 
   const slugify = (value) =>
     String(value || "")
@@ -76,9 +74,9 @@
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-  const parseList = (value, separator = ",") =>
+  const parseList = (value) =>
     String(value || "")
-      .split(separator)
+      .split(",")
       .map((part) => part.trim())
       .filter(Boolean);
 
@@ -90,109 +88,95 @@
 
   const buildPayload = () => {
     const title = fields.title.value.trim();
-    const slug = (fields.slug.value.trim() || slugify(title) || "untitled-product");
+    const slug = fields.slug.value.trim() || slugify(title) || "untitled-product";
+    const folder = fields.folder.value.trim() || slug;
     const gameSystem = fields.system.value.trim();
     const productLine = fields.line.value.trim();
     const pageCountRaw = fields.pageCount.value.trim();
     const priceRaw = fields.price.value.trim();
     const priceCents = priceRaw ? Math.round(Number(priceRaw) * 100) : null;
-    const formats = parseList(fields.format.value);
-    const previewImagePaths = fields.previewFiles.files.length
-      ? Array.from(fields.previewFiles.files).map((_file, index) => `/assets/products/${slug}/preview-${String(index + 1).padStart(2, "0")}.webp`)
-      : [
-          `/assets/products/${slug}/preview-01.webp`,
-          `/assets/products/${slug}/preview-02.webp`,
-          `/assets/products/${slug}/preview-03.webp`
-        ];
 
     return {
-      slug,
-      title,
-      subtitle: fields.subtitle.value.trim(),
-      authors: parseList(fields.authors.value),
-      publisher: fields.publisher.value.trim(),
+      authorSlugs: ["rv-sawyer"],
+      authors: ["RV Sawyer"],
+      buyMode: fields.buyMode.value,
+      buyUrl: fields.buyUrl.value.trim(),
+      creationMethod: fields.creationMethod.value.trim() || "Human-authored by RV Sawyer.",
+      currency: fields.currency.value.trim() || "USD",
+      features: parseLines(fields.features.value),
+      fileList: [`${title || "Untitled Product"} PDF`],
+      folder,
+      format: parseList(fields.format.value).length ? parseList(fields.format.value) : ["PDF"],
+      fulfillmentNote: fields.fulfillmentNote.value.trim(),
       gameSystem,
       gameSystemSlug: slugify(gameSystem),
-      productLine,
-      productLineSlug: slugify(productLine),
-      format: formats,
-      fileList: formats.map((formatName) => `${title || "Untitled Product"} ${formatName}`),
+      lastUpdated: fields.lastUpdated.value,
+      legalNote: fields.legalNote.value.trim(),
+      longDescription: fields.longDescription.value.trim(),
       pageCount: pageCountRaw ? Number(pageCountRaw) : null,
       price: priceRaw,
       priceCents,
-      minimumPrice: "",
-      minimumPriceCents: null,
-      suggestedPrice: "",
-      suggestedPriceCents: null,
-      currency: fields.currency.value.trim() || "USD",
+      productLine,
+      productLineSlug: slugify(productLine),
+      publisher: "Tobacco Road Games",
+      relatedProducts: parseList(fields.related.value),
+      releaseDate: fields.releaseDate.value,
+      shortDescription: fields.shortDescription.value.trim(),
+      slug,
       status: fields.status.value,
       statusLabel: statusLabels[fields.status.value] || "Unavailable",
-      thumbnailImage: `/assets/products/${slug}/thumb.webp`,
-      frontCoverImage: `/assets/products/${slug}/cover.webp`,
-      previewImages: previewImagePaths,
-      previewPdf: fields.sampleFile.files.length ? `/assets/products/${slug}/sample.pdf` : "",
-      teaserVideo: fields.videoFile.files.length ? `/assets/products/${slug}/teaser.mp4` : "",
-      buyMode: fields.buyMode.value,
-      buyUrl: fields.buyUrl.value.trim(),
-      fulfillmentNote: fields.fulfillmentNote.value.trim(),
-      shortDescription: fields.shortDescription.value.trim(),
-      longDescription: fields.longDescription.value.trim(),
-      features: parseLines(fields.features.value),
+      subtitle: fields.subtitle.value.trim(),
       tags: parseList(fields.tags.value),
-      creationMethod: fields.creationMethod.value.trim(),
-      legalNote: fields.legalNote.value.trim(),
-      version: fields.version.value.trim(),
-      releaseDate: fields.releaseDate.value,
-      lastUpdated: fields.lastUpdated.value,
-      relatedProducts: parseList(fields.related.value),
-      libraryEligible: true,
-      updateEligible: true,
-      bundleEligible: false,
-      bundleMinPriceCents: 100,
-      bundleGroup: "standard-digital",
-      allowSeasonalBundle: false,
-      excludeFromBundles: true
+      title,
+      version: fields.version.value.trim() || "1.0"
     };
   };
 
-  const formatJson = (payload) => `${JSON.stringify(payload, null, 2)}`;
-
-  const renderChecklist = (payload) => {
-    const lines = [
-      `Suggested folder: /assets/products/${payload.slug}/`,
-      "",
-      "Expected files:",
-      `- thumb.webp`,
-      `- cover.webp`,
-      `- preview-01.webp`,
-      `- preview-02.webp`,
-      `- preview-03.webp`,
-      `- sample.pdf`,
-      `- teaser.mp4`,
-      "",
-      "Generated paths:",
-      `thumbnailImage: ${payload.thumbnailImage}`,
-      `frontCoverImage: ${payload.frontCoverImage}`,
-      `previewImages: ${payload.previewImages.join(", ")}`,
-      `previewPdf: ${payload.previewPdf || "(none)"}`,
-      `teaserVideo: ${payload.teaserVideo || "(none)"}`,
-      "",
-      "Next step:",
-      "1. Place the final files in the folder above.",
-      "2. Paste the JSON entry into data/products.json.",
-      "3. Run: node scripts/build-store.js"
-    ];
-    outputs.checklist.textContent = lines.join("\n");
+  const updatePreview = () => {
+    const payload = buildPayload();
+    outputs.previewStatus.textContent = payload.statusLabel;
+    outputs.previewStatus.className = `status-badge status-badge--${payload.status}`;
+    outputs.previewTitle.textContent = payload.title || "Untitled Product";
+    outputs.previewSubtitle.textContent = payload.subtitle || "Subtitle will appear here.";
+    outputs.previewCopy.textContent = payload.shortDescription || "Short description preview will appear here.";
+    outputs.assetFolder.textContent = `R2 folder: ${payload.folder || "untitled-product"}`;
+    outputs.json.value = `${JSON.stringify(payload, null, 2)}`;
+    outputs.checklist.textContent = buildChecklist(payload);
+    renderAssetFileList(payload);
+    updateCoverPreview();
   };
 
-  const renderAssetFileList = (payload) => {
+  function buildChecklist(payload) {
+    return [
+      `R2 folder: ${payload.folder}`,
+      "",
+      "Required uploaded files:",
+      `- ${payload.folder}/cover.webp`,
+      `- ${payload.folder}/preview.webp`,
+      `- ${payload.folder}/product.pdf`,
+      "",
+      "Published public asset paths:",
+      `/product-assets/${payload.slug}/cover.webp`,
+      `/product-assets/${payload.slug}/preview.webp`,
+      "",
+      "Repo publish path after upload:",
+      "- Update shared folder map",
+      "- Update data/product-intake-map.json",
+      "- Update data/products.json",
+      "- Run node scripts/build-store.js",
+      "- Commit and push to main"
+    ].join("\n");
+  }
+
+  function renderAssetFileList(payload) {
     const items = [
-      payload.thumbnailImage,
-      payload.frontCoverImage,
-      ...payload.previewImages,
-      payload.previewPdf || "/assets/products/[slug]/sample.pdf",
-      payload.teaserVideo || "/assets/products/[slug]/teaser.mp4"
+      `${payload.folder}/cover.webp`,
+      `${payload.folder}/preview.webp`,
+      `${payload.folder}/product.pdf`,
+      `/product-assets/${payload.slug}/cover.webp`,
+      `/product-assets/${payload.slug}/preview.webp`
     ];
+
     outputs.assetFileList.replaceChildren(
       ...items.map((item) => {
         const chip = document.createElement("span");
@@ -200,18 +184,9 @@
         return chip;
       })
     );
-  };
+  }
 
-  const renderPreview = (payload) => {
-    outputs.previewStatus.textContent = payload.statusLabel;
-    outputs.previewStatus.className = `status-badge status-badge--${payload.status}`;
-    outputs.previewTitle.textContent = payload.title || "Untitled Product";
-    outputs.previewSubtitle.textContent = payload.subtitle || "Subtitle will appear here.";
-    outputs.previewCopy.textContent = payload.shortDescription || "Short description preview will appear here.";
-    outputs.assetFolder.textContent = `/assets/products/${payload.slug || "untitled-product"}/`;
-  };
-
-  const updateCoverPreview = () => {
+  function updateCoverPreview() {
     if (coverObjectUrl) {
       URL.revokeObjectURL(coverObjectUrl);
       coverObjectUrl = "";
@@ -226,77 +201,189 @@
 
     outputs.previewCoverImage.src = "../assets/logo.png";
     outputs.previewCoverImage.alt = "Tobacco Road Games logo fallback";
-  };
+  }
 
-  const updateVideoPreview = () => {
-    if (videoObjectUrl) {
-      URL.revokeObjectURL(videoObjectUrl);
-      videoObjectUrl = "";
+  function getCookie(name) {
+    const cookies = document.cookie.split(";").map((entry) => entry.trim()).filter(Boolean);
+    for (const cookie of cookies) {
+      const separator = cookie.indexOf("=");
+      if (separator === -1) {
+        continue;
+      }
+      const cookieName = cookie.slice(0, separator);
+      if (cookieName === name) {
+        return cookie.slice(separator + 1);
+      }
     }
+    return "";
+  }
 
-    if (fields.videoFile.files.length) {
-      videoObjectUrl = URL.createObjectURL(fields.videoFile.files[0]);
-      outputs.previewVideo.src = videoObjectUrl;
-      outputs.previewVideoWrap.hidden = false;
+  async function publishProduct() {
+    if (publishBusy) {
       return;
     }
 
-    outputs.previewVideo.removeAttribute("src");
-    outputs.previewVideo.load();
-    outputs.previewVideoWrap.hidden = true;
-  };
+    const missingTextErrors = validateRequiredFields();
+    if (missingTextErrors.length) {
+      outputs.status.textContent = missingTextErrors.join(" ");
+      return;
+    }
 
-  const updateAll = () => {
+    const csrfToken = getCookie("trg_owner_csrf");
+    if (!csrfToken) {
+      outputs.status.textContent = "Your login security token is missing. Reload the page and sign in again if needed.";
+      return;
+    }
+
+    publishBusy = true;
+    buttons.publish.disabled = true;
+    outputs.status.textContent = "Uploading to R2 and waiting for the GitHub publish workflow to finish...";
+
+    try {
+      const payload = buildPayload();
+      const formData = new FormData();
+      formData.set("title", payload.title);
+      formData.set("slug", payload.slug);
+      formData.set("folder", payload.folder);
+      formData.set("subtitle", payload.subtitle);
+      formData.set("gameSystem", payload.gameSystem);
+      formData.set("gameSystemSlug", payload.gameSystemSlug);
+      formData.set("productLine", payload.productLine);
+      formData.set("productLineSlug", payload.productLineSlug);
+      formData.set("format", payload.format.join(", "));
+      formData.set("pageCount", payload.pageCount === null ? "" : String(payload.pageCount));
+      formData.set("price", payload.price);
+      formData.set("currency", payload.currency);
+      formData.set("status", payload.status);
+      formData.set("buyMode", payload.buyMode);
+      formData.set("buyUrl", payload.buyUrl);
+      formData.set("shortDescription", payload.shortDescription);
+      formData.set("longDescription", payload.longDescription);
+      formData.set("features", payload.features.join("\n"));
+      formData.set("tags", payload.tags.join(", "));
+      formData.set("fulfillmentNote", payload.fulfillmentNote);
+      formData.set("creationMethod", payload.creationMethod);
+      formData.set("legalNote", payload.legalNote);
+      formData.set("version", payload.version);
+      formData.set("releaseDate", payload.releaseDate);
+      formData.set("lastUpdated", payload.lastUpdated);
+      formData.set("relatedProducts", payload.relatedProducts.join(", "));
+      formData.set("coverFile", fields.coverFile.files[0]);
+      formData.set("previewFile", fields.previewFile.files[0]);
+      formData.set("productFile", fields.pdfFile.files[0]);
+
+      const response = await fetch("/owner/api/publish", {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": csrfToken
+        },
+        body: formData,
+        redirect: "manual"
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        const payload = await safeJson(response);
+        outputs.status.textContent = payload.error || "Your session is no longer valid. Redirecting to login...";
+        window.setTimeout(() => {
+          window.location.assign(`/owner/login?next=${encodeURIComponent(window.location.pathname)}`);
+        }, 600);
+        return;
+      }
+
+      const responsePayload = await safeJson(response);
+      if (!response.ok) {
+        outputs.status.textContent = responsePayload.error || "Publish failed.";
+        return;
+      }
+
+      outputs.status.textContent = responsePayload.runUrl
+        ? `${responsePayload.message} Workflow: ${responsePayload.runUrl}`
+        : responsePayload.message;
+    } catch {
+      outputs.status.textContent = "The publish request failed before the server could answer. Please try again.";
+    } finally {
+      publishBusy = false;
+      buttons.publish.disabled = false;
+    }
+  }
+
+  function validateRequiredFields() {
+    const errors = [];
+    const requiredTextFields = [
+      [fields.title, "Title"],
+      [fields.slug, "Slug"],
+      [fields.folder, "R2 folder name"],
+      [fields.subtitle, "Subtitle"],
+      [fields.system, "Game system"],
+      [fields.line, "Product line"],
+      [fields.shortDescription, "Short description"],
+      [fields.longDescription, "Long description"]
+    ];
+
+    for (const [field, label] of requiredTextFields) {
+      if (!field.value.trim()) {
+        errors.push(`${label} is required.`);
+      }
+    }
+
+    if (!fields.coverFile.files.length) {
+      errors.push("cover.webp is required.");
+    }
+    if (!fields.previewFile.files.length) {
+      errors.push("preview.webp is required.");
+    }
+    if (!fields.pdfFile.files.length) {
+      errors.push("product.pdf is required.");
+    }
+
+    return errors;
+  }
+
+  async function safeJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  function updateAutoFields() {
     if (!slugTouched && fields.title.value.trim()) {
       fields.slug.value = slugify(fields.title.value);
     }
 
-    const payload = buildPayload();
-    outputs.json.value = formatJson(payload);
-    renderChecklist(payload);
-    renderAssetFileList(payload);
-    renderPreview(payload);
-    updateCoverPreview();
-    updateVideoPreview();
-  };
+    if (!folderTouched && fields.slug.value.trim()) {
+      fields.folder.value = fields.slug.value.trim();
+    }
+
+    updatePreview();
+  }
 
   fields.slug.addEventListener("input", () => {
     slugTouched = fields.slug.value.trim().length > 0;
-    updateAll();
+    if (!folderTouched) {
+      fields.folder.value = fields.slug.value.trim();
+    }
+    updatePreview();
   });
 
-  fields.title.addEventListener("input", updateAll);
+  fields.folder.addEventListener("input", () => {
+    folderTouched = fields.folder.value.trim().length > 0;
+    updatePreview();
+  });
+
+  fields.title.addEventListener("input", updateAutoFields);
 
   Object.values(fields).forEach((field) => {
-    if (!field || field === fields.slug || field === fields.title) {
+    if (!field || field === fields.slug || field === fields.title || field === fields.folder) {
       return;
     }
-    field.addEventListener("input", updateAll);
-    field.addEventListener("change", updateAll);
+
+    field.addEventListener("input", updatePreview);
+    field.addEventListener("change", updatePreview);
   });
 
-  buttons.copy.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(outputs.json.value);
-      outputs.status.textContent = "JSON entry copied to clipboard.";
-    } catch {
-      outputs.status.textContent = "Clipboard copy failed. You can still copy from the textarea below.";
-    }
-  });
-
-  buttons.download.addEventListener("click", () => {
-    const payload = buildPayload();
-    const blob = new Blob([`${formatJson(payload)}\n`], { type: "application/json" });
-    const href = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = href;
-    anchor.download = `${payload.slug || "product-entry"}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(href);
-    outputs.status.textContent = `Downloaded ${payload.slug || "product-entry"}.json.`;
-  });
+  buttons.publish.addEventListener("click", publishProduct);
 
   buttons.reset.addEventListener("click", () => {
     document.querySelectorAll("input, textarea, select").forEach((field) => {
@@ -306,6 +393,7 @@
     });
     fields.title.value = "";
     fields.slug.value = "";
+    fields.folder.value = "";
     fields.subtitle.value = "";
     fields.authors.value = "RV Sawyer";
     fields.publisher.value = "Tobacco Road Games";
@@ -330,9 +418,10 @@
     fields.lastUpdated.value = "";
     fields.related.value = "";
     slugTouched = false;
+    folderTouched = false;
     outputs.status.textContent = "Form reset.";
-    updateAll();
+    updatePreview();
   });
 
-  updateAll();
+  updatePreview();
 })();

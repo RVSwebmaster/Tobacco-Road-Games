@@ -1,15 +1,20 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
 const PRODUCTS_PATH = path.join(ROOT, "data", "products.json");
 const INTAKE_MAP_PATH = path.join(ROOT, "data", "product-intake-map.json");
 const BUILD_SCRIPT_PATH = path.join(ROOT, "scripts", "build-store.js");
+const SHARED_FOLDER_MAP_PATH = path.join(ROOT, "shared", "product-folder-map.mjs");
 
-main();
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (!options.manifestPath) {
     printUsage();
@@ -18,10 +23,11 @@ function main() {
   }
 
   const intakeMap = JSON.parse(fs.readFileSync(INTAKE_MAP_PATH, "utf8"));
+  const sharedFolderMap = await loadSharedFolderMap();
   const existingProducts = JSON.parse(fs.readFileSync(PRODUCTS_PATH, "utf8"));
   const objectKeys = loadObjectKeys(options.manifestPath);
   const bucketIndex = groupKeysByFolder(objectKeys);
-  const syncResult = syncProducts(existingProducts, intakeMap, bucketIndex);
+  const syncResult = syncProducts(existingProducts, intakeMap, sharedFolderMap, bucketIndex);
 
   if (options.write) {
     fs.writeFileSync(PRODUCTS_PATH, `${JSON.stringify(syncResult.products, null, 2)}\n`);
@@ -182,7 +188,7 @@ function groupKeysByFolder(objectKeys) {
   return grouped;
 }
 
-function syncProducts(existingProducts, intakeMap, bucketIndex) {
+function syncProducts(existingProducts, intakeMap, sharedFolderMap, bucketIndex) {
   const globalDefaults = intakeMap.globalDefaults || {};
   const configuredProducts = Array.isArray(intakeMap.products) ? intakeMap.products : [];
   const existingBySlug = new Map(existingProducts.map((product) => [product.slug, clone(product)]));
@@ -198,31 +204,41 @@ function syncProducts(existingProducts, intakeMap, bucketIndex) {
   };
 
   for (const definition of configuredProducts) {
-    const bucketFiles = bucketIndex.get(definition.folder) || [];
+    const folder = sharedFolderMap[definition.slug];
+    if (!folder) {
+      report.skipped.push({
+        slug: definition.slug,
+        title: definition.title,
+        reason: `Missing shared folder map entry for ${definition.slug}`
+      });
+      continue;
+    }
+
+    const bucketFiles = bucketIndex.get(folder) || [];
     const assetState = detectBucketAssets(bucketFiles);
 
     if (!assetState.hasCover) {
       report.skipped.push({
         slug: definition.slug,
         title: definition.title,
-        reason: `Missing cover.webp in bucket folder ${definition.folder}`
+        reason: `Missing cover.webp in bucket folder ${folder}`
       });
       continue;
     }
 
     if (!assetState.hasPreview) {
       report.missingPreview.push({
+        folder,
         slug: definition.slug,
-        title: definition.title,
-        folder: definition.folder
+        title: definition.title
       });
     }
 
     if (!assetState.mainPdf && !assetState.samplePdf) {
       report.missingPdf.push({
+        folder,
         slug: definition.slug,
-        title: definition.title,
-        folder: definition.folder
+        title: definition.title
       });
     }
 
@@ -232,9 +248,9 @@ function syncProducts(existingProducts, intakeMap, bucketIndex) {
 
     if (!existing) {
       report.added.push({
+        folder,
         slug: definition.slug,
         title: nextProduct.title,
-        folder: definition.folder
       });
       continue;
     }
@@ -248,9 +264,9 @@ function syncProducts(existingProducts, intakeMap, bucketIndex) {
     }
 
     report.updated.push({
+      folder,
       slug: definition.slug,
       title: nextProduct.title,
-      folder: definition.folder
     });
   }
 
@@ -482,6 +498,12 @@ function slugify(value) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+async function loadSharedFolderMap() {
+  const moduleUrl = `${pathToFileURL(SHARED_FOLDER_MAP_PATH).href}?cacheBust=${Date.now()}`;
+  const imported = await import(moduleUrl);
+  return imported.PRODUCT_FOLDER_MAP || {};
 }
 
 function printReport(report, options) {

@@ -25,7 +25,6 @@
   "products": [
     {
       "slug": "sirrocans",
-      "folder": "sirrocans",
       "title": "Sirrocans",
       "subtitle": "A 5E-compatible character race of giant-blooded desert nomads",
       "featured": true,
@@ -46,7 +45,6 @@
     },
     {
       "slug": "spriggans",
-      "folder": "spriggans",
       "title": "Spriggans",
       "subtitle": "A 5E-compatible fantasy roleplaying supplement",
       "featured": false,
@@ -67,7 +65,6 @@
     },
     {
       "slug": "tablecraft-primer",
-      "folder": "Tablecraft Primer",
       "title": "Tablecraft Primer",
       "subtitle": "A Tablecraft catalog preview",
       "featured": false,
@@ -80,7 +77,6 @@
     },
     {
       "slug": "circle-of-cinder",
-      "folder": "circleofcinder",
       "title": "Circle of Cinder",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
@@ -93,7 +89,6 @@
     },
     {
       "slug": "final-flame",
-      "folder": "finalflame",
       "title": "Final Flame",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
@@ -106,7 +101,6 @@
     },
     {
       "slug": "mouthy-monsters",
-      "folder": "mouthy-monsters",
       "title": "Mouthy Monsters",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
@@ -119,7 +113,6 @@
     },
     {
       "slug": "path-of-the-janky",
-      "folder": "path of the janky",
       "title": "Path of the Janky",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
@@ -132,7 +125,6 @@
     },
     {
       "slug": "ringbound",
-      "folder": "ringbound",
       "title": "Ringbound",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
@@ -145,7 +137,6 @@
     },
     {
       "slug": "silence-and-the-spotlight",
-      "folder": "silenceandthespotlight",
       "title": "Silence and the Spotlight",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
@@ -160,7 +151,6 @@
     },
     {
       "slug": "yojimbo",
-      "folder": "yojimbo",
       "title": "Yojimbo",
       "subtitle": "A Tobacco Road Games catalog preview",
       "featured": false,
