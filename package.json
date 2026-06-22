@@ -1,0 +1,24 @@
+{
+  "name": "tobacco-road-games",
+  "version": "1.0.0",
+  "description": "Tobacco Road Games storefront and Pages Functions",
+  "main": "releases.js",
+  "scripts": {
+    "test": "node scripts/test-owner-intake.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RVSwebmaster/Tobacco-Road-Games.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/RVSwebmaster/Tobacco-Road-Games/issues"
+  },
+  "homepage": "https://github.com/RVSwebmaster/Tobacco-Road-Games#readme",
+  "dependencies": {
+    "jose": "^6.2.3"
+  }
+}

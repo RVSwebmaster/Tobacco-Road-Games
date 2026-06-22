@@ -15,11 +15,22 @@ import {
   verifyPasswordHash,
   verifySessionToken
 } from "./owner-auth.mjs";
+import {
+  buildOwnerAccessDeniedResponse,
+  buildOwnerAccessLogoutUrl,
+  getOwnerAccessConfig,
+  verifyOwnerAccessRequest
+} from "./owner-access.mjs";
 
 export async function handleOwnerLoginRequest(request, env) {
   const url = new URL(request.url);
+  const accessConfig = getOwnerAccessConfig(env);
 
   try {
+    if (accessConfig.enabled) {
+      return await handleAccessProtectedLogin(request, env, url, accessConfig);
+    }
+
     const method = request.method.toUpperCase();
 
     if (method === "GET") {
@@ -43,7 +54,11 @@ export async function handleOwnerLoginRequest(request, env) {
   }
 }
 
-export async function handleOwnerLogoutRequest(request) {
+export async function handleOwnerLogoutRequest(request, env) {
+  if (getOwnerAccessConfig(env).enabled) {
+    return Response.redirect(buildOwnerAccessLogoutUrl(request), 303);
+  }
+
   const redirectUrl = new URL("/owner/login", request.url);
   redirectUrl.searchParams.set("logged_out", "1");
   const headers = new Headers({
@@ -63,6 +78,23 @@ export async function handleOwnerLogoutRequest(request) {
     status: 303,
     headers
   });
+}
+
+async function handleAccessProtectedLogin(request, env, url, accessConfig) {
+  if (!accessConfig.ready) {
+    return buildOwnerAccessDeniedResponse(request, {
+      reason: "config_incomplete",
+      userMessage: "Owner access is partially configured. Add OWNER_ACCESS_TEAM_DOMAIN and OWNER_ACCESS_AUD together."
+    });
+  }
+
+  const accessState = await verifyOwnerAccessRequest(request, env);
+  if (!accessState.valid) {
+    return buildOwnerAccessDeniedResponse(request, accessState);
+  }
+
+  const nextPath = getSafeOwnerNextPath(url.searchParams.get("next"));
+  return Response.redirect(new URL(nextPath, request.url).toString(), 303);
 }
 
 async function handleLoginGet(request, env, url) {

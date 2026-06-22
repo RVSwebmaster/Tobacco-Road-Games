@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
@@ -14,36 +15,52 @@ async function main() {
   const ownerMiddleware = await importModule("functions/_lib/owner-middleware.mjs");
   const ownerPublish = await importModule("functions/_lib/owner-publish.mjs");
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
+  const accessContext = await createAccessTestContext();
 
-  const passwordHash = await ownerAuth.createPasswordHash("correct horse battery staple");
-  assert.equal(await ownerAuth.verifyPasswordHash("correct horse battery staple", passwordHash), true, "Generated password hash should validate the correct password.");
-  assert.equal(await ownerAuth.verifyPasswordHash("wrong password", passwordHash), false, "Generated password hash should reject the wrong password.");
-  const baseEnv = {
-    GITHUB_PUBLISH_REF: "owner-intake-test",
-    GITHUB_REPO_NAME: "Tobacco-Road-Games",
-    GITHUB_REPO_OWNER: "RVSwebmaster",
-    GITHUB_TOKEN: "test-token",
-    OWNER_CSRF_SECRET: "csrf-secret",
-    OWNER_PASSWORD_HASH: passwordHash,
-    OWNER_SESSION_SECRET: "session-secret",
-    OWNER_USERNAME: "rv-owner"
-  };
+  try {
+    const passwordHash = await ownerAuth.createPasswordHash("correct horse battery staple");
+    assert.equal(await ownerAuth.verifyPasswordHash("correct horse battery staple", passwordHash), true, "Generated password hash should validate the correct password.");
+    assert.equal(await ownerAuth.verifyPasswordHash("wrong password", passwordHash), false, "Generated password hash should reject the wrong password.");
+    const baseEnv = {
+      GITHUB_PUBLISH_REF: "owner-intake-test",
+      GITHUB_REPO_NAME: "Tobacco-Road-Games",
+      GITHUB_REPO_OWNER: "RVSwebmaster",
+      GITHUB_TOKEN: "test-token",
+      OWNER_CSRF_SECRET: "csrf-secret",
+      OWNER_PASSWORD_HASH: passwordHash,
+      OWNER_SESSION_SECRET: "session-secret",
+      OWNER_USERNAME: "rv-owner"
+    };
+    const accessEnv = {
+      ...baseEnv,
+      OWNER_ACCESS_AUD: accessContext.audience,
+      OWNER_ACCESS_EMAIL: accessContext.email,
+      OWNER_ACCESS_TEAM_DOMAIN: accessContext.teamDomain
+    };
 
-  await testWrongUsername(ownerLogin, baseEnv);
-  await testBadLogin(ownerLogin, baseEnv);
-  const authCookies = await testGoodLogin(ownerLogin, baseEnv);
-  await testMalformedHash(ownerLogin, baseEnv);
-  await testMissingSecret(ownerLogin, baseEnv);
-  await testUnexpectedLoginException(ownerLogin, baseEnv);
-  await testAlteredCookie(ownerMiddleware, baseEnv, authCookies);
-  await testExpiredCookie(ownerMiddleware, ownerAuth, baseEnv);
-  await testMissingFiles(ownerPublish, baseEnv, authCookies);
-  await testWrongFileType(ownerPublish, baseEnv, authCookies);
-  await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
-  await testExistingProductUpdatePreservesFields(publishScript);
-  await testNewProductBuildAndSharedMap(publishScript);
+    await testWrongUsername(ownerLogin, baseEnv);
+    await testBadLogin(ownerLogin, baseEnv);
+    const authCookies = await testGoodLogin(ownerLogin, baseEnv);
+    await testMalformedHash(ownerLogin, baseEnv);
+    await testMissingSecret(ownerLogin, baseEnv);
+    await testUnexpectedLoginException(ownerLogin, baseEnv);
+    await testAlteredCookie(ownerMiddleware, baseEnv, authCookies);
+    await testExpiredCookie(ownerMiddleware, ownerAuth, baseEnv);
+    await testMissingFiles(ownerPublish, baseEnv, authCookies);
+    await testWrongFileType(ownerPublish, baseEnv, authCookies);
+    await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
+    await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
+    const accessCookies = await testAccessMiddlewareAllowsAuthorized(ownerMiddleware, accessEnv, accessContext.token);
+    await testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, accessEnv);
+    await testAccessPublishDeniedUnauthorized(ownerPublish, accessEnv);
+    await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
+    await testExistingProductUpdatePreservesFields(publishScript);
+    await testNewProductBuildAndSharedMap(publishScript);
 
-  console.log("Owner intake tests passed.");
+    console.log("Owner intake tests passed.");
+  } finally {
+    await closeAccessTestContext(accessContext);
+  }
 }
 
 async function testWrongUsername(ownerLogin, env) {
@@ -160,6 +177,18 @@ async function testUnexpectedLoginException(ownerLogin, env) {
   }
 }
 
+async function testAccessLoginRedirect(ownerLogin, env, accessToken) {
+  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login?next=%2Fowner%2Fproduct-intake.html", {
+    headers: {
+      "cf-access-jwt-assertion": accessToken
+    },
+    method: "GET"
+  }), env);
+
+  assert.equal(response.status, 303, "Access-protected login should redirect into the intake page.");
+  assert.match(response.headers.get("location") || "", /\/owner\/product-intake\.html$/, "Access-protected login should redirect to the owner intake.");
+}
+
 async function testAlteredCookie(ownerMiddleware, env, cookieHeader) {
   const tamperedCookie = cookieHeader.replace(/trg_owner_session=([^;]+)/, "trg_owner_session=$1tampered");
   const response = await ownerMiddleware.handleOwnerMiddleware({
@@ -192,6 +221,40 @@ async function testExpiredCookie(ownerMiddleware, ownerAuth, env) {
   assert.match(response.headers.get("location") || "", /\/owner\/login/, "Expired cookie redirect should go to login.");
 }
 
+async function testAccessMiddlewareAllowsAuthorized(ownerMiddleware, env, accessToken) {
+  const response = await ownerMiddleware.handleOwnerMiddleware({
+    env,
+    next: () => new Response("ok", {
+      headers: {
+        "content-type": "text/plain; charset=utf-8"
+      },
+      status: 200
+    }),
+    request: new Request("https://example.com/owner/product-intake.html", {
+      headers: {
+        "cf-access-jwt-assertion": accessToken
+      }
+    })
+  });
+
+  assert.equal(response.status, 200, "Authorized Access request should reach the owner page.");
+  const cookies = extractSetCookies(response.headers);
+  assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_csrf=") && cookie.includes("SameSite=Strict")), "Authorized Access request should issue the CSRF cookie.");
+  return cookieHeaderFromSetCookies(cookies);
+}
+
+async function testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, env) {
+  const response = await ownerMiddleware.handleOwnerMiddleware({
+    env,
+    next: () => new Response("ok"),
+    request: new Request("https://example.com/owner/product-intake.html")
+  });
+
+  assert.equal(response.status, 403, "Missing Access JWT should deny the owner page.");
+  const body = await response.text();
+  assert.match(body, /Cloudflare Access/i, "Missing Access JWT should explain that Cloudflare Access is required.");
+}
+
 async function testMissingFiles(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
@@ -210,6 +273,33 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
   assert.equal(response.status, 400, "Missing files should return 400.");
   const payload = await response.json();
   assert.match(payload.error, /product\.pdf is required/i, "Missing PDF error should be human-readable.");
+}
+
+async function testAccessPublishDeniedUnauthorized(ownerPublish, env) {
+  const formData = new FormData();
+  addRequiredTextFields(formData);
+  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+
+  const response = await ownerPublish.handleOwnerPublishRequest(new Request("https://example.com/owner/api/publish", {
+    body: formData,
+    headers: {
+      origin: "https://example.com"
+    },
+    method: "POST"
+  }), {
+    ...env,
+    TRG_PRODUCTS: createMockBucket()
+  }, {
+    dispatchOptions: {
+      fetchImpl: async () => new Response(null, { status: 204 })
+    }
+  });
+
+  assert.equal(response.status, 403, "Publish should deny direct unauthenticated requests in Access mode.");
+  const payload = await response.json();
+  assert.match(payload.error, /Cloudflare Access/i, "Access-mode publish denial should mention Cloudflare Access.");
 }
 
 async function testWrongFileType(ownerPublish, env, cookieHeader) {
@@ -231,6 +321,64 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
   assert.equal(response.status, 400, "Wrong file type should return 400.");
   const payload = await response.json();
   assert.match(payload.error, /preview\.webp must be uploaded with that exact filename|must be a WebP/i, "Wrong file type error should be human-readable.");
+}
+
+async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieHeader) {
+  const bucket = createMockBucket();
+  const formData = new FormData();
+  addRequiredTextFields(formData);
+  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+
+  const originalRandomUuid = crypto.randomUUID;
+  const originalDateNow = Date.now;
+  const fixedNow = 1760000000001;
+  const fetchImpl = async (url) => {
+    if (String(url).endsWith("/dispatches")) {
+      return new Response(null, { status: 204 });
+    }
+
+    return jsonResponse({
+      workflow_runs: [
+        {
+          conclusion: "success",
+          created_at: new Date().toISOString(),
+          display_title: `Owner publish pub-${fixedNow}-access-run`,
+          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/2",
+          id: 2,
+          status: "completed"
+        }
+      ]
+    });
+  };
+
+  Date.now = () => fixedNow;
+  crypto.randomUUID = () => "access-run";
+  try {
+    const response = await ownerPublish.handleOwnerPublishRequest(buildAccessAuthenticatedPublishRequest(formData, cookieHeader, accessToken), {
+      ...env,
+      TRG_PRODUCTS: bucket
+    }, {
+      dispatchOptions: {
+        fetchImpl,
+        pollIntervalMs: 1,
+        timeoutMs: 100
+      }
+    });
+
+    assert.equal(response.status, 200, "Authenticated Access publish should succeed.");
+    const payload = await response.json();
+    assert.equal(payload.ok, true, "Authenticated Access publish should report success.");
+    assert.deepEqual(bucket.putKeys.sort(), [
+      "new-product/cover.webp",
+      "new-product/preview.webp",
+      "new-product/product.pdf"
+    ], "Authenticated Access publish should upload all required files.");
+  } finally {
+    Date.now = originalDateNow;
+    crypto.randomUUID = originalRandomUuid;
+  }
 }
 
 async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
@@ -406,6 +554,20 @@ function buildAuthenticatedPublishRequest(formData, cookieHeader) {
   });
 }
 
+function buildAccessAuthenticatedPublishRequest(formData, cookieHeader, accessToken) {
+  const csrfToken = readCookieFromHeader(cookieHeader, "trg_owner_csrf");
+  return new Request("https://example.com/owner/api/publish", {
+    body: formData,
+    headers: {
+      "cf-access-jwt-assertion": accessToken,
+      cookie: cookieHeader,
+      origin: "https://example.com",
+      "x-csrf-token": csrfToken
+    },
+    method: "POST"
+  });
+}
+
 function createMockBucket() {
   return {
     deletedKeys: [],
@@ -471,6 +633,79 @@ function readCookieFromHeader(cookieHeader, name) {
     }
   }
   return "";
+}
+
+async function createAccessTestContext() {
+  const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
+  const { privateKey, publicKey } = await generateKeyPair("RS256");
+  const publicJwk = await exportJWK(publicKey);
+  publicJwk.alg = "RS256";
+  publicJwk.kid = "owner-access-test";
+  publicJwk.use = "sig";
+
+  const server = http.createServer((request, response) => {
+    if (request.url === "/cdn-cgi/access/certs") {
+      response.writeHead(200, {
+        "content-type": "application/json; charset=utf-8"
+      });
+      response.end(JSON.stringify({
+        keys: [publicJwk]
+      }));
+      return;
+    }
+
+    response.writeHead(404, {
+      "content-type": "text/plain; charset=utf-8"
+    });
+    response.end("Not found");
+  });
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  const teamDomain = `http://127.0.0.1:${address.port}`;
+  const audience = "owner-access-test-audience";
+  const email = "rv@example.com";
+  const token = await new SignJWT({
+    email
+  })
+    .setProtectedHeader({
+      alg: "RS256",
+      kid: publicJwk.kid
+    })
+    .setAudience(audience)
+    .setExpirationTime("2h")
+    .setIssuedAt()
+    .setIssuer(teamDomain)
+    .setSubject("rv-owner-subject")
+    .sign(privateKey);
+
+  return {
+    audience,
+    email,
+    server,
+    teamDomain,
+    token
+  };
+}
+
+async function closeAccessTestContext(accessContext) {
+  if (!accessContext?.server) {
+    return;
+  }
+
+  await new Promise((resolve, reject) => {
+    accessContext.server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
 }
 
 main().catch((error) => {

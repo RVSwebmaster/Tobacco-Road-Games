@@ -274,6 +274,7 @@
 
       const response = await fetch("/owner/api/publish", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "X-CSRF-Token": csrfToken
         },
@@ -283,9 +284,9 @@
 
       if (response.status === 401 || response.status === 403) {
         const payload = await safeJson(response);
-        outputs.status.textContent = payload.error || "Your session is no longer valid. Redirecting to login...";
+        outputs.status.textContent = payload.error || "Your owner access session is no longer valid. Reloading the protected route...";
         window.setTimeout(() => {
-          window.location.assign(`/owner/login?next=${encodeURIComponent(window.location.pathname)}`);
+          window.location.assign("/owner/");
         }, 600);
         return;
       }

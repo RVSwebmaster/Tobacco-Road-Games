@@ -5,6 +5,13 @@ import {
   clearCookie,
   verifySessionToken
 } from "./owner-auth.mjs";
+import {
+  attachOwnerAccessCsrfCookie,
+  buildOwnerAccessDeniedResponse,
+  buildOwnerAccessLogoutUrl,
+  getOwnerAccessConfig,
+  verifyOwnerAccessRequest
+} from "./owner-access.mjs";
 
 export async function handleOwnerMiddleware(context) {
   const request = context.request;
@@ -13,6 +20,11 @@ export async function handleOwnerMiddleware(context) {
 
   if (!pathname.startsWith("/owner")) {
     return context.next();
+  }
+
+  const accessConfig = getOwnerAccessConfig(context.env);
+  if (accessConfig.enabled) {
+    return handleOwnerAccessMiddleware(context, accessConfig);
   }
 
   if (pathname === "/owner" || pathname === "/owner/") {
@@ -33,6 +45,36 @@ export async function handleOwnerMiddleware(context) {
   }
 
   return redirectToOwnerLogin(request, session.reason === "expired" || session.reason === "bad_signature");
+}
+
+async function handleOwnerAccessMiddleware(context, accessConfig) {
+  const request = context.request;
+  const requestUrl = new URL(request.url);
+  const pathname = requestUrl.pathname;
+  const apiPath = pathname.startsWith("/owner/api/");
+
+  if (!accessConfig.ready) {
+    return buildOwnerAccessDeniedResponse(request, {
+      reason: "config_incomplete",
+      userMessage: "Owner access is partially configured. Add OWNER_ACCESS_TEAM_DOMAIN and OWNER_ACCESS_AUD together."
+    }, apiPath);
+  }
+
+  const accessState = await verifyOwnerAccessRequest(request, context.env);
+  if (!accessState.valid) {
+    return buildOwnerAccessDeniedResponse(request, accessState, apiPath);
+  }
+
+  if (pathname === "/owner" || pathname === "/owner/" || pathname === "/owner/login") {
+    return Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303);
+  }
+
+  if (pathname === "/owner/logout") {
+    return Response.redirect(buildOwnerAccessLogoutUrl(request), 303);
+  }
+
+  const response = await context.next();
+  return attachOwnerAccessCsrfCookie(response, request, context.env, accessState);
 }
 
 export async function readOwnerSession(request, env) {
