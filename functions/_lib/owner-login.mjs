@@ -10,6 +10,7 @@ import {
   getOwnerSecrets,
   getSafeOwnerNextPath,
   htmlResponse,
+  inspectPasswordHash,
   readCookie,
   verifyPasswordHash,
   verifySessionToken
@@ -17,20 +18,29 @@ import {
 
 export async function handleOwnerLoginRequest(request, env) {
   const url = new URL(request.url);
-  const method = request.method.toUpperCase();
 
-  if (method === "GET") {
-    return handleLoginGet(request, env, url);
+  try {
+    const method = request.method.toUpperCase();
+
+    if (method === "GET") {
+      return await handleLoginGet(request, env, url);
+    }
+
+    if (method === "POST") {
+      return await handleLoginPost(request, env, url);
+    }
+
+    return htmlResponse(renderLoginPage({
+      errorMessage: "This page only supports GET and POST.",
+      nextPath: getSafeOwnerNextPath(url.searchParams.get("next"))
+    }), 405);
+  } catch (error) {
+    logOwnerLoginException(request, error);
+    return htmlResponse(renderLoginPage({
+      errorMessage: "Owner login could not be completed. Please try again or check Cloudflare login secret configuration.",
+      nextPath: getSafeOwnerNextPath(url.searchParams.get("next"))
+    }), 500);
   }
-
-  if (method === "POST") {
-    return handleLoginPost(request, env, url);
-  }
-
-  return htmlResponse(renderLoginPage({
-    errorMessage: "This page only supports GET and POST.",
-    nextPath: getSafeOwnerNextPath(url.searchParams.get("next"))
-  }), 405);
 }
 
 export async function handleOwnerLogoutRequest(request) {
@@ -79,6 +89,14 @@ async function handleLoginPost(request, env, url) {
   if (!secrets.username || !secrets.passwordHash || !secrets.sessionSecret || !secrets.csrfSecret) {
     return htmlResponse(renderLoginPage({
       errorMessage: "Owner login is not configured yet. Add the required Cloudflare secrets first.",
+      nextPath
+    }), 503);
+  }
+
+  const passwordHashState = inspectPasswordHash(secrets.passwordHash);
+  if (!passwordHashState.valid) {
+    return htmlResponse(renderLoginPage({
+      errorMessage: "Owner login is not configured correctly yet. Update OWNER_PASSWORD_HASH in Cloudflare and try again.",
       nextPath
     }), 503);
   }
@@ -245,4 +263,17 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function logOwnerLoginException(request, error) {
+  const payload = {
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    event: "owner_login_exception",
+    method: request.method,
+    path: new URL(request.url).pathname,
+    rayId: request.headers.get("cf-ray") || ""
+  };
+
+  console.error(JSON.stringify(payload));
 }

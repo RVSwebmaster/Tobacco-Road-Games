@@ -12,6 +12,39 @@ export {
   SESSION_TTL_SECONDS
 };
 
+export function inspectPasswordHash(storedHash) {
+  const parts = String(storedHash || "")
+    .trim()
+    .split("$")
+    .map((part) => part.trim());
+
+  if (parts.length !== 4 || parts[0] !== PASSWORD_HASH_PREFIX) {
+    return { valid: false, reason: "unsupported_format" };
+  }
+
+  const iterations = Number(parts[1]);
+  if (!Number.isInteger(iterations) || iterations <= 0) {
+    return { valid: false, reason: "bad_iterations" };
+  }
+
+  try {
+    const saltBytes = fromBase64Url(parts[2]);
+    const expectedBytes = fromBase64Url(parts[3]);
+    if (!saltBytes.length || !expectedBytes.length) {
+      return { valid: false, reason: "empty_components" };
+    }
+
+    return {
+      valid: true,
+      expectedBytes,
+      iterations,
+      saltBytes
+    };
+  } catch {
+    return { valid: false, reason: "bad_encoding" };
+  }
+}
+
 export async function createPasswordHash(password, options = {}) {
   const saltBytes = options.saltBytes || randomBytes(16);
   const iterations = Number.isFinite(options.iterations) ? options.iterations : PASSWORD_HASH_ITERATIONS;
@@ -20,20 +53,17 @@ export async function createPasswordHash(password, options = {}) {
 }
 
 export async function verifyPasswordHash(password, storedHash) {
-  const parts = String(storedHash || "").split("$");
-  if (parts.length !== 4 || parts[0] !== PASSWORD_HASH_PREFIX) {
+  const parsed = inspectPasswordHash(storedHash);
+  if (!parsed.valid) {
     return false;
   }
 
-  const iterations = Number(parts[1]);
-  const saltBytes = fromBase64Url(parts[2]);
-  const expectedBytes = fromBase64Url(parts[3]);
-  if (!Number.isFinite(iterations) || !saltBytes.length || !expectedBytes.length) {
+  try {
+    const actualBytes = await derivePasswordHash(password, parsed.saltBytes, parsed.iterations, parsed.expectedBytes.length * 8);
+    return constantTimeEqual(actualBytes, parsed.expectedBytes);
+  } catch {
     return false;
   }
-
-  const actualBytes = await derivePasswordHash(password, saltBytes, iterations, expectedBytes.length * 8);
-  return constantTimeEqual(actualBytes, expectedBytes);
 }
 
 export async function createSessionToken(username, secret, nowMs = Date.now(), ttlSeconds = SESSION_TTL_SECONDS) {
@@ -342,6 +372,8 @@ function toBase64Url(bytes) {
 
 function fromBase64Url(value) {
   const normalized = String(value || "")
+    .trim()
+    .replace(/\s+/g, "")
     .replace(/-/g, "+")
     .replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);

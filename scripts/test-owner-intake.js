@@ -16,6 +16,8 @@ async function main() {
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
 
   const passwordHash = await ownerAuth.createPasswordHash("correct horse battery staple");
+  assert.equal(await ownerAuth.verifyPasswordHash("correct horse battery staple", passwordHash), true, "Generated password hash should validate the correct password.");
+  assert.equal(await ownerAuth.verifyPasswordHash("wrong password", passwordHash), false, "Generated password hash should reject the wrong password.");
   const baseEnv = {
     GITHUB_PUBLISH_REF: "owner-intake-test",
     GITHUB_REPO_NAME: "Tobacco-Road-Games",
@@ -27,8 +29,12 @@ async function main() {
     OWNER_USERNAME: "rv-owner"
   };
 
+  await testWrongUsername(ownerLogin, baseEnv);
   await testBadLogin(ownerLogin, baseEnv);
   const authCookies = await testGoodLogin(ownerLogin, baseEnv);
+  await testMalformedHash(ownerLogin, baseEnv);
+  await testMissingSecret(ownerLogin, baseEnv);
+  await testUnexpectedLoginException(ownerLogin, baseEnv);
   await testAlteredCookie(ownerMiddleware, baseEnv, authCookies);
   await testExpiredCookie(ownerMiddleware, ownerAuth, baseEnv);
   await testMissingFiles(ownerPublish, baseEnv, authCookies);
@@ -38,6 +44,21 @@ async function main() {
   await testNewProductBuildAndSharedMap(publishScript);
 
   console.log("Owner intake tests passed.");
+}
+
+async function testWrongUsername(ownerLogin, env) {
+  const formData = new FormData();
+  formData.set("username", "not-the-owner");
+  formData.set("password", "correct horse battery staple");
+
+  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
+    body: formData,
+    method: "POST"
+  }), env);
+
+  assert.equal(response.status, 401, "Wrong username should return 401.");
+  const body = await response.text();
+  assert.match(body, /did not work/i, "Wrong username should show a human-readable error.");
 }
 
 async function testBadLogin(ownerLogin, env) {
@@ -71,6 +92,72 @@ async function testGoodLogin(ownerLogin, env) {
   assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_session=") && cookie.includes("HttpOnly") && cookie.includes("SameSite=Strict")), "Session cookie should be secure and HttpOnly.");
   assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_csrf=") && cookie.includes("SameSite=Strict")), "CSRF cookie should be secure and strict.");
   return cookieHeaderFromSetCookies(cookies);
+}
+
+async function testMalformedHash(ownerLogin, env) {
+  const formData = new FormData();
+  formData.set("username", env.OWNER_USERNAME);
+  formData.set("password", "wrong password");
+
+  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
+    body: formData,
+    method: "POST"
+  }), {
+    ...env,
+    OWNER_PASSWORD_HASH: "pbkdf2_sha256$310000$bad***$also***"
+  });
+
+  assert.equal(response.status, 503, "Malformed password hash should return 503 instead of throwing.");
+  const body = await response.text();
+  assert.match(body, /OWNER_PASSWORD_HASH|not configured correctly/i, "Malformed password hash should show a configuration error.");
+}
+
+async function testMissingSecret(ownerLogin, env) {
+  const formData = new FormData();
+  formData.set("username", env.OWNER_USERNAME);
+  formData.set("password", "wrong password");
+
+  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
+    body: formData,
+    method: "POST"
+  }), {
+    ...env,
+    OWNER_SESSION_SECRET: ""
+  });
+
+  assert.equal(response.status, 503, "Missing owner secrets should return 503.");
+  const body = await response.text();
+  assert.match(body, /not configured yet/i, "Missing owner secrets should show a configuration error.");
+}
+
+async function testUnexpectedLoginException(ownerLogin, env) {
+  const captured = [];
+  const originalConsoleError = console.error;
+  console.error = (entry) => {
+    captured.push(String(entry));
+  };
+
+  try {
+    const response = await ownerLogin.handleOwnerLoginRequest({
+      formData() {
+        throw new Error("synthetic login failure");
+      },
+      headers: new Headers({
+        "cf-ray": "test-ray-id"
+      }),
+      method: "POST",
+      url: "https://example.com/owner/login"
+    }, env);
+
+    assert.equal(response.status, 500, "Unexpected login exceptions should be caught and turned into a normal response.");
+    const body = await response.text();
+    assert.match(body, /could not be completed/i, "Unexpected login exceptions should show a safe error.");
+    assert.equal(captured.length, 1, "Unexpected login exceptions should be logged once.");
+    assert.match(captured[0], /owner_login_exception/, "Unexpected login exceptions should use the safe event log.");
+    assert.doesNotMatch(captured[0], /correct horse battery staple|session-secret|csrf-secret|pbkdf2_sha256/, "Safe login logs must not include secrets or credentials.");
+  } finally {
+    console.error = originalConsoleError;
+  }
 }
 
 async function testAlteredCookie(ownerMiddleware, env, cookieHeader) {
