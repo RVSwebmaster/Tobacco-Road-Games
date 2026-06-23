@@ -119,6 +119,22 @@ function main() {
     }));
   }
 
+  for (const series of indexes.series) {
+    writeFile(`store/series/${series.slug}/index.html`, renderCollectionPage({
+      title: series.name,
+      kicker: "Series",
+      description: `Browse Tobacco Road Games titles in the ${series.name} series.`,
+      canonicalPath: `/store/series/${series.slug}/`,
+      breadcrumbs: [
+        { label: "Store", href: "/store/" },
+        { label: "Catalog", href: "/store/catalog/" },
+        { label: "Series" },
+        { label: series.name }
+      ],
+      cards: series.products.map((product) => renderProductCard(product))
+    }));
+  }
+
   for (const status of indexes.statuses) {
     writeFile(`store/status/${status.slug}/index.html`, renderCollectionPage({
       title: status.label,
@@ -243,6 +259,8 @@ function loadProducts(authorLookup) {
       fulfillmentNote: product.fulfillmentNote || "",
       creationMethod: product.creationMethod || "",
       legalNote: product.legalNote || "",
+      series: product.series || "",
+      seriesSlug: product.seriesSlug || "",
       version: product.version || "",
       releaseDate: product.releaseDate || "",
       lastUpdated: product.lastUpdated || ""
@@ -301,6 +319,7 @@ function buildIndexes(products, authors) {
   const authorMap = new Map();
   const systemMap = new Map();
   const lineMap = new Map();
+  const seriesMap = new Map();
   const statusMap = new Map();
   const formatMap = new Map();
   const priceTypeMap = new Map();
@@ -336,6 +355,7 @@ function buildIndexes(products, authors) {
 
     collectIndex(systemMap, product.gameSystemSlug, product.gameSystem, product);
     collectIndex(lineMap, product.productLineSlug, product.productLine, product);
+    collectIndex(seriesMap, product.seriesSlug, product.series, product);
     collectIndex(statusMap, product.status, product.statusLabel, product, "label");
     collectIndex(priceTypeMap, product.priceType, product.priceTypeLabel, product, "label");
 
@@ -352,6 +372,7 @@ function buildIndexes(products, authors) {
     })),
     systems: sortByName([...systemMap.values()]),
     lines: sortByName([...lineMap.values()]),
+    series: sortByName([...seriesMap.values()]),
     statuses: sortByName([...statusMap.values()], "label"),
     formats: sortByName([...formatMap.values()]),
     priceTypes: sortByName([...priceTypeMap.values()], "label"),
@@ -438,7 +459,7 @@ function renderStoreHome(products, indexes) {
           <div class="section-heading">
             <p class="section-heading__kicker">Bookshelf</p>
             <h2 id="bookshelf-browser-heading">Shelf first, catalog second.</h2>
-            <p>Use the shelf filters to browse by category or line, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
+            <p>Use the shelf filters to browse by category or line, series, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
           </div>
           ${renderStoreBrowser(browserProducts, indexes, {
             browserId: "store-home-browser",
@@ -468,13 +489,14 @@ function renderStoreHome(products, indexes) {
 
         ${renderBrowseSection("Browse by Game System", indexes.systems, (entry) => `/store/systems/${entry.slug}/`)}
         ${renderBrowseSection("Browse by Product Line", indexes.lines, (entry) => `/store/lines/${entry.slug}/`)}
+        ${renderBrowseSection("Browse by Series", indexes.series, (entry) => `/store/series/${entry.slug}/`)}
         ${renderBrowseSection("Browse by Author", indexes.authors, (entry) => entry.url)}
 
         <section class="store-section store-callout" aria-labelledby="catalog-link-heading">
           <div class="store-callout__copy">
             <p class="section-heading__kicker">Catalog</p>
             <h2 id="catalog-link-heading">Search and browse the full Tobacco Road Games catalog.</h2>
-            <p>Search titles by author, game system, product line, status, format, and price type from one clean catalog page.</p>
+            <p>Search titles by author, game system, product line, series, status, format, and price type from one clean catalog page.</p>
           </div>
           <div class="store-callout__panel">
             <p class="note-card__label">Catalog Access</p>
@@ -494,14 +516,14 @@ function renderCatalogPage(products, indexes) {
 
   return renderLayout({
     pageTitle: `${STORE_TITLE} Catalog | Search and Browse Titles`,
-    description: "Search and browse Tobacco Road Games titles by author, game system, product line, release status, and title.",
+    description: "Search and browse Tobacco Road Games titles by author, game system, product line, series, release status, and title.",
     canonicalPath: "/store/catalog/",
     ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
     extraScripts: ["/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
-      description: "Search and browse Tobacco Road Games titles by author, game system, product line, release status, and title.",
+      description: "Search and browse Tobacco Road Games titles by author, game system, product line, series, release status, and title.",
       url: `${BASE_URL}/store/catalog/`
     }),
     content: `
@@ -512,7 +534,7 @@ function renderCatalogPage(products, indexes) {
           <div class="section-heading">
             <p class="section-heading__kicker">Catalog</p>
             <h1 id="catalog-heading">Search and browse Tobacco Road Games titles.</h1>
-            <p>Browse by author, game system, category or line, release status, format, and price type.</p>
+            <p>Browse by author, game system, category or line, series, release status, format, and price type.</p>
           </div>
           ${renderStoreBrowser(sortedProducts, indexes, {
             browserId: "catalog-browser",
@@ -538,6 +560,7 @@ function renderProductPage(product, products) {
     renderIdentityItem("Author", product.authors.join(", ")),
     renderIdentityItem("Game System", product.gameSystem),
     renderIdentityItem("Product Line", renderProductLineValue(product)),
+    ...(product.series ? [renderIdentityItem("Series", renderSeriesValue(product))] : []),
     renderIdentityItem("Format", product.format.join(", ") || "TBD"),
     renderIdentityItem("Pages", product.pageCount ? String(product.pageCount) : "TBD"),
     renderIdentityItem("Status", product.statusLabel),
@@ -601,6 +624,7 @@ function renderProductPage(product, products) {
     product.format.join(", ") || "Format TBD",
     product.pageCount ? `${product.pageCount} pages` : "Page count TBD",
     product.productLine,
+    product.series && product.series !== product.productLine ? product.series : "",
     product.version || "Version TBD",
     product.lastUpdated || "Update date TBD"
   ].filter(Boolean);
@@ -967,7 +991,7 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
     <div class="catalog-controls" data-store-controls>
       <label class="catalog-control">
         <span>Title Search</span>
-        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, tags" data-filter-search>
+        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, series, tags" data-filter-search>
       </label>
 
       <label class="catalog-control">
@@ -991,6 +1015,14 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
         <select class="dock-input" data-filter-line>
           <option value="">All Categories and Lines</option>
           ${indexes.lines.map((line) => `<option value="${escapeAttribute(line.slug)}">${escapeHtml(line.name)}</option>`).join("")}
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Series</span>
+        <select class="dock-input" data-filter-series>
+          <option value="">All Series</option>
+          ${indexes.series.map((series) => `<option value="${escapeAttribute(series.slug)}">${escapeHtml(series.name)}</option>`).join("")}
         </select>
       </label>
 
@@ -1075,6 +1107,7 @@ function renderProductCard(product, options = {}) {
     product.authors.join(" "),
     product.gameSystem,
     product.productLine,
+    product.series,
     product.tags.join(" "),
     product.statusLabel,
     product.priceTypeLabel
@@ -1635,7 +1668,7 @@ function renderProductSchema(product) {
       url: `${BASE_URL}${author.url}`
     })),
     sku: product.slug,
-    category: product.productLine || product.gameSystem,
+    category: product.series || product.productLine || product.gameSystem,
     url: `${BASE_URL}${product.url}`
   };
 
@@ -1659,6 +1692,7 @@ function renderStoreSitemap(products, indexes, bundleRules) {
     ...products.map((product) => product.url),
     ...indexes.systems.map((system) => `/store/systems/${system.slug}/`),
     ...indexes.lines.map((line) => `/store/lines/${line.slug}/`),
+    ...indexes.series.map((series) => `/store/series/${series.slug}/`),
     ...indexes.statuses.map((status) => `/store/status/${status.slug}/`)
   ];
 
@@ -1695,6 +1729,16 @@ function resolveRelatedProducts(product, products) {
 
   if (explicit.length) {
     return explicit.slice(0, 3);
+  }
+
+  const sameSeries = product.seriesSlug
+    ? products
+      .filter((candidate) => candidate.slug !== product.slug)
+      .filter((candidate) => candidate.seriesSlug === product.seriesSlug)
+    : [];
+
+  if (sameSeries.length) {
+    return sameSeries.slice(0, 3);
   }
 
   return products
@@ -1913,8 +1957,16 @@ function renderProductLineValue(product) {
   return product.productLine || "Not assigned";
 }
 
+function renderSeriesValue(product) {
+  return product.series || "";
+}
+
 function renderCatalogMeta(product) {
-  return [product.gameSystem, product.productLine].filter(Boolean).join(" | ") || product.gameSystem;
+  return [
+    product.gameSystem,
+    product.productLine,
+    product.series && product.series !== product.productLine ? product.series : ""
+  ].filter(Boolean).join(" | ") || product.gameSystem;
 }
 
 function renderProductDatasetAttributes(product, searchText) {
@@ -1924,6 +1976,7 @@ function renderProductDatasetAttributes(product, searchText) {
     product.authors.join(" "),
     product.gameSystem,
     product.productLine,
+    product.series,
     product.tags.join(" "),
     product.statusLabel,
     product.priceTypeLabel
@@ -1936,6 +1989,7 @@ function renderProductDatasetAttributes(product, searchText) {
     `data-author="${escapeAttribute(product.authorSlugs.join("|"))}"`,
     `data-system="${escapeAttribute(product.gameSystemSlug)}"`,
     `data-line="${escapeAttribute(product.productLineSlug)}"`,
+    `data-series="${escapeAttribute(product.seriesSlug)}"`,
     `data-status="${escapeAttribute(product.status)}"`,
     `data-format="${escapeAttribute(product.format.map(slugify).join("|"))}"`,
     `data-price-type="${escapeAttribute(slugify(product.priceTypeLabel))}"`,

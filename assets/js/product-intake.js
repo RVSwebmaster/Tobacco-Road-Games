@@ -21,6 +21,7 @@
     publisher: document.getElementById("product-publisher"),
     system: document.getElementById("product-system"),
     line: document.getElementById("product-line"),
+    series: document.getElementById("product-series"),
     format: document.getElementById("product-format"),
     pageCount: document.getElementById("product-page-count"),
     price: document.getElementById("product-price"),
@@ -92,6 +93,7 @@
     const folder = fields.folder.value.trim() || slug;
     const gameSystem = fields.system.value.trim();
     const productLine = fields.line.value.trim();
+    const series = fields.series.value.trim();
     const pageCountRaw = fields.pageCount.value.trim();
     const priceRaw = fields.price.value.trim();
     const priceCents = priceRaw ? Math.round(Number(priceRaw) * 100) : null;
@@ -118,6 +120,8 @@
       priceCents,
       productLine,
       productLineSlug: slugify(productLine),
+      series,
+      seriesSlug: slugify(series),
       publisher: "Tobacco Road Games",
       relatedProducts: parseList(fields.related.value),
       releaseDate: fields.releaseDate.value,
@@ -250,6 +254,8 @@
       formData.set("gameSystemSlug", payload.gameSystemSlug);
       formData.set("productLine", payload.productLine);
       formData.set("productLineSlug", payload.productLineSlug);
+      formData.set("series", payload.series);
+      formData.set("seriesSlug", payload.seriesSlug);
       formData.set("format", payload.format.join(", "));
       formData.set("pageCount", payload.pageCount === null ? "" : String(payload.pageCount));
       formData.set("price", payload.price);
@@ -400,6 +406,7 @@
     fields.publisher.value = "Tobacco Road Games";
     fields.system.value = "5E Compatible";
     fields.line.value = "Fifth Edition Fantasy Roleplaying";
+    fields.series.value = "";
     fields.format.value = "PDF";
     fields.pageCount.value = "";
     fields.price.value = "";

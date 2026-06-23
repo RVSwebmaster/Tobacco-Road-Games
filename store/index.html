@@ -345,7 +345,7 @@
           <div class="section-heading">
             <p class="section-heading__kicker">Bookshelf</p>
             <h2 id="bookshelf-browser-heading">Shelf first, catalog second.</h2>
-            <p>Use the shelf filters to browse by category or line, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
+            <p>Use the shelf filters to browse by category or line, series, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
           </div>
           
     <div class="store-browser" data-store-browser="store-home-browser">
@@ -353,7 +353,7 @@
     <div class="catalog-controls" data-store-controls>
       <label class="catalog-control">
         <span>Title Search</span>
-        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, tags" data-filter-search>
+        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, series, tags" data-filter-search>
       </label>
 
       <label class="catalog-control">
@@ -377,6 +377,14 @@
         <select class="dock-input" data-filter-line>
           <option value="">All Categories and Lines</option>
           <option value="fifth-edition-fantasy-roleplaying">Fifth Edition Fantasy Roleplaying</option><option value="other-games-and-experiments">Other Games &amp; Experiments</option><option value="tablecraft">Tablecraft</option>
+        </select>
+      </label>
+
+      <label class="catalog-control">
+        <span>Series</span>
+        <select class="dock-input" data-filter-series>
+          <option value="">All Series</option>
+          <option value="tablecraft">Tablecraft</option>
         </select>
       </label>
 
@@ -433,7 +441,7 @@
           
           <div class="bookshelf-grid" data-store-shelf>
             
-    <a class="bookshelf-book" href="/store/products/silence-and-the-spotlight/" data-product-card="true" data-slug="silence-and-the-spotlight" data-title="silence and the spotlight" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781913600000" data-updated="1781913600000" data-sale-active="false" data-search="silence and the spotlight a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Silence and the Spotlight product page">
+    <a class="bookshelf-book" href="/store/products/silence-and-the-spotlight/" data-product-card="true" data-slug="silence-and-the-spotlight" data-title="silence and the spotlight" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781913600000" data-updated="1781913600000" data-sale-active="false" data-search="silence and the spotlight a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Silence and the Spotlight product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -457,7 +465,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/tablecraft-primer/" data-product-card="true" data-slug="tablecraft-primer" data-title="tablecraft primer" data-author="rv-sawyer" data-system="system-neutral" data-line="tablecraft" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="tablecraft primer a tablecraft catalog preview rv sawyer system neutral tablecraft tablecraft preview preview available preview only" aria-label="Open Tablecraft Primer product page">
+    <a class="bookshelf-book" href="/store/products/tablecraft-primer/" data-product-card="true" data-slug="tablecraft-primer" data-title="tablecraft primer" data-author="rv-sawyer" data-system="system-neutral" data-line="tablecraft" data-series="tablecraft" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="tablecraft primer a tablecraft catalog preview rv sawyer system neutral tablecraft tablecraft tablecraft preview preview available preview only" aria-label="Open Tablecraft Primer product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -481,7 +489,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/circle-of-cinder/" data-product-card="true" data-slug="circle-of-cinder" data-title="circle of cinder" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="circle of cinder a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Circle of Cinder product page">
+    <a class="bookshelf-book" href="/store/products/circle-of-cinder/" data-product-card="true" data-slug="circle-of-cinder" data-title="circle of cinder" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="circle of cinder a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Circle of Cinder product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -505,7 +513,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/final-flame/" data-product-card="true" data-slug="final-flame" data-title="final flame" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="final flame a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Final Flame product page">
+    <a class="bookshelf-book" href="/store/products/final-flame/" data-product-card="true" data-slug="final-flame" data-title="final flame" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="final flame a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Final Flame product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -529,7 +537,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/mouthy-monsters/" data-product-card="true" data-slug="mouthy-monsters" data-title="mouthy monsters" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="mouthy monsters a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Mouthy Monsters product page">
+    <a class="bookshelf-book" href="/store/products/mouthy-monsters/" data-product-card="true" data-slug="mouthy-monsters" data-title="mouthy monsters" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="mouthy monsters a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Mouthy Monsters product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -553,7 +561,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/path-of-the-janky/" data-product-card="true" data-slug="path-of-the-janky" data-title="path of the janky" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="path of the janky a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Path of the Janky product page">
+    <a class="bookshelf-book" href="/store/products/path-of-the-janky/" data-product-card="true" data-slug="path-of-the-janky" data-title="path of the janky" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="path of the janky a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Path of the Janky product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -577,7 +585,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/ringbound/" data-product-card="true" data-slug="ringbound" data-title="ringbound" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="ringbound a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Ringbound product page">
+    <a class="bookshelf-book" href="/store/products/ringbound/" data-product-card="true" data-slug="ringbound" data-title="ringbound" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="ringbound a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Ringbound product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -601,7 +609,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/yojimbo/" data-product-card="true" data-slug="yojimbo" data-title="yojimbo" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="yojimbo a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only" aria-label="Open Yojimbo product page">
+    <a class="bookshelf-book" href="/store/products/yojimbo/" data-product-card="true" data-slug="yojimbo" data-title="yojimbo" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="yojimbo a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only" aria-label="Open Yojimbo product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -625,7 +633,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/spriggans/" data-product-card="true" data-slug="spriggans" data-title="spriggans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1780531200000" data-updated="1780531200000" data-sale-active="false" data-search="spriggans a 5e-compatible fantasy roleplaying supplement rv sawyer 5e compatible fifth edition fantasy roleplaying 5e fantasy preview preview available preview only" aria-label="Open Spriggans product page">
+    <a class="bookshelf-book" href="/store/products/spriggans/" data-product-card="true" data-slug="spriggans" data-title="spriggans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1780531200000" data-updated="1780531200000" data-sale-active="false" data-search="spriggans a 5e-compatible fantasy roleplaying supplement rv sawyer 5e compatible fifth edition fantasy roleplaying  5e fantasy preview preview available preview only" aria-label="Open Spriggans product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -649,7 +657,7 @@
       </span>
     </a>
   
-    <a class="bookshelf-book" href="/store/products/sirrocans/" data-product-card="true" data-slug="sirrocans" data-title="sirrocans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1779840000000" data-updated="1779840000000" data-sale-active="false" data-search="sirrocans a 5e-compatible character race of giant-blooded desert nomads rv sawyer 5e compatible fifth edition fantasy roleplaying 5e ancestry desert character race giant-blooded preview preview available preview only" aria-label="Open Sirrocans product page">
+    <a class="bookshelf-book" href="/store/products/sirrocans/" data-product-card="true" data-slug="sirrocans" data-title="sirrocans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1779840000000" data-updated="1779840000000" data-sale-active="false" data-search="sirrocans a 5e-compatible character race of giant-blooded desert nomads rv sawyer 5e compatible fifth edition fantasy roleplaying  5e ancestry desert character race giant-blooded preview preview available preview only" aria-label="Open Sirrocans product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">Preview Available</span>
@@ -684,7 +692,7 @@
       
       <div class="product-card-grid" data-store-grid>
         
-    <article class="product-card"  data-product-card="true" data-slug="silence-and-the-spotlight" data-title="silence and the spotlight" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781913600000" data-updated="1781913600000" data-sale-active="false" data-search="silence and the spotlight a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="silence-and-the-spotlight" data-title="silence and the spotlight" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781913600000" data-updated="1781913600000" data-sale-active="false" data-search="silence and the spotlight a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/silence-and-the-spotlight/cover.webp" alt="Silence and the Spotlight thumbnail">
       </div>
@@ -704,7 +712,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="tablecraft-primer" data-title="tablecraft primer" data-author="rv-sawyer" data-system="system-neutral" data-line="tablecraft" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="tablecraft primer a tablecraft catalog preview rv sawyer system neutral tablecraft tablecraft preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="tablecraft-primer" data-title="tablecraft primer" data-author="rv-sawyer" data-system="system-neutral" data-line="tablecraft" data-series="tablecraft" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="tablecraft primer a tablecraft catalog preview rv sawyer system neutral tablecraft tablecraft tablecraft preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/tablecraft-primer/cover.webp" alt="Tablecraft Primer thumbnail">
       </div>
@@ -724,7 +732,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="circle-of-cinder" data-title="circle of cinder" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="circle of cinder a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="circle-of-cinder" data-title="circle of cinder" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="circle of cinder a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/circle-of-cinder/cover.webp" alt="Circle of Cinder thumbnail">
       </div>
@@ -744,7 +752,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="final-flame" data-title="final flame" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="final flame a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="final-flame" data-title="final flame" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="final flame a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/final-flame/cover.webp" alt="Final Flame thumbnail">
       </div>
@@ -764,7 +772,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="mouthy-monsters" data-title="mouthy monsters" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="mouthy monsters a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="mouthy-monsters" data-title="mouthy monsters" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="mouthy monsters a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/mouthy-monsters/cover.webp" alt="Mouthy Monsters thumbnail">
       </div>
@@ -784,7 +792,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="path-of-the-janky" data-title="path of the janky" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="path of the janky a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="path-of-the-janky" data-title="path of the janky" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="path of the janky a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/path-of-the-janky/cover.webp" alt="Path of the Janky thumbnail">
       </div>
@@ -804,7 +812,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="ringbound" data-title="ringbound" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="ringbound a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="ringbound" data-title="ringbound" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="ringbound a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/ringbound/cover.webp" alt="Ringbound thumbnail">
       </div>
@@ -824,7 +832,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="yojimbo" data-title="yojimbo" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="yojimbo a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="yojimbo" data-title="yojimbo" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="yojimbo a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
       <div class="product-card__media">
         <img src="/product-assets/yojimbo/cover.webp" alt="Yojimbo thumbnail">
       </div>
@@ -844,7 +852,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="spriggans" data-title="spriggans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1780531200000" data-updated="1780531200000" data-sale-active="false" data-search="spriggans a 5e-compatible fantasy roleplaying supplement rv sawyer 5e compatible fifth edition fantasy roleplaying 5e fantasy preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="spriggans" data-title="spriggans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1780531200000" data-updated="1780531200000" data-sale-active="false" data-search="spriggans a 5e-compatible fantasy roleplaying supplement rv sawyer 5e compatible fifth edition fantasy roleplaying  5e fantasy preview preview available preview only">
       <div class="product-card__media">
         <img src="/assets/products/spriggans/thumb.webp" alt="Spriggans thumbnail">
       </div>
@@ -864,7 +872,7 @@
       </div>
     </article>
   
-    <article class="product-card"  data-product-card="true" data-slug="sirrocans" data-title="sirrocans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1779840000000" data-updated="1779840000000" data-sale-active="false" data-search="sirrocans a 5e-compatible character race of giant-blooded desert nomads rv sawyer 5e compatible fifth edition fantasy roleplaying 5e ancestry desert character race giant-blooded preview preview available preview only">
+    <article class="product-card"  data-product-card="true" data-slug="sirrocans" data-title="sirrocans" data-author="rv-sawyer" data-system="5e-compatible" data-line="fifth-edition-fantasy-roleplaying" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1779840000000" data-updated="1779840000000" data-sale-active="false" data-search="sirrocans a 5e-compatible character race of giant-blooded desert nomads rv sawyer 5e compatible fifth edition fantasy roleplaying  5e ancestry desert character race giant-blooded preview preview available preview only">
       <div class="product-card__media">
         <img src="/assets/products/sirrocans/thumb.webp" alt="Sirrocans thumbnail">
       </div>
@@ -955,6 +963,22 @@
     </section>
   
         
+    <section class="store-section" aria-labelledby="browse-by-series-heading">
+      <div class="section-heading">
+        <p class="section-heading__kicker">Browse</p>
+        <h2 id="browse-by-series-heading">Browse by Series</h2>
+      </div>
+      <div class="browse-card-grid">
+        
+    <a class="browse-card" href="/store/series/tablecraft/">
+      <h3>Tablecraft</h3>
+      <p>1 title</p>
+    </a>
+  
+      </div>
+    </section>
+  
+        
     <section class="store-section" aria-labelledby="browse-by-author-heading">
       <div class="section-heading">
         <p class="section-heading__kicker">Browse</p>
@@ -975,7 +999,7 @@
           <div class="store-callout__copy">
             <p class="section-heading__kicker">Catalog</p>
             <h2 id="catalog-link-heading">Search and browse the full Tobacco Road Games catalog.</h2>
-            <p>Search titles by author, game system, product line, status, format, and price type from one clean catalog page.</p>
+            <p>Search titles by author, game system, product line, series, status, format, and price type from one clean catalog page.</p>
           </div>
           <div class="store-callout__panel">
             <p class="note-card__label">Catalog Access</p>

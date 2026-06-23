@@ -177,6 +177,8 @@
     "gameSystemSlug": "system-neutral",
     "productLine": "Tablecraft",
     "productLineSlug": "tablecraft",
+    "series": "Tablecraft",
+    "seriesSlug": "tablecraft",
     "format": [
       "PDF"
     ],

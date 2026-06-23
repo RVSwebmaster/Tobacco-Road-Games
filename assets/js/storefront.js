@@ -19,6 +19,7 @@
     const matchesAuthor = !state.author || authors.includes(state.author);
     const matchesSystem = !state.system || item.dataset.system === state.system;
     const matchesLine = !state.line || item.dataset.line === state.line;
+    const matchesSeries = !state.series || item.dataset.series === state.series;
     const matchesStatus = !state.status || item.dataset.status === state.status;
     const matchesFormat = !state.format || formats.includes(state.format);
     const matchesPriceType = !state.priceType || item.dataset.priceType === state.priceType;
@@ -28,6 +29,7 @@
       && matchesAuthor
       && matchesSystem
       && matchesLine
+      && matchesSeries
       && matchesStatus
       && matchesFormat
       && matchesPriceType
@@ -61,6 +63,7 @@
     author: root.querySelector("[data-filter-author]")?.value || "",
     system: root.querySelector("[data-filter-system]")?.value || "",
     line: root.querySelector("[data-filter-line]")?.value || "",
+    series: root.querySelector("[data-filter-series]")?.value || "",
     status: root.querySelector("[data-filter-status]")?.value || "",
     format: root.querySelector("[data-filter-format]")?.value || "",
     priceType: root.querySelector("[data-filter-price-type]")?.value || "",

@@ -200,6 +200,8 @@ function parsePublishForm(formData) {
       priceCents: normalizePriceCents(formData.get("price")),
       productLine: metadata.productLine,
       productLineSlug: normalizeSlug(String(formData.get("productLineSlug") || metadata.productLine)),
+      series: String(formData.get("series") || "").trim(),
+      seriesSlug: normalizeSlug(String(formData.get("seriesSlug") || formData.get("series") || "")),
       publisher: "Tobacco Road Games",
       relatedProducts: parseList(formData.get("relatedProducts")),
       releaseDate: String(formData.get("releaseDate") || "").trim(),

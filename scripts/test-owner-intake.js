@@ -498,6 +498,8 @@ async function testNewProductBuildAndSharedMap(publishScript) {
       productLine: "Other Games & Experiments",
       productLineSlug: "other-games-and-experiments",
       releaseDate: "2026-06-22",
+      series: "Tablecraft",
+      seriesSlug: "tablecraft",
       shortDescription: "A test-only haunted cairn product.",
       slug: "ghost-cairn",
       status: "preview-available",
@@ -520,6 +522,9 @@ async function testNewProductBuildAndSharedMap(publishScript) {
   assert.match(builtPage, /\/product-assets\/ghost-cairn\/cover\.webp/, "New product page should use the public cover route.");
   assert.match(builtPage, /\/product-assets\/ghost-cairn\/preview\.webp/, "New product page should use the public preview route.");
 
+  const builtSeriesPath = path.join(tempRoot, "store", "series", "tablecraft", "index.html");
+  assert.ok(fs.existsSync(builtSeriesPath), "Series landing page should be generated when a product includes a series.");
+
   const sharedMap = await import(`${pathToFileURL(path.join(tempRoot, "shared", "product-folder-map.mjs")).href}?cacheBust=${Date.now()}`);
   assert.equal(sharedMap.getFolderForSlug("ghost-cairn"), "ghost-cairn", "Shared folder map should know the new product folder.");
 }
@@ -533,6 +538,8 @@ function addRequiredTextFields(formData) {
   formData.set("gameSystemSlug", "system-neutral");
   formData.set("productLine", "Other Games & Experiments");
   formData.set("productLineSlug", "other-games-and-experiments");
+  formData.set("series", "Tablecraft");
+  formData.set("seriesSlug", "tablecraft");
   formData.set("format", "PDF");
   formData.set("status", "preview-available");
   formData.set("buyMode", "preview-only");

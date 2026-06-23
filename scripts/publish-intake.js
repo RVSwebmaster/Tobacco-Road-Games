@@ -120,6 +120,8 @@ function normalizePublishMetadata(metadata) {
     priceCents: chooseNullableInteger(metadata.priceCents, normalizePriceCents(metadata.price)),
     productLine: chooseText(metadata.productLine, ""),
     productLineSlug: normalizeSlug(chooseText(metadata.productLineSlug, metadata.productLine, "")),
+    series: chooseText(metadata.series, ""),
+    seriesSlug: normalizeSlug(chooseText(metadata.seriesSlug, metadata.series, "")),
     publisher: chooseText(metadata.publisher, "Tobacco Road Games"),
     relatedProducts: normalizeStringArray(metadata.relatedProducts),
     releaseDate: chooseText(metadata.releaseDate, ""),
@@ -151,6 +153,8 @@ function upsertIntakeMap(intakeMap, metadata) {
     gameSystemSlug: chooseText(metadata.gameSystemSlug, existing.gameSystemSlug, normalizeSlug(metadata.gameSystem)),
     productLine: chooseText(metadata.productLine, existing.productLine, "Other Games & Experiments"),
     productLineSlug: chooseText(metadata.productLineSlug, existing.productLineSlug, normalizeSlug(metadata.productLine)),
+    series: chooseText(metadata.series, existing.series, ""),
+    seriesSlug: chooseText(metadata.seriesSlug, existing.seriesSlug, normalizeSlug(metadata.series)),
     format: chooseArray(metadata.format, existing.format, ["PDF"]),
     tags: chooseArray(metadata.tags, existing.tags, ["Preview"])
   };
@@ -185,6 +189,8 @@ function upsertProducts(products, metadata) {
     gameSystemSlug: chooseText(metadata.gameSystemSlug, existing.gameSystemSlug, normalizeSlug(metadata.gameSystem)),
     productLine: chooseText(metadata.productLine, existing.productLine, "Other Games & Experiments"),
     productLineSlug: chooseText(metadata.productLineSlug, existing.productLineSlug, normalizeSlug(metadata.productLine)),
+    series: chooseText(metadata.series, existing.series, ""),
+    seriesSlug: chooseText(metadata.seriesSlug, existing.seriesSlug, normalizeSlug(metadata.series)),
     format: chooseArray(metadata.format, existing.format, ["PDF"]),
     fileList: chooseArray(metadata.fileList, existing.fileList, [`${title} PDF`]),
     pageCount: chooseNullableInteger(metadata.pageCount, existing.pageCount, null),
