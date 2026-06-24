@@ -56,9 +56,9 @@ const REQUIRED_TEXT_FIELDS = [
 ];
 
 const REQUIRED_FILE_FIELDS = [
-  ["coverFile", "cover.webp", "image/webp"],
-  ["previewFile", "preview.webp", "image/webp"],
-  ["productFile", "product.pdf", "application/pdf"]
+  ["coverFile", "Cover image", "image/webp", ".webp"],
+  ["previewFile", "Preview image", "image/webp", ".webp"],
+  ["productFile", "Product PDF", "application/pdf", ".pdf"]
 ];
 
 export async function handleOwnerPublishRequest(request, env, options = {}) {
@@ -187,7 +187,7 @@ function parsePublishForm(formData) {
       excludeFromBundles: true,
       features: parseLines(formData.get("features")),
       featured: String(formData.get("featured") || "") === "true",
-      fileList: [`${metadata.title || "Untitled Product"} PDF`],
+      fileList: [],
       format: formatList,
       fulfillmentNote: String(formData.get("fulfillmentNote") || "").trim(),
       gameSystem: metadata.gameSystem,
@@ -220,9 +220,9 @@ function parsePublishForm(formData) {
     coverFile: null
   };
 
-  for (const [fieldName, expectedName, expectedType] of REQUIRED_FILE_FIELDS) {
+  for (const [fieldName, label, expectedType, expectedExtension] of REQUIRED_FILE_FIELDS) {
     const file = formData.get(fieldName);
-    const fileValidation = validateRequiredFile(file, expectedName, expectedType);
+    const fileValidation = validateRequiredFile(file, label, expectedType, expectedExtension);
     if (!fileValidation.valid) {
       errors.push(fileValidation.userMessage);
       continue;
@@ -244,6 +244,8 @@ function parsePublishForm(formData) {
   if (!payload.metadata.version) {
     payload.metadata.version = "1.0";
   }
+
+  payload.metadata.fileList = [payload.productFile?.name || `${metadata.title || "Untitled Product"}.pdf`];
 
   return {
     valid: true,
@@ -395,48 +397,41 @@ async function verifyAccessProtectedPublishRequest(request, env, accessConfig) {
   };
 }
 
-function validateRequiredFile(file, expectedName, expectedType) {
+function validateRequiredFile(file, label, expectedType, expectedExtension) {
   if (!(file instanceof File)) {
     return {
       valid: false,
-      userMessage: `${expectedName} is required.`
+      userMessage: `${label} is required.`
     };
   }
 
   const actualName = String(file.name || "").trim().toLowerCase();
-  if (actualName !== expectedName) {
-    return {
-      valid: false,
-      userMessage: `${expectedName} must be uploaded with that exact filename.`
-    };
-  }
-
   if (!file.size) {
     return {
       valid: false,
-      userMessage: `${expectedName} is empty.`
+      userMessage: `${label} is empty.`
     };
   }
 
   const contentType = String(file.type || "").toLowerCase();
   if (expectedType === "image/webp") {
-    const nameLooksRight = actualName.endsWith(".webp");
+    const nameLooksRight = actualName.endsWith(expectedExtension);
     const typeLooksRight = !contentType || contentType === "image/webp";
     if (!nameLooksRight || !typeLooksRight) {
       return {
         valid: false,
-        userMessage: `${expectedName} must be a WebP image.`
+        userMessage: `${label} must be a WebP image.`
       };
     }
   }
 
   if (expectedType === "application/pdf") {
-    const nameLooksRight = actualName.endsWith(".pdf");
+    const nameLooksRight = actualName.endsWith(expectedExtension);
     const typeLooksRight = !contentType || contentType === "application/pdf";
     if (!nameLooksRight || !typeLooksRight) {
       return {
         valid: false,
-        userMessage: `${expectedName} must be a PDF file.`
+        userMessage: `${label} must be a PDF file.`
       };
     }
   }
