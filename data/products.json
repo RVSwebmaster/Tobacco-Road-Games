@@ -723,5 +723,90 @@
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
     "excludeFromBundles": true
+  },
+  {
+    "slug": "agency",
+    "title": "Agency",
+    "subtitle": "Share the wheel or crash the game",
+    "featured": false,
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
+    "publisher": "Tobacco Road Games",
+    "gameSystem": "System Agnotic",
+    "gameSystemSlug": "system-agnotic",
+    "productLine": "Tablecraft",
+    "productLineSlug": "tablecraft",
+    "series": "Tablecraft",
+    "seriesSlug": "tablecraft",
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "Agency.pdf"
+    ],
+    "pageCount": 9,
+    "price": "4.99",
+    "priceCents": 499,
+    "minimumPrice": "",
+    "minimumPriceCents": null,
+    "suggestedPrice": "",
+    "suggestedPriceCents": null,
+    "regularPrice": "",
+    "regularPriceCents": null,
+    "salePrice": "",
+    "salePriceCents": null,
+    "saleStart": "",
+    "saleEnd": "",
+    "saleLabel": "",
+    "saleEnabled": false,
+    "currency": "USD",
+    "status": "coming-soon",
+    "statusLabel": "Coming Soon",
+    "coverImage": "/product-assets/agency/cover.webp",
+    "previewImage": "/product-assets/agency/preview.webp",
+    "thumbnailImage": "",
+    "frontCoverImage": "/product-assets/agency/cover.webp",
+    "previewImages": [],
+    "previewPdf": "",
+    "teaserVideo": "",
+    "buyMode": "coming-soon",
+    "buyUrl": "",
+    "fulfillmentNote": "Digital PDF delivered via email immediately after payment is completed",
+    "shortDescription": "What does \"player agency\" actually mean? *Agency: Share the Wheel or Crash the Game* cuts through the arguments to explore one of tabletop roleplaying's most misunderstood ideas. Learn how player choice, Game Master authority, meaningful consequences, and shared responsibility work together to create games where decisions matter, worlds push back, and every session belongs to everyone at the table. Practical, system-neutral, and written from decades of experience behind the screen, this is a guide to building campaigns driven by choice instead of control.",
+    "longDescription": "Agency: Share the Wheel or Crash the Game is a system-neutral tabletop roleplaying supplement about player choice, Game Master authority, and the shared responsibility that makes a campaign work. It cuts through the usual arguments over “agency” and gets to the table-level truth: players control their characters, the Game Master controls the world, and the game becomes meaningful when choices have honest consequences.\r\n\r\nInside, RV Sawyer examines what agency is, what it is not, and how it breaks when either side tries to seize too much control. The supplement covers divided authority, meaningful choice, consequence, honest failure, spotlight balance, information, pacing, and the social agreement that keeps play from becoming either a guided tour through the GM’s private novel or a wish engine where nothing pushes back.\r\n\r\nWritten for both Game Masters and players, Agency is practical, direct, and built from real table experience rather than theory floating around in a wizard jar. It is for groups that want campaigns shaped by decisions, worlds that answer player action, and games where failure, risk, and consequence make victory matter.\r\n\r\nShare the wheel. Let choices bite. Then hold on when the road turns.",
+    "features": [
+      "Inside you'll find:",
+      "A practical definition of player agency.",
+      "Clear boundaries between player and Game Master authority.",
+      "Advice for creating meaningful choices and honest consequences.",
+      "Guidance on pacing, spotlight sharing, and player engagement.",
+      "Examples of common agency failures and how to repair them.",
+      "System-neutral advice usable in virtually any tabletop RPG."
+    ],
+    "tags": [
+      "Tablecraft"
+    ],
+    "creationMethod": "Human-authored by RV Sawyer.",
+    "legalNote": "© 2026 Tobacco Road Game. All rights reserved. Written by RV Sawyer.",
+    "version": "1.0",
+    "releaseDate": "2026-06-24",
+    "lastUpdated": "2026-06-24",
+    "relatedProducts": [
+      "tablecraft-primer",
+      "silence-and-the-spotlight",
+      "final-flame",
+      "mouthy-monsters"
+    ],
+    "libraryEligible": true,
+    "updateEligible": true,
+    "bundleEligible": false,
+    "bundleMinPriceCents": 100,
+    "bundleGroup": "standard-digital",
+    "allowSeasonalBundle": false,
+    "excludeFromBundles": true
   }
 ]

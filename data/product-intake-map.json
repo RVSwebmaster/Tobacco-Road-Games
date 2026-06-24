@@ -1,7 +1,11 @@
 {
   "globalDefaults": {
-    "authors": ["RV Sawyer"],
-    "authorSlugs": ["rv-sawyer"],
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
     "publisher": "Tobacco Road Games",
     "currency": "USD",
     "status": "preview-available",
@@ -24,6 +28,122 @@
   },
   "products": [
     {
+      "slug": "agency",
+      "title": "Agency",
+      "subtitle": "Share the wheel or crash the game",
+      "featured": false,
+      "gameSystem": "System Agnotic",
+      "gameSystemSlug": "system-agnotic",
+      "productLine": "Tablecraft",
+      "productLineSlug": "tablecraft",
+      "series": "Tablecraft",
+      "seriesSlug": "tablecraft",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Tablecraft"
+      ]
+    },
+    {
+      "slug": "circle-of-cinder",
+      "title": "Circle of Cinder",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ]
+    },
+    {
+      "slug": "final-flame",
+      "title": "Final Flame",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ]
+    },
+    {
+      "slug": "mouthy-monsters",
+      "title": "Mouthy Monsters",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ]
+    },
+    {
+      "slug": "path-of-the-janky",
+      "title": "Path of the Janky",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ]
+    },
+    {
+      "slug": "ringbound",
+      "title": "Ringbound",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ]
+    },
+    {
+      "slug": "silence-and-the-spotlight",
+      "title": "Silence and the Spotlight",
+      "subtitle": "A Tobacco Road Games catalog preview",
+      "featured": false,
+      "gameSystem": "System TBD",
+      "gameSystemSlug": "system-tbd",
+      "productLine": "Other Games & Experiments",
+      "productLineSlug": "other-games-and-experiments",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ],
+      "releaseDate": "2026-06-20",
+      "lastUpdated": "2026-06-20"
+    },
+    {
       "slug": "sirrocans",
       "title": "Sirrocans",
       "subtitle": "A 5E-compatible character race of giant-blooded desert nomads",
@@ -32,8 +152,17 @@
       "gameSystemSlug": "5e-compatible",
       "productLine": "Fifth Edition Fantasy Roleplaying",
       "productLineSlug": "fifth-edition-fantasy-roleplaying",
-      "format": ["PDF"],
-      "tags": ["5E", "Ancestry", "Desert", "Character Race", "Giant-Blooded", "Preview"],
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "5E",
+        "Ancestry",
+        "Desert",
+        "Character Race",
+        "Giant-Blooded",
+        "Preview"
+      ],
       "coverImageOverride": "/assets/products/sirrocans/cover.webp",
       "frontCoverImageOverride": "/assets/products/sirrocans/cover.webp",
       "thumbnailImage": "/assets/products/sirrocans/thumb.webp",
@@ -52,8 +181,14 @@
       "gameSystemSlug": "5e-compatible",
       "productLine": "Fifth Edition Fantasy Roleplaying",
       "productLineSlug": "fifth-edition-fantasy-roleplaying",
-      "format": ["PDF"],
-      "tags": ["5E", "Fantasy", "Preview"],
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "5E",
+        "Fantasy",
+        "Preview"
+      ],
       "thumbnailImage": "/assets/products/spriggans/thumb.webp",
       "previewImages": [
         "/assets/products/spriggans/preview-01.webp",
@@ -61,7 +196,9 @@
         "/assets/products/spriggans/preview-03.webp"
       ],
       "previewPdf": "/assets/products/spriggans/sample.pdf",
-      "relatedProducts": ["sirrocans"]
+      "relatedProducts": [
+        "sirrocans"
+      ]
     },
     {
       "slug": "tablecraft-primer",
@@ -74,82 +211,13 @@
       "productLineSlug": "tablecraft",
       "series": "Tablecraft",
       "seriesSlug": "tablecraft",
-      "format": ["PDF"],
-      "tags": ["Tablecraft", "Preview"]
-    },
-    {
-      "slug": "circle-of-cinder",
-      "title": "Circle of Cinder",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"]
-    },
-    {
-      "slug": "final-flame",
-      "title": "Final Flame",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"]
-    },
-    {
-      "slug": "mouthy-monsters",
-      "title": "Mouthy Monsters",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"]
-    },
-    {
-      "slug": "path-of-the-janky",
-      "title": "Path of the Janky",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"]
-    },
-    {
-      "slug": "ringbound",
-      "title": "Ringbound",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"]
-    },
-    {
-      "slug": "silence-and-the-spotlight",
-      "title": "Silence and the Spotlight",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"],
-      "releaseDate": "2026-06-20",
-      "lastUpdated": "2026-06-20"
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Tablecraft",
+        "Preview"
+      ]
     },
     {
       "slug": "yojimbo",
@@ -160,8 +228,12 @@
       "gameSystemSlug": "system-tbd",
       "productLine": "Other Games & Experiments",
       "productLineSlug": "other-games-and-experiments",
-      "format": ["PDF"],
-      "tags": ["Preview"]
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Preview"
+      ]
     }
   ]
 }
