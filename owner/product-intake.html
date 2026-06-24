@@ -140,6 +140,35 @@
       gap: 12px;
     }
 
+    .intake-picker-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .intake-selection-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .intake-selection-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    }
+
+    .intake-selection-item button {
+      flex: 0 0 auto;
+    }
+
     .intake-status {
       min-height: 1.4rem;
       margin: 0;
@@ -344,9 +373,16 @@
                 <input id="product-last-updated" class="dock-input" type="date">
               </div>
 
-              <div class="intake-field">
-                <label for="product-related">Related Products</label>
-                <input id="product-related" class="dock-input" type="text" placeholder="sirrocans, some-other-slug">
+              <div class="intake-field intake-field--full">
+                <label for="product-related-select">Related Products</label>
+                <div class="intake-picker-row">
+                  <select id="product-related-select" class="dock-input">
+                    <option value="">Loading products...</option>
+                  </select>
+                  <button id="product-related-add" class="button button--secondary" type="button">Add</button>
+                </div>
+                <p class="intake-help">Pick from existing storefront products. You can add more than one.</p>
+                <div id="product-related-list" class="intake-selection-list" aria-live="polite"></div>
               </div>
 
               <div class="intake-field intake-field--full">

@@ -39,7 +39,8 @@
     version: document.getElementById("product-version"),
     releaseDate: document.getElementById("product-release-date"),
     lastUpdated: document.getElementById("product-last-updated"),
-    related: document.getElementById("product-related"),
+    relatedSelect: document.getElementById("product-related-select"),
+    relatedList: document.getElementById("product-related-list"),
     coverFile: document.getElementById("product-cover-file"),
     previewFile: document.getElementById("product-preview-file"),
     pdfFile: document.getElementById("product-pdf-file")
@@ -59,6 +60,7 @@
   };
 
   const buttons = {
+    addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
     reset: document.getElementById("reset-intake-button")
   };
@@ -67,6 +69,8 @@
   let slugTouched = false;
   let folderTouched = false;
   let publishBusy = false;
+  let availableProducts = [];
+  let selectedRelatedProducts = [];
 
   const slugify = (value) =>
     String(value || "")
@@ -86,6 +90,114 @@
       .split(/\r?\n/)
       .map((part) => part.trim())
       .filter(Boolean);
+
+  const updateRelatedSelectOptions = () => {
+    if (!fields.relatedSelect) {
+      return;
+    }
+
+    const currentSlug = (fields.slug.value.trim() || slugify(fields.title.value)).trim();
+    const products = availableProducts
+      .filter((product) => product.slug && product.slug !== currentSlug)
+      .filter((product) => !selectedRelatedProducts.includes(product.slug));
+
+    const previousValue = fields.relatedSelect.value;
+    const placeholderLabel = availableProducts.length ? "Select a related product" : "No products available";
+    const options = [
+      `<option value="">${placeholderLabel}</option>`,
+      ...products.map((product) => `<option value="${product.slug}">${product.title} (${product.slug})</option>`)
+    ];
+
+    fields.relatedSelect.innerHTML = options.join("");
+    if (products.some((product) => product.slug === previousValue)) {
+      fields.relatedSelect.value = previousValue;
+    }
+  };
+
+  const renderSelectedRelatedProducts = () => {
+    if (!fields.relatedList) {
+      return;
+    }
+
+    fields.relatedList.replaceChildren();
+
+    if (!selectedRelatedProducts.length) {
+      const empty = document.createElement("p");
+      empty.className = "intake-help";
+      empty.textContent = "No related products selected yet.";
+      fields.relatedList.append(empty);
+      return;
+    }
+
+    selectedRelatedProducts.forEach((slug) => {
+      const product = availableProducts.find((entry) => entry.slug === slug);
+      const item = document.createElement("div");
+      item.className = "intake-selection-item";
+
+      const label = document.createElement("span");
+      label.textContent = product ? `${product.title} (${product.slug})` : slug;
+      item.append(label);
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "button button--secondary";
+      removeButton.dataset.relatedRemove = slug;
+      removeButton.textContent = "Remove";
+      item.append(removeButton);
+
+      fields.relatedList.append(item);
+    });
+  };
+
+  const syncRelatedPicker = () => {
+    updateRelatedSelectOptions();
+    renderSelectedRelatedProducts();
+  };
+
+  const addRelatedProduct = () => {
+    const slug = fields.relatedSelect?.value || "";
+    if (!slug || selectedRelatedProducts.includes(slug)) {
+      return;
+    }
+
+    selectedRelatedProducts.push(slug);
+    syncRelatedPicker();
+    updatePreview();
+  };
+
+  const removeRelatedProduct = (slug) => {
+    selectedRelatedProducts = selectedRelatedProducts.filter((entry) => entry !== slug);
+    syncRelatedPicker();
+    updatePreview();
+  };
+
+  async function loadAvailableProducts() {
+    try {
+      const response = await fetch("/data/products.json", {
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+
+      if (!response.ok) {
+        throw new Error("Product catalog request failed.");
+      }
+
+      const payload = await response.json();
+      availableProducts = Array.isArray(payload)
+        ? payload
+          .map((product) => ({
+            slug: String(product.slug || "").trim(),
+            title: String(product.title || product.slug || "").trim()
+          }))
+          .filter((product) => product.slug && product.title)
+          .sort((left, right) => left.title.localeCompare(right.title))
+        : [];
+    } catch {
+      availableProducts = [];
+    }
+
+    syncRelatedPicker();
+  }
 
   const buildPayload = () => {
     const title = fields.title.value.trim();
@@ -123,7 +235,7 @@
       series,
       seriesSlug: slugify(series),
       publisher: "Tobacco Road Games",
-      relatedProducts: parseList(fields.related.value),
+      relatedProducts: [...selectedRelatedProducts],
       releaseDate: fields.releaseDate.value,
       shortDescription: fields.shortDescription.value.trim(),
       slug,
@@ -363,6 +475,7 @@
       fields.folder.value = fields.slug.value.trim();
     }
 
+    updateRelatedSelectOptions();
     updatePreview();
   }
 
@@ -371,6 +484,7 @@
     if (!folderTouched) {
       fields.folder.value = fields.slug.value.trim();
     }
+    updateRelatedSelectOptions();
     updatePreview();
   });
 
@@ -391,6 +505,21 @@
   });
 
   buttons.publish.addEventListener("click", publishProduct);
+  buttons.addRelated.addEventListener("click", addRelatedProduct);
+
+  fields.relatedList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const slug = target.dataset.relatedRemove || "";
+    if (!slug) {
+      return;
+    }
+
+    removeRelatedProduct(slug);
+  });
 
   buttons.reset.addEventListener("click", () => {
     document.querySelectorAll("input, textarea, select").forEach((field) => {
@@ -424,12 +553,15 @@
     fields.version.value = "";
     fields.releaseDate.value = "";
     fields.lastUpdated.value = "";
-    fields.related.value = "";
+    selectedRelatedProducts = [];
     slugTouched = false;
     folderTouched = false;
     outputs.status.textContent = "Form reset.";
+    syncRelatedPicker();
     updatePreview();
   });
 
+  void loadAvailableProducts();
+  syncRelatedPicker();
   updatePreview();
 })();
