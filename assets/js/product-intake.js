@@ -209,6 +209,7 @@
     const pageCountRaw = fields.pageCount.value.trim();
     const priceRaw = fields.price.value.trim();
     const priceCents = priceRaw ? Math.round(Number(priceRaw) * 100) : null;
+    const selectedPdfName = fields.pdfFile.files[0]?.name?.trim() || "";
 
     return {
       authorSlugs: ["rv-sawyer"],
@@ -218,7 +219,7 @@
       creationMethod: fields.creationMethod.value.trim() || "Human-authored by RV Sawyer.",
       currency: fields.currency.value.trim() || "USD",
       features: parseLines(fields.features.value),
-      fileList: [`${title || "Untitled Product"} PDF`],
+      fileList: [selectedPdfName || `${title || "Untitled Product"}.pdf`],
       folder,
       format: parseList(fields.format.value).length ? parseList(fields.format.value) : ["PDF"],
       fulfillmentNote: fields.fulfillmentNote.value.trim(),
@@ -267,6 +268,11 @@
       `R2 folder: ${payload.folder}`,
       "",
       "Required uploaded files:",
+      "- One WebP cover image",
+      "- One WebP preview image",
+      "- One PDF product file",
+      "",
+      "Internal bucket object paths after publish:",
       `- ${payload.folder}/cover.webp`,
       `- ${payload.folder}/preview.webp`,
       `- ${payload.folder}/product.pdf`,
@@ -286,6 +292,7 @@
 
   function renderAssetFileList(payload) {
     const items = [
+      ...payload.fileList,
       `${payload.folder}/cover.webp`,
       `${payload.folder}/preview.webp`,
       `${payload.folder}/product.pdf`,
@@ -446,13 +453,13 @@
     }
 
     if (!fields.coverFile.files.length) {
-      errors.push("cover.webp is required.");
+      errors.push("A cover WebP is required.");
     }
     if (!fields.previewFile.files.length) {
-      errors.push("preview.webp is required.");
+      errors.push("A preview WebP is required.");
     }
     if (!fields.pdfFile.files.length) {
-      errors.push("product.pdf is required.");
+      errors.push("A product PDF is required.");
     }
 
     return errors;
