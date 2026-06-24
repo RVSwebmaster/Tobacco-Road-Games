@@ -46,6 +46,7 @@ async function main() {
     await testUnexpectedLoginException(ownerLogin, baseEnv);
     await testAlteredCookie(ownerMiddleware, baseEnv, authCookies);
     await testExpiredCookie(ownerMiddleware, ownerAuth, baseEnv);
+    await testOwnerIntakeAliasRedirects(ownerMiddleware, baseEnv, authCookies);
     await testMissingFiles(ownerPublish, baseEnv, authCookies);
     await testWrongFileType(ownerPublish, baseEnv, authCookies);
     await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
@@ -219,6 +220,21 @@ async function testExpiredCookie(ownerMiddleware, ownerAuth, env) {
 
   assert.equal(response.status, 303, "Expired cookie should redirect to login.");
   assert.match(response.headers.get("location") || "", /\/owner\/login/, "Expired cookie redirect should go to login.");
+}
+
+async function testOwnerIntakeAliasRedirects(ownerMiddleware, env, cookieHeader) {
+  const response = await ownerMiddleware.handleOwnerMiddleware({
+    env,
+    next: () => new Response("ok"),
+    request: new Request("https://example.com/owner/intake", {
+      headers: {
+        cookie: cookieHeader
+      }
+    })
+  });
+
+  assert.equal(response.status, 303, "Owner intake alias should redirect.");
+  assert.match(response.headers.get("location") || "", /\/owner\/product-intake\.html$/, "Owner intake alias should land on the real intake page.");
 }
 
 async function testAccessMiddlewareAllowsAuthorized(ownerMiddleware, env, accessToken) {

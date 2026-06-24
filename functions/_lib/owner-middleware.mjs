@@ -17,6 +17,7 @@ export async function handleOwnerMiddleware(context) {
   const request = context.request;
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
+  const ownerIntakeAliases = new Set(["/owner/intake", "/owner/intake/"]);
 
   if (!pathname.startsWith("/owner")) {
     return context.next();
@@ -33,6 +34,14 @@ export async function handleOwnerMiddleware(context) {
       return Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303);
     }
     return redirectToOwnerLogin(request);
+  }
+
+  if (ownerIntakeAliases.has(pathname)) {
+    const session = await readOwnerSession(request, context.env);
+    if (session.valid) {
+      return Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303);
+    }
+    return redirectToOwnerLogin(request, session.reason === "expired" || session.reason === "bad_signature");
   }
 
   if (pathname === "/owner/login" || pathname === "/owner/logout" || pathname.startsWith("/owner/api/")) {
@@ -52,6 +61,7 @@ async function handleOwnerAccessMiddleware(context, accessConfig) {
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
   const apiPath = pathname.startsWith("/owner/api/");
+  const ownerIntakeAliases = new Set(["/owner/intake", "/owner/intake/"]);
 
   if (!accessConfig.ready) {
     return buildOwnerAccessDeniedResponse(request, {
@@ -66,6 +76,10 @@ async function handleOwnerAccessMiddleware(context, accessConfig) {
   }
 
   if (pathname === "/owner" || pathname === "/owner/" || pathname === "/owner/login") {
+    return Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303);
+  }
+
+  if (ownerIntakeAliases.has(pathname)) {
     return Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303);
   }
 
