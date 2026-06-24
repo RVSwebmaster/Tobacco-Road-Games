@@ -274,8 +274,8 @@ async function testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, env) {
 async function testMissingFiles(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -288,15 +288,15 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
 
   assert.equal(response.status, 400, "Missing files should return 400.");
   const payload = await response.json();
-  assert.match(payload.error, /product\.pdf is required/i, "Missing PDF error should be human-readable.");
+  assert.match(payload.error, /product pdf is required/i, "Missing PDF error should be human-readable.");
 }
 
 async function testAccessPublishDeniedUnauthorized(ownerPublish, env) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(new Request("https://example.com/owner/api/publish", {
     body: formData,
@@ -321,9 +321,9 @@ async function testAccessPublishDeniedUnauthorized(ownerPublish, env) {
 async function testWrongFileType(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
   formData.set("previewFile", new FileCtor(["preview"], "preview.png", { type: "image/png" }));
-  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -336,16 +336,16 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
 
   assert.equal(response.status, 400, "Wrong file type should return 400.");
   const payload = await response.json();
-  assert.match(payload.error, /preview\.webp must be uploaded with that exact filename|must be a WebP/i, "Wrong file type error should be human-readable.");
+  assert.match(payload.error, /preview image must be a webp image/i, "Wrong file type error should be human-readable.");
 }
 
 async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieHeader) {
   const bucket = createMockBucket();
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
 
   const originalRandomUuid = crypto.randomUUID;
   const originalDateNow = Date.now;
@@ -425,9 +425,9 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
 
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
 
   const originalRandomUuid = crypto.randomUUID;
   const originalDateNow = Date.now;
