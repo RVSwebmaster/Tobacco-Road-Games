@@ -210,7 +210,7 @@
           <p class="section-heading__kicker">Owner Tool</p>
           <h1 id="intake-heading">Product Intake Bench</h1>
           <p>Use this Cloudflare Access protected page to publish one storefront product at a time. It uploads the required files to R2, then sends the metadata through the normal GitHub build path.</p>
-          <p>Required files: <code>cover.webp</code>, <code>preview.webp</code>, and <code>product.pdf</code>. Cover and preview become public through <code>/product-assets/</code>. The PDF stays private.</p>
+          <p>Required files: one cover WebP, one preview WebP, and one product PDF. The intake stores them under the standard internal object keys after upload. Cover and preview become public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
         <div class="intake-grid">
@@ -435,7 +435,7 @@
               <p class="note-card__label">How to use this</p>
               <ol class="intake-list">
                 <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
-                <li>Choose the three required files using their real final names: <code>cover.webp</code>, <code>preview.webp</code>, and <code>product.pdf</code>.</li>
+                <li>Choose the three required files: one cover WebP, one preview WebP, and the product PDF. Your local filenames can stay meaningful.</li>
                 <li>Use the generated metadata preview below as a final sanity check.</li>
                 <li>Click Publish. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
               </ol>
