@@ -14,16 +14,16 @@
   <meta property="og:image" content="https://tobaccoroadgames.com/assets/products/sirrocans/cover.webp">
   <meta name="theme-color" content="#120c08">
   
-  <link rel="icon" type="image/png" href="/assets/logo.png?v=20260625d">
-  <link rel="stylesheet" href="/styles.css?v=20260625d">
+  <link rel="icon" type="image/png" href="/assets/logo.png?v=20260625e">
+  <link rel="stylesheet" href="/styles.css?v=20260625e">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Tobacco Road Games Store","description":"Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games.","url":"https://tobaccoroadgames.com/store/"}</script>
-  <script src="/assets/js/storefront.js?v=20260625d" defer></script>
+  <script src="/assets/js/storefront.js?v=20260625e" defer></script>
 </head>
 <body class="view-section">
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="/" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="/assets/logo.png?v=20260625d" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="/assets/logo.png?v=20260625e" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
           <span class="brand__tag">Publisher-owned store and workshop catalog</span>
@@ -344,11 +344,11 @@
         <section class="store-section" id="store-bookshelf" aria-labelledby="bookshelf-browser-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Bookshelf</p>
-            <h2 id="bookshelf-browser-heading">Shelf first, catalog second.</h2>
-            <p>Use the shelf filters to browse by category or line, series, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
+            <h2 id="bookshelf-browser-heading">Shelf or catalog, your call.</h2>
+            <p>Use the store filters to browse by category or line, series, author, system, and status, then switch between the animated shelf and the full card catalog without duplicating the same titles on screen.</p>
           </div>
           
-    <div class="store-browser" data-store-browser="store-home-browser">
+    <div class="store-browser" data-store-browser="store-home-browser" data-store-view="shelf" data-store-has-views="true">
       
     <div class="catalog-controls" data-store-controls>
       <label class="catalog-control">
@@ -426,16 +426,22 @@
       </label>
     </div>
   
+      
+        <div class="store-browser__view-switcher" role="group" aria-label="Choose a store browser view">
+          <button type="button" class="store-browser__view-button" data-store-view-button="shelf" aria-pressed="true">Bookshelf</button>
+          <button type="button" class="store-browser__view-button" data-store-view-button="catalog" aria-pressed="false">Catalog</button>
+        </div>
+      
       <div class="catalog-tools">
         <p class="catalog-count" data-store-count>11 titles currently shown</p>
         
       </div>
       <div class="initiative-empty" data-store-empty hidden>No titles match the current search and filters.</div>
       
-        <section class="bookshelf-browser" aria-label="Desktop bookshelf view">
+        <section class="store-browser__panel bookshelf-browser" data-store-view-panel="shelf" aria-label="Bookshelf view">
           
             <div class="bookshelf-browser__header">
-              <h3>Desktop Bookshelf</h3>
+              <h3>Bookshelf View</h3>
               <p>Hover or focus a spine to turn it toward the cover, then open the full product page.</p>
             </div>
           
@@ -708,14 +714,15 @@
           </div>
         </section>
       
-      
-        <div class="catalog-browser__header">
-          <h3>Catalog Fallback</h3>
-          <p>The practical card grid stays below the shelf for touch devices, scanning, and no-hover browsing.</p>
-        </div>
-      
-      <div class="product-card-grid" data-store-grid>
+      <section class="store-browser__panel store-browser__panel--catalog" data-store-view-panel="catalog" aria-label="Catalog view">
         
+          <div class="catalog-browser__header">
+            <h3>Catalog View</h3>
+            <p>The same filtered titles stay available as cards for touch devices, scanning, and no-hover browsing.</p>
+          </div>
+        
+        <div class="product-card-grid" data-store-grid>
+          
     <article class="product-card"  data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="coming-soon" data-format="pdf" data-price-type="coming-soon" data-price-cents="499" data-release="1782259200000" data-updated="1782259200000" data-sale-active="false" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft coming soon coming soon">
       <div class="product-card__media">
         <img src="/product-assets/agency/cover.webp" alt="Agency thumbnail">
@@ -936,7 +943,8 @@
       </div>
     </article>
   
-      </div>
+        </div>
+      </section>
     </div>
   
         </section>
@@ -1063,7 +1071,7 @@
 
     <footer class="site-footer">
       <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="/assets/logo.png?v=20260625d" alt="">
+        <img src="/assets/logo.png?v=20260625e" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>

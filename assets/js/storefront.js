@@ -1,6 +1,7 @@
 (() => {
   const browsers = Array.from(document.querySelectorAll("[data-store-browser]"));
   const shelves = Array.from(document.querySelectorAll(".bookshelf-grid"));
+  const compactCatalogQuery = window.matchMedia("(max-width: 980px), (hover: none)");
   let shelfRefreshTimer = 0;
 
   if (!browsers.length && !shelves.length) {
@@ -127,6 +128,52 @@
     saleOnly: Boolean(root.querySelector("[data-filter-sale]")?.checked)
   });
 
+  const getAvailableViews = (root) => {
+    const views = [];
+
+    if (root.querySelector("[data-store-shelf]")) {
+      views.push("shelf");
+    }
+
+    if (root.querySelector("[data-store-grid]")) {
+      views.push("catalog");
+    }
+
+    return views;
+  };
+
+  const getDefaultView = (root) => {
+    const views = getAvailableViews(root);
+
+    if (!views.includes("shelf")) {
+      return "catalog";
+    }
+
+    return compactCatalogQuery.matches ? "catalog" : "shelf";
+  };
+
+  const setBrowserView = (root, requestedView) => {
+    const views = getAvailableViews(root);
+    const nextView = views.includes(requestedView) ? requestedView : getDefaultView(root);
+
+    root.dataset.storeView = nextView;
+
+    root.querySelectorAll("[data-store-view-button]").forEach((button) => {
+      const isActive = button.dataset.storeViewButton === nextView;
+      button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
+  };
+
+  const syncResponsiveBrowserViews = () => {
+    browsers.forEach((root) => {
+      if (root.dataset.storeViewLocked === "true") {
+        return;
+      }
+
+      setBrowserView(root, getDefaultView(root));
+    });
+  };
+
   const applyBrowser = (root) => {
     const state = collectState(root);
     const shelf = root.querySelector("[data-store-shelf]");
@@ -165,8 +212,16 @@
   };
 
   browsers.forEach((root) => {
+    root.querySelectorAll("[data-store-view-button]").forEach((button) => {
+      button.addEventListener("click", () => {
+        root.dataset.storeViewLocked = "true";
+        setBrowserView(root, button.dataset.storeViewButton || "");
+      });
+    });
+
     root.addEventListener("input", () => applyBrowser(root));
     root.addEventListener("change", () => applyBrowser(root));
+    setBrowserView(root, root.dataset.storeViewLocked === "true" ? (root.dataset.storeView || getDefaultView(root)) : getDefaultView(root));
     applyBrowser(root);
   });
 
@@ -174,5 +229,8 @@
     scheduleShelfEdgeRefresh();
   }
 
-  window.addEventListener("resize", scheduleShelfEdgeRefresh);
+  window.addEventListener("resize", () => {
+    syncResponsiveBrowserViews();
+    scheduleShelfEdgeRefresh();
+  });
 })();

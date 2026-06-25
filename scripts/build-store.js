@@ -9,7 +9,7 @@ const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260625d";
+const CACHE_BUST = "20260625e";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -458,8 +458,8 @@ function renderStoreHome(products, indexes) {
         <section class="store-section" id="store-bookshelf" aria-labelledby="bookshelf-browser-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Bookshelf</p>
-            <h2 id="bookshelf-browser-heading">Shelf first, catalog second.</h2>
-            <p>Use the shelf filters to browse by category or line, series, author, system, and status. On desktop the books turn from spine to cover; on mobile the normal card catalog stays in front.</p>
+            <h2 id="bookshelf-browser-heading">Shelf or catalog, your call.</h2>
+            <p>Use the store filters to browse by category or line, series, author, system, and status, then switch between the animated shelf and the full card catalog without duplicating the same titles on screen.</p>
           </div>
           ${renderStoreBrowser(browserProducts, indexes, {
             browserId: "store-home-browser",
@@ -467,10 +467,10 @@ function renderStoreHome(products, indexes) {
             includeTitleIndex: false,
             defaultSort: "newest",
             countLabel: "titles currently shown",
-            shelfHeading: "Desktop Bookshelf",
+            shelfHeading: "Bookshelf View",
             shelfDescription: "Hover or focus a spine to turn it toward the cover, then open the full product page.",
-            gridHeading: "Catalog Fallback",
-            gridDescription: "The practical card grid stays below the shelf for touch devices, scanning, and no-hover browsing."
+            gridHeading: "Catalog View",
+            gridDescription: "The same filtered titles stay available as cards for touch devices, scanning, and no-hover browsing."
           })}
         </section>
 
@@ -937,8 +937,14 @@ function renderStoreBrowser(products, indexes, options = {}) {
   const initials = includeTitleIndex ? buildTitleIndex(products) : [];
 
   return `
-    <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}">
+    <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}"${showShelf ? ' data-store-view="shelf" data-store-has-views="true"' : ""}>
       ${renderStoreBrowserControls(indexes, defaultSort)}
+      ${showShelf ? `
+        <div class="store-browser__view-switcher" role="group" aria-label="Choose a store browser view">
+          <button type="button" class="store-browser__view-button" data-store-view-button="shelf" aria-pressed="true">Bookshelf</button>
+          <button type="button" class="store-browser__view-button" data-store-view-button="catalog" aria-pressed="false">Catalog</button>
+        </div>
+      ` : ""}
       <div class="catalog-tools">
         <p class="catalog-count" data-store-count>${products.length} ${escapeHtml(countLabel)}</p>
         ${includeTitleIndex ? `
@@ -949,7 +955,7 @@ function renderStoreBrowser(products, indexes, options = {}) {
       </div>
       <div class="initiative-empty" data-store-empty hidden>No titles match the current search and filters.</div>
       ${showShelf ? `
-        <section class="bookshelf-browser" aria-label="Desktop bookshelf view">
+        <section class="store-browser__panel bookshelf-browser" data-store-view-panel="shelf" aria-label="Bookshelf view">
           ${shelfHeading || shelfDescription ? `
             <div class="bookshelf-browser__header">
               ${shelfHeading ? `<h3>${escapeHtml(shelfHeading)}</h3>` : ""}
@@ -961,15 +967,17 @@ function renderStoreBrowser(products, indexes, options = {}) {
           </div>
         </section>
       ` : ""}
-      ${gridHeading || gridDescription ? `
-        <div class="catalog-browser__header">
-          ${gridHeading ? `<h3>${escapeHtml(gridHeading)}</h3>` : ""}
-          ${gridDescription ? `<p>${escapeHtml(gridDescription)}</p>` : ""}
+      <section class="store-browser__panel store-browser__panel--catalog" data-store-view-panel="catalog" aria-label="Catalog view">
+        ${gridHeading || gridDescription ? `
+          <div class="catalog-browser__header">
+            ${gridHeading ? `<h3>${escapeHtml(gridHeading)}</h3>` : ""}
+            ${gridDescription ? `<p>${escapeHtml(gridDescription)}</p>` : ""}
+          </div>
+        ` : ""}
+        <div class="product-card-grid" data-store-grid>
+          ${products.map((product) => renderProductCard(product, { withDataset: true, includeAnchorId: includeTitleIndex })).join("")}
         </div>
-      ` : ""}
-      <div class="product-card-grid" data-store-grid>
-        ${products.map((product) => renderProductCard(product, { withDataset: true, includeAnchorId: includeTitleIndex })).join("")}
-      </div>
+      </section>
     </div>
   `;
 }
