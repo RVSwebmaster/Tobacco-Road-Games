@@ -1062,6 +1062,7 @@ h4 {
 .bookshelf-grid {
   --bookshelf-spine-width: clamp(70px, 6.3vw, 94px);
   --bookshelf-cover-width: clamp(188px, 16vw, 236px);
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -1076,9 +1077,18 @@ h4 {
     inset 0 -10px 0 rgba(59, 34, 20, 0.92),
     inset 0 -14px 0 rgba(136, 88, 52, 0.25),
     0 18px 34px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .bookshelf-book {
+  --bookshelf-cover-left: 0;
+  --bookshelf-cover-right: auto;
+  --bookshelf-cover-origin: left center;
+  --bookshelf-cover-rest-transform: rotateY(88deg) scale(0.96);
+  --bookshelf-spine-origin: left center;
+  --bookshelf-spine-open-transform: rotateY(-88deg) scaleX(0.74);
+  --bookshelf-cover-radius: 16px 10px 10px 16px;
   display: block;
   position: relative;
   z-index: 0;
@@ -1087,7 +1097,8 @@ h4 {
   min-height: 310px;
   text-decoration: none;
   perspective: 1200px;
-  transition: flex-basis 260ms ease, width 260ms ease, z-index 0ms linear 130ms;
+  overflow: visible;
+  transition: z-index 0ms linear 130ms;
 }
 
 .bookshelf-book__scene {
@@ -1095,28 +1106,29 @@ h4 {
   display: block;
   width: 100%;
   min-height: 310px;
-  transition: width 260ms ease;
 }
 
 .bookshelf-book__spine,
 .bookshelf-book__cover-frame {
   position: absolute;
-  inset: 0;
   overflow: hidden;
   border: 1px solid rgba(242, 216, 170, 0.18);
-  border-radius: 16px 10px 10px 16px;
+  border-radius: var(--bookshelf-cover-radius);
   box-shadow: 0 18px 30px rgba(0, 0, 0, 0.3);
   backface-visibility: hidden;
-  transform-origin: left center;
+  transform-style: preserve-3d;
   transition: transform 260ms ease, opacity 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
 .bookshelf-book__spine {
+  inset: 0;
+  z-index: 1;
   display: grid;
   grid-template-rows: auto 1fr auto;
   justify-items: center;
   gap: 10px;
   padding: 14px 8px;
+  transform-origin: var(--bookshelf-spine-origin);
   background:
     linear-gradient(180deg, rgba(125, 77, 42, 0.95), rgba(66, 39, 22, 0.98)),
     linear-gradient(90deg, rgba(255, 240, 216, 0.12), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.24));
@@ -1170,8 +1182,16 @@ h4 {
 }
 
 .bookshelf-book__cover-frame {
+  top: 0;
+  bottom: 0;
+  left: var(--bookshelf-cover-left);
+  right: var(--bookshelf-cover-right);
+  z-index: 2;
+  width: var(--bookshelf-cover-width);
   opacity: 0;
-  transform: rotateY(88deg) scale(0.96);
+  pointer-events: none;
+  transform: var(--bookshelf-cover-rest-transform);
+  transform-origin: var(--bookshelf-cover-origin);
   background:
     linear-gradient(180deg, rgba(24, 16, 12, 0.96), rgba(8, 6, 5, 0.98));
 }
@@ -1190,26 +1210,20 @@ h4 {
 .bookshelf-book:hover .bookshelf-book__spine,
 .bookshelf-book:focus-visible .bookshelf-book__spine {
   opacity: 0.08;
-  transform: rotateY(-88deg) scaleX(0.74);
+  transform: var(--bookshelf-spine-open-transform);
   border-color: rgba(242, 216, 170, 0.28);
 }
 
 .bookshelf-book:hover,
 .bookshelf-book:focus-visible {
   z-index: 3;
-  flex-basis: var(--bookshelf-cover-width);
-  width: var(--bookshelf-cover-width);
   transition-delay: 0ms;
-}
-
-.bookshelf-book:hover .bookshelf-book__scene,
-.bookshelf-book:focus-visible .bookshelf-book__scene {
-  width: var(--bookshelf-cover-width);
 }
 
 .bookshelf-book:hover .bookshelf-book__cover-frame,
 .bookshelf-book:focus-visible .bookshelf-book__cover-frame {
   opacity: 1;
+  pointer-events: auto;
   transform: rotateY(0deg) scale(1);
   border-color: rgba(242, 216, 170, 0.34);
   box-shadow: 0 22px 40px rgba(0, 0, 0, 0.34);
@@ -1217,6 +1231,16 @@ h4 {
 
 .bookshelf-book:focus-visible {
   outline: none;
+}
+
+.bookshelf-book--edge-right {
+  --bookshelf-cover-left: auto;
+  --bookshelf-cover-right: 0;
+  --bookshelf-cover-origin: right center;
+  --bookshelf-cover-rest-transform: rotateY(-88deg) scale(0.96);
+  --bookshelf-spine-origin: right center;
+  --bookshelf-spine-open-transform: rotateY(88deg) scaleX(0.74);
+  --bookshelf-cover-radius: 10px 16px 16px 10px;
 }
 
 .catalog-controls {

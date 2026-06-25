@@ -1,9 +1,65 @@
 (() => {
   const browsers = Array.from(document.querySelectorAll("[data-store-browser]"));
+  const shelves = Array.from(document.querySelectorAll(".bookshelf-grid"));
+  let shelfRefreshTimer = 0;
 
-  if (!browsers.length) {
+  if (!browsers.length && !shelves.length) {
     return;
   }
+
+  const getBooksByRow = (shelf) => {
+    const items = Array.from(shelf.querySelectorAll(".bookshelf-book:not([hidden])"));
+    const rows = new Map();
+
+    items.forEach((item) => {
+      const rowKey = String(Math.round(item.offsetTop));
+
+      if (!rows.has(rowKey)) {
+        rows.set(rowKey, []);
+      }
+
+      rows.get(rowKey).push(item);
+    });
+
+    return Array.from(rows.values()).map((rowItems) => {
+      return rowItems.sort((left, right) => left.offsetLeft - right.offsetLeft);
+    });
+  };
+
+  const refreshShelfEdges = () => {
+    const targets = Array.from(document.querySelectorAll(".bookshelf-grid"));
+
+    targets.forEach((shelf) => {
+      const rows = getBooksByRow(shelf);
+
+      shelf.querySelectorAll(".bookshelf-book").forEach((item) => {
+        item.classList.remove("bookshelf-book--edge-right");
+      });
+
+      rows.forEach((rowItems) => {
+        if (!rowItems.length) {
+          return;
+        }
+
+        const rightmost = rowItems.reduce((candidate, item) => {
+          return item.offsetLeft > candidate.offsetLeft ? item : candidate;
+        }, rowItems[0]);
+
+        rightmost.classList.add("bookshelf-book--edge-right");
+      });
+    });
+  };
+
+  const scheduleShelfEdgeRefresh = () => {
+    if (shelfRefreshTimer) {
+      clearTimeout(shelfRefreshTimer);
+    }
+
+    shelfRefreshTimer = window.setTimeout(() => {
+      shelfRefreshTimer = 0;
+      refreshShelfEdges();
+    }, 0);
+  };
 
   const normalizePrice = (value) => {
     const parsed = Number(value);
@@ -104,6 +160,8 @@
     if (empty) {
       empty.hidden = sortedGridItems.length !== 0;
     }
+
+    scheduleShelfEdgeRefresh();
   };
 
   browsers.forEach((root) => {
@@ -111,4 +169,10 @@
     root.addEventListener("change", () => applyBrowser(root));
     applyBrowser(root);
   });
+
+  if (!browsers.length) {
+    scheduleShelfEdgeRefresh();
+  }
+
+  window.addEventListener("resize", scheduleShelfEdgeRefresh);
 })();
