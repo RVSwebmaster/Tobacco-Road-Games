@@ -14,6 +14,7 @@ async function main() {
   const ownerLogin = await importModule("functions/_lib/owner-login.mjs");
   const ownerMiddleware = await importModule("functions/_lib/owner-middleware.mjs");
   const ownerPublish = await importModule("functions/_lib/owner-publish.mjs");
+  const productAdvisor = require(path.join(ROOT, "shared", "product-advisor.js"));
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
   const accessContext = await createAccessTestContext();
 
@@ -56,6 +57,7 @@ async function main() {
     await testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, accessEnv);
     await testAccessPublishDeniedUnauthorized(ownerPublish, accessEnv);
     await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
+    await testProductAdvisorSuggestions(productAdvisor);
     await testExistingProductUpdatePreservesFields(publishScript);
     await testNewProductBuildAndSharedMap(publishScript);
 
@@ -532,6 +534,54 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
     Date.now = originalDateNow;
     crypto.randomUUID = originalRandomUuid;
   }
+}
+
+async function testProductAdvisorSuggestions(productAdvisor) {
+  const result = productAdvisor.analyzeProductListing({
+    coverImage: "/product-assets/agency/cover.webp",
+    features: [
+      "A practical definition of player agency.",
+      "Advice for creating meaningful choices and honest consequences.",
+      "System-neutral guidance usable in virtually any tabletop RPG."
+    ],
+    fileList: ["Agency.pdf"],
+    gameSystem: "System Agnotic",
+    longDescription: "Agency: Share the Wheel or Crash the Game is a system-neutral tabletop roleplaying supplement about player choice, Game Master authority, and shared responsibility in campaign play.",
+    page_count: 9,
+    previewImage: "/product-assets/agency/preview.webp",
+    productLine: "Tablecraft",
+    series: "Tablecraft",
+    short_description: "A practical system-neutral guide to player choice, consequence, and campaign design.",
+    subtitle: "Share the wheel or crash the game",
+    tags: ["Tablecraft"],
+    title: "Agency"
+  }, {
+    catalog: [
+      {
+        productLine: "Tablecraft",
+        series: "Tablecraft",
+        slug: "tablecraft-primer",
+        tags: ["Tablecraft", "GM Advice"],
+        title: "Tablecraft Primer"
+      },
+      {
+        productLine: "Fifth Edition Fantasy Roleplaying",
+        series: "",
+        slug: "sirrocans",
+        tags: ["5E", "Ancestry"],
+        title: "Sirrocans"
+      }
+    ]
+  });
+
+  assert.equal(result.suggested_price, 4.99, "Advisor should anchor short Tablecraft advice at a $4.99 MSRP.");
+  assert.equal(result.suggested_sale_price, 2.99, "Advisor should suggest a lighter sale price tier.");
+  assert.equal(result.product_type, "GM Advice", "Advisor should identify the GM advice format.");
+  assert.equal(result.series_fit, "Tablecraft", "Advisor should detect the Tablecraft fit.");
+  assert.ok(result.price_confidence >= 0.8, "Advisor confidence should be high for a well-described listing.");
+  assert.ok(result.suggested_tags.includes("Agency"), "Advisor should include title-driven tags.");
+  assert.ok(result.suggested_tags.includes("GM Advice"), "Advisor should include advice classification tags.");
+  assert.ok(result.suggested_cross_sells.includes("tablecraft-primer"), "Advisor should suggest same-series cross-sells.");
 }
 
 async function testExistingProductUpdatePreservesFields(publishScript) {

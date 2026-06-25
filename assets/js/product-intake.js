@@ -26,7 +26,9 @@
     format: document.getElementById("product-format"),
     pageCount: document.getElementById("product-page-count"),
     price: document.getElementById("product-price"),
+    salePrice: document.getElementById("product-sale-price"),
     currency: document.getElementById("product-currency"),
+    saleEnabled: document.getElementById("product-sale-enabled"),
     status: document.getElementById("product-status"),
     buyMode: document.getElementById("product-buy-mode"),
     buyUrl: document.getElementById("product-buy-url"),
@@ -49,6 +51,18 @@
 
   const outputs = {
     editMode: document.getElementById("product-edit-mode"),
+    advisorPanel: document.getElementById("advisor-panel"),
+    advisorSummaryCopy: document.getElementById("advisor-summary-copy"),
+    advisorSuggestedPrice: document.getElementById("advisor-suggested-price"),
+    advisorSuggestedSalePrice: document.getElementById("advisor-suggested-sale-price"),
+    advisorConfidence: document.getElementById("advisor-confidence"),
+    advisorProductType: document.getElementById("advisor-product-type"),
+    advisorSeriesFit: document.getElementById("advisor-series-fit"),
+    advisorAudience: document.getElementById("advisor-audience"),
+    advisorTags: document.getElementById("advisor-tags-output"),
+    advisorCrossSells: document.getElementById("advisor-cross-sells-output"),
+    advisorReasoningList: document.getElementById("advisor-reasoning-list"),
+    advisorJson: document.getElementById("advisor-json"),
     json: document.getElementById("generated-json"),
     checklist: document.getElementById("asset-checklist"),
     status: document.getElementById("intake-status"),
@@ -62,6 +76,9 @@
   };
 
   const buttons = {
+    analyze: document.getElementById("analyze-listing-button"),
+    applyAdvisor: document.getElementById("apply-advisor-button"),
+    ignoreAdvisor: document.getElementById("ignore-advisor-button"),
     loadExisting: document.getElementById("product-existing-load"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
@@ -77,6 +94,7 @@
   let loadedProductSlug = "";
   let loadedProductFolder = "";
   let loadedProductRecord = null;
+  let latestAdvisorRun = null;
 
   const slugify = (value) =>
     String(value || "")
@@ -96,6 +114,22 @@
       .split(/\r?\n/)
       .map((part) => part.trim())
       .filter(Boolean);
+
+  const normalizeMoneyText = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/\$/g, "")
+      .replace(/,/g, "");
+
+  const parsePriceNumber = (value) => {
+    const numeric = Number(normalizeMoneyText(value));
+    return Number.isFinite(numeric) ? numeric : null;
+  };
+
+  const formatMoney = (value) =>
+    value === null || value === undefined || Number.isNaN(value)
+      ? ""
+      : Number(value).toFixed(2);
 
   const formatListValue = (value) =>
     Array.isArray(value)
@@ -132,6 +166,109 @@
       ? " Because the slug or folder changed, the next publish needs a full replacement set of cover, preview, and PDF files."
       : " Leave file inputs blank to keep the live assets, or choose only the replacement files you want to swap in.";
     outputs.editMode.textContent = `Editing ${loadedProductRecord?.title || loadedProductSlug}.${renameWarning}`;
+  };
+
+  const formatConfidenceLabel = (value) => {
+    if (value >= 0.8) {
+      return `High (${Math.round(value * 100)}%)`;
+    }
+    if (value >= 0.6) {
+      return `Medium (${Math.round(value * 100)}%)`;
+    }
+    return `Low (${Math.round(value * 100)}%)`;
+  };
+
+  const buildAdvisorInput = () => {
+    const payload = buildPayload();
+    return {
+      author: "RV Sawyer",
+      category: payload.productLine,
+      coverImage: fields.coverFile.files[0]?.name || loadedProductRecord?.coverImage || "",
+      current_price: payload.price,
+      gameSystem: payload.gameSystem,
+      interior_image_count: (loadedProductRecord?.previewImages?.length || 0) + (fields.previewFile.files[0] ? 1 : 0),
+      long_description: payload.longDescription,
+      page_count: payload.pageCount,
+      pdf_file: fields.pdfFile.files[0]?.name || payload.fileList[0] || "",
+      previewImages: loadedProductRecord?.previewImages || [],
+      productLine: payload.productLine,
+      series: payload.series,
+      short_description: payload.shortDescription,
+      slug: payload.slug,
+      subtitle: payload.subtitle,
+      system: payload.gameSystem,
+      tags: payload.tags,
+      title: payload.title,
+      features: payload.features
+    };
+  };
+
+  const clearAdvisorPanel = () => {
+    latestAdvisorRun = null;
+    outputs.advisorPanel.hidden = true;
+    outputs.advisorSummaryCopy.textContent = "Tiny robot accountant, not dictator.";
+    outputs.advisorReasoningList.replaceChildren();
+    outputs.advisorTags.value = "";
+    outputs.advisorCrossSells.value = "";
+    outputs.advisorJson.value = "";
+  };
+
+  const renderAdvisorPanel = (advisorRun) => {
+    outputs.advisorPanel.hidden = false;
+    outputs.advisorSuggestedPrice.textContent = advisorRun.suggested_price === null ? "No price" : `$${formatMoney(advisorRun.suggested_price)}`;
+    outputs.advisorSuggestedSalePrice.textContent = advisorRun.suggested_sale_price === null ? "No sale" : `$${formatMoney(advisorRun.suggested_sale_price)}`;
+    outputs.advisorConfidence.textContent = formatConfidenceLabel(advisorRun.price_confidence);
+    outputs.advisorProductType.textContent = advisorRun.product_type || "Not classified";
+    outputs.advisorSeriesFit.textContent = advisorRun.series_fit || "No strong series fit";
+    outputs.advisorAudience.textContent = advisorRun.audience.length ? advisorRun.audience.join(", ") : "No audience signal";
+    outputs.advisorTags.value = advisorRun.suggested_tags.join(", ");
+    outputs.advisorCrossSells.value = advisorRun.suggested_cross_sells.join(", ");
+    outputs.advisorJson.value = JSON.stringify(advisorRun, null, 2);
+    outputs.advisorSummaryCopy.textContent = advisorRun.suggested_sale_price === null
+      ? "This is an advisory pass only. Nothing changes until you click Apply Suggestions."
+      : "Suggested sale price is advisory too. Applying it fills the field, but it does not turn a sale on by itself.";
+
+    outputs.advisorReasoningList.replaceChildren(
+      ...advisorRun.reasoning.map((reason) => {
+        const item = document.createElement("li");
+        item.textContent = reason;
+        return item;
+      })
+    );
+  };
+
+  const analyzeCurrentListing = () => {
+    if (!globalThis.TRGProductAdvisor?.analyzeProductListing) {
+      outputs.status.textContent = "The pricing advisor is not available on this page right now.";
+      return;
+    }
+
+    const advisorRun = globalThis.TRGProductAdvisor.analyzeProductListing(buildAdvisorInput(), {
+      catalog: availableProducts
+    });
+    latestAdvisorRun = advisorRun;
+    renderAdvisorPanel(advisorRun);
+    outputs.status.textContent = "Listing analysis is ready. Review the suggestions, then apply or ignore them.";
+  };
+
+  const applyAdvisorSuggestions = () => {
+    if (!latestAdvisorRun) {
+      outputs.status.textContent = "Run Analyze Listing first.";
+      return;
+    }
+
+    fields.price.value = formatMoney(latestAdvisorRun.suggested_price);
+    fields.salePrice.value = formatMoney(latestAdvisorRun.suggested_sale_price);
+
+    if (latestAdvisorRun.series_fit) {
+      fields.series.value = latestAdvisorRun.series_fit;
+    }
+
+    fields.tags.value = latestAdvisorRun.suggested_tags.join(", ");
+    selectedRelatedProducts = [...latestAdvisorRun.suggested_cross_sells];
+    syncRelatedPicker();
+    updatePreview();
+    outputs.status.textContent = "Advisor suggestions applied to the form. You can still edit every field.";
   };
 
   const updateRelatedSelectOptions = () => {
@@ -260,9 +397,13 @@
               longDescription: String(product.longDescription || "").trim(),
               pageCount: product.pageCount ?? null,
               price: String(product.price || "").trim(),
+              previewImage: String(product.previewImage || "").trim(),
+              previewImages: Array.isArray(product.previewImages) ? [...product.previewImages] : [],
               productLine: String(product.productLine || "").trim(),
               relatedProducts: Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [],
               releaseDate: String(product.releaseDate || "").trim(),
+              saleEnabled: Boolean(product.saleEnabled),
+              salePrice: String(product.salePrice || "").trim(),
               series: String(product.series || "").trim(),
               shortDescription: String(product.shortDescription || "").trim(),
               slug,
@@ -300,8 +441,10 @@
     const productLine = fields.line.value.trim();
     const series = fields.series.value.trim();
     const pageCountRaw = fields.pageCount.value.trim();
-    const priceRaw = fields.price.value.trim();
-    const priceCents = priceRaw ? Math.round(Number(priceRaw) * 100) : null;
+    const priceRaw = normalizeMoneyText(fields.price.value);
+    const priceCents = parsePriceNumber(priceRaw) === null ? null : Math.round(parsePriceNumber(priceRaw) * 100);
+    const salePriceRaw = normalizeMoneyText(fields.salePrice.value);
+    const salePriceCents = parsePriceNumber(salePriceRaw) === null ? null : Math.round(parsePriceNumber(salePriceRaw) * 100);
     const selectedPdfName = fields.pdfFile.files[0]?.name?.trim() || "";
     const fileList = selectedPdfName
       ? [selectedPdfName]
@@ -331,6 +474,9 @@
       priceCents,
       productLine,
       productLineSlug: slugify(productLine),
+      saleEnabled: fields.saleEnabled.checked,
+      salePrice: salePriceRaw,
+      salePriceCents,
       series,
       seriesSlug: slugify(series),
       publisher: "Tobacco Road Games",
@@ -495,6 +641,8 @@
       formData.set("format", payload.format.join(", "));
       formData.set("pageCount", payload.pageCount === null ? "" : String(payload.pageCount));
       formData.set("price", payload.price);
+      formData.set("salePrice", payload.salePrice);
+      formData.set("saleEnabled", payload.saleEnabled ? "true" : "false");
       formData.set("currency", payload.currency);
       formData.set("status", payload.status);
       formData.set("buyMode", payload.buyMode);
@@ -641,7 +789,9 @@
     fields.format.value = formatListValue(product.format) || "PDF";
     fields.pageCount.value = product.pageCount ?? "";
     fields.price.value = product.price || "";
+    fields.salePrice.value = product.salePrice || "";
     fields.currency.value = product.currency || "USD";
+    fields.saleEnabled.checked = Boolean(product.saleEnabled);
     fields.status.value = product.status || "coming-soon";
     fields.buyMode.value = product.buyMode || "coming-soon";
     fields.buyUrl.value = product.buyUrl || "";
@@ -662,6 +812,7 @@
     slugTouched = true;
     folderTouched = true;
 
+    clearAdvisorPanel();
     syncRelatedPicker();
     updateRelatedSelectOptions();
     updateEditModeCopy();
@@ -696,6 +847,12 @@
     field.addEventListener("change", updatePreview);
   });
 
+  buttons.analyze?.addEventListener("click", analyzeCurrentListing);
+  buttons.applyAdvisor?.addEventListener("click", applyAdvisorSuggestions);
+  buttons.ignoreAdvisor?.addEventListener("click", () => {
+    clearAdvisorPanel();
+    outputs.status.textContent = "Advisor suggestions cleared.";
+  });
   buttons.publish.addEventListener("click", publishProduct);
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
   buttons.addRelated.addEventListener("click", addRelatedProduct);
@@ -732,7 +889,9 @@
     fields.format.value = "PDF";
     fields.pageCount.value = "";
     fields.price.value = "";
+    fields.salePrice.value = "";
     fields.currency.value = "USD";
+    fields.saleEnabled.checked = false;
     fields.status.value = "coming-soon";
     fields.buyMode.value = "coming-soon";
     fields.buyUrl.value = "";
@@ -756,11 +915,13 @@
     slugTouched = false;
     folderTouched = false;
     outputs.status.textContent = "Form reset.";
+    clearAdvisorPanel();
     syncRelatedPicker();
     updateEditModeCopy();
     updatePreview();
   });
 
+  clearAdvisorPanel();
   void loadAvailableProducts();
   syncRelatedPicker();
   updatePreview();

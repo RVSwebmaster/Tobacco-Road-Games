@@ -200,7 +200,7 @@ function parsePublishForm(formData) {
       legalNote: String(formData.get("legalNote") || "").trim(),
       longDescription: metadata.longDescription,
       pageCount: normalizeOptionalNumber(formData.get("pageCount")),
-      price: String(formData.get("price") || "").trim(),
+      price: normalizeMoneyText(formData.get("price")),
       priceCents: normalizePriceCents(formData.get("price")),
       productLine: metadata.productLine,
       productLineSlug: normalizeSlug(String(formData.get("productLineSlug") || metadata.productLine)),
@@ -209,6 +209,9 @@ function parsePublishForm(formData) {
       publisher: "Tobacco Road Games",
       relatedProducts: parseList(formData.get("relatedProducts")),
       releaseDate: String(formData.get("releaseDate") || "").trim(),
+      saleEnabled: String(formData.get("saleEnabled") || "") === "true",
+      salePrice: normalizeMoneyText(formData.get("salePrice")),
+      salePriceCents: normalizePriceCents(formData.get("salePrice")),
       shortDescription: metadata.shortDescription,
       slug,
       status,
@@ -487,10 +490,17 @@ function normalizeOptionalNumber(value) {
 }
 
 function normalizePriceCents(value) {
-  const trimmed = String(value || "").trim();
+  const trimmed = normalizeMoneyText(value);
   if (!trimmed) {
     return null;
   }
   const numeric = Number(trimmed);
   return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
+}
+
+function normalizeMoneyText(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\$/g, "")
+    .replace(/,/g, "");
 }

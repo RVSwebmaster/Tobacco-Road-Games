@@ -134,6 +134,10 @@
       resize: vertical;
     }
 
+    .advisor-panel .intake-output textarea {
+      min-height: 120px;
+    }
+
     .intake-actions {
       display: flex;
       flex-wrap: wrap;
@@ -167,6 +171,60 @@
 
     .intake-selection-item button {
       flex: 0 0 auto;
+    }
+
+    .advisor-panel {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(242, 216, 170, 0.16);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .advisor-panel[hidden] {
+      display: none;
+    }
+
+    .advisor-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .advisor-metric {
+      padding: 0.85rem 0.9rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.52);
+    }
+
+    .advisor-metric strong,
+    .advisor-metric span {
+      display: block;
+    }
+
+    .advisor-metric strong {
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .advisor-metric span {
+      margin-top: 0.35rem;
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .advisor-list {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: var(--text);
+      line-height: 1.7;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
     }
 
     .intake-status {
@@ -296,8 +354,18 @@
               </div>
 
               <div class="intake-field">
+                <label for="product-sale-price">Sale Price</label>
+                <input id="product-sale-price" class="dock-input" type="text" placeholder="2.99">
+              </div>
+
+              <div class="intake-field">
                 <label for="product-currency">Currency</label>
                 <input id="product-currency" class="dock-input" type="text" value="USD">
+              </div>
+
+              <div class="intake-field">
+                <label for="product-sale-enabled">Sale Active</label>
+                <input id="product-sale-enabled" type="checkbox">
               </div>
 
               <div class="intake-field">
@@ -462,10 +530,74 @@
         </div>
 
         <div class="intake-actions">
+          <button id="analyze-listing-button" class="button button--secondary" type="button">Analyze Listing</button>
           <button id="publish-button" class="button button--primary" type="button">Publish Product</button>
           <button id="reset-intake-button" class="button button--secondary" type="button">Reset Form</button>
         </div>
         <p id="intake-status" class="intake-status" aria-live="polite"></p>
+
+        <section id="advisor-panel" class="advisor-panel" aria-labelledby="advisor-panel-heading" hidden>
+          <div class="section-heading">
+            <p class="section-heading__kicker">Product Intelligence</p>
+            <h3 id="advisor-panel-heading">Pricing advisor</h3>
+            <p id="advisor-summary-copy" class="intake-help">Tiny robot accountant, not dictator.</p>
+          </div>
+
+          <div class="advisor-summary-grid">
+            <div class="advisor-metric">
+              <strong>Suggested MSRP</strong>
+              <span id="advisor-suggested-price">$0.00</span>
+            </div>
+            <div class="advisor-metric">
+              <strong>Suggested Sale Price</strong>
+              <span id="advisor-suggested-sale-price">$0.00</span>
+            </div>
+            <div class="advisor-metric">
+              <strong>Confidence</strong>
+              <span id="advisor-confidence">Low</span>
+            </div>
+          </div>
+
+          <div class="advisor-summary-grid">
+            <div class="advisor-metric">
+              <strong>Product Type</strong>
+              <span id="advisor-product-type">Not analyzed</span>
+            </div>
+            <div class="advisor-metric">
+              <strong>Series Fit</strong>
+              <span id="advisor-series-fit">Not analyzed</span>
+            </div>
+            <div class="advisor-metric">
+              <strong>Audience</strong>
+              <span id="advisor-audience">Not analyzed</span>
+            </div>
+          </div>
+
+          <div class="intake-output">
+            <label for="advisor-tags-output">Suggested tags</label>
+            <textarea id="advisor-tags-output" spellcheck="false" aria-label="Suggested tags"></textarea>
+          </div>
+
+          <div class="intake-output">
+            <label for="advisor-cross-sells-output">Suggested cross-sells</label>
+            <textarea id="advisor-cross-sells-output" spellcheck="false" aria-label="Suggested cross-sells"></textarea>
+          </div>
+
+          <div>
+            <p class="note-card__label">Reasoning</p>
+            <ol id="advisor-reasoning-list" class="advisor-list"></ol>
+          </div>
+
+          <div class="intake-actions">
+            <button id="apply-advisor-button" class="button button--primary" type="button">Apply Suggestions</button>
+            <button id="ignore-advisor-button" class="button button--secondary" type="button">Ignore</button>
+          </div>
+
+          <div class="intake-output">
+            <label for="advisor-json">Advisor output JSON</label>
+            <textarea id="advisor-json" spellcheck="false" aria-label="Advisor output JSON"></textarea>
+          </div>
+        </section>
 
         <div class="intake-output">
           <label for="generated-json">Generated products.json entry</label>
@@ -485,6 +617,7 @@
     </footer>
   </div>
 
-  <script src="../assets/js/product-intake.js?v=20260604e"></script>
+  <script src="../shared/product-advisor.js?v=20260624a"></script>
+  <script src="../assets/js/product-intake.js?v=20260624a"></script>
 </body>
 </html>

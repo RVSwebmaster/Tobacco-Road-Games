@@ -94,6 +94,10 @@ async function applyPublishPayload(rootDir, clientPayload) {
 }
 
 function normalizePublishMetadata(metadata) {
+  const hasSaleEnabled = Object.prototype.hasOwnProperty.call(metadata, "saleEnabled");
+  const hasSalePrice = Object.prototype.hasOwnProperty.call(metadata, "salePrice");
+  const hasSalePriceCents = Object.prototype.hasOwnProperty.call(metadata, "salePriceCents");
+
   return {
     authorSlugs: Array.isArray(metadata.authorSlugs) && metadata.authorSlugs.length ? metadata.authorSlugs : ["rv-sawyer"],
     authors: Array.isArray(metadata.authors) && metadata.authors.length ? metadata.authors : ["RV Sawyer"],
@@ -116,7 +120,7 @@ function normalizePublishMetadata(metadata) {
     legalNote: chooseText(metadata.legalNote, ""),
     longDescription: chooseText(metadata.longDescription, ""),
     pageCount: chooseNullableInteger(metadata.pageCount, null),
-    price: chooseText(metadata.price, ""),
+    price: chooseText(normalizeMoneyText(metadata.price), ""),
     priceCents: chooseNullableInteger(metadata.priceCents, normalizePriceCents(metadata.price)),
     productLine: chooseText(metadata.productLine, ""),
     productLineSlug: normalizeSlug(chooseText(metadata.productLineSlug, metadata.productLine, "")),
@@ -125,6 +129,11 @@ function normalizePublishMetadata(metadata) {
     publisher: chooseText(metadata.publisher, "Tobacco Road Games"),
     relatedProducts: normalizeStringArray(metadata.relatedProducts),
     releaseDate: chooseText(metadata.releaseDate, ""),
+    saleEnabled: hasSaleEnabled ? Boolean(metadata.saleEnabled) : undefined,
+    salePrice: hasSalePrice ? chooseText(normalizeMoneyText(metadata.salePrice), "") : undefined,
+    salePriceCents: hasSalePriceCents || hasSalePrice
+      ? chooseNullableInteger(metadata.salePriceCents, normalizePriceCents(metadata.salePrice))
+      : undefined,
     shortDescription: chooseText(metadata.shortDescription, ""),
     slug: normalizeSlug(metadata.slug),
     status: chooseText(metadata.status, "preview-available"),
@@ -203,12 +212,12 @@ function upsertProducts(products, metadata) {
     suggestedPriceCents: chooseNullableInteger(existing.suggestedPriceCents, null),
     regularPrice: chooseText(existing.regularPrice, ""),
     regularPriceCents: chooseNullableInteger(existing.regularPriceCents, null),
-    salePrice: chooseText(existing.salePrice, ""),
-    salePriceCents: chooseNullableInteger(existing.salePriceCents, null),
+    salePrice: chooseText(metadata.salePrice, existing.salePrice, ""),
+    salePriceCents: chooseNullableInteger(metadata.salePriceCents, existing.salePriceCents, null),
     saleStart: chooseText(existing.saleStart, ""),
     saleEnd: chooseText(existing.saleEnd, ""),
     saleLabel: chooseText(existing.saleLabel, ""),
-    saleEnabled: chooseBoolean(existing.saleEnabled, false),
+    saleEnabled: chooseBoolean(metadata.saleEnabled, existing.saleEnabled, false),
     currency: chooseText(metadata.currency, existing.currency, "USD"),
     status: chooseText(metadata.status, existing.status, "preview-available"),
     statusLabel: resolveStatusLabel(chooseText(metadata.status, existing.status, "preview-available")),
@@ -323,8 +332,15 @@ function normalizeStringArray(value) {
 }
 
 function normalizePriceCents(value) {
-  const numeric = Number(String(value || "").trim());
+  const numeric = Number(normalizeMoneyText(value));
   return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
+}
+
+function normalizeMoneyText(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\$/g, "")
+    .replace(/,/g, "");
 }
 
 function chooseText(...values) {
