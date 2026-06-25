@@ -17,6 +17,10 @@ import {
   getOwnerAccessConfig,
   verifyOwnerAccessRequest
 } from "./owner-access.mjs";
+import {
+  getFolderForSlug,
+  hasFolderForSlug
+} from "../../shared/product-folder-map.mjs";
 
 const STATUS_LABELS = {
   "available-direct": "Available Direct",
@@ -215,19 +219,29 @@ function parsePublishForm(formData) {
       updateEligible: true,
       version: String(formData.get("version") || "").trim()
     },
+    existingFolder: "",
+    isExistingProduct: false,
     productFile: null,
     previewFile: null,
     coverFile: null
   };
 
+  payload.isExistingProduct = hasFolderForSlug(slug);
+  payload.existingFolder = getFolderForSlug(slug);
+  const requireAllFiles = !payload.isExistingProduct || payload.existingFolder !== folder;
+
   for (const [fieldName, label, expectedType, expectedExtension] of REQUIRED_FILE_FIELDS) {
     const file = formData.get(fieldName);
-    const fileValidation = validateRequiredFile(file, label, expectedType, expectedExtension);
+    const fileValidation = validateRequiredFile(file, label, expectedType, expectedExtension, {
+      required: requireAllFiles
+    });
     if (!fileValidation.valid) {
       errors.push(fileValidation.userMessage);
       continue;
     }
-    payload[fieldName] = file;
+    if (fileValidation.file) {
+      payload[fieldName] = fileValidation.file;
+    }
   }
 
   if (errors.length) {
@@ -245,7 +259,7 @@ function parsePublishForm(formData) {
     payload.metadata.version = "1.0";
   }
 
-  payload.metadata.fileList = [payload.productFile?.name || `${metadata.title || "Untitled Product"}.pdf`];
+  payload.metadata.fileList = payload.productFile?.name ? [payload.productFile.name] : [];
 
   return {
     valid: true,
@@ -258,7 +272,7 @@ async function uploadRequiredProductFiles(bucket, payload) {
     [payload.coverFile, `${payload.folder}/cover.webp`, "image/webp"],
     [payload.previewFile, `${payload.folder}/preview.webp`, "image/webp"],
     [payload.productFile, `${payload.folder}/product.pdf`, "application/pdf"]
-  ];
+  ].filter(([file]) => file instanceof File);
   const uploadedKeys = [];
 
   try {
@@ -397,8 +411,15 @@ async function verifyAccessProtectedPublishRequest(request, env, accessConfig) {
   };
 }
 
-function validateRequiredFile(file, label, expectedType, expectedExtension) {
+function validateRequiredFile(file, label, expectedType, expectedExtension, options = {}) {
+  const required = options.required !== false;
   if (!(file instanceof File)) {
+    if (!required) {
+      return {
+        valid: true,
+        file: null
+      };
+    }
     return {
       valid: false,
       userMessage: `${label} is required.`
@@ -436,7 +457,10 @@ function validateRequiredFile(file, label, expectedType, expectedExtension) {
     }
   }
 
-  return { valid: true };
+  return {
+    valid: true,
+    file
+  };
 }
 
 function parseList(value) {

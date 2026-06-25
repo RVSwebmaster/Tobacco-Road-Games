@@ -221,6 +221,17 @@
             </div>
 
             <div class="intake-form-grid">
+              <div class="intake-field intake-field--full">
+                <label for="product-existing-select">Edit Existing Listing</label>
+                <div class="intake-picker-row">
+                  <select id="product-existing-select" class="dock-input">
+                    <option value="">Loading listings...</option>
+                  </select>
+                  <button id="product-existing-load" class="button button--secondary" type="button">Load Listing</button>
+                </div>
+                <p id="product-edit-mode" class="intake-help">Creating a new listing. Load an existing one to revise metadata or replace only the files you choose.</p>
+              </div>
+
               <div class="intake-field">
                 <label for="product-title">Title</label>
                 <input id="product-title" class="dock-input" type="text" placeholder="Sirrocans">
@@ -435,7 +446,7 @@
               <p class="note-card__label">How to use this</p>
               <ol class="intake-list">
                 <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
-                <li>Choose the three required files: one cover WebP, one preview WebP, and the product PDF. Your local filenames can stay meaningful.</li>
+                <li>For a new listing, choose the three required files: one cover WebP, one preview WebP, and the product PDF. For an existing listing, leave file inputs blank to keep the current assets or add only the replacements you want.</li>
                 <li>Use the generated metadata preview below as a final sanity check.</li>
                 <li>Click Publish. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
               </ol>

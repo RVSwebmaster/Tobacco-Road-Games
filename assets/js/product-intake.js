@@ -13,6 +13,7 @@
   };
 
   const fields = {
+    existingSelect: document.getElementById("product-existing-select"),
     title: document.getElementById("product-title"),
     slug: document.getElementById("product-slug"),
     folder: document.getElementById("product-folder"),
@@ -47,6 +48,7 @@
   };
 
   const outputs = {
+    editMode: document.getElementById("product-edit-mode"),
     json: document.getElementById("generated-json"),
     checklist: document.getElementById("asset-checklist"),
     status: document.getElementById("intake-status"),
@@ -60,6 +62,7 @@
   };
 
   const buttons = {
+    loadExisting: document.getElementById("product-existing-load"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
     reset: document.getElementById("reset-intake-button")
@@ -71,6 +74,9 @@
   let publishBusy = false;
   let availableProducts = [];
   let selectedRelatedProducts = [];
+  let loadedProductSlug = "";
+  let loadedProductFolder = "";
+  let loadedProductRecord = null;
 
   const slugify = (value) =>
     String(value || "")
@@ -90,6 +96,43 @@
       .split(/\r?\n/)
       .map((part) => part.trim())
       .filter(Boolean);
+
+  const formatListValue = (value) =>
+    Array.isArray(value)
+      ? value.join(", ")
+      : String(value || "").trim();
+
+  const isEditingLoadedListing = () =>
+    Boolean(loadedProductSlug);
+
+  const requiresFullAssetSet = () => {
+    if (!isEditingLoadedListing()) {
+      return true;
+    }
+
+    const currentSlug = fields.slug.value.trim() || slugify(fields.title.value);
+    const currentFolder = fields.folder.value.trim() || currentSlug;
+    return currentSlug !== loadedProductSlug || currentFolder !== loadedProductFolder;
+  };
+
+  const findAvailableProduct = (slug) =>
+    availableProducts.find((product) => product.slug === slug) || null;
+
+  const updateEditModeCopy = () => {
+    if (!outputs.editMode) {
+      return;
+    }
+
+    if (!isEditingLoadedListing()) {
+      outputs.editMode.textContent = "Creating a new listing. Load an existing one to revise metadata or replace only the files you choose.";
+      return;
+    }
+
+    const renameWarning = requiresFullAssetSet()
+      ? " Because the slug or folder changed, the next publish needs a full replacement set of cover, preview, and PDF files."
+      : " Leave file inputs blank to keep the live assets, or choose only the replacement files you want to swap in.";
+    outputs.editMode.textContent = `Editing ${loadedProductRecord?.title || loadedProductSlug}.${renameWarning}`;
+  };
 
   const updateRelatedSelectOptions = () => {
     if (!fields.relatedSelect) {
@@ -173,22 +216,63 @@
 
   async function loadAvailableProducts() {
     try {
-      const response = await fetch("/data/products.json", {
-        cache: "no-store",
-        credentials: "same-origin"
-      });
+      const [productsResponse, intakeResponse] = await Promise.all([
+        fetch("/data/products.json", {
+          cache: "no-store",
+          credentials: "same-origin"
+        }),
+        fetch("/data/product-intake-map.json", {
+          cache: "no-store",
+          credentials: "same-origin"
+        })
+      ]);
 
-      if (!response.ok) {
-        throw new Error("Product catalog request failed.");
+      if (!productsResponse.ok || !intakeResponse.ok) {
+        throw new Error("Product intake sources failed to load.");
       }
 
-      const payload = await response.json();
-      availableProducts = Array.isArray(payload)
-        ? payload
-          .map((product) => ({
-            slug: String(product.slug || "").trim(),
-            title: String(product.title || product.slug || "").trim()
-          }))
+      const productsPayload = await productsResponse.json();
+      const intakePayload = await intakeResponse.json();
+      const intakeProducts = Array.isArray(intakePayload?.products) ? intakePayload.products : [];
+      const intakeBySlug = new Map(
+        intakeProducts.map((product) => [String(product.slug || "").trim(), product])
+      );
+
+      availableProducts = Array.isArray(productsPayload)
+        ? productsPayload
+          .map((product) => {
+            const slug = String(product.slug || "").trim();
+            const intakeProduct = intakeBySlug.get(slug) || {};
+            return {
+              buyMode: String(product.buyMode || "").trim(),
+              buyUrl: String(product.buyUrl || "").trim(),
+              coverImage: String(product.coverImage || "").trim(),
+              creationMethod: String(product.creationMethod || "").trim(),
+              currency: String(product.currency || "USD").trim() || "USD",
+              features: Array.isArray(product.features) ? [...product.features] : [],
+              fileList: Array.isArray(product.fileList) ? [...product.fileList] : [],
+              folder: String(intakeProduct.folder || slug).trim() || slug,
+              format: Array.isArray(product.format) ? [...product.format] : [],
+              fulfillmentNote: String(product.fulfillmentNote || "").trim(),
+              gameSystem: String(product.gameSystem || "").trim(),
+              lastUpdated: String(product.lastUpdated || "").trim(),
+              legalNote: String(product.legalNote || "").trim(),
+              longDescription: String(product.longDescription || "").trim(),
+              pageCount: product.pageCount ?? null,
+              price: String(product.price || "").trim(),
+              productLine: String(product.productLine || "").trim(),
+              relatedProducts: Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [],
+              releaseDate: String(product.releaseDate || "").trim(),
+              series: String(product.series || "").trim(),
+              shortDescription: String(product.shortDescription || "").trim(),
+              slug,
+              status: String(product.status || "").trim(),
+              subtitle: String(product.subtitle || "").trim(),
+              tags: Array.isArray(product.tags) ? [...product.tags] : [],
+              title: String(product.title || product.slug || "").trim(),
+              version: String(product.version || "").trim()
+            };
+          })
           .filter((product) => product.slug && product.title)
           .sort((left, right) => left.title.localeCompare(right.title))
         : [];
@@ -196,7 +280,16 @@
       availableProducts = [];
     }
 
+    if (fields.existingSelect) {
+      const options = [
+        `<option value="">${availableProducts.length ? "Select a listing to edit" : "No listings available"}</option>`,
+        ...availableProducts.map((product) => `<option value="${product.slug}">${product.title} (${product.slug})</option>`)
+      ];
+      fields.existingSelect.innerHTML = options.join("");
+    }
+
     syncRelatedPicker();
+    updateEditModeCopy();
   }
 
   const buildPayload = () => {
@@ -210,6 +303,11 @@
     const priceRaw = fields.price.value.trim();
     const priceCents = priceRaw ? Math.round(Number(priceRaw) * 100) : null;
     const selectedPdfName = fields.pdfFile.files[0]?.name?.trim() || "";
+    const fileList = selectedPdfName
+      ? [selectedPdfName]
+      : (isEditingLoadedListing() && !requiresFullAssetSet() && Array.isArray(loadedProductRecord?.fileList) && loadedProductRecord.fileList.length
+        ? [...loadedProductRecord.fileList]
+        : [`${title || "Untitled Product"}.pdf`]);
 
     return {
       authorSlugs: ["rv-sawyer"],
@@ -219,7 +317,7 @@
       creationMethod: fields.creationMethod.value.trim() || "Human-authored by RV Sawyer.",
       currency: fields.currency.value.trim() || "USD",
       features: parseLines(fields.features.value),
-      fileList: [selectedPdfName || `${title || "Untitled Product"}.pdf`],
+      fileList,
       folder,
       format: parseList(fields.format.value).length ? parseList(fields.format.value) : ["PDF"],
       fulfillmentNote: fields.fulfillmentNote.value.trim(),
@@ -264,13 +362,26 @@
   };
 
   function buildChecklist(payload) {
+    const existingMode = isEditingLoadedListing();
+    const requiresFiles = requiresFullAssetSet();
+
     return [
       `R2 folder: ${payload.folder}`,
+      existingMode ? `Editing existing listing: ${loadedProductRecord?.title || loadedProductSlug}` : "Publishing mode: New listing",
       "",
-      "Required uploaded files:",
-      "- One WebP cover image",
-      "- One WebP preview image",
-      "- One PDF product file",
+      requiresFiles ? "Required uploaded files:" : "Optional replacement files:",
+      requiresFiles
+        ? "- One WebP cover image"
+        : "- Cover WebP only if you want to replace the current live cover",
+      requiresFiles
+        ? "- One WebP preview image"
+        : "- Preview WebP only if you want to replace the current live preview",
+      requiresFiles
+        ? "- One PDF product file"
+        : "- Product PDF only if you want to replace the current private PDF",
+      ...(existingMode && !requiresFiles
+        ? ["", "Leave file inputs blank to preserve the current bucket assets."]
+        : []),
       "",
       "Internal bucket object paths after publish:",
       `- ${payload.folder}/cover.webp`,
@@ -319,6 +430,12 @@
       coverObjectUrl = URL.createObjectURL(fields.coverFile.files[0]);
       outputs.previewCoverImage.src = coverObjectUrl;
       outputs.previewCoverImage.alt = "Selected product cover preview";
+      return;
+    }
+
+    if (loadedProductRecord?.coverImage) {
+      outputs.previewCoverImage.src = loadedProductRecord.coverImage;
+      outputs.previewCoverImage.alt = `${loadedProductRecord.title || "Current"} cover preview`;
       return;
     }
 
@@ -393,9 +510,16 @@
       formData.set("releaseDate", payload.releaseDate);
       formData.set("lastUpdated", payload.lastUpdated);
       formData.set("relatedProducts", payload.relatedProducts.join(", "));
-      formData.set("coverFile", fields.coverFile.files[0]);
-      formData.set("previewFile", fields.previewFile.files[0]);
-      formData.set("productFile", fields.pdfFile.files[0]);
+
+      if (fields.coverFile.files[0]) {
+        formData.set("coverFile", fields.coverFile.files[0]);
+      }
+      if (fields.previewFile.files[0]) {
+        formData.set("previewFile", fields.previewFile.files[0]);
+      }
+      if (fields.pdfFile.files[0]) {
+        formData.set("productFile", fields.pdfFile.files[0]);
+      }
 
       const response = await fetch("/owner/api/publish", {
         method: "POST",
@@ -435,6 +559,7 @@
 
   function validateRequiredFields() {
     const errors = [];
+    const requireFiles = requiresFullAssetSet();
     const requiredTextFields = [
       [fields.title, "Title"],
       [fields.slug, "Slug"],
@@ -452,13 +577,13 @@
       }
     }
 
-    if (!fields.coverFile.files.length) {
+    if (requireFiles && !fields.coverFile.files.length) {
       errors.push("A cover WebP is required.");
     }
-    if (!fields.previewFile.files.length) {
+    if (requireFiles && !fields.previewFile.files.length) {
       errors.push("A preview WebP is required.");
     }
-    if (!fields.pdfFile.files.length) {
+    if (requireFiles && !fields.pdfFile.files.length) {
       errors.push("A product PDF is required.");
     }
 
@@ -483,7 +608,65 @@
     }
 
     updateRelatedSelectOptions();
+    updateEditModeCopy();
     updatePreview();
+  }
+
+  function loadExistingProductIntoForm() {
+    const slug = fields.existingSelect?.value || "";
+    if (!slug) {
+      outputs.status.textContent = "Pick a listing first.";
+      return;
+    }
+
+    const product = findAvailableProduct(slug);
+    if (!product) {
+      outputs.status.textContent = "That listing could not be loaded from the current catalog data.";
+      return;
+    }
+
+    loadedProductSlug = product.slug;
+    loadedProductFolder = product.folder || product.slug;
+    loadedProductRecord = product;
+
+    fields.title.value = product.title || "";
+    fields.slug.value = product.slug || "";
+    fields.folder.value = product.folder || product.slug || "";
+    fields.subtitle.value = product.subtitle || "";
+    fields.authors.value = "RV Sawyer";
+    fields.publisher.value = "Tobacco Road Games";
+    fields.system.value = product.gameSystem || "";
+    fields.line.value = product.productLine || "";
+    fields.series.value = product.series || "";
+    fields.format.value = formatListValue(product.format) || "PDF";
+    fields.pageCount.value = product.pageCount ?? "";
+    fields.price.value = product.price || "";
+    fields.currency.value = product.currency || "USD";
+    fields.status.value = product.status || "coming-soon";
+    fields.buyMode.value = product.buyMode || "coming-soon";
+    fields.buyUrl.value = product.buyUrl || "";
+    fields.shortDescription.value = product.shortDescription || "";
+    fields.longDescription.value = product.longDescription || "";
+    fields.features.value = Array.isArray(product.features) ? product.features.join("\n") : "";
+    fields.tags.value = Array.isArray(product.tags) ? product.tags.join(", ") : "";
+    fields.fulfillmentNote.value = product.fulfillmentNote || "";
+    fields.creationMethod.value = product.creationMethod || "Human-authored by RV Sawyer.";
+    fields.legalNote.value = product.legalNote || "";
+    fields.version.value = product.version || "";
+    fields.releaseDate.value = product.releaseDate || "";
+    fields.lastUpdated.value = product.lastUpdated || "";
+    fields.coverFile.value = "";
+    fields.previewFile.value = "";
+    fields.pdfFile.value = "";
+    selectedRelatedProducts = Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [];
+    slugTouched = true;
+    folderTouched = true;
+
+    syncRelatedPicker();
+    updateRelatedSelectOptions();
+    updateEditModeCopy();
+    updatePreview();
+    outputs.status.textContent = `Loaded ${product.title} for editing.`;
   }
 
   fields.slug.addEventListener("input", () => {
@@ -492,11 +675,13 @@
       fields.folder.value = fields.slug.value.trim();
     }
     updateRelatedSelectOptions();
+    updateEditModeCopy();
     updatePreview();
   });
 
   fields.folder.addEventListener("input", () => {
     folderTouched = fields.folder.value.trim().length > 0;
+    updateEditModeCopy();
     updatePreview();
   });
 
@@ -512,6 +697,7 @@
   });
 
   buttons.publish.addEventListener("click", publishProduct);
+  buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
   buttons.addRelated.addEventListener("click", addRelatedProduct);
 
   fields.relatedList.addEventListener("click", (event) => {
@@ -560,11 +746,18 @@
     fields.version.value = "";
     fields.releaseDate.value = "";
     fields.lastUpdated.value = "";
+    if (fields.existingSelect) {
+      fields.existingSelect.value = "";
+    }
     selectedRelatedProducts = [];
+    loadedProductSlug = "";
+    loadedProductFolder = "";
+    loadedProductRecord = null;
     slugTouched = false;
     folderTouched = false;
     outputs.status.textContent = "Form reset.";
     syncRelatedPicker();
+    updateEditModeCopy();
     updatePreview();
   });
 

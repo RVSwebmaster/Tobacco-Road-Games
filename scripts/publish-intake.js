@@ -78,7 +78,7 @@ async function applyPublishPayload(rootDir, clientPayload) {
   };
 
   const intakeMap = JSON.parse(fs.readFileSync(intakeMapPath, "utf8"));
-  const nextIntakeMap = upsertIntakeMap(intakeMap, metadata);
+  const nextIntakeMap = upsertIntakeMap(intakeMap, metadata, folder);
 
   const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
   const nextProducts = upsertProducts(products, metadata);
@@ -137,7 +137,7 @@ function normalizePublishMetadata(metadata) {
   };
 }
 
-function upsertIntakeMap(intakeMap, metadata) {
+function upsertIntakeMap(intakeMap, metadata, folder) {
   const next = clone(intakeMap);
   const existingProducts = Array.isArray(next.products) ? next.products : [];
   const index = existingProducts.findIndex((product) => product.slug === metadata.slug);
@@ -145,6 +145,7 @@ function upsertIntakeMap(intakeMap, metadata) {
 
   const updated = {
     ...existing,
+    folder: chooseText(folder, existing.folder, metadata.slug),
     slug: metadata.slug,
     title: chooseText(metadata.title, existing.title, humanizeSlug(metadata.slug)),
     subtitle: chooseText(metadata.subtitle, existing.subtitle, `${metadata.title} catalog preview`),
