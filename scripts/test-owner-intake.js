@@ -355,6 +355,9 @@ async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieH
       return new Response(null, { status: 204 });
     }
 
+    const workflowRunsUrl = new URL(String(url));
+    assert.equal(workflowRunsUrl.searchParams.get("event"), "repository_dispatch", "Workflow polling should filter by the GitHub event name.");
+
     return jsonResponse({
       workflow_runs: [
         {
@@ -408,6 +411,9 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
       assert.equal(body.client_payload.ref, env.GITHUB_PUBLISH_REF, "Dispatch should use the configured ref.");
       return new Response(null, { status: 204 });
     }
+
+    const workflowRunsUrl = new URL(String(url));
+    assert.equal(workflowRunsUrl.searchParams.get("event"), "repository_dispatch", "Workflow polling should filter by the GitHub event name.");
 
     return jsonResponse({
       workflow_runs: [

@@ -1,4 +1,5 @@
 const DEFAULT_EVENT_TYPE = "owner_publish_intake";
+const DEFAULT_WORKFLOW_EVENT = "repository_dispatch";
 const DEFAULT_POLL_INTERVAL_MS = 3000;
 const DEFAULT_TIMEOUT_MS = 120000;
 const DEFAULT_WORKFLOW_FILE = "publish-owner-intake.yml";
@@ -94,7 +95,7 @@ export async function dispatchPublishWorkflow(payload, env, options = {}) {
 
 async function findMatchingWorkflowRun(options) {
   const listUrl = new URL(`https://api.github.com/repos/${options.owner}/${options.repo}/actions/workflows/${options.workflowFile}/runs`);
-  listUrl.searchParams.set("event", DEFAULT_EVENT_TYPE);
+  listUrl.searchParams.set("event", DEFAULT_WORKFLOW_EVENT);
   listUrl.searchParams.set("per_page", "20");
 
   const response = await options.fetchImpl(listUrl.toString(), {
