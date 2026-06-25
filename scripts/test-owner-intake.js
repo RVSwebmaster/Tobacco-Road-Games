@@ -49,6 +49,7 @@ async function main() {
     await testOwnerIntakeAliasRedirects(ownerMiddleware, baseEnv, authCookies);
     await testMissingFiles(ownerPublish, baseEnv, authCookies);
     await testWrongFileType(ownerPublish, baseEnv, authCookies);
+    await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, authCookies);
     await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
     await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
     const accessCookies = await testAccessMiddlewareAllowsAuthorized(ownerMiddleware, accessEnv, accessContext.token);
@@ -339,6 +340,73 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
   assert.match(payload.error, /preview image must be a webp image/i, "Wrong file type error should be human-readable.");
 }
 
+async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieHeader) {
+  const bucket = createMockBucket();
+  const calls = [];
+  const fixedNow = 1760000000002;
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).endsWith("/dispatches")) {
+      return new Response(null, { status: 204 });
+    }
+
+    return jsonResponse({
+      workflow_runs: [
+        {
+          conclusion: "success",
+          created_at: new Date().toISOString(),
+          display_title: `Owner publish pub-${fixedNow}-metadata-only`,
+          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/3",
+          id: 3,
+          status: "completed"
+        }
+      ]
+    });
+  };
+
+  const formData = new FormData();
+  addRequiredTextFields(formData, {
+    folder: "sirrocans",
+    gameSystem: "5E Compatible",
+    gameSystemSlug: "5e-compatible",
+    longDescription: "Metadata-only update for an existing listing.",
+    productLine: "Fifth Edition Fantasy Roleplaying",
+    productLineSlug: "fifth-edition-fantasy-roleplaying",
+    series: "",
+    seriesSlug: "",
+    shortDescription: "Metadata-only update for an existing listing.",
+    slug: "sirrocans",
+    subtitle: "Updated existing product",
+    title: "Sirrocans"
+  });
+
+  const originalRandomUuid = crypto.randomUUID;
+  const originalDateNow = Date.now;
+  Date.now = () => fixedNow;
+  crypto.randomUUID = () => "metadata-only";
+  try {
+    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+      ...env,
+      TRG_PRODUCTS: bucket
+    }, {
+      dispatchOptions: {
+        fetchImpl,
+        pollIntervalMs: 1,
+        timeoutMs: 100
+      }
+    });
+
+    assert.equal(response.status, 200, "Existing listings should allow metadata-only publish.");
+    const payload = await response.json();
+    assert.equal(payload.ok, true, "Metadata-only publish should still report success.");
+    assert.deepEqual(bucket.putKeys, [], "Metadata-only publish should not overwrite assets when no replacement files were provided.");
+    assert.ok(calls.some((call) => String(call.url).includes("/dispatches")), "Metadata-only publish should still dispatch the GitHub workflow.");
+  } finally {
+    Date.now = originalDateNow;
+    crypto.randomUUID = originalRandomUuid;
+  }
+}
+
 async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieHeader) {
   const bucket = createMockBucket();
   const formData = new FormData();
@@ -551,23 +619,30 @@ async function testNewProductBuildAndSharedMap(publishScript) {
   assert.equal(sharedMap.getFolderForSlug("ghost-cairn"), "ghost-cairn", "Shared folder map should know the new product folder.");
 }
 
-function addRequiredTextFields(formData) {
-  formData.set("title", "New Product");
-  formData.set("slug", "new-product");
-  formData.set("folder", "new-product");
-  formData.set("subtitle", "A test product");
-  formData.set("gameSystem", "System Neutral");
-  formData.set("gameSystemSlug", "system-neutral");
-  formData.set("productLine", "Other Games & Experiments");
-  formData.set("productLineSlug", "other-games-and-experiments");
-  formData.set("series", "Tablecraft");
-  formData.set("seriesSlug", "tablecraft");
-  formData.set("format", "PDF");
-  formData.set("status", "preview-available");
-  formData.set("buyMode", "preview-only");
-  formData.set("shortDescription", "Short description");
-  formData.set("longDescription", "Long description");
-  formData.set("version", "1.0");
+function addRequiredTextFields(formData, overrides = {}) {
+  const fields = {
+    title: "New Product",
+    slug: "new-product",
+    folder: "new-product",
+    subtitle: "A test product",
+    gameSystem: "System Neutral",
+    gameSystemSlug: "system-neutral",
+    productLine: "Other Games & Experiments",
+    productLineSlug: "other-games-and-experiments",
+    series: "Tablecraft",
+    seriesSlug: "tablecraft",
+    format: "PDF",
+    status: "preview-available",
+    buyMode: "preview-only",
+    shortDescription: "Short description",
+    longDescription: "Long description",
+    version: "1.0",
+    ...overrides
+  };
+
+  for (const [key, value] of Object.entries(fields)) {
+    formData.set(key, value);
+  }
 }
 
 function buildAuthenticatedPublishRequest(formData, cookieHeader) {
