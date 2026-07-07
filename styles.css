@@ -1314,6 +1314,13 @@ h4 {
   --bookshelf-cover-radius: 10px 16px 16px 10px;
 }
 
+.bookshelf-book[data-bookshelf-force-right="true"] {
+  --bookshelf-cover-left: calc(100% - 2px);
+  --bookshelf-cover-right: auto;
+  --bookshelf-cover-origin: left center;
+  --bookshelf-cover-rest-transform: rotateY(88deg) scale(0.96);
+}
+
 .catalog-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

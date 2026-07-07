@@ -445,8 +445,7 @@ function renderStoreHome(products, indexes) {
           kicker: "Featured",
           title: "Featured Shelf",
           description: "Manually chosen titles stay at eye level here so the shelf can spotlight work Tobacco Road Games wants front and center.",
-          products: featuredShelf,
-          forceOpenRightSlugs: ["sirrocans"]
+          products: featuredShelf
         }) : ""}
 
         ${newReleases.length ? renderBookshelfSection({
@@ -471,6 +470,7 @@ function renderStoreHome(products, indexes) {
             countLabel: "titles currently shown",
             shelfHeading: "Bookshelf View",
             shelfDescription: "Hover or focus a spine to turn it toward the cover, then open the full product page.",
+            forceOpenRightSlugs: ["sirrocans"],
             gridHeading: "Catalog View",
             gridDescription: "The same filtered titles stay available as cards for touch devices, scanning, and no-hover browsing."
           })}
@@ -937,10 +937,12 @@ function renderStoreBrowser(products, indexes, options = {}) {
     countLabel = "titles currently shown",
     shelfHeading = "",
     shelfDescription = "",
+    forceOpenRightSlugs = [],
     gridHeading = "",
     gridDescription = ""
   } = options;
   const initials = includeTitleIndex ? buildTitleIndex(products) : [];
+  const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
 
   return `
     <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}"${showShelf ? ' data-store-view="shelf" data-store-has-views="true"' : ""}>
@@ -969,7 +971,10 @@ function renderStoreBrowser(products, indexes, options = {}) {
             </div>
           ` : ""}
           <div class="bookshelf-grid" data-store-shelf>
-            ${products.map((product) => renderBookshelfBook(product, { withDataset: true })).join("")}
+            ${products.map((product) => renderBookshelfBook(product, {
+              withDataset: true,
+              forceOpenRight: forceOpenRightSlugSet.has(product.slug)
+            })).join("")}
           </div>
         </section>
       ` : ""}
