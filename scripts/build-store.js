@@ -445,7 +445,8 @@ function renderStoreHome(products, indexes) {
           kicker: "Featured",
           title: "Featured Shelf",
           description: "Manually chosen titles stay at eye level here so the shelf can spotlight work Tobacco Road Games wants front and center.",
-          products: featuredShelf
+          products: featuredShelf,
+          forceOpenRightSlugs: ["sirrocans"]
         }) : ""}
 
         ${newReleases.length ? renderBookshelfSection({
