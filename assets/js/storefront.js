@@ -38,13 +38,15 @@
       });
 
       rows.forEach((rowItems) => {
-        if (!rowItems.length) {
+        const autoEdgeCandidates = rowItems.filter((item) => item.dataset.bookshelfForceRight !== "true");
+
+        if (!autoEdgeCandidates.length) {
           return;
         }
 
-        const rightmost = rowItems.reduce((candidate, item) => {
+        const rightmost = autoEdgeCandidates.reduce((candidate, item) => {
           return item.offsetLeft > candidate.offsetLeft ? item : candidate;
-        }, rowItems[0]);
+        }, autoEdgeCandidates[0]);
 
         rightmost.classList.add("bookshelf-book--edge-right");
       });

@@ -423,6 +423,7 @@ function renderStoreHome(products, indexes) {
               <p class="creation-standard-title">Our Creation Standard</p>
               <p class="creation-standard-copy">Tobacco Road Games is not anti AI or pro AI. We are pro honesty, pro rights, pro quality, and pro customer choice.</p>
               <p class="creation-standard-copy">We do not reject tools. We reject deception, theft, spam, and lazy shovelware.</p>
+              <p class="creation-standard-copy">At Tobacco Road Games, buying a product means owning it. No subscriptions, no access fees, no vanishing bookshelf.</p>
               <p class="creation-standard-motto">Tell the truth. Own your work. Respect the buyer. Make something worth buying.</p>
             </article>
           </aside>
@@ -444,7 +445,8 @@ function renderStoreHome(products, indexes) {
           kicker: "Featured",
           title: "Featured Shelf",
           description: "Manually chosen titles stay at eye level here so the shelf can spotlight work Tobacco Road Games wants front and center.",
-          products: featuredShelf
+          products: featuredShelf,
+          forceOpenRightSlugs: ["sirrocans"]
         }) : ""}
 
         ${newReleases.length ? renderBookshelfSection({
@@ -903,10 +905,12 @@ function renderFeatureSpotlight(product) {
   `;
 }
 
-function renderBookshelfSection({ id, kicker, title, description, products }) {
+function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [] }) {
   if (!products.length) {
     return "";
   }
+
+  const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
 
   return `
     <section class="store-section" aria-labelledby="${escapeAttribute(id)}">
@@ -916,7 +920,9 @@ function renderBookshelfSection({ id, kicker, title, description, products }) {
         <p>${escapeHtml(description)}</p>
       </div>
       <div class="bookshelf-grid">
-        ${products.map((product) => renderBookshelfBook(product)).join("")}
+        ${products.map((product) => renderBookshelfBook(product, {
+          forceOpenRight: forceOpenRightSlugSet.has(product.slug)
+        })).join("")}
       </div>
     </section>
   `;
@@ -1075,12 +1081,13 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
 }
 
 function renderBookshelfBook(product, options = {}) {
-  const { withDataset = false } = options;
+  const { withDataset = false, forceOpenRight = false } = options;
   const dataset = withDataset ? renderProductDatasetAttributes(product) : "";
+  const forceOpenRightAttribute = forceOpenRight ? ' data-bookshelf-force-right="true"' : "";
   const authorName = product.authors.join(", ") || product.publisher;
 
   return `
-    <a class="bookshelf-book" href="${product.url}" ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
+    <a class="bookshelf-book" href="${product.url}"${forceOpenRightAttribute} ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">${escapeHtml(product.statusLabel)}</span>
