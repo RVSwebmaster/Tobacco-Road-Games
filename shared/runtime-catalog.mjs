@@ -250,7 +250,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
-    "buyMode": "preview-only",
+    "buyMode": "pay-what-you-want",
     "coverUrl": "/product-assets/tablecraft-primer/cover.webp",
     "currency": "USD",
     "effectivePriceCents": null,
@@ -258,12 +258,12 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "lastUpdated": "2026-06-17",
     "priceCents": null,
     "saleActive": false,
-    "saleEnabled": false,
+    "saleEnabled": true,
     "saleEnd": "",
     "salePriceCents": null,
     "saleStart": "",
     "slug": "tablecraft-primer",
-    "status": "preview-available",
+    "status": "pay-what-you-want",
     "title": "Tablecraft Primer",
     "updateEligible": true,
     "version": "2026 catalog preview"
