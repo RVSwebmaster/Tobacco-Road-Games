@@ -1,5 +1,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
+const pricingModule = require(path.join(__dirname, "..", "shared", "pricing.js"));
+
+const { getEffectivePriceDetails } = pricingModule;
 
 // Product source of truth lives in data/products.json and data/authors.js.
 // releases.js is deprecated in this site and is kept only as a warning stub.
@@ -9,7 +13,7 @@ const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260625e";
+const CACHE_BUST = "20260709a";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -45,6 +49,7 @@ const LEGACY_BUY_MODE_MAP = {
 };
 
 function main() {
+  buildRuntimeCatalog();
   const authors = loadAuthors();
   const authorLookup = buildAuthorLookup(authors);
   const products = loadProducts(authorLookup);
@@ -268,8 +273,10 @@ function loadProducts(authorLookup) {
       lastUpdated: product.lastUpdated || ""
     };
 
+    const priceDetails = getEffectivePriceDetails(normalized);
     normalized.url = `/store/products/${normalized.slug}/`;
-    normalized.saleActive = isSaleActive(normalized);
+    normalized.effectivePriceCents = priceDetails.effectivePriceCents;
+    normalized.saleActive = priceDetails.saleActive;
     normalized.assetSet = resolveProductAssets(normalized);
     normalized.releaseStamp = parseDate(normalized.releaseDate);
     normalized.updatedStamp = parseDate(normalized.lastUpdated);
@@ -1724,10 +1731,10 @@ function renderProductSchema(product) {
     url: `${BASE_URL}${product.url}`
   };
 
-  if (product.priceCents !== null && product.currency && product.buyUrl && isBuyModeActive(product.buyMode)) {
+  if (product.effectivePriceCents !== null && product.currency && product.buyUrl && isBuyModeActive(product.buyMode)) {
     schema.offers = {
       "@type": "Offer",
-      price: centsToDecimal(product.priceCents),
+      price: centsToDecimal(product.effectivePriceCents),
       priceCurrency: product.currency,
       availability: product.status === "available-direct" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
       url: product.buyUrl
@@ -1832,11 +1839,11 @@ function sortProducts(products, mode) {
   }
 
   if (mode === "price-low") {
-    return list.sort((a, b) => comparePriceCents(a.priceCents, b.priceCents));
+    return list.sort((a, b) => comparePriceCents(a.effectivePriceCents ?? a.priceCents, b.effectivePriceCents ?? b.priceCents));
   }
 
   if (mode === "price-high") {
-    return list.sort((a, b) => comparePriceCents(b.priceCents, a.priceCents));
+    return list.sort((a, b) => comparePriceCents(b.effectivePriceCents ?? b.priceCents, a.effectivePriceCents ?? a.priceCents));
   }
 
   return list.sort((a, b) => a.title.localeCompare(b.title));
@@ -1949,11 +1956,12 @@ function parseDate(value) {
 }
 
 function formatPrice(product) {
-  if (product.priceCents !== null) {
+  const displayPriceCents = product.effectivePriceCents ?? product.priceCents;
+  if (displayPriceCents !== null) {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: product.currency || "USD"
-    }).format(centsToDecimal(product.priceCents));
+    }).format(centsToDecimal(displayPriceCents));
   }
 
   if (product.price) {
@@ -1970,7 +1978,7 @@ function renderCardPrice(product) {
   if (product.buyMode === "free-download") {
     return "Free Download";
   }
-  if (product.priceCents !== null) {
+  if (product.effectivePriceCents !== null || product.priceCents !== null) {
     return formatPrice(product);
   }
   return product.statusLabel;
@@ -1987,7 +1995,7 @@ function renderDisplayPrice(product) {
     return "Free Download";
   }
 
-  if (product.priceCents !== null) {
+  if (product.effectivePriceCents !== null || product.priceCents !== null) {
     return formatPrice(product);
   }
 
@@ -2050,7 +2058,7 @@ function renderProductDatasetAttributes(product, searchText) {
     `data-status="${escapeAttribute(product.status)}"`,
     `data-format="${escapeAttribute(product.format.map(slugify).join("|"))}"`,
     `data-price-type="${escapeAttribute(slugify(product.priceTypeLabel))}"`,
-    `data-price-cents="${escapeAttribute(String(product.priceCents ?? -1))}"`,
+    `data-price-cents="${escapeAttribute(String(product.effectivePriceCents ?? product.priceCents ?? -1))}"`,
     `data-release="${escapeAttribute(String(product.releaseStamp))}"`,
     `data-updated="${escapeAttribute(String(product.updatedStamp))}"`,
     `data-sale-active="${product.saleActive ? "true" : "false"}"`,
@@ -2119,12 +2127,15 @@ function renderCartPage(products) {
           <div class="cart-layout" data-cart-page>
             <section class="cart-panel">
               <div class="initiative-empty" data-cart-empty>Your cart is empty. Add a product from the store to see it here.</div>
+              <p class="cart-summary__status" data-cart-status aria-live="polite">Add a cart-ready product to load a verified quote.</p>
               <div class="cart-item-list" data-cart-items></div>
+              <div class="cart-unavailable" data-cart-unavailable hidden></div>
             </section>
             <aside class="note-card cart-summary">
-              <p class="note-card__label">Estimated Total</p>
+              <p class="note-card__label" data-cart-total-label>Estimated Total</p>
               <p class="cart-summary__total" data-cart-total>$0.00</p>
-              <p class="cart-summary__copy">Final product availability and pricing will be verified during checkout.</p>
+              <p class="cart-summary__copy" data-cart-note>Final product availability and pricing will be verified during checkout.</p>
+              <button type="button" class="button button--secondary cart-summary__button" data-cart-retry hidden>Retry Verified Quote</button>
               <button type="button" class="button button--secondary button--pending cart-summary__button" disabled aria-disabled="true">Checkout Unavailable In This Phase</button>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
             </aside>
@@ -2222,34 +2233,12 @@ function isBuyModeActive(buyMode) {
 function isCartReady(product) {
   return product.buyMode === "cart"
     && product.status === "available-direct"
-    && Number.isInteger(product.priceCents)
-    && product.priceCents > 0;
+    && Number.isInteger(product.effectivePriceCents ?? product.priceCents)
+    && (product.effectivePriceCents ?? product.priceCents) > 0;
 }
 
 function resolveEstimatedCartPriceCents(product) {
-  if (product.saleActive && Number.isInteger(product.salePriceCents) && product.salePriceCents > 0) {
-    return product.salePriceCents;
-  }
-  return product.priceCents;
-}
-
-function isSaleActive(product) {
-  if (!product.saleEnabled || product.salePriceCents === null) {
-    return false;
-  }
-
-  const now = Date.now();
-  const start = parseDate(product.saleStart);
-  const end = parseDate(product.saleEnd);
-
-  if (start && now < start) {
-    return false;
-  }
-  if (end && now > end + 86400000 - 1) {
-    return false;
-  }
-
-  return true;
+  return product.effectivePriceCents ?? product.priceCents;
 }
 
 function inferBuyMode(product) {
@@ -2462,6 +2451,19 @@ function writeFile(relativePath, contents) {
   const filePath = path.join(ROOT, relativePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, contents);
+}
+
+function buildRuntimeCatalog() {
+  const scriptPath = path.join(ROOT, "scripts", "build-runtime-catalog.mjs");
+  const result = spawnSync(process.execPath, [scriptPath], {
+    cwd: ROOT,
+    encoding: "utf8"
+  });
+
+  if (result.status !== 0) {
+    const message = (result.stderr || result.stdout || "Unknown runtime catalog build error.").trim();
+    throw new Error(`Runtime catalog build failed. ${message}`);
+  }
 }
 
 main();

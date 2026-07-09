@@ -14,16 +14,16 @@
   <meta property="og:image" content="https://tobaccoroadgames.com/assets/logo.png">
   <meta name="theme-color" content="#120c08">
   
-  <link rel="icon" type="image/png" href="/assets/logo.png?v=20260625e">
-  <link rel="stylesheet" href="/styles.css?v=20260625e">
+  <link rel="icon" type="image/png" href="/assets/logo.png?v=20260709a">
+  <link rel="stylesheet" href="/styles.css?v=20260709a">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Tobacco Road Games Store Cart","description":"Review the Tobacco Road Games browser cart before checkout is enabled.","url":"https://tobaccoroadgames.com/store/cart/"}</script>
-  <script src="/assets/js/cart.js?v=20260625e" defer></script>
+  <script src="/assets/js/cart.js?v=20260709a" defer></script>
 </head>
 <body class="view-section">
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="/" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="/assets/logo.png?v=20260625e" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="/assets/logo.png?v=20260709a" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
           <span class="brand__tag">Publisher-owned store and workshop catalog</span>
@@ -54,12 +54,15 @@
           <div class="cart-layout" data-cart-page>
             <section class="cart-panel">
               <div class="initiative-empty" data-cart-empty>Your cart is empty. Add a product from the store to see it here.</div>
+              <p class="cart-summary__status" data-cart-status aria-live="polite">Add a cart-ready product to load a verified quote.</p>
               <div class="cart-item-list" data-cart-items></div>
+              <div class="cart-unavailable" data-cart-unavailable hidden></div>
             </section>
             <aside class="note-card cart-summary">
-              <p class="note-card__label">Estimated Total</p>
+              <p class="note-card__label" data-cart-total-label>Estimated Total</p>
               <p class="cart-summary__total" data-cart-total>$0.00</p>
-              <p class="cart-summary__copy">Final product availability and pricing will be verified during checkout.</p>
+              <p class="cart-summary__copy" data-cart-note>Final product availability and pricing will be verified during checkout.</p>
+              <button type="button" class="button button--secondary cart-summary__button" data-cart-retry hidden>Retry Verified Quote</button>
               <button type="button" class="button button--secondary button--pending cart-summary__button" disabled aria-disabled="true">Checkout Unavailable In This Phase</button>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
             </aside>
@@ -71,7 +74,7 @@
 
     <footer class="site-footer">
       <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="/assets/logo.png?v=20260625e" alt="">
+        <img src="/assets/logo.png?v=20260709a" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>

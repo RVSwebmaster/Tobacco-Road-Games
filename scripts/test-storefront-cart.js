@@ -6,10 +6,13 @@ const vm = require("node:vm");
 const { spawnSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..");
+const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
-function main() {
+async function main() {
   testCartStorageHelpers();
   testCartBrowserInitAndStorageSync();
+  await testCartQuoteFailureAndRetry();
+  await testCartUnavailableRemoval();
   testStoreGenerationCartMode();
   console.log("Storefront cart tests passed.");
 }
@@ -35,6 +38,12 @@ function testCartStorageHelpers() {
   api.addItem("sirrocans", storage);
   cart = api.readCart(storage);
   assert.equal(cart.items.length, 2, "Distinct products should be added to the cart.");
+  assert.deepEqual(JSON.parse(JSON.stringify(api.createQuoteRequest(cart))), {
+    items: [
+      { quantity: 1, slug: "agency" },
+      { quantity: 1, slug: "sirrocans" }
+    ]
+  }, "Quote requests should submit only slugs and fixed quantity.");
 
   api.removeItem("agency", storage);
   cart = api.readCart(storage);
@@ -88,13 +97,149 @@ function testCartBrowserInitAndStorageSync() {
   assert.equal(countBadge.textContent, "2", "Storage events should synchronize cart count across tabs.");
 }
 
+async function testCartQuoteFailureAndRetry() {
+  const document = createCartPageDocument([
+    {
+      cover: "/product-assets/agency/cover.webp",
+      currency: "USD",
+      priceCents: 500,
+      priceDisplay: "$5.00",
+      slug: "agency",
+      title: "Agency",
+      url: "/store/products/agency/"
+    }
+  ]);
+  const storage = createStorage();
+  storage.setItem("trg_cart_v1", JSON.stringify({
+    version: 1,
+    items: [
+      {
+        addedAt: new Date().toISOString(),
+        quantity: 1,
+        slug: "agency"
+      }
+    ],
+    updatedAt: new Date().toISOString()
+  }));
+
+  let requestCount = 0;
+  const fetchImpl = async () => {
+    requestCount += 1;
+    if (requestCount <= 2) {
+      throw new Error("synthetic failure");
+    }
+    return createJsonResponse({
+      includedTaxTotalCents: null,
+      items: [
+        {
+          authorDisplay: "RV Sawyer",
+          coverUrl: "/product-assets/agency/cover.webp",
+          currency: "USD",
+          effectivePriceCents: 400,
+          lineTotalCents: 400,
+          quantity: 1,
+          regularPriceCents: 500,
+          saleActive: true,
+          slug: "agency",
+          title: "Agency"
+        }
+      ],
+      pricingNote: TAX_NOTE,
+      quotedAt: new Date().toISOString(),
+      subtotalCents: 400,
+      taxInclusive: true,
+      totalCents: 400,
+      unavailableItems: []
+    });
+  };
+
+  const { api } = loadCartScript({
+    document,
+    fetchImpl,
+    storage,
+    window: createWindow()
+  });
+
+  await api.renderAll(document, storage, { fetchImpl });
+  assert.equal(document.totalLabel.textContent, "Estimated Total Only", "Quote failures should keep the total marked as an estimate.");
+  assert.equal(document.total.textContent, "$5.00", "Quote failures should preserve the browser estimate.");
+  assert.match(document.note.textContent, /estimates only/i, "Quote failures should warn that prices are estimates only.");
+  assert.equal(document.retryButton.hidden, false, "Quote failures should expose a retry button.");
+  assert.match(document.items.innerHTML, /Estimated price: \$5\.00/, "Estimated item pricing should render before quote recovery.");
+
+  document.retryButton.click();
+  await flushTasks();
+
+  assert.equal(document.totalLabel.textContent, "Final Listed Total", "Retry should replace estimates with a verified total.");
+  assert.equal(document.total.textContent, "$4.00", "Retry should render the verified server quote.");
+  assert.equal(document.note.textContent, TAX_NOTE, "Retry should render the exact tax-inclusive pricing note.");
+  assert.equal(document.retryButton.hidden, true, "Retry button should hide after quote recovery.");
+  assert.match(document.items.innerHTML, /Verified sale price: \$4\.00/, "Verified item pricing should replace browser estimates.");
+}
+
+async function testCartUnavailableRemoval() {
+  const document = createCartPageDocument([]);
+  const storage = createStorage();
+  storage.setItem("trg_cart_v1", JSON.stringify({
+    version: 1,
+    items: [
+      {
+        addedAt: new Date().toISOString(),
+        quantity: 1,
+        slug: "missing-book"
+      }
+    ],
+    updatedAt: new Date().toISOString()
+  }));
+
+  const fetchImpl = async () => createJsonResponse({
+    includedTaxTotalCents: null,
+    items: [],
+    pricingNote: TAX_NOTE,
+    quotedAt: new Date().toISOString(),
+    subtotalCents: 0,
+    taxInclusive: true,
+    totalCents: 0,
+    unavailableItems: [
+      {
+        code: "unknown_slug",
+        message: "This item is not available for checkout.",
+        quantity: 1,
+        slug: "missing-book"
+      }
+    ]
+  });
+
+  const { api } = loadCartScript({
+    document,
+    fetchImpl,
+    storage,
+    window: createWindow()
+  });
+
+  await api.renderAll(document, storage, { fetchImpl });
+  assert.equal(document.unavailable.hidden, false, "Unavailable quote items should render in a dedicated state.");
+  assert.match(document.unavailable.innerHTML, /This item is not available for checkout\./, "Unavailable items should explain why checkout is blocked.");
+
+  const removeButtons = document.unavailable.querySelectorAll("[data-cart-remove]");
+  assert.equal(removeButtons.length, 1, "Unavailable items should still be removable.");
+  removeButtons[0].click();
+  await flushTasks();
+
+  const cart = api.readCart(storage);
+  assert.equal(cart.items.length, 0, "Removing an unavailable item should persist to localStorage.");
+  assert.equal(document.countBadge.textContent, "0", "Removing an unavailable item should update the cart badge.");
+}
+
 function testStoreGenerationCartMode() {
   const tempRoot = createTempRepo([
     "assets/js/cart.js",
     "data/authors.js",
     "data/bundle-rules.json",
     "data/products.json",
+    "scripts/build-runtime-catalog.mjs",
     "scripts/build-store.js",
+    "shared/pricing.js",
     "styles.css"
   ]);
   const productsPath = path.join(tempRoot, "data", "products.json");
@@ -110,9 +255,11 @@ function testStoreGenerationCartMode() {
     buyUrl: "",
     price: "4.99",
     priceCents: 499,
-    saleEnabled: false,
-    salePrice: "",
-    salePriceCents: null,
+    saleEnabled: true,
+    salePrice: "3.99",
+    salePriceCents: 399,
+    saleStart: "2026-01-01",
+    saleEnd: "2027-12-31",
     coverImage: "/product-assets/cart-test-product/cover.webp",
     previewImage: "/product-assets/cart-test-product/preview.webp",
     frontCoverImage: "/product-assets/cart-test-product/cover.webp"
@@ -145,22 +292,33 @@ function testStoreGenerationCartMode() {
   assert.match(cartProductPage, /Add to Cart/, "Cart product pages should render Add to Cart.");
   assert.match(cartProductPage, /assets\/js\/cart\.js\?v=/, "Cart product pages should load the shared cart script.");
   assert.match(cartProductPage, /data-cart-add="cart-test-product"/, "Cart product pages should expose the cart control slug.");
+  assert.match(cartProductPage, /\$3\.99/, "Cart product pages should render the effective sale price.");
 
   const catalogPage = fs.readFileSync(path.join(tempRoot, "store", "catalog", "index.html"), "utf8");
   assert.match(catalogPage, /data-cart-add="cart-test-product"/, "Catalog cards should render Add to Cart for cart products.");
+  assert.match(catalogPage, /data-price-cents="399"/, "Catalog cards should carry the effective price in dataset filters.");
 
   const cartPagePath = path.join(tempRoot, "store", "cart", "index.html");
   assert.ok(fs.existsSync(cartPagePath), "The generated cart page should exist.");
   const cartPage = fs.readFileSync(cartPagePath, "utf8");
-  assert.match(cartPage, /Final product availability and pricing will be verified during checkout\./, "The cart page should explain estimated pricing.");
-  assert.match(cartPage, /Checkout Unavailable In This Phase/, "The cart page should include a disabled checkout control.");
-  assert.match(cartPage, /trg-cart-catalog/, "The cart page should include the embedded cart catalog.");
+  assert.match(cartPage, /data-cart-status/, "The cart page should include verified quote status messaging.");
+  assert.match(cartPage, /data-cart-note/, "The cart page should include a quote note container.");
+  assert.match(cartPage, /data-cart-total-label/, "The cart page should include a labeled total state.");
+  assert.match(cartPage, /data-cart-retry/, "The cart page should include a retry control.");
+  assert.match(cartPage, /data-cart-unavailable/, "The cart page should include an unavailable-item container.");
+  assert.match(cartPage, /Checkout Unavailable In This Phase/, "The cart page should keep checkout disabled in this phase.");
+  assert.match(cartPage, /\"priceCents\":399/, "Embedded cart catalog estimates should use the effective sale price.");
+
+  const runtimeCatalogPath = path.join(tempRoot, "shared", "runtime-catalog.mjs");
+  assert.ok(fs.existsSync(runtimeCatalogPath), "Store builds should generate the runtime catalog.");
+  const runtimeCatalog = fs.readFileSync(runtimeCatalogPath, "utf8");
+  assert.match(runtimeCatalog, /Do not hand-edit this file\./, "Generated runtime catalogs should be clearly marked as generated.");
 
   const fixedPricePage = fs.readFileSync(path.join(tempRoot, "store", "products", "fixed-price-fixture", "index.html"), "utf8");
   assert.match(fixedPricePage, />Buy Now</, "Existing fixed-price purchase modes should remain functional.");
 }
 
-function loadCartScript({ document, window, storage }) {
+function loadCartScript({ document, fetchImpl, storage, window }) {
   const scriptPath = path.join(ROOT, "assets", "js", "cart.js");
   const script = fs.readFileSync(scriptPath, "utf8");
   const context = {
@@ -168,6 +326,16 @@ function loadCartScript({ document, window, storage }) {
     Date,
     Intl,
     JSON,
+    fetch: fetchImpl || (async () => createJsonResponse({
+      includedTaxTotalCents: null,
+      items: [],
+      pricingNote: TAX_NOTE,
+      quotedAt: new Date().toISOString(),
+      subtotalCents: 0,
+      taxInclusive: true,
+      totalCents: 0,
+      unavailableItems: []
+    })),
     localStorage: storage,
     document,
     window,
@@ -234,11 +402,46 @@ function createDocument() {
   };
 }
 
+function createCartPageDocument(catalogEntries) {
+  const document = createDocument();
+  document.pageRoot = createElement();
+  document.items = createMarkupContainer();
+  document.empty = createElement("Your cart is empty.");
+  document.total = createElement("$0.00");
+  document.totalLabel = createElement("Estimated Total");
+  document.note = createElement("");
+  document.status = createElement("");
+  document.retryButton = createElement("Retry Verified Quote");
+  document.retryButton.hidden = true;
+  document.unavailable = createMarkupContainer();
+  document.unavailable.hidden = true;
+  document.clearButton = createElement("Clear Cart");
+  document.countBadge = createElement("0");
+
+  document.register("[data-cart-page]", [document.pageRoot]);
+  document.register("[data-cart-items]", [document.items]);
+  document.register("[data-cart-empty]", [document.empty]);
+  document.register("[data-cart-total]", [document.total]);
+  document.register("[data-cart-total-label]", [document.totalLabel]);
+  document.register("[data-cart-note]", [document.note]);
+  document.register("[data-cart-status]", [document.status]);
+  document.register("[data-cart-retry]", [document.retryButton]);
+  document.register("[data-cart-unavailable]", [document.unavailable]);
+  document.register("[data-cart-clear]", [document.clearButton]);
+  document.register("[data-cart-count]", [document.countBadge]);
+  document.registerId("trg-cart-catalog", {
+    textContent: JSON.stringify(catalogEntries)
+  });
+
+  return document;
+}
+
 function createElement(textContent = "", dataset = {}) {
   return {
     dataset: { ...dataset },
     disabled: false,
     hidden: false,
+    innerHTML: "",
     listeners: new Map(),
     textContent,
     addEventListener(type, handler) {
@@ -262,6 +465,29 @@ function createElement(textContent = "", dataset = {}) {
   };
 }
 
+function createMarkupContainer() {
+  const element = createElement();
+  const selectorMap = new Map();
+  let markup = "";
+
+  Object.defineProperty(element, "innerHTML", {
+    enumerable: true,
+    get() {
+      return markup;
+    },
+    set(value) {
+      markup = String(value || "");
+      const removeButtons = Array.from(markup.matchAll(/data-cart-remove="([^"]+)"/g), (match) => createElement("Remove", {
+        cartRemove: match[1]
+      }));
+      selectorMap.set("[data-cart-remove]", removeButtons);
+    }
+  });
+
+  element.querySelectorAll = (selector) => selectorMap.get(selector) || [];
+  return element;
+}
+
 function createWindow() {
   const listeners = new Map();
   return {
@@ -277,4 +503,22 @@ function createWindow() {
   };
 }
 
-main();
+function createJsonResponse(payload, status = 200) {
+  return {
+    async json() {
+      return payload;
+    },
+    ok: status >= 200 && status < 300,
+    status
+  };
+}
+
+async function flushTasks() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

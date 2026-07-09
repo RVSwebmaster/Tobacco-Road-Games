@@ -783,7 +783,9 @@ async function testNewProductBuildAndSharedMap(publishScript) {
     "data/authors.js",
     "data/product-intake-map.json",
     "data/products.json",
+    "scripts/build-runtime-catalog.mjs",
     "scripts/build-store.js",
+    "shared/pricing.js",
     "shared/product-folder-map.mjs"
   ]);
 
