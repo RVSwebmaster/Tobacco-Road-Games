@@ -50,6 +50,7 @@ function buildRuntimeCatalogEntry(product) {
     currency: price.currency,
     effectivePriceCents: price.effectivePriceCents,
     fulfillmentEligible: product.libraryEligible !== false,
+    lastUpdated: String(product.lastUpdated || "").trim(),
     priceCents: price.regularPriceCents,
     saleActive: price.saleActive,
     saleEnabled: Boolean(product.saleEnabled),
