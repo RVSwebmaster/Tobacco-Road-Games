@@ -2,13 +2,14 @@
 
 This repository does not assume the Tobacco Road Games orders database already exists.
 
-Phase 3A adds the internal order ledger schema and a temporary development endpoint:
+Phase 3A added the internal order ledger schema and Phase 3B moves checkout creation onto the cart endpoint:
 
 - D1 binding name: `TRG_ORDERS`
 - Migration path: `migrations/001_direct_storefront.sql`
-- Temporary development route: `POST /api/orders/pending`
+- Active checkout route: `POST /api/cart/checkout`
+- Disabled temporary route: `POST /api/orders/pending`
 
-`/api/orders/pending` is for development and integration testing only. Before live checkout goes live, this route must be removed, disabled, or folded into the real checkout flow.
+`/api/orders/pending` is no longer the active checkout entry point. It now returns a disabled response so the cart checkout route can own pending-order creation before Stripe Session creation.
 
 ## Manual Cloudflare setup required
 
@@ -23,6 +24,8 @@ Required binding:
 Required secret:
 
 - `ORDER_EMAIL_HASH_SECRET`
+- `CHECKOUT_ACCESS_COOKIE_SECRET`
+- `STRIPE_SECRET_KEY` for sandbox checkout only
 
 Do not commit account identifiers, database IDs, secrets, or dashboard export files into this repo.
 

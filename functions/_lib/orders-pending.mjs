@@ -121,7 +121,7 @@ export async function handlePendingOrderRequest(request, env = {}, options = {})
   }, 201);
 }
 
-async function parsePendingOrderRequest(request) {
+export async function parsePendingOrderRequest(request) {
   let rawBody = "";
   try {
     rawBody = await request.text();
@@ -175,7 +175,7 @@ async function parsePendingOrderRequest(request) {
   };
 }
 
-function resolvePendingOrderItems(requestItems, catalogMap, options = {}) {
+export function resolvePendingOrderItems(requestItems, catalogMap, options = {}) {
   const seen = new Set();
   const unavailableItems = [];
   const resolvedItems = [];

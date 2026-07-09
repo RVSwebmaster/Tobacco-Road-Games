@@ -1,1 +1,1 @@
-export { handlePendingOrderRequest, onRequestPost } from "../../_lib/orders-pending.mjs";
+export { onRequestPost } from "../../_lib/orders-pending-route.mjs";

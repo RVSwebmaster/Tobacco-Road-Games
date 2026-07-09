@@ -2,6 +2,8 @@
   const STORAGE_KEY = "trg_cart_v1";
   const SCHEMA_VERSION = 1;
   const QUOTE_ENDPOINT = "/api/cart/quote";
+  const CHECKOUT_ENDPOINT = "/api/cart/checkout";
+  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const DEFAULT_ESTIMATE_NOTE = "Final product availability and pricing will be verified during checkout.";
   const QUOTE_LOADING_NOTE = "Loading a verified quote from the store.";
   const QUOTE_FAILURE_NOTE = "We could not verify pricing right now. These browser values are estimates only until the store can refresh the cart quote.";
@@ -182,6 +184,14 @@
     };
   }
 
+  function createCheckoutRequest(cart, email, emailConfirmation) {
+    return {
+      email,
+      emailConfirmation,
+      items: createQuoteRequest(cart).items
+    };
+  }
+
   async function requestQuote(cart, fetchImpl = globalThis.fetch) {
     if (typeof fetchImpl !== "function") {
       throw new Error("Verified quote fetch is unavailable.");
@@ -195,20 +205,36 @@
       method: "POST"
     });
 
-    let payload = null;
-    try {
-      payload = await response.json();
-    } catch {
-      // Leave payload null so the error path can use a generic message.
-    }
-
+    const payload = await safeJson(response);
     if (!response.ok) {
-      const message = payload?.error || "Verified quote request failed.";
-      throw new Error(String(message));
+      throw new Error(payload?.error || "Verified quote request failed.");
     }
-
     if (!payload || !Array.isArray(payload.items) || !Array.isArray(payload.unavailableItems)) {
       throw new Error("Verified quote response was not valid.");
+    }
+
+    return payload;
+  }
+
+  async function requestCheckout(cart, email, emailConfirmation, fetchImpl = globalThis.fetch) {
+    if (typeof fetchImpl !== "function") {
+      throw new Error("Checkout request is unavailable.");
+    }
+
+    const response = await fetchImpl(CHECKOUT_ENDPOINT, {
+      body: JSON.stringify(createCheckoutRequest(cart, email, emailConfirmation)),
+      headers: {
+        "content-type": "application/json"
+      },
+      method: "POST"
+    });
+
+    const payload = await safeJson(response);
+    if (!response.ok) {
+      throw new Error(payload?.error || "Checkout could not be started.");
+    }
+    if (!payload || typeof payload.checkoutUrl !== "string") {
+      throw new Error("Checkout response was not valid.");
     }
 
     return payload;
@@ -262,6 +288,11 @@
     }
 
     return {
+      checkoutFeedbackNode: documentRef.querySelector?.("[data-cart-checkout-feedback]") || null,
+      checkoutForm: documentRef.querySelector?.("[data-cart-checkout-form]") || null,
+      checkoutSubmitButton: documentRef.querySelector?.("[data-cart-checkout-submit]") || null,
+      emailConfirmationInput: documentRef.querySelector?.("[data-cart-email-confirmation]") || null,
+      emailInput: documentRef.querySelector?.("[data-cart-email]") || null,
       emptyNode,
       itemsNode,
       noteNode: documentRef.querySelector?.("[data-cart-note]") || null,
@@ -277,6 +308,9 @@
   function getCartPageState(pageRoot) {
     if (!pageRoot.__trgCartState) {
       pageRoot.__trgCartState = {
+        checkoutBusy: false,
+        checkoutFeedbackMode: "validation",
+        latestModel: null,
         requestId: 0
       };
     }
@@ -317,6 +351,7 @@
     });
 
     return {
+      checkoutReady: false,
       items,
       note: DEFAULT_ESTIMATE_NOTE,
       retryHidden: true,
@@ -359,6 +394,7 @@
     });
 
     return {
+      checkoutReady: items.length > 0 && unavailableItems.length === 0,
       items,
       note: quote.pricingNote || DEFAULT_ESTIMATE_NOTE,
       retryHidden: true,
@@ -462,9 +498,32 @@
         void renderAll(documentRef, storage, options);
       });
     }
+
+    if (nodes.checkoutForm && nodes.checkoutForm.dataset.cartBound !== "true") {
+      nodes.checkoutForm.dataset.cartBound = "true";
+      nodes.checkoutForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await submitCheckout(documentRef, storage, options);
+      });
+    }
+
+    [nodes.emailInput, nodes.emailConfirmationInput].filter(Boolean).forEach((input) => {
+      if (input.dataset.cartBound === "true") {
+        return;
+      }
+      input.dataset.cartBound = "true";
+      input.addEventListener("input", () => {
+        const state = getCartPageState(nodes.pageRoot);
+        state.checkoutFeedbackMode = "validation";
+        updateCheckoutControls(nodes, getCartPageState(nodes.pageRoot));
+      });
+    });
   }
 
   function applyCartModel(nodes, model) {
+    const state = getCartPageState(nodes.pageRoot);
+    state.latestModel = model;
+
     nodes.itemsNode.innerHTML = model.items.map((item) => renderCartItemMarkup(item)).join("");
     nodes.emptyNode.hidden = model.items.length !== 0 || model.unavailableItems.length !== 0;
     nodes.totalNode.textContent = formatCents(model.totalCents);
@@ -485,6 +544,8 @@
       nodes.unavailableNode.innerHTML = renderUnavailableMarkup(model.unavailableItems);
       nodes.unavailableNode.hidden = model.unavailableItems.length === 0;
     }
+
+    updateCheckoutControls(nodes, state);
   }
 
   async function renderCartPage(documentRef, storage = getStorage(), options = {}) {
@@ -529,6 +590,88 @@
     await renderCartPage(documentRef, storage, options);
   }
 
+  async function submitCheckout(documentRef, storage = getStorage(), options = {}) {
+    const nodes = getCartPageNodes(documentRef);
+    if (!nodes) {
+      return;
+    }
+
+    const state = getCartPageState(nodes.pageRoot);
+    const email = String(nodes.emailInput?.value || "").trim();
+    const emailConfirmation = String(nodes.emailConfirmationInput?.value || "").trim();
+    const validationMessage = getCheckoutValidationMessage(state.latestModel, email, emailConfirmation);
+    if (validationMessage) {
+      state.checkoutFeedbackMode = "validation";
+      setCheckoutFeedback(nodes, validationMessage);
+      updateCheckoutControls(nodes, state);
+      return;
+    }
+
+    state.checkoutBusy = true;
+    state.checkoutFeedbackMode = "server";
+    setCheckoutFeedback(nodes, "Opening Stripe-hosted checkout.");
+    updateCheckoutControls(nodes, state);
+
+    try {
+      const cart = readCart(storage);
+      const payload = await requestCheckout(cart, email, emailConfirmation, options.fetchImpl || globalThis.fetch);
+      if (options.onCheckoutRedirect) {
+        options.onCheckoutRedirect(payload.checkoutUrl, payload);
+      } else if (options.window?.location) {
+        options.window.location.assign(payload.checkoutUrl);
+      } else if (globalThis.location) {
+        globalThis.location.assign(payload.checkoutUrl);
+      }
+    } catch (error) {
+      state.checkoutFeedbackMode = "server";
+      setCheckoutFeedback(nodes, error instanceof Error ? error.message : "Checkout could not be started.");
+      state.checkoutBusy = false;
+      updateCheckoutControls(nodes, state);
+    }
+  }
+
+  function updateCheckoutControls(nodes, state) {
+    if (!nodes.checkoutSubmitButton) {
+      return;
+    }
+
+    const model = state.latestModel;
+    const email = String(nodes.emailInput?.value || "").trim();
+    const emailConfirmation = String(nodes.emailConfirmationInput?.value || "").trim();
+    const validationMessage = getCheckoutValidationMessage(model, email, emailConfirmation);
+    const disabled = state.checkoutBusy || Boolean(validationMessage);
+
+    nodes.checkoutSubmitButton.disabled = disabled;
+    nodes.checkoutSubmitButton.setAttribute("aria-disabled", disabled ? "true" : "false");
+    nodes.checkoutSubmitButton.textContent = state.checkoutBusy ? "Redirecting to Stripe Checkout..." : "Continue to Secure Checkout";
+
+    if (!state.checkoutBusy && state.checkoutFeedbackMode === "validation") {
+      setCheckoutFeedback(nodes, validationMessage || "");
+    }
+  }
+
+  function getCheckoutValidationMessage(model, email, emailConfirmation) {
+    if (!model?.checkoutReady) {
+      return "A verified quote is required before checkout can begin.";
+    }
+    if (!email || !emailConfirmation) {
+      return "Enter and confirm your email to continue.";
+    }
+    if (!EMAIL_PATTERN.test(email) || !EMAIL_PATTERN.test(emailConfirmation)) {
+      return "Enter a valid email address to continue.";
+    }
+    if (email.toLowerCase() !== emailConfirmation.toLowerCase()) {
+      return "Email confirmation must match.";
+    }
+    return "";
+  }
+
+  function setCheckoutFeedback(nodes, message) {
+    if (nodes.checkoutFeedbackNode) {
+      nodes.checkoutFeedbackNode.textContent = String(message || "");
+    }
+  }
+
   function initBrowserCart(options = {}) {
     const documentRef = options.document || globalThis.document;
     const windowRef = options.window || globalThis;
@@ -566,12 +709,22 @@
     };
   }
 
+  async function safeJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
   const api = {
+    CHECKOUT_ENDPOINT,
     QUOTE_ENDPOINT,
     STORAGE_KEY,
     addItem,
     clearCart,
     countItems,
+    createCheckoutRequest,
     createEmptyCart,
     createQuoteRequest,
     formatCents,
@@ -580,6 +733,7 @@
     readCart,
     removeItem,
     renderAll,
+    requestCheckout,
     requestQuote,
     sanitizeCart,
     writeCart

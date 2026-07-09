@@ -13,6 +13,7 @@ async function main() {
   testCartBrowserInitAndStorageSync();
   await testCartQuoteFailureAndRetry();
   await testCartUnavailableRemoval();
+  await testCartCheckoutRedirect();
   testStoreGenerationCartMode();
   console.log("Storefront cart tests passed.");
 }
@@ -125,7 +126,7 @@ async function testCartQuoteFailureAndRetry() {
   let requestCount = 0;
   const fetchImpl = async () => {
     requestCount += 1;
-    if (requestCount <= 2) {
+    if (requestCount === 1) {
       throw new Error("synthetic failure");
     }
     return createJsonResponse({
@@ -231,6 +232,131 @@ async function testCartUnavailableRemoval() {
   assert.equal(document.countBadge.textContent, "0", "Removing an unavailable item should update the cart badge.");
 }
 
+async function testCartCheckoutRedirect() {
+  const document = createCartPageDocument([
+    {
+      cover: "/product-assets/agency/cover.webp",
+      currency: "USD",
+      priceCents: 400,
+      priceDisplay: "$4.00",
+      slug: "agency",
+      title: "Agency",
+      url: "/store/products/agency/"
+    }
+  ]);
+  const storage = createStorage();
+  const windowRef = createWindow();
+  storage.setItem("trg_cart_v1", JSON.stringify({
+    version: 1,
+    items: [
+      {
+        addedAt: new Date().toISOString(),
+        quantity: 1,
+        slug: "agency"
+      }
+    ],
+    updatedAt: new Date().toISOString()
+  }));
+
+  let quoteCount = 0;
+  let checkoutBody = null;
+  let redirectedTo = "";
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url).includes("/api/cart/quote")) {
+      quoteCount += 1;
+      return createJsonResponse({
+        includedTaxTotalCents: null,
+        items: [
+          {
+            authorDisplay: "RV Sawyer",
+            coverUrl: "/product-assets/agency/cover.webp",
+            currency: "USD",
+            effectivePriceCents: 400,
+            lineTotalCents: 400,
+            quantity: 1,
+            regularPriceCents: 500,
+            saleActive: true,
+            slug: "agency",
+            title: "Agency"
+          }
+        ],
+        pricingNote: TAX_NOTE,
+        quotedAt: new Date().toISOString(),
+        subtotalCents: 400,
+        taxInclusive: true,
+        totalCents: 400,
+        unavailableItems: []
+      });
+    }
+
+    assert.equal(String(url), "/api/cart/checkout", "Checkout should post to the checkout endpoint.");
+    checkoutBody = JSON.parse(options.body);
+    return createJsonResponse({
+      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test_123",
+      createdAt: new Date().toISOString(),
+      currency: "USD",
+      items: [
+        {
+          authorDisplay: "RV Sawyer",
+          currency: "USD",
+          effectiveUnitPriceCents: 400,
+          lineTotalCents: 400,
+          quantity: 1,
+          regularPriceCents: 500,
+          saleActive: true,
+          slug: "agency",
+          title: "Agency"
+        }
+      ],
+      paymentStatus: "pending",
+      pricingNote: TAX_NOTE,
+      publicOrderReference: "TRG-ABCDEF123456-1234ABCD",
+      subtotalCents: 400,
+      taxInclusive: true,
+      totalCents: 400
+    });
+  };
+
+  const { api } = loadCartScript({
+    document,
+    fetchImpl,
+    storage,
+    window: windowRef
+  });
+
+  await api.renderAll(document, storage, {
+    fetchImpl,
+    onCheckoutRedirect(url) {
+      redirectedTo = String(url);
+    },
+    window: windowRef
+  });
+  assert.equal(document.checkoutSubmitButton.disabled, true, "Checkout should stay disabled until email fields are completed.");
+
+  document.emailInput.value = "buyer@example.com";
+  document.emailInput.dispatchInput();
+  document.emailConfirmationInput.value = "buyer@example.com";
+  document.emailConfirmationInput.dispatchInput();
+
+  assert.equal(document.checkoutSubmitButton.disabled, false, "Checkout should enable once the quote is verified and emails match.");
+  const submitHandler = document.checkoutForm.listeners.get("submit");
+  await submitHandler({
+    currentTarget: document.checkoutForm,
+    preventDefault() {}
+  });
+
+  assert.ok(checkoutBody, "Successful checkout should submit a checkout request.");
+  assert.deepEqual(checkoutBody, {
+    email: "buyer@example.com",
+    emailConfirmation: "buyer@example.com",
+    items: [
+      { quantity: 1, slug: "agency" }
+    ]
+  }, "Checkout should submit only confirmed email and cart slugs.");
+  assert.equal(redirectedTo, "https://checkout.stripe.com/c/pay/cs_test_123", "Successful checkout should redirect the browser to Stripe-hosted Checkout.");
+  assert.ok(quoteCount >= 1, "Checkout should still rely on a verified quote before redirecting.");
+}
+
 function testStoreGenerationCartMode() {
   const tempRoot = createTempRepo([
     "assets/js/cart.js",
@@ -306,7 +432,9 @@ function testStoreGenerationCartMode() {
   assert.match(cartPage, /data-cart-total-label/, "The cart page should include a labeled total state.");
   assert.match(cartPage, /data-cart-retry/, "The cart page should include a retry control.");
   assert.match(cartPage, /data-cart-unavailable/, "The cart page should include an unavailable-item container.");
-  assert.match(cartPage, /Checkout Unavailable In This Phase/, "The cart page should keep checkout disabled in this phase.");
+  assert.match(cartPage, /data-cart-checkout-form/, "The cart page should include the checkout email form.");
+  assert.match(cartPage, /data-cart-checkout-submit/, "The cart page should include the checkout submit control.");
+  assert.match(cartPage, /Continue to Secure Checkout/, "The cart page should expose the Stripe-hosted checkout control.");
   assert.match(cartPage, /\"priceCents\":399/, "Embedded cart catalog estimates should use the effective sale price.");
 
   const runtimeCatalogPath = path.join(tempRoot, "shared", "runtime-catalog.mjs");
@@ -337,8 +465,8 @@ function loadCartScript({ document, fetchImpl, storage, window }) {
       unavailableItems: []
     })),
     localStorage: storage,
-    document,
-    window,
+    document: undefined,
+    window: undefined,
     globalThis: null
   };
   context.globalThis = context;
@@ -417,6 +545,12 @@ function createCartPageDocument(catalogEntries) {
   document.unavailable.hidden = true;
   document.clearButton = createElement("Clear Cart");
   document.countBadge = createElement("0");
+  document.checkoutForm = createFormElement();
+  document.checkoutSubmitButton = createElement("Continue to Secure Checkout");
+  document.checkoutSubmitButton.disabled = true;
+  document.checkoutFeedback = createElement("");
+  document.emailInput = createInputElement();
+  document.emailConfirmationInput = createInputElement();
 
   document.register("[data-cart-page]", [document.pageRoot]);
   document.register("[data-cart-items]", [document.items]);
@@ -429,6 +563,11 @@ function createCartPageDocument(catalogEntries) {
   document.register("[data-cart-unavailable]", [document.unavailable]);
   document.register("[data-cart-clear]", [document.clearButton]);
   document.register("[data-cart-count]", [document.countBadge]);
+  document.register("[data-cart-checkout-form]", [document.checkoutForm]);
+  document.register("[data-cart-checkout-submit]", [document.checkoutSubmitButton]);
+  document.register("[data-cart-checkout-feedback]", [document.checkoutFeedback]);
+  document.register("[data-cart-email]", [document.emailInput]);
+  document.register("[data-cart-email-confirmation]", [document.emailConfirmationInput]);
   document.registerId("trg-cart-catalog", {
     textContent: JSON.stringify(catalogEntries)
   });
@@ -465,6 +604,35 @@ function createElement(textContent = "", dataset = {}) {
   };
 }
 
+function createInputElement() {
+  const element = createElement("");
+  element.value = "";
+  element.dispatchInput = () => {
+    const handler = element.listeners.get("input");
+    if (handler) {
+      handler({
+        currentTarget: element,
+        preventDefault() {}
+      });
+    }
+  };
+  return element;
+}
+
+function createFormElement() {
+  const element = createElement("");
+  element.submit = () => {
+    const handler = element.listeners.get("submit");
+    if (handler) {
+      handler({
+        currentTarget: element,
+        preventDefault() {}
+      });
+    }
+  };
+  return element;
+}
+
 function createMarkupContainer() {
   const element = createElement();
   const selectorMap = new Map();
@@ -498,6 +666,12 @@ function createWindow() {
       const handler = listeners.get("storage");
       if (handler) {
         handler({ key });
+      }
+    },
+    location: {
+      assignedUrl: "",
+      assign(url) {
+        this.assignedUrl = String(url);
       }
     }
   };

@@ -2135,8 +2135,20 @@ function renderCartPage(products) {
               <p class="note-card__label" data-cart-total-label>Estimated Total</p>
               <p class="cart-summary__total" data-cart-total>$0.00</p>
               <p class="cart-summary__copy" data-cart-note>Final product availability and pricing will be verified during checkout.</p>
+              <form class="cart-checkout-form" data-cart-checkout-form novalidate>
+                <label class="cart-checkout-form__field">
+                  <span>Email</span>
+                  <input type="email" name="email" autocomplete="email" inputmode="email" data-cart-email>
+                </label>
+                <label class="cart-checkout-form__field">
+                  <span>Confirm Email</span>
+                  <input type="email" name="emailConfirmation" autocomplete="email" inputmode="email" data-cart-email-confirmation>
+                </label>
+                <p class="cart-summary__copy">Checkout opens on a Stripe-hosted page. This phase uses sandbox checkout only.</p>
+                <p class="cart-checkout-form__feedback" data-cart-checkout-feedback aria-live="polite"></p>
+                <button type="submit" class="button button--primary cart-summary__button" data-cart-checkout-submit disabled aria-disabled="true">Continue to Secure Checkout</button>
+              </form>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-retry hidden>Retry Verified Quote</button>
-              <button type="button" class="button button--secondary button--pending cart-summary__button" disabled aria-disabled="true">Checkout Unavailable In This Phase</button>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
             </aside>
           </div>
