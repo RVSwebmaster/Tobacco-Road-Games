@@ -37,6 +37,7 @@ const STATUS_LABELS = {
 
 const ALLOWED_BUY_MODES = new Set([
   "available-direct",
+  "cart",
   "coming-soon",
   "fixed-price",
   "free-download",
@@ -168,6 +169,19 @@ function parsePublishForm(formData) {
     errors.push("Buy mode is not one of the supported storefront values.");
   }
 
+  const priceText = normalizeMoneyText(formData.get("price"));
+  const priceCents = normalizePriceCents(formData.get("price"));
+  const buyUrl = String(formData.get("buyUrl") || "").trim();
+
+  if (buyMode === "cart") {
+    if (status !== "available-direct") {
+      errors.push("Cart products must use Available Direct status.");
+    }
+    if (!Number.isInteger(priceCents) || priceCents <= 0) {
+      errors.push("Cart products require a positive price.");
+    }
+  }
+
   const formatList = String(formData.get("format") || "PDF")
     .split(",")
     .map((entry) => entry.trim())
@@ -185,7 +199,7 @@ function parsePublishForm(formData) {
       bundleGroup: "standard-digital",
       bundleMinPriceCents: 100,
       buyMode,
-      buyUrl: String(formData.get("buyUrl") || "").trim(),
+      buyUrl: buyMode === "cart" ? "" : buyUrl,
       creationMethod: String(formData.get("creationMethod") || "").trim(),
       currency: String(formData.get("currency") || "USD").trim() || "USD",
       excludeFromBundles: true,
@@ -200,8 +214,8 @@ function parsePublishForm(formData) {
       legalNote: String(formData.get("legalNote") || "").trim(),
       longDescription: metadata.longDescription,
       pageCount: normalizeOptionalNumber(formData.get("pageCount")),
-      price: normalizeMoneyText(formData.get("price")),
-      priceCents: normalizePriceCents(formData.get("price")),
+      price: priceText,
+      priceCents,
       productLine: metadata.productLine,
       productLineSlug: normalizeSlug(String(formData.get("productLineSlug") || metadata.productLine)),
       series: String(formData.get("series") || "").trim(),

@@ -66,6 +66,7 @@ async function applyPublishPayload(rootDir, clientPayload) {
   if (!metadata.slug || !folder) {
     throw new Error("The publish payload must include metadata.slug and folder.");
   }
+  validatePublishMetadata(metadata);
 
   const sharedMapPath = path.join(rootDir, "shared", "product-folder-map.mjs");
   const intakeMapPath = path.join(rootDir, "data", "product-intake-map.json");
@@ -97,6 +98,7 @@ function normalizePublishMetadata(metadata) {
   const hasSaleEnabled = Object.prototype.hasOwnProperty.call(metadata, "saleEnabled");
   const hasSalePrice = Object.prototype.hasOwnProperty.call(metadata, "salePrice");
   const hasSalePriceCents = Object.prototype.hasOwnProperty.call(metadata, "salePriceCents");
+  const buyMode = chooseText(metadata.buyMode, "preview-only");
 
   return {
     authorSlugs: Array.isArray(metadata.authorSlugs) && metadata.authorSlugs.length ? metadata.authorSlugs : ["rv-sawyer"],
@@ -104,8 +106,8 @@ function normalizePublishMetadata(metadata) {
     bundleEligible: Boolean(metadata.bundleEligible),
     bundleGroup: chooseText(metadata.bundleGroup, "standard-digital"),
     bundleMinPriceCents: chooseInteger(metadata.bundleMinPriceCents, 100),
-    buyMode: chooseText(metadata.buyMode, "preview-only"),
-    buyUrl: chooseText(metadata.buyUrl, ""),
+    buyMode,
+    buyUrl: buyMode === "cart" ? "" : chooseText(metadata.buyUrl, ""),
     creationMethod: chooseText(metadata.creationMethod, "Human-authored by RV Sawyer."),
     currency: chooseText(metadata.currency, "USD"),
     excludeFromBundles: metadata.excludeFromBundles !== false,
@@ -144,6 +146,20 @@ function normalizePublishMetadata(metadata) {
     updateEligible: metadata.updateEligible !== false,
     version: chooseText(metadata.version, "1.0")
   };
+}
+
+function validatePublishMetadata(metadata) {
+  if (metadata.buyMode !== "cart") {
+    return;
+  }
+
+  if (metadata.status !== "available-direct") {
+    throw new Error("Cart products must use Available Direct status.");
+  }
+
+  if (!Number.isInteger(metadata.priceCents) || metadata.priceCents <= 0) {
+    throw new Error("Cart products require a positive price.");
+  }
 }
 
 function upsertIntakeMap(intakeMap, metadata, folder) {
@@ -229,7 +245,7 @@ function upsertProducts(products, metadata) {
     previewPdf: chooseText(existing.previewPdf, ""),
     teaserVideo: chooseText(existing.teaserVideo, ""),
     buyMode: chooseText(metadata.buyMode, existing.buyMode, "preview-only"),
-    buyUrl: chooseText(metadata.buyUrl, existing.buyUrl, ""),
+    buyUrl: metadata.buyMode === "cart" ? "" : chooseText(metadata.buyUrl, existing.buyUrl, ""),
     fulfillmentNote: chooseText(metadata.fulfillmentNote, existing.fulfillmentNote, ""),
     shortDescription: chooseText(metadata.shortDescription, existing.shortDescription, "Product summary coming soon."),
     longDescription: chooseText(metadata.longDescription, existing.longDescription, "Product summary coming soon."),

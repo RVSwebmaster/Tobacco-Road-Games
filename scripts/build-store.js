@@ -28,6 +28,7 @@ const STATUS_LABELS = {
 };
 
 const PRICE_TYPE_LABELS = {
+  cart: "Cart",
   "fixed-price": "Fixed Price",
   "free-download": "Free Download",
   "pay-what-you-want": "Pay What You Want",
@@ -82,6 +83,7 @@ function main() {
 
   writeFile("store/index.html", renderStoreHome(products, indexes));
   writeFile("store/catalog/index.html", renderCatalogPage(products, indexes));
+  writeFile("store/cart/index.html", renderCartPage(products));
 
   for (const product of products) {
     writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, products));
@@ -817,6 +819,10 @@ function renderLayout({
     : structuredData
       ? [structuredData]
       : [];
+  const scriptSources = Array.from(new Set([
+    `/assets/js/cart.js?v=${CACHE_BUST}`,
+    ...extraScripts
+  ]));
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -837,7 +843,7 @@ function renderLayout({
   <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
   <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
-  ${extraScripts.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
+  ${scriptSources.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -874,6 +880,7 @@ function renderStoreNav(currentNav) {
     { key: "authors", href: "/authors.html", label: "Authors" },
     { key: "store", href: "/store/", label: "Store" },
     { key: "catalog", href: "/store/catalog/", label: "Catalog" },
+    { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' },
     { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
   ];
 
@@ -886,6 +893,9 @@ function renderStoreNav(currentNav) {
 
 function renderFeatureSpotlight(product) {
   const authorByline = renderAuthorByline(product);
+  const cartAction = renderCartActionButton(product, {
+    className: "button button--primary"
+  });
   return `
     <article class="store-spotlight">
       <div class="store-spotlight__media">
@@ -898,6 +908,7 @@ function renderFeatureSpotlight(product) {
         ${authorByline ? `<p class="product-byline">${authorByline}</p>` : ""}
         <p>${escapeHtml(product.shortDescription)}</p>
         <div class="hero__actions">
+          ${cartAction || ""}
           <a class="button button--primary" href="${product.url}">Open Product Page</a>
           <a class="button button--secondary" href="/store/catalog/">Open the Catalog</a>
         </div>
@@ -1135,6 +1146,9 @@ function renderProductCard(product, options = {}) {
   ].join(" ").toLowerCase();
   const dataset = withDataset ? renderProductDatasetAttributes(product, searchText) : "";
   const cardId = includeAnchorId ? `id="product-${escapeAttribute(product.slug)}"` : "";
+  const cartAction = renderCartActionButton(product, {
+    className: "button button--primary product-card__button"
+  });
 
   return `
     <article class="product-card" ${cardId} ${dataset}>
@@ -1152,6 +1166,7 @@ function renderProductCard(product, options = {}) {
         <p class="product-card__meta">${escapeHtml(renderCatalogMeta(product))}</p>
         <p class="product-card__meta">${escapeHtml(product.format.join(", ") || "Format TBD")}</p>
         <div class="product-card__actions">
+          ${cartAction || ""}
           <a class="button button--secondary product-card__button" href="${product.url}">View Product</a>
         </div>
       </div>
@@ -1548,6 +1563,22 @@ function renderBuyUi(product) {
   const active = isBuyModeActive(product.buyMode);
   const supportLink = `<a class="inline-link" href="${SUPPORT_URL}">Questions about an order? Contact Tobacco Road Games.</a>`;
 
+  if (isCartReady(product)) {
+    return {
+      primary: renderCartActionButton(product, {
+        className: "button button--primary"
+      }),
+      afterPurchase: `
+        <article class="note-card">
+          <p class="note-card__label">Cart Notice</p>
+          <p>This title can be saved to your Tobacco Road Games cart in this browser. Final product availability and pricing will be verified during checkout.</p>
+          <p>${supportLink}</p>
+        </article>
+      `,
+      active: true
+    };
+  }
+
   if (product.buyMode === "fixed-price" && product.buyUrl) {
     return {
       primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Buy Now</a>`,
@@ -1710,6 +1741,7 @@ function renderStoreSitemap(products, indexes, bundleRules) {
   const urls = [
     "/store/",
     "/store/catalog/",
+    "/store/cart/",
     ...products.map((product) => product.url),
     ...indexes.systems.map((system) => `/store/systems/${system.slug}/`),
     ...indexes.lines.map((line) => `/store/lines/${line.slug}/`),
@@ -1734,7 +1766,8 @@ function renderRootSitemap(authors) {
     ...authors.map((author) => author.url),
     "/ai-statement.html",
     "/support.html",
-    "/store/"
+    "/store/",
+    "/store/cart/"
   ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1965,6 +1998,9 @@ function renderDeliveryLabel(product) {
   if (product.buyMode === "free-download") {
     return "Direct download from the product page";
   }
+  if (isCartReady(product)) {
+    return "Email delivery after payment confirmation";
+  }
   if (isBuyModeActive(product.buyMode)) {
     return "Email delivery after payment confirmation";
   }
@@ -2044,6 +2080,60 @@ function renderPurchaseSummary(product) {
     return `${product.title} is listed here with current format, status, and update information while direct ordering is being prepared.`;
   }
   return `You are buying ${product.title} in the listed digital format${product.pageCount ? `, currently ${product.pageCount} pages` : ""}, for personal tabletop use.`;
+}
+
+function renderCartPage(products) {
+  const cartCatalog = products
+    .filter((product) => isCartReady(product))
+    .map((product) => ({
+      cover: product.assetSet.thumb || product.assetSet.cover,
+      currency: product.currency,
+      priceCents: resolveEstimatedCartPriceCents(product),
+      priceDisplay: formatCents(resolveEstimatedCartPriceCents(product), product.currency),
+      slug: product.slug,
+      title: product.title,
+      url: product.url
+    }));
+  const cartCatalogJson = escapeInlineJson(JSON.stringify(cartCatalog));
+
+  return renderLayout({
+    pageTitle: `Cart | ${STORE_TITLE}`,
+    description: "Review the Tobacco Road Games browser cart before checkout is enabled.",
+    canonicalPath: "/store/cart/",
+    currentNav: "cart",
+    structuredData: renderWebPageSchema({
+      name: `${STORE_TITLE} Cart`,
+      description: "Review the Tobacco Road Games browser cart before checkout is enabled.",
+      url: `${BASE_URL}/store/cart/`
+    }),
+    content: `
+      <main id="top">
+        ${renderBreadcrumbs([{ label: "Store", href: "/store/" }, { label: "Cart" }])}
+
+        <section class="store-section" aria-labelledby="cart-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Cart</p>
+            <h1 id="cart-heading">Your Tobacco Road Games cart.</h1>
+            <p>Items saved here stay in this browser while you keep browsing. Final product availability and pricing will be verified during checkout.</p>
+          </div>
+          <div class="cart-layout" data-cart-page>
+            <section class="cart-panel">
+              <div class="initiative-empty" data-cart-empty>Your cart is empty. Add a product from the store to see it here.</div>
+              <div class="cart-item-list" data-cart-items></div>
+            </section>
+            <aside class="note-card cart-summary">
+              <p class="note-card__label">Estimated Total</p>
+              <p class="cart-summary__total" data-cart-total>$0.00</p>
+              <p class="cart-summary__copy">Final product availability and pricing will be verified during checkout.</p>
+              <button type="button" class="button button--secondary button--pending cart-summary__button" disabled aria-disabled="true">Checkout Unavailable In This Phase</button>
+              <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
+            </aside>
+          </div>
+        </section>
+        <script id="trg-cart-catalog" type="application/json">${cartCatalogJson}</script>
+      </main>
+    `
+  });
 }
 
 function renderFactCard(title, body) {
@@ -2129,6 +2219,20 @@ function isBuyModeActive(buyMode) {
   return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
 }
 
+function isCartReady(product) {
+  return product.buyMode === "cart"
+    && product.status === "available-direct"
+    && Number.isInteger(product.priceCents)
+    && product.priceCents > 0;
+}
+
+function resolveEstimatedCartPriceCents(product) {
+  if (product.saleActive && Number.isInteger(product.salePriceCents) && product.salePriceCents > 0) {
+    return product.salePriceCents;
+  }
+  return product.priceCents;
+}
+
 function isSaleActive(product) {
   if (!product.saleEnabled || product.salePriceCents === null) {
     return false;
@@ -2174,6 +2278,15 @@ function normalizeBuyMode(value) {
   return LEGACY_BUY_MODE_MAP[value] || value;
 }
 
+function renderCartActionButton(product, options = {}) {
+  if (!isCartReady(product)) {
+    return "";
+  }
+
+  const className = options.className || "button button--primary";
+  return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}">Add to Cart</button>`;
+}
+
 function isBundleEligible(product, bundleRules) {
   if (!bundleRules.active && !product.allowSeasonalBundle) {
     return false;
@@ -2204,6 +2317,13 @@ function formatCents(cents, currency = "USD") {
     style: "currency",
     currency
   }).format(centsToDecimal(cents));
+}
+
+function escapeInlineJson(value) {
+  return String(value || "")
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
 }
 
 function centsToDecimal(cents) {

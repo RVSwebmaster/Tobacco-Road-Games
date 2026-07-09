@@ -50,6 +50,9 @@ async function main() {
     await testOwnerIntakeAliasRedirects(ownerMiddleware, baseEnv, authCookies);
     await testMissingFiles(ownerPublish, baseEnv, authCookies);
     await testWrongFileType(ownerPublish, baseEnv, authCookies);
+    await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, authCookies);
+    await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, authCookies);
+    await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, authCookies);
     await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, authCookies);
     await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
     await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
@@ -59,6 +62,8 @@ async function main() {
     await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
     await testProductAdvisorSuggestions(productAdvisor);
     await testExistingProductUpdatePreservesFields(publishScript);
+    await testPublishScriptRejectsInvalidCartMetadata(publishScript);
+    await testPublishScriptNormalizesCartBuyUrl(publishScript);
     await testNewProductBuildAndSharedMap(publishScript);
 
     console.log("Owner intake tests passed.");
@@ -342,6 +347,113 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
   assert.match(payload.error, /preview image must be a webp image/i, "Wrong file type error should be human-readable.");
 }
 
+async function testCartPublishAcceptedWithoutBuyUrl(ownerPublish, env, cookieHeader) {
+  const bucket = createMockBucket();
+  const formData = new FormData();
+  addRequiredTextFields(formData, {
+    buyMode: "cart",
+    price: "4.99",
+    status: "available-direct"
+  });
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+
+  const originalRandomUuid = crypto.randomUUID;
+  const originalDateNow = Date.now;
+  const fixedNow = 1760000000003;
+  const fetchImpl = async (url) => {
+    if (String(url).endsWith("/dispatches")) {
+      return new Response(null, { status: 204 });
+    }
+
+    return jsonResponse({
+      workflow_runs: [
+        {
+          conclusion: "success",
+          created_at: new Date().toISOString(),
+          display_title: `Owner publish pub-${fixedNow}-cart-mode`,
+          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/4",
+          id: 4,
+          status: "completed"
+        }
+      ]
+    });
+  };
+
+  Date.now = () => fixedNow;
+  crypto.randomUUID = () => "cart-mode";
+  try {
+    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+      ...env,
+      TRG_PRODUCTS: bucket
+    }, {
+      dispatchOptions: {
+        fetchImpl,
+        pollIntervalMs: 1,
+        timeoutMs: 100
+      }
+    });
+
+    assert.equal(response.status, 200, "Cart products should publish without a buy URL.");
+    const payload = await response.json();
+    assert.equal(payload.ok, true, "Cart publish should report success.");
+  } finally {
+    Date.now = originalDateNow;
+    crypto.randomUUID = originalRandomUuid;
+  }
+}
+
+async function testCartPublishRejectsMissingPrice(ownerPublish, env, cookieHeader) {
+  const formData = new FormData();
+  addRequiredTextFields(formData, {
+    buyMode: "cart",
+    price: "",
+    status: "available-direct"
+  });
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+
+  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+    ...env,
+    TRG_PRODUCTS: createMockBucket()
+  }, {
+    dispatchOptions: {
+      fetchImpl: async () => new Response(null, { status: 204 })
+    }
+  });
+
+  assert.equal(response.status, 400, "Cart products without a price should be rejected.");
+  const payload = await response.json();
+  assert.match(payload.error, /Cart products require a positive price/i, "Cart price validation should be human-readable.");
+}
+
+async function testCartPublishRejectsInvalidStatus(ownerPublish, env, cookieHeader) {
+  const formData = new FormData();
+  addRequiredTextFields(formData, {
+    buyMode: "cart",
+    price: "4.99",
+    status: "coming-soon"
+  });
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+
+  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+    ...env,
+    TRG_PRODUCTS: createMockBucket()
+  }, {
+    dispatchOptions: {
+      fetchImpl: async () => new Response(null, { status: 204 })
+    }
+  });
+
+  assert.equal(response.status, 400, "Cart products with the wrong status should be rejected.");
+  const payload = await response.json();
+  assert.match(payload.error, /Cart products must use Available Direct status/i, "Cart status validation should be human-readable.");
+}
+
 async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieHeader) {
   const bucket = createMockBucket();
   const calls = [];
@@ -617,6 +729,53 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
   assert.equal(sirrocans.saleLabel, "Summer Sale", "Existing sale labels should survive publish.");
   assert.equal(sirrocans.bundleEligible, true, "Existing bundle flags should survive publish.");
   assert.equal(sirrocans.shortDescription, "Updated short copy.", "Explicit new copy should apply.");
+}
+
+async function testPublishScriptRejectsInvalidCartMetadata(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await assert.rejects(
+    publishScript.applyPublishPayload(tempRoot, {
+      folder: "cart-bad-fixture",
+      metadata: {
+        buyMode: "cart",
+        gameSystem: "System Neutral",
+        longDescription: "Invalid cart fixture",
+        price: "",
+        productLine: "Other Games & Experiments",
+        shortDescription: "Invalid cart fixture",
+        slug: "cart-bad-fixture",
+        status: "available-direct",
+        subtitle: "Invalid cart fixture",
+        title: "Cart Bad Fixture"
+      }
+    }),
+    /Cart products require a positive price/,
+    "Publish script should reject invalid cart pricing."
+  );
+}
+
+async function testPublishScriptNormalizesCartBuyUrl(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await publishScript.applyPublishPayload(tempRoot, {
+    folder: "cart-good-fixture",
+    metadata: {
+      buyMode: "cart",
+      buyUrl: "https://example.com/not-used",
+      gameSystem: "System Neutral",
+      longDescription: "Cart fixture",
+      price: "3.99",
+      productLine: "Other Games & Experiments",
+      shortDescription: "Cart fixture",
+      slug: "cart-good-fixture",
+      status: "available-direct",
+      subtitle: "Cart fixture",
+      title: "Cart Good Fixture"
+    }
+  });
+
+  const updatedProducts = JSON.parse(fs.readFileSync(path.join(tempRoot, "data", "products.json"), "utf8"));
+  const fixture = updatedProducts.find((product) => product.slug === "cart-good-fixture");
+  assert.equal(fixture.buyUrl, "", "Cart products should normalize buyUrl to an empty string.");
 }
 
 async function testNewProductBuildAndSharedMap(publishScript) {

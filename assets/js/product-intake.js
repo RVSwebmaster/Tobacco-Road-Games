@@ -1,4 +1,6 @@
 (() => {
+  const CART_BUY_MODE = "cart";
+  const CART_BUY_URL_PLACEHOLDER = "No buy URL needed for cart products.";
   const statusLabels = {
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
@@ -151,6 +153,21 @@
 
   const findAvailableProduct = (slug) =>
     availableProducts.find((product) => product.slug === slug) || null;
+
+  const isCartModeSelected = () => fields.buyMode.value === CART_BUY_MODE;
+
+  const syncBuyModeUi = () => {
+    const cartMode = isCartModeSelected();
+    if (cartMode) {
+      fields.buyUrl.value = "";
+      fields.buyUrl.disabled = true;
+      fields.buyUrl.placeholder = CART_BUY_URL_PLACEHOLDER;
+      return;
+    }
+
+    fields.buyUrl.disabled = false;
+    fields.buyUrl.placeholder = "https://...";
+  };
 
   const updateEditModeCopy = () => {
     if (!outputs.editMode) {
@@ -456,7 +473,7 @@
       authorSlugs: ["rv-sawyer"],
       authors: ["RV Sawyer"],
       buyMode: fields.buyMode.value,
-      buyUrl: fields.buyUrl.value.trim(),
+      buyUrl: fields.buyMode.value === CART_BUY_MODE ? "" : fields.buyUrl.value.trim(),
       creationMethod: fields.creationMethod.value.trim() || "Human-authored by RV Sawyer.",
       currency: fields.currency.value.trim() || "USD",
       features: parseLines(fields.features.value),
@@ -735,6 +752,16 @@
       errors.push("A product PDF is required.");
     }
 
+    if (fields.buyMode.value === CART_BUY_MODE) {
+      if (fields.status.value !== "available-direct") {
+        errors.push("Cart products must use Available Direct status.");
+      }
+      const parsedPrice = parsePriceNumber(fields.price.value);
+      if (parsedPrice === null || parsedPrice <= 0) {
+        errors.push("Cart products require a positive price.");
+      }
+    }
+
     return errors;
   }
 
@@ -795,6 +822,7 @@
     fields.status.value = product.status || "coming-soon";
     fields.buyMode.value = product.buyMode || "coming-soon";
     fields.buyUrl.value = product.buyUrl || "";
+    syncBuyModeUi();
     fields.shortDescription.value = product.shortDescription || "";
     fields.longDescription.value = product.longDescription || "";
     fields.features.value = Array.isArray(product.features) ? product.features.join("\n") : "";
@@ -837,6 +865,10 @@
   });
 
   fields.title.addEventListener("input", updateAutoFields);
+  fields.buyMode.addEventListener("change", () => {
+    syncBuyModeUi();
+    updatePreview();
+  });
 
   Object.values(fields).forEach((field) => {
     if (!field || field === fields.slug || field === fields.title || field === fields.folder) {
@@ -895,6 +927,7 @@
     fields.status.value = "coming-soon";
     fields.buyMode.value = "coming-soon";
     fields.buyUrl.value = "";
+    syncBuyModeUi();
     fields.shortDescription.value = "";
     fields.longDescription.value = "";
     fields.features.value = "";
@@ -924,5 +957,6 @@
   clearAdvisorPanel();
   void loadAvailableProducts();
   syncRelatedPicker();
+  syncBuyModeUi();
   updatePreview();
 })();
