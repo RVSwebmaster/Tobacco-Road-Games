@@ -151,7 +151,7 @@
     <a class="bookshelf-book" href="/store/products/agency/"  aria-label="Open Agency product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
-          <span class="bookshelf-book__status">Coming Soon</span>
+          <span class="bookshelf-book__status">Available Direct</span>
           <span class="bookshelf-book__title">Agency</span>
           <span class="bookshelf-book__author">RV Sawyer</span>
         </span>
@@ -163,7 +163,7 @@
             <img class="bookshelf-book__cover" src="/product-assets/agency/cover.webp" alt="">
           </span>
           <span class="bookshelf-book__mobile-copy">
-            <span class="status-badge status-badge--coming-soon">Coming Soon</span>
+            <span class="status-badge status-badge--available-direct">Available Direct</span>
             <span class="bookshelf-book__mobile-title">Agency</span>
             <span class="bookshelf-book__mobile-subtitle">Share the wheel or crash the game</span>
             <span class="bookshelf-book__mobile-meta">System Agnotic | Tablecraft</span>
@@ -395,7 +395,7 @@
         <span>Status</span>
         <select class="dock-input" data-filter-status>
           <option value="">All Statuses</option>
-          <option value="coming-soon">Coming Soon</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-available">Preview Available</option>
+          <option value="available-direct">Available Direct</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-available">Preview Available</option>
         </select>
       </label>
 
@@ -411,11 +411,19 @@
         <span>Price Type</span>
         <select class="dock-input" data-filter-price-type>
           <option value="">All Price Types</option>
-          <option value="coming-soon">Coming Soon</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-only">Preview Only</option>
+          <option value="cart">Cart</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-only">Preview Only</option>
         </select>
       </label>
 
       
+      <label class="catalog-control catalog-control--toggle">
+        <span>Sale Filter</span>
+        <span class="catalog-toggle">
+          <input type="checkbox" data-filter-sale>
+          <span>On Sale Only</span>
+        </span>
+      </label>
+    
 
       <label class="catalog-control">
         <span>Sort</span>
@@ -450,10 +458,10 @@
           
           <div class="bookshelf-grid" data-store-shelf>
             
-    <a class="bookshelf-book" href="/store/products/agency/" data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="coming-soon" data-format="pdf" data-price-type="coming-soon" data-price-cents="499" data-release="1782259200000" data-updated="1782259200000" data-sale-active="false" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft coming soon coming soon" aria-label="Open Agency product page">
+    <a class="bookshelf-book" href="/store/products/agency/" data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="available-direct" data-format="pdf" data-price-type="cart" data-price-cents="300" data-release="1782259200000" data-updated="1782259200000" data-sale-active="true" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft available direct cart" aria-label="Open Agency product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
-          <span class="bookshelf-book__status">Coming Soon</span>
+          <span class="bookshelf-book__status">Available Direct</span>
           <span class="bookshelf-book__title">Agency</span>
           <span class="bookshelf-book__author">RV Sawyer</span>
         </span>
@@ -465,7 +473,7 @@
             <img class="bookshelf-book__cover" src="/product-assets/agency/cover.webp" alt="">
           </span>
           <span class="bookshelf-book__mobile-copy">
-            <span class="status-badge status-badge--coming-soon">Coming Soon</span>
+            <span class="status-badge status-badge--available-direct">Available Direct</span>
             <span class="bookshelf-book__mobile-title">Agency</span>
             <span class="bookshelf-book__mobile-subtitle">Share the wheel or crash the game</span>
             <span class="bookshelf-book__mobile-meta">System Agnotic | Tablecraft</span>
@@ -726,14 +734,14 @@
         
         <div class="product-card-grid" data-store-grid>
           
-    <article class="product-card"  data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="coming-soon" data-format="pdf" data-price-type="coming-soon" data-price-cents="499" data-release="1782259200000" data-updated="1782259200000" data-sale-active="false" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft coming soon coming soon">
+    <article class="product-card"  data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="available-direct" data-format="pdf" data-price-type="cart" data-price-cents="300" data-release="1782259200000" data-updated="1782259200000" data-sale-active="true" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft available direct cart">
       <div class="product-card__media">
         <img src="/product-assets/agency/cover.webp" alt="Agency thumbnail">
       </div>
       <div class="product-card__body">
         <div class="product-card__topline">
-          <span class="status-badge status-badge--coming-soon">Coming Soon</span>
-          <span class="product-card__price">$4.99</span>
+          <span class="status-badge status-badge--available-direct">Available Direct</span>
+          <span class="product-card__price">$3.00</span>
         </div>
         <h3 class="product-card__title">Agency</h3>
         <p class="product-card__subtitle">Share the wheel or crash the game</p>
@@ -741,7 +749,7 @@
         <p class="product-card__meta">System Agnotic | Tablecraft</p>
         <p class="product-card__meta">PDF</p>
         <div class="product-card__actions">
-          
+          <button type="button" class="button button--primary product-card__button" data-cart-add="agency">Add to Cart</button>
           <a class="button button--secondary product-card__button" href="/store/products/agency/">View Product</a>
         </div>
       </div>
