@@ -15,6 +15,10 @@ Minimal return pages:
 - `/store/checkout/complete`
 - `/store/checkout/canceled`
 
+Reserved for a later phase:
+
+- `GET /store/checkout/status`
+
 ## Phase limits
 
 This phase intentionally does not add:
@@ -61,6 +65,17 @@ The checkout route sets a short-lived cookie:
 - path: `/store/checkout/`
 
 This cookie exists so the Stripe Checkout Session ID is not treated as authorization by itself. The return pages compare the query-string Session ID against the cookie-backed server record and then clear the cookie.
+
+This cookie is temporary. It is:
+
+- signed, not encrypted
+- limited to `publicOrderReference`, `stripeCheckoutSessionId`, and `createdAt`
+- server-checked for a short lifetime
+- not a download credential
+- not an emailed recovery credential
+- not valid for long-term order access
+
+This phase keeps the cookie scoped to `/store/checkout/`. Later order-recovery, status polling, and download authorization must use a different credential or a deliberately planned route structure under the same path.
 
 ## Cloudflare setup
 

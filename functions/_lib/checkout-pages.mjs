@@ -95,7 +95,9 @@ function htmlPage({ title, body }, setCookie) {
 </body>
 </html>`, {
     headers: {
+      "cache-control": "no-store",
       "content-type": "text/html; charset=utf-8",
+      "referrer-policy": "no-referrer",
       "set-cookie": setCookie
     },
     status: 200

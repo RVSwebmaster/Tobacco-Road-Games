@@ -11,17 +11,19 @@ const TAX_NOTE = "The listed price is the final price. Any applicable sales tax 
 async function main() {
   const cartCheckout = await importModule("functions/_lib/cart-checkout.mjs");
   const completePage = await importModule("functions/_lib/checkout-pages.mjs");
+  const cookieHelpers = await importModule("functions/_lib/checkout-cookie.mjs");
   const pendingRoute = await importModule("functions/_lib/orders-pending-route.mjs");
 
-  await testCheckoutEndpoint(cartCheckout);
+  await testCheckoutEndpoint(cartCheckout, cookieHelpers);
   await testCheckoutValidation(cartCheckout);
-  await testCheckoutReturnPages(completePage);
+  await testCheckoutAccessCookie(cookieHelpers);
+  await testCheckoutReturnPages(completePage, cookieHelpers);
   await testPendingRouteDisabled(pendingRoute);
 
   console.log("Cart checkout tests passed.");
 }
 
-async function testCheckoutEndpoint(cartCheckout) {
+async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
   const { d1 } = createD1Database();
   const catalogProducts = [
     {
@@ -89,6 +91,14 @@ async function testCheckoutEndpoint(cartCheckout) {
   assert.match(setCookie, /Secure/i, "Checkout-access cookie should be Secure.");
   assert.match(setCookie, /SameSite=Lax/i, "Checkout-access cookie should be SameSite=Lax.");
   assert.match(setCookie, /Path=\/store\/checkout\//i, "Checkout-access cookie should be scoped to checkout return pages.");
+  assert.match(setCookie, new RegExp(`Max-Age=${cookieHelpers.CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS}`), "Checkout-access cookie should use the shared max-age constant.");
+
+  const checkoutCookie = decodeCheckoutCookie(setCookie);
+  assert.equal(checkoutCookie.publicOrderReference, payload.publicOrderReference, "Checkout-access cookies should carry the public order reference.");
+  assert.equal(checkoutCookie.stripeCheckoutSessionId, "cs_test_created", "Checkout-access cookies should carry the Stripe Checkout Session ID.");
+  assert.ok(typeof checkoutCookie.createdAt === "string" && checkoutCookie.createdAt.length > 0, "Checkout-access cookies should carry a creation timestamp.");
+  assert.ok(!("customerEmail" in checkoutCookie), "Checkout-access cookies must not expose customer email.");
+  assert.ok(!("id" in checkoutCookie), "Checkout-access cookies must not expose the internal order ID.");
 
   assert.equal(capturedForm.get("mode"), "payment", "Stripe checkout should use payment mode.");
   assert.equal(capturedForm.get("client_reference_id"), payload.publicOrderReference, "Stripe checkout should reconcile with the public order reference.");
@@ -219,10 +229,69 @@ async function testCheckoutValidation(cartCheckout) {
   assert.equal(failedOrder.stripe_checkout_session_id, null, "Failed Stripe session creation should not attach a session ID.");
 }
 
-async function testCheckoutReturnPages(completePage) {
+async function testCheckoutAccessCookie(cookieHelpers) {
+  const secret = "cookie-secret";
+  const nowMs = Date.parse("2026-07-09T12:00:00.000Z");
+  const basePayload = {
+    createdAt: "2026-07-09T11:00:00.000Z",
+    publicOrderReference: "TRG-COOKIE123456-1234ABCD",
+    stripeCheckoutSessionId: "cs_test_cookie"
+  };
+
+  const validCookie = await cookieHelpers.createCheckoutAccessCookie(basePayload, secret);
+  const validRequest = new Request("https://example.com/store/checkout/complete", {
+    headers: {
+      cookie: validCookie
+    }
+  });
+  const parsed = await cookieHelpers.readCheckoutAccessCookie(validRequest, secret, { nowMs });
+  assert.deepEqual(parsed, basePayload, "Valid unexpired checkout cookies should round-trip.");
+  assert.equal(cookieHelpers.CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS, 7200, "Checkout cookies should use the shared two-hour lifetime.");
+
+  const expiredCookie = await cookieHelpers.createCheckoutAccessCookie({
+    ...basePayload,
+    createdAt: "2026-07-09T09:59:59.000Z"
+  }, secret);
+  const expired = await cookieHelpers.readCheckoutAccessCookie(new Request("https://example.com/store/checkout/complete", {
+    headers: {
+      cookie: expiredCookie
+    }
+  }), secret, { nowMs });
+  assert.equal(expired, null, "Expired checkout cookies should be rejected server-side.");
+
+  const malformedTimestampCookie = await cookieHelpers.createCheckoutAccessCookie({
+    ...basePayload,
+    createdAt: "not-a-timestamp"
+  }, secret);
+  const malformed = await cookieHelpers.readCheckoutAccessCookie(new Request("https://example.com/store/checkout/complete", {
+    headers: {
+      cookie: malformedTimestampCookie
+    }
+  }), secret, { nowMs });
+  assert.equal(malformed, null, "Malformed checkout cookie timestamps should be rejected.");
+
+  const tooFutureCookie = await cookieHelpers.createCheckoutAccessCookie({
+    ...basePayload,
+    createdAt: "2026-07-09T12:05:01.000Z"
+  }, secret);
+  const tooFuture = await cookieHelpers.readCheckoutAccessCookie(new Request("https://example.com/store/checkout/complete", {
+    headers: {
+      cookie: tooFutureCookie
+    }
+  }), secret, { nowMs });
+  assert.equal(tooFuture, null, "Checkout cookies too far in the future should be rejected.");
+
+  const altered = await cookieHelpers.readCheckoutAccessCookie(new Request("https://example.com/store/checkout/complete", {
+    headers: {
+      cookie: tamperCheckoutCookie(validCookie)
+    }
+  }), secret, { nowMs });
+  assert.equal(altered, null, "Altered checkout cookie signatures should be rejected.");
+}
+
+async function testCheckoutReturnPages(completePage, cookieHelpers) {
   const { d1 } = createD1Database();
   const ordersD1 = await importModule("functions/_lib/orders-d1.mjs");
-  const cookieHelpers = await importModule("functions/_lib/checkout-cookie.mjs");
   const order = await ordersD1.createPendingOrder(d1, {
     currency: "USD",
     customerEmail: "buyer@example.com",
@@ -265,6 +334,8 @@ async function testCheckoutReturnPages(completePage) {
   assert.match(body, new RegExp(order.public_id), "Completion page should show the public order reference when cookie and session match.");
   assert.match(body, /payment status is still/i, "Completion page should avoid claiming fulfillment or payment confirmation in this phase.");
   assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Completion page should clear the checkout cookie after use.");
+  assert.equal(response.headers.get("cache-control"), "no-store", "Completion responses should not be cacheable.");
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer", "Completion responses should prevent referrer leakage.");
 
   response = await completePage.handleCheckoutCompletePage(new Request("https://example.com/store/checkout/complete?session_id=wrong-session", {
     headers: {
@@ -276,6 +347,72 @@ async function testCheckoutReturnPages(completePage) {
   });
   body = await response.text();
   assert.doesNotMatch(body, new RegExp(order.public_id), "Completion page should not reveal order data when the session ID does not match the signed cookie.");
+  assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Mismatched completion states should still clear the checkout cookie.");
+
+  const expiredCookie = await cookieHelpers.createCheckoutAccessCookie({
+    createdAt: "2000-01-01T00:00:00.000Z",
+    publicOrderReference: order.public_id,
+    stripeCheckoutSessionId: "cs_test_cookie"
+  }, "cookie-secret");
+  response = await completePage.handleCheckoutCompletePage(new Request("https://example.com/store/checkout/complete?session_id=cs_test_cookie", {
+    headers: {
+      cookie: expiredCookie
+    }
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    TRG_ORDERS: d1
+  });
+  body = await response.text();
+  assert.doesNotMatch(body, new RegExp(order.public_id), "Expired checkout cookies should not reveal order context.");
+  assert.match(body, /start a fresh checkout attempt/i, "Expired checkout cookies should fall back to the safe checkout state.");
+  assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Expired checkout cookies should be cleared.");
+
+  const malformedTimestampCookie = await cookieHelpers.createCheckoutAccessCookie({
+    createdAt: "not-a-timestamp",
+    publicOrderReference: order.public_id,
+    stripeCheckoutSessionId: "cs_test_cookie"
+  }, "cookie-secret");
+  response = await completePage.handleCheckoutCanceledPage(new Request("https://example.com/store/checkout/canceled", {
+    headers: {
+      cookie: malformedTimestampCookie
+    }
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    TRG_ORDERS: d1
+  });
+  body = await response.text();
+  assert.doesNotMatch(body, new RegExp(order.public_id), "Canceled checkout pages should not reveal order context for malformed cookies.");
+  assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Canceled checkout pages should clear malformed cookies.");
+  assert.equal(response.headers.get("cache-control"), "no-store", "Canceled responses should not be cacheable.");
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer", "Canceled responses should prevent referrer leakage.");
+
+  const futureCookie = await cookieHelpers.createCheckoutAccessCookie({
+    createdAt: "2099-01-01T00:00:00.000Z",
+    publicOrderReference: order.public_id,
+    stripeCheckoutSessionId: "cs_test_cookie"
+  }, "cookie-secret");
+  response = await completePage.handleCheckoutCanceledPage(new Request("https://example.com/store/checkout/canceled", {
+    headers: {
+      cookie: futureCookie
+    }
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    TRG_ORDERS: d1
+  });
+  body = await response.text();
+  assert.doesNotMatch(body, new RegExp(order.public_id), "Future-dated checkout cookies should not reveal order context.");
+
+  const tamperedCookie = tamperCheckoutCookie(cookie);
+  response = await completePage.handleCheckoutCanceledPage(new Request("https://example.com/store/checkout/canceled", {
+    headers: {
+      cookie: tamperedCookie
+    }
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    TRG_ORDERS: d1
+  });
+  body = await response.text();
+  assert.doesNotMatch(body, new RegExp(order.public_id), "Tampered checkout cookies should not reveal order context.");
 
   response = await completePage.handleCheckoutCanceledPage(new Request("https://example.com/store/checkout/canceled", {
     headers: {
@@ -362,6 +499,27 @@ function createJsonResponse(payload, status = 200) {
     ok: status >= 200 && status < 300,
     status
   };
+}
+
+function decodeCheckoutCookie(setCookie) {
+  const raw = getCheckoutCookieValue(setCookie);
+  const encodedPayload = raw.split(".")[0];
+  const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  return JSON.parse(Buffer.from(normalized + padding, "base64").toString("utf8"));
+}
+
+function getCheckoutCookieValue(setCookie) {
+  return String(setCookie || "").split(";")[0].split("=").slice(1).join("=");
+}
+
+function tamperCheckoutCookie(setCookie) {
+  const raw = getCheckoutCookieValue(setCookie);
+  const separator = raw.lastIndexOf(".");
+  const payload = raw.slice(0, separator + 1);
+  const signature = raw.slice(separator + 1);
+  const alteredSignature = signature.replace(/.$/, (value) => value === "0" ? "1" : "0");
+  return String(setCookie || "").replace(raw, `${payload}${alteredSignature}`);
 }
 
 function importModule(relativePath) {

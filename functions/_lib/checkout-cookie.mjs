@@ -1,8 +1,14 @@
 const COOKIE_NAME = "trg_checkout_access";
-const DEFAULT_MAX_AGE_SECONDS = 2 * 60 * 60;
+const CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS = 2 * 60 * 60;
+const CHECKOUT_ACCESS_CLOCK_SKEW_SECONDS = 5 * 60;
+
+export {
+  CHECKOUT_ACCESS_CLOCK_SKEW_SECONDS,
+  CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS
+};
 
 export async function createCheckoutAccessCookie(payload, secret, options = {}) {
-  const maxAgeSeconds = Number.isInteger(options.maxAgeSeconds) ? options.maxAgeSeconds : DEFAULT_MAX_AGE_SECONDS;
+  const maxAgeSeconds = Number.isInteger(options.maxAgeSeconds) ? options.maxAgeSeconds : CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS;
   const normalizedPayload = {
     createdAt: String(payload?.createdAt || new Date().toISOString()),
     publicOrderReference: requiredString(payload?.publicOrderReference, "publicOrderReference"),
@@ -20,7 +26,7 @@ export async function createCheckoutAccessCookie(payload, secret, options = {}) 
   });
 }
 
-export async function readCheckoutAccessCookie(request, secret) {
+export async function readCheckoutAccessCookie(request, secret, options = {}) {
   const rawCookie = readCookieValue(request, COOKIE_NAME);
   if (!rawCookie) {
     return null;
@@ -39,7 +45,8 @@ export async function readCheckoutAccessCookie(request, secret) {
   }
 
   try {
-    return JSON.parse(base64urlDecode(encodedPayload));
+    const payload = JSON.parse(base64urlDecode(encodedPayload));
+    return isPayloadFresh(payload, options.nowMs) ? payload : null;
   } catch {
     return null;
   }
@@ -130,6 +137,21 @@ function requiredString(value, fieldName) {
     throw new Error(`${fieldName} is required.`);
   }
   return normalized;
+}
+
+function isPayloadFresh(payload, nowMs = Date.now()) {
+  const createdAtMs = Date.parse(String(payload?.createdAt || ""));
+  if (!Number.isFinite(createdAtMs)) {
+    return false;
+  }
+
+  const clockSkewMs = CHECKOUT_ACCESS_CLOCK_SKEW_SECONDS * 1000;
+  const maxAgeMs = CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS * 1000;
+  if (createdAtMs > nowMs + clockSkewMs) {
+    return false;
+  }
+
+  return createdAtMs >= nowMs - maxAgeMs;
 }
 
 function timingSafeEqual(left, right) {
