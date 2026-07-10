@@ -44,6 +44,15 @@
       grid-column: 1 / -1;
     }
 
+    .intake-field--game-system {
+      align-self: start;
+      align-content: start;
+    }
+
+    #product-system {
+      margin: 0;
+    }
+
     .intake-field label,
     .intake-output label {
       color: var(--muted);
@@ -450,7 +459,7 @@
                 <input id="product-publisher" class="dock-input" type="text" value="Tobacco Road Games" readonly>
               </div>
 
-              <div class="intake-field">
+              <div class="intake-field intake-field--game-system">
                 <label for="product-system">Game System</label>
                 <input id="product-system" class="dock-input" type="text" value="5E Compatible">
               </div>
