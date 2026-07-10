@@ -68,6 +68,7 @@ async function main() {
     await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
     await testProductAdvisorSuggestions(productAdvisor);
     await testExistingProductUpdatePreservesFields(publishScript);
+    await testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript);
     await testPricingUpdatePreservesUnrelatedFields(publishScript);
     await testPricingUpdateRejectsInvalidMoney(publishScript);
     await testPricingUpdateRejectsSaleAboveRegular(publishScript);
@@ -935,6 +936,37 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
   assert.equal(sirrocans.saleLabel, "Summer Sale", "Existing sale labels should survive publish.");
   assert.equal(sirrocans.bundleEligible, true, "Existing bundle flags should survive publish.");
   assert.equal(sirrocans.shortDescription, "Updated short copy.", "Explicit new copy should apply.");
+}
+
+async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  const tempProductsPath = path.join(tempRoot, "data", "products.json");
+
+  await publishScript.applyPublishPayload(tempRoot, {
+    folder: "ringbound",
+    metadata: {
+      buyMode: "preview-only",
+      gameSystem: "System TBD",
+      gameSystemSlug: "system-tbd",
+      longDescription: "Product summary coming soon.",
+      pageCount: 12,
+      productLine: "Other Games & Experiments",
+      productLineSlug: "other-games-and-experiments",
+      shortDescription: "Product summary coming soon.",
+      slug: "ringbound",
+      status: "preview-available",
+      subtitle: "A Tobacco Road Games catalog preview",
+      title: "Ringbound",
+      version: "2026 catalog preview"
+    }
+  });
+
+  const updatedProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
+  const ringbound = updatedProducts.find((product) => product.slug === "ringbound");
+  assert.equal(ringbound.productLineSlug, "other-games-and-experiments", "Existing metadata-only updates should preserve the original product-line slug when the visible label is unchanged.");
+  assert.equal(Object.prototype.hasOwnProperty.call(ringbound, "series"), false, "Existing metadata-only updates should not invent empty series fields.");
+  assert.equal(Object.prototype.hasOwnProperty.call(ringbound, "seriesSlug"), false, "Existing metadata-only updates should not invent empty series slug fields.");
+  assert.equal(ringbound.pageCount, 12, "The requested page-count change should still apply.");
 }
 
 async function testPricingUpdatePreservesUnrelatedFields(publishScript) {

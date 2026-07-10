@@ -76,13 +76,18 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
+  const generatedBeforeReload = JSON.parse(harness.outputs.json.value);
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Editing Ringbound should stay in existing-listing mode before reload.");
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Ringbound should not offer a new-product publish action.");
+  assert.equal(generatedBeforeReload.productLineSlug, "other-games-and-experiments", "Editing an existing listing should preserve the original product-line slug when the visible label is unchanged.");
+  assert.equal(Object.prototype.hasOwnProperty.call(generatedBeforeReload, "series"), false, "Editing an existing listing should not invent empty series fields.");
+  assert.equal(Object.prototype.hasOwnProperty.call(generatedBeforeReload, "seriesSlug"), false, "Editing an existing listing should not invent empty series slug fields.");
 
   const reloadedHarness = createHarness({
     sessionStorageStore: harness.sessionStorageStore
   });
   await reloadedHarness.flush();
+  const generatedAfterReload = JSON.parse(reloadedHarness.outputs.json.value);
 
   assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Reloading should restore the loaded Ringbound listing.");
   assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "A restored existing listing must not show the new-product publish action.");
@@ -93,6 +98,9 @@ async function testExistingListingDraftRestoresAfterReload() {
   assert.match(reloadedHarness.outputs.status.textContent, /Restored Ringbound for editing after the page was reloaded\./, "Reloading should explain why the existing listing remained active.");
   assert.equal(reloadedHarness.api.hasUnsavedChanges(), true, "Reloading should preserve the unsaved-changes baseline.");
   assert.equal(reloadedHarness.api.validateRequiredFields().length, 0, "Reloading should not fall back to new-product validation errors for a restored existing listing.");
+  assert.equal(generatedAfterReload.productLineSlug, "other-games-and-experiments", "Reloading should preserve the original product-line slug.");
+  assert.equal(Object.prototype.hasOwnProperty.call(generatedAfterReload, "series"), false, "Reloading should not invent empty series fields.");
+  assert.equal(Object.prototype.hasOwnProperty.call(generatedAfterReload, "seriesSlug"), false, "Reloading should not invent empty series slug fields.");
 
   reloadedHarness.buttons.review.click();
   assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Ringbound draft should still work.");
@@ -328,6 +336,7 @@ function createHarness(options = {}) {
       format: ["PDF"],
       fulfillmentNote: "Manual note",
       gameSystem: "5E Compatible",
+      gameSystemSlug: "5e-compatible",
       lastUpdated: "",
       legalNote: "",
       longDescription: "Long description",
@@ -336,11 +345,13 @@ function createHarness(options = {}) {
       previewImage: "/product-assets/agency/preview.webp",
       previewImages: [],
       productLine: "Fifth Edition Fantasy Roleplaying",
+      productLineSlug: "fifth-edition-fantasy-roleplaying",
       relatedProducts: [],
       releaseDate: "",
       saleEnabled: false,
       salePrice: "",
       series: "",
+      seriesSlug: "",
       shortDescription: "Original preview copy",
       slug: "agency",
       status: "preview-available",
@@ -361,6 +372,7 @@ function createHarness(options = {}) {
       format: ["PDF"],
       fulfillmentNote: "",
       gameSystem: "System TBD",
+      gameSystemSlug: "system-tbd",
       lastUpdated: "2026-06-17",
       legalNote: "",
       longDescription: "Product summary coming soon.",
@@ -369,11 +381,11 @@ function createHarness(options = {}) {
       previewImage: "/product-assets/ringbound/preview.webp",
       previewImages: [],
       productLine: "Other Games & Experiments",
+      productLineSlug: "other-games-and-experiments",
       relatedProducts: [],
       releaseDate: "2026-06-17",
       saleEnabled: false,
       salePrice: "",
-      series: "",
       shortDescription: "Product summary coming soon.",
       slug: "ringbound",
       status: "preview-available",

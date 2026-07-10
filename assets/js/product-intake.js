@@ -668,6 +668,7 @@
               format: Array.isArray(product.format) ? [...product.format] : [],
               fulfillmentNote: String(product.fulfillmentNote || "").trim(),
               gameSystem: String(product.gameSystem || "").trim(),
+              gameSystemSlug: String(product.gameSystemSlug || "").trim(),
               lastUpdated: String(product.lastUpdated || "").trim(),
               legalNote: String(product.legalNote || "").trim(),
               longDescription: String(product.longDescription || "").trim(),
@@ -676,11 +677,13 @@
               previewImage: String(product.previewImage || "").trim(),
               previewImages: Array.isArray(product.previewImages) ? [...product.previewImages] : [],
               productLine: String(product.productLine || "").trim(),
+              productLineSlug: String(product.productLineSlug || "").trim(),
               relatedProducts: Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [],
               releaseDate: String(product.releaseDate || "").trim(),
               saleEnabled: Boolean(product.saleEnabled),
               salePrice: String(product.salePrice || "").trim(),
               series: String(product.series || "").trim(),
+              seriesSlug: String(product.seriesSlug || "").trim(),
               shortDescription: String(product.shortDescription || "").trim(),
               slug,
               status: String(product.status || "").trim(),
@@ -716,6 +719,12 @@
     const gameSystem = fields.system.value.trim();
     const productLine = fields.line.value.trim();
     const series = fields.series.value.trim();
+    const existingGameSystem = String(loadedProductRecord?.gameSystem || "").trim();
+    const existingGameSystemSlug = String(loadedProductRecord?.gameSystemSlug || "").trim();
+    const existingProductLine = String(loadedProductRecord?.productLine || "").trim();
+    const existingProductLineSlug = String(loadedProductRecord?.productLineSlug || "").trim();
+    const existingSeries = String(loadedProductRecord?.series || "").trim();
+    const existingSeriesSlug = String(loadedProductRecord?.seriesSlug || "").trim();
     const pageCountRaw = fields.pageCount.value.trim();
     const priceRaw = normalizeMoneyText(fields.price.value);
     const priceCents = parsePriceNumber(priceRaw) === null ? null : Math.round(parsePriceNumber(priceRaw) * 100);
@@ -741,7 +750,9 @@
       format: parseList(fields.format.value).length ? parseList(fields.format.value) : ["PDF"],
       fulfillmentNote: fields.fulfillmentNote.value.trim(),
       gameSystem,
-      gameSystemSlug: slugify(gameSystem),
+      gameSystemSlug: isEditingLoadedListing() && gameSystem === existingGameSystem
+        ? (existingGameSystemSlug || slugify(gameSystem))
+        : slugify(gameSystem),
       lastUpdated: fields.lastUpdated.value,
       legalNote: fields.legalNote.value.trim(),
       longDescription: fields.longDescription.value.trim(),
@@ -749,12 +760,16 @@
       price: priceRaw,
       priceCents,
       productLine,
-      productLineSlug: slugify(productLine),
+      productLineSlug: isEditingLoadedListing() && productLine === existingProductLine
+        ? (existingProductLineSlug || slugify(productLine))
+        : slugify(productLine),
       saleEnabled: fields.saleEnabled.checked,
       salePrice: salePriceRaw,
       salePriceCents,
       series,
-      seriesSlug: slugify(series),
+      seriesSlug: isEditingLoadedListing() && series === existingSeries
+        ? (existingSeriesSlug || (series ? slugify(series) : ""))
+        : slugify(series),
       publisher: "Tobacco Road Games",
       relatedProducts: [...selectedRelatedProducts],
       releaseDate: fields.releaseDate.value,

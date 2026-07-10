@@ -366,6 +366,13 @@ function upsertProducts(products, metadata) {
     excludeFromBundles: chooseBoolean(existing.excludeFromBundles, true)
   };
 
+  if (!Object.prototype.hasOwnProperty.call(existing, "series") && !String(metadata.series || "").trim()) {
+    delete updated.series;
+  }
+  if (!Object.prototype.hasOwnProperty.call(existing, "seriesSlug") && !String(metadata.seriesSlug || "").trim()) {
+    delete updated.seriesSlug;
+  }
+
   if (index >= 0) {
     nextProducts[index] = updated;
   } else {
