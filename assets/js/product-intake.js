@@ -55,6 +55,7 @@
 
   const outputs = {
     editMode: document.getElementById("product-edit-mode"),
+    listingDetails: document.getElementById("listing-details-section"),
     modeIndicatorTitle: document.getElementById("product-mode-indicator-title"),
     modeIndicatorCopy: document.getElementById("product-mode-indicator-copy"),
     advisorPanel: document.getElementById("advisor-panel"),
@@ -90,6 +91,7 @@
     applyAdvisor: document.getElementById("apply-advisor-button"),
     ignoreAdvisor: document.getElementById("ignore-advisor-button"),
     loadExisting: document.getElementById("product-existing-load"),
+    startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
     review: document.getElementById("review-listing-button"),
@@ -171,6 +173,12 @@
     if (buttons.toggleChecklist) {
       buttons.toggleChecklist.textContent = visible ? "Hide Asset Checklist" : "View Asset Checklist";
       buttons.toggleChecklist.setAttribute("aria-expanded", visible ? "true" : "false");
+    }
+  };
+
+  const setListingDetailsVisibility = (visible) => {
+    if (outputs.listingDetails) {
+      outputs.listingDetails.hidden = !visible;
     }
   };
 
@@ -1230,6 +1238,7 @@
     clearAdvisorPanel();
     syncRelatedPicker();
     updateRelatedSelectOptions();
+    setListingDetailsVisibility(true);
     updateEditModeCopy();
     updatePreview();
     markDraftBaseline();
@@ -1301,6 +1310,7 @@
     clearAdvisorPanel();
     syncRelatedPicker();
     updateRelatedSelectOptions();
+    setListingDetailsVisibility(true);
     updateEditModeCopy();
     updatePreview();
     draftBaseline = typeof persisted.draftBaseline === "string" && persisted.draftBaseline
@@ -1350,6 +1360,21 @@
   });
   buttons.publish.addEventListener("click", publishProduct);
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
+  buttons.startNew?.addEventListener("click", () => {
+    const wasEditing = isEditingLoadedListing();
+    if (hasUnsavedChanges() && !confirmDiscardChanges()) {
+      outputs.status.textContent = "Unsaved listing changes are still in place.";
+      return;
+    }
+
+    resetFormToDefaults({ hideDetails: false });
+    outputs.status.textContent = wasEditing
+      ? "Existing-listing edits were discarded. You are now creating a new product."
+      : "New listing workspace is ready. Nothing has been published yet.";
+    if (typeof fields.title?.focus === "function") {
+      fields.title.focus();
+    }
+  });
   buttons.addRelated.addEventListener("click", addRelatedProduct);
   buttons.review?.addEventListener("click", reviewCurrentListing);
   buttons.toggleJson?.addEventListener("click", () => {
@@ -1373,7 +1398,7 @@
     removeRelatedProduct(slug);
   });
 
-  const resetFormToDefaults = () => {
+  const resetFormToDefaults = ({ hideDetails = true } = {}) => {
     document.querySelectorAll("input, textarea, select").forEach((field) => {
       if (field.type === "file") {
         field.value = "";
@@ -1420,6 +1445,7 @@
     clearAdvisorPanel();
     clearPersistedExistingListingDraft();
     syncRelatedPicker();
+    setListingDetailsVisibility(!hideDetails);
     updateEditModeCopy();
     updatePreview();
     markDraftBaseline();
@@ -1432,9 +1458,9 @@
       return;
     }
 
-    resetFormToDefaults();
+    resetFormToDefaults({ hideDetails: wasEditing });
     outputs.status.textContent = wasEditing
-      ? "Listing changes discarded. You are now creating a new product. Published data was not changed."
+      ? "Listing changes discarded. You are back at the listing picker. Published data was not changed."
       : "New product form cleared. Published data was not changed.";
   });
 
@@ -1451,6 +1477,7 @@
   syncBuyModeUi();
   setJsonVisibility(false);
   setChecklistVisibility(false);
+  setListingDetailsVisibility(false);
   updateActionLabels();
   updatePreview();
   markDraftBaseline();

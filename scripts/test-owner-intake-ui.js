@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, "..");
 
 async function main() {
   await testIntakeLabelsAndHelperText();
+  await testListingDetailsStayHiddenUntilWorkStarts();
   await testGeneratedJsonToggle();
   await testAssetChecklistToggle();
   await testIntakeModeSpecificLabels();
@@ -21,6 +22,7 @@ async function main() {
 async function testIntakeLabelsAndHelperText() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
   assert.match(html, /Creating New Product/, "Product intake should show a clear new-product mode indicator.");
+  assert.match(html, />New Listing</, "Product intake should expose a New Listing launcher.");
   assert.match(html, />Check New Listing</, "Product intake should expose a Check New Listing action.");
   assert.match(html, />Review New Product</, "Product intake should expose a Review New Product action.");
   assert.match(html, />Publish New Product</, "Product intake should expose a Publish New Product action.");
@@ -30,6 +32,24 @@ async function testIntakeLabelsAndHelperText() {
   assert.match(html, /Discards unsaved work from this form only\. Published data is not affected\./, "Product intake should explain the discard action.");
   assert.match(html, /aria-describedby="intake-check-help"/, "Product intake actions should expose accessible helper text.");
   assert.doesNotMatch(html, /Analyze Listing|Publish Product|Reset Form/, "Product intake should not keep the vague old action labels.");
+}
+
+async function testListingDetailsStayHiddenUntilWorkStarts() {
+  const harness = createHarness();
+  await harness.flush();
+
+  assert.equal(harness.outputs.listingDetails.hidden, true, "Listing details should stay hidden on first load.");
+
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+  assert.equal(harness.outputs.listingDetails.hidden, false, "Loading an existing listing should reveal the listing details workspace.");
+
+  harness.buttons.reset.click();
+  assert.equal(harness.outputs.listingDetails.hidden, true, "Returning to the picker from an existing listing should hide the listing details workspace.");
+
+  harness.buttons.startNew.click();
+  assert.equal(harness.outputs.listingDetails.hidden, false, "Starting a new listing should reveal the listing details workspace.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "Starting a new listing should keep the intake in new-product mode.");
 }
 
 async function testIntakeModeSpecificLabels() {
@@ -137,6 +157,7 @@ async function testExistingListingDraftRestoresAfterReload() {
   const generatedAfterReload = JSON.parse(reloadedHarness.outputs.json.value);
 
   assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Reloading should restore the loaded Ringbound listing.");
+  assert.equal(reloadedHarness.outputs.listingDetails.hidden, false, "Reloading a persisted existing-listing draft should reveal the listing details workspace.");
   assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "A restored existing listing must not show the new-product publish action.");
   assert.equal(reloadedHarness.buttons.reset.textContent, "Discard Listing Changes", "A restored existing listing must keep the existing-listing discard action.");
   assert.equal(reloadedHarness.fields.title.value, "Ringbound", "Reloading should preserve the loaded title.");
@@ -198,6 +219,7 @@ async function testExistingListingSuccessfulUpdateReturnsToPicker() {
   await harness.flush();
 
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "A successful existing-listing update should close the editor and return to the picker state.");
+  assert.equal(harness.outputs.listingDetails.hidden, true, "A successful existing-listing update should hide the listing details workspace after returning to the picker.");
   assert.equal(harness.fields.existingSelect.value, "", "A successful existing-listing update should clear the loaded listing selection.");
   assert.equal(harness.fields.title.value, "", "A successful existing-listing update should clear the form fields.");
   assert.equal(harness.fields.slug.value, "", "A successful existing-listing update should clear the loaded slug.");
@@ -382,6 +404,7 @@ function createHarness(options = {}) {
 
   const outputs = {
     editMode: register("product-edit-mode", createElement("p")),
+    listingDetails: register("listing-details-section", createElement("section")),
     modeIndicatorTitle: register("product-mode-indicator-title", createElement("span")),
     modeIndicatorCopy: register("product-mode-indicator-copy", createElement("span")),
     outputHeading: register("intake-output-heading", createElement("h2")),
@@ -417,6 +440,7 @@ function createHarness(options = {}) {
     applyAdvisor: register("apply-advisor-button", createElement("button")),
     ignoreAdvisor: register("ignore-advisor-button", createElement("button")),
     loadExisting: register("product-existing-load", createElement("button")),
+    startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),
     publish: register("publish-button", createElement("button")),
     review: register("review-listing-button", createElement("button")),

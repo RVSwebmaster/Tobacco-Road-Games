@@ -187,6 +187,10 @@
       align-items: end;
     }
 
+    .intake-picker-row--launcher {
+      grid-template-columns: minmax(0, 1fr) repeat(2, auto);
+    }
+
     .intake-selection-list {
       display: grid;
       gap: 8px;
@@ -309,31 +313,42 @@
           <p>Required files: one cover WebP, one preview WebP, and one product PDF. The intake stores them under the standard internal object keys after upload. Cover and preview become public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
-        <div class="intake-mode" aria-live="polite">
-          <strong>Current Mode</strong>
-          <span id="product-mode-indicator-title">Creating New Product</span>
-          <span id="product-mode-indicator-copy">Publishing will create a new listing from the form values and selected files.</span>
-        </div>
+        <section class="intake-output" aria-labelledby="intake-picker-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Start Here</p>
+            <h2 id="intake-picker-heading">Choose a Listing</h2>
+            <p>Load an existing listing to edit it, or start a new listing when you are ready to work on product details.</p>
+          </div>
 
-        <div class="intake-grid">
-          <section class="intake-form" aria-labelledby="intake-form-heading">
+          <div class="intake-action-card">
+            <strong>Listing Picker</strong>
+            <label for="product-existing-select">Load Existing Listing for Updates</label>
+            <div class="intake-picker-row intake-picker-row--launcher">
+              <select id="product-existing-select" class="dock-input">
+                <option value="">Loading listings...</option>
+              </select>
+              <button id="product-existing-load" class="button button--secondary" type="button">Load Existing Listing</button>
+              <button id="start-new-listing-button" class="button button--secondary" type="button">New Listing</button>
+            </div>
+            <p id="product-edit-mode" class="intake-help">Stay at the listing picker until you deliberately load an existing listing or start a new one.</p>
+          </div>
+        </section>
+
+        <section id="listing-details-section" hidden>
+          <div class="intake-mode" aria-live="polite">
+            <strong>Current Mode</strong>
+            <span id="product-mode-indicator-title">Creating New Product</span>
+            <span id="product-mode-indicator-copy">Publishing will create a new listing from the form values and selected files.</span>
+          </div>
+
+          <div class="intake-grid">
+            <section class="intake-form" aria-labelledby="intake-form-heading">
             <div class="section-heading">
               <p class="section-heading__kicker">Metadata</p>
               <h2 id="intake-form-heading">Product details</h2>
             </div>
 
             <div class="intake-form-grid">
-              <div class="intake-field intake-field--full">
-                <label for="product-existing-select">Load Existing Listing for Updates</label>
-                <div class="intake-picker-row">
-                  <select id="product-existing-select" class="dock-input">
-                    <option value="">Loading listings...</option>
-                  </select>
-                  <button id="product-existing-load" class="button button--secondary" type="button">Load Existing Listing</button>
-                </div>
-                <p id="product-edit-mode" class="intake-help">Stay in new-product mode to create a listing, or load an existing one when you want to update metadata or replace only selected files.</p>
-              </div>
-
               <div class="intake-field">
                 <label for="product-title">Title</label>
                 <input id="product-title" class="dock-input" type="text" placeholder="Sirrocans">
@@ -524,9 +539,9 @@
                 <input id="product-pdf-file" class="dock-input" type="file" accept=".pdf,application/pdf">
               </div>
             </div>
-          </section>
+            </section>
 
-          <aside class="intake-preview" aria-labelledby="intake-preview-heading">
+            <aside class="intake-preview" aria-labelledby="intake-preview-heading">
             <div class="section-heading">
               <p class="section-heading__kicker">Catalog Preview</p>
               <h2 id="intake-preview-heading">Live product card + asset paths</h2>
@@ -564,11 +579,10 @@
                 <li>Use Publish or Update only after the review looks right. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
               </ol>
             </div>
-          </aside>
-        </div>
-      </section>
+            </aside>
+          </div>
 
-      <section class="store-section intake-output" aria-labelledby="intake-output-heading">
+          <section class="store-section intake-output" aria-labelledby="intake-output-heading">
         <div class="section-heading">
           <p class="section-heading__kicker">Check And Review</p>
           <h2 id="intake-output-heading">Review New Product</h2>
@@ -677,6 +691,8 @@
             <pre id="asset-checklist"></pre>
           </div>
         </div>
+          </section>
+        </section>
       </section>
     </main>
 
@@ -687,6 +703,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710h"></script>
+  <script src="../assets/js/product-intake.js?v=20260710i"></script>
 </body>
 </html>
