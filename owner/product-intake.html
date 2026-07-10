@@ -62,6 +62,16 @@
       align-content: start;
     }
 
+    .intake-field--checkbox-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .intake-field--checkbox-inline label {
+      margin: 0;
+    }
+
     #product-system {
       margin: 0;
     }
@@ -497,7 +507,7 @@
                 <input id="product-sale-price" class="dock-input" type="text" placeholder="2.99">
               </div>
 
-              <div class="intake-field">
+              <div class="intake-field intake-field--checkbox-inline">
                 <label for="product-sale-enabled">Sale Active</label>
                 <input id="product-sale-enabled" type="checkbox">
               </div>
