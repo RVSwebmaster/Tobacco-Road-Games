@@ -313,6 +313,135 @@
       line-height: 1.5;
     }
 
+    .tag-selector {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .tag-selector__group {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.42);
+    }
+
+    .tag-selector__group-title {
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.96rem;
+      font-weight: 700;
+    }
+
+    .tag-selector__options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 10px;
+    }
+
+    .tag-selector__option {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.92rem;
+      line-height: 1.4;
+      text-transform: none;
+      letter-spacing: normal;
+      font-weight: 400;
+    }
+
+    .tag-selector__option input {
+      margin: 0;
+      flex: 0 0 auto;
+    }
+
+    .tag-manager {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.42);
+    }
+
+    .tag-manager[hidden] {
+      display: none;
+    }
+
+    .tag-manager__row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .tag-manager__row--group {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .tag-manager__list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .tag-manager__group {
+      display: grid;
+      gap: 8px;
+      padding: 0.8rem 0.9rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tag-manager__group-title {
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .tag-manager__group-empty {
+      margin: 0;
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .tag-manager__item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px 12px;
+      align-items: center;
+      padding: 0.7rem 0.8rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.42);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    }
+
+    .tag-manager__item-copy {
+      display: grid;
+      gap: 0.2rem;
+      min-width: 0;
+    }
+
+    .tag-manager__item-name {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .tag-manager__item-note {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
     .advisor-panel {
       display: grid;
       gap: 14px;
@@ -380,6 +509,16 @@
       .intake-form-grid,
       .intake-form-columns,
       .intake-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .tag-selector {
+        grid-template-columns: 1fr;
+      }
+
+      .tag-selector__options,
+      .tag-manager__row,
+      .tag-manager__row--group {
         grid-template-columns: 1fr;
       }
     }
@@ -606,8 +745,38 @@
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-tags">Tags</label>
-                <input id="product-tags" class="dock-input" type="text" placeholder="5E, Ancestry, Desert">
+                <div class="intake-field__header">
+                  <label for="product-tags">Tags</label>
+                  <button id="manage-tags-button" class="button button--secondary" type="button" aria-controls="tag-manager-panel" aria-expanded="false">Manage Tags</button>
+                </div>
+                <p class="intake-help">Select tags from the grouped checkboxes below. Existing tags not shown here will still be preserved when you update a listing.</p>
+                <div id="product-tag-selector" class="tag-selector" aria-live="polite"></div>
+                <p id="product-tag-preserved-note" class="intake-help">Only the selected checkbox tags will be published.</p>
+                <input id="product-tags" type="hidden" value="">
+                <div id="tag-manager-panel" class="tag-manager" hidden>
+                  <div class="tag-manager__row">
+                    <div class="intake-field">
+                      <label for="tag-manager-group-select">Existing Tag Group</label>
+                      <select id="tag-manager-group-select" class="dock-input">
+                        <option value="">Select a tag group</option>
+                      </select>
+                    </div>
+                    <div class="intake-field">
+                      <label for="tag-manager-tag-input">New Tag</label>
+                      <input id="tag-manager-tag-input" class="dock-input" type="text" placeholder="Weird West">
+                    </div>
+                    <button id="add-tag-button" class="button button--secondary" type="button">Add Tag</button>
+                  </div>
+                  <div class="tag-manager__row tag-manager__row--group">
+                    <div class="intake-field">
+                      <label for="tag-manager-group-input">New Tag Group</label>
+                      <input id="tag-manager-group-input" class="dock-input" type="text" placeholder="Tone">
+                    </div>
+                    <button id="add-tag-group-button" class="button button--secondary" type="button">Add Tag Group</button>
+                  </div>
+                  <p id="tag-manager-status" class="intake-help">Used tags cannot be removed while published listings still reference them.</p>
+                  <div id="tag-manager-list" class="tag-manager__list" aria-live="polite"></div>
+                </div>
               </div>
 
               <div class="intake-field intake-field--full">
@@ -831,6 +1000,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710l"></script>
+  <script src="../assets/js/product-intake.js?v=20260710m"></script>
 </body>
 </html>

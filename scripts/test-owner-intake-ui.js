@@ -8,17 +8,24 @@ const ROOT = path.resolve(__dirname, "..");
 async function main() {
   await testIntakeLabelsAndHelperText();
   await testProductLineTerminologyAndManagerLabels();
+  await testTagSelectorMarkup();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
+  await testExistingListingLoadsMatchingTagCheckboxes();
   await testOwnerProductLineManagerAddsAndRemovesUnusedLine();
   await testOwnerProductLineManagerBlocksUsedLineRemoval();
   await testSeriesFieldRemainsIndependentFromProductLineManager();
+  await testTagManagerAddsGroupAndTag();
+  await testTagManagerRemovesUnusedTag();
+  await testTagManagerBlocksUsedTagRemoval();
   await testBackToListingsLeavesUnchangedExistingListing();
   await testBackToListingsConfirmsEditedExistingListing();
   await testGeneratedJsonToggle();
   await testAssetChecklistToggle();
   await testIntakeModeSpecificLabels();
   await testExistingListingDraftRestoresAfterReload();
+  await testExistingListingPublishPreservesUnknownTags();
+  await testExistingListingReopenRestoresSavedTagCheckboxes();
   await testExistingListingPublishOmitsUndefinedSeriesFields();
   await testExistingListingSuccessfulUpdateReturnsToPicker();
   await testIntakeReviewAndDiscardConfirmation();
@@ -50,6 +57,16 @@ async function testProductLineTerminologyAndManagerLabels() {
   assert.doesNotMatch(html, /<label for="product-line">Store Line<\/label>/, "The old Store Line label should be removed.");
 }
 
+async function testTagSelectorMarkup() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
+  assert.match(html, />Manage Tags</, "The owner intake should expose a Manage Tags control.");
+  assert.match(html, /id="product-tag-selector"/, "The owner intake should render a grouped tag selector.");
+  assert.match(script, /Product Lines[\s\S]*Genre[\s\S]*Product Type[\s\S]*Game System/, "The grouped tag selector should include the default tag groups.");
+  assert.match(html, /<input id="product-tags" type="hidden"/, "The legacy tags field should remain as a hidden publish field.");
+  assert.doesNotMatch(html, /<input id="product-tags" class="dock-input" type="text"/, "The old visible free-text tags input should be removed from normal use.");
+}
+
 async function testTablecraftListingStillLoadsWithProductLine() {
   const harness = createHarness();
   await harness.flush();
@@ -63,6 +80,19 @@ async function testTablecraftListingStillLoadsWithProductLine() {
   assert.equal(harness.fields.series.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve series separately.");
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Tablecraft Primer", "Tablecraft listings should still load into existing-listing mode.");
   assert.equal(harness.fields.title.value, "Tablecraft Primer", "The existing Tablecraft listing should still populate the form.");
+}
+
+async function testExistingListingLoadsMatchingTagCheckboxes() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+
+  assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, true, "Existing known tags should load as checked checkboxes.");
+  assert.equal(findTagCheckbox(harness, "Historical")?.checked, false, "Unselected known tags should stay unchecked.");
+  assert.match(harness.outputs.tagPreservedNote.textContent, /Preview/, "Unknown existing tags should be called out as preserved.");
+  assert.equal(harness.fields.tags.value, "Fantasy, Preview", "The hidden tags field should preserve the combined visible and unknown tag values.");
 }
 
 async function testOwnerProductLineManagerAddsAndRemovesUnusedLine() {
@@ -119,6 +149,66 @@ async function testSeriesFieldRemainsIndependentFromProductLineManager() {
 
   getProductLineRemoveButton(findProductLineManagerRow(harness, "Night Roads")).click();
   assert.equal(harness.fields.series.value, "Chronicles", "Removing an unused Product Line should not alter the Series field.");
+}
+
+async function testTagManagerAddsGroupAndTag() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.buttons.manageTags.click();
+  assert.equal(harness.outputs.tagManagerPanel.hidden, false, "Manage Tags should reveal the tag manager.");
+
+  harness.fields.tagManagerGroupInput.value = "Tone";
+  harness.buttons.addTagGroup.click();
+  assert.ok(getSelectOptionLabels(harness.fields.tagManagerGroupSelect).includes("Tone"), "Adding a tag group should make it immediately selectable.");
+  assert.match(harness.outputs.tagManagerStatus.textContent, /Tone added/i, "Adding a tag group should confirm success.");
+
+  harness.fields.tagManagerGroupSelect.value = "Tone";
+  harness.fields.tagManagerTagInput.value = "Melancholic";
+  harness.buttons.addTag.click();
+  assert.ok(findTagCheckbox(harness, "Melancholic"), "Adding a tag should make it immediately available in the checkbox selector.");
+  assert.match(harness.outputs.tagManagerStatus.textContent, /Melancholic added/i, "Adding a tag should confirm success.");
+
+  const tagCheckbox = findTagCheckbox(harness, "Melancholic");
+  tagCheckbox.checked = true;
+  tagCheckbox.dispatch("change");
+  assert.ok(harness.api.getCurrentTagValues().includes("Melancholic"), "A newly added tag should be selectable immediately.");
+}
+
+async function testTagManagerRemovesUnusedTag() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.buttons.manageTags.click();
+  harness.fields.tagManagerGroupInput.value = "Tone";
+  harness.buttons.addTagGroup.click();
+  harness.fields.tagManagerGroupSelect.value = "Tone";
+  harness.fields.tagManagerTagInput.value = "Melancholic";
+  harness.buttons.addTag.click();
+
+  const groupRow = findTagManagerGroup(harness, "Tone");
+  const tagRow = findTagManagerItem(groupRow, "Melancholic");
+  getTagRemoveButton(tagRow).click();
+
+  assert.equal(findTagCheckbox(harness, "Melancholic"), null, "Removing an unused tag should remove it from the checkbox selector immediately.");
+  assert.match(harness.outputs.tagManagerStatus.textContent, /Melancholic removed/i, "Removing an unused tag should confirm that no published listing changed.");
+}
+
+async function testTagManagerBlocksUsedTagRemoval() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.buttons.manageTags.click();
+  const productLinesGroup = findTagManagerGroup(harness, "Product Lines");
+  const tablecraftRow = findTagManagerItem(productLinesGroup, "Tablecraft");
+  const removeButton = getTagRemoveButton(tablecraftRow);
+
+  assert.equal(removeButton.disabled, true, "Used tags should not expose an active remove action.");
+  assert.match(getTagManagerNote(tablecraftRow), /Used by 1 product/i, "Used tags should explain why they cannot be removed.");
+
+  const removed = harness.api.removeOwnerTag("Product Lines", "Tablecraft");
+  assert.equal(removed, false, "Used tags should remain protected even if removal is called directly.");
+  assert.match(harness.outputs.tagManagerStatus.textContent, /cannot be removed/i, "Blocked used-tag removal should explain that published listings still reference the tag.");
 }
 
 async function testListingDetailsStayHiddenUntilWorkStarts() {
@@ -290,6 +380,7 @@ async function testExistingListingDraftRestoresAfterReload() {
   assert.equal(reloadedHarness.fields.title.value, "Ringbound", "Reloading should preserve the loaded title.");
   assert.equal(reloadedHarness.fields.slug.value, "ringbound", "Reloading should preserve the loaded slug.");
   assert.equal(reloadedHarness.fields.pageCount.value, "12", "Reloading should preserve the unsaved page-count edit.");
+  assert.equal(findTagCheckbox(reloadedHarness, "Fantasy")?.checked, true, "Reloading should preserve the checked tag selector state.");
   assert.match(reloadedHarness.outputs.status.textContent, /Restored Ringbound for editing after the page was reloaded\./, "Reloading should explain why the existing listing remained active.");
   assert.equal(reloadedHarness.api.hasUnsavedChanges(), true, "Reloading should preserve the unsaved-changes baseline.");
   assert.equal(reloadedHarness.api.validateRequiredFields().length, 0, "Reloading should not fall back to new-product validation errors for a restored existing listing.");
@@ -302,6 +393,51 @@ async function testExistingListingDraftRestoresAfterReload() {
   reloadedHarness.buttons.review.click();
   assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Ringbound draft should still work.");
   assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "Reviewing the restored draft must not relabel the publish action.");
+}
+
+async function testExistingListingPublishPreservesUnknownTags() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+
+  const fantasyCheckbox = findTagCheckbox(harness, "Fantasy");
+  const historicalCheckbox = findTagCheckbox(harness, "Historical");
+  fantasyCheckbox.checked = false;
+  fantasyCheckbox.dispatch("change");
+  historicalCheckbox.checked = true;
+  historicalCheckbox.dispatch("change");
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+
+  assert.equal(harness.lastPublishFormData.get("tags"), "Historical, Preview", "Publishing should preserve unknown tags while applying the current checkbox selection.");
+}
+
+async function testExistingListingReopenRestoresSavedTagCheckboxes() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+
+  const fantasyCheckbox = findTagCheckbox(harness, "Fantasy");
+  const historicalCheckbox = findTagCheckbox(harness, "Historical");
+  fantasyCheckbox.checked = false;
+  fantasyCheckbox.dispatch("change");
+  historicalCheckbox.checked = true;
+  historicalCheckbox.dispatch("change");
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+  await harness.api.loadAvailableProductsForTests();
+  await harness.flush();
+
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+
+  assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, false, "Reopened listings should clear tags that were unchecked in the saved update.");
+  assert.equal(findTagCheckbox(harness, "Historical")?.checked, true, "Reopened listings should restore tags that were checked in the saved update.");
+  assert.match(harness.outputs.tagPreservedNote.textContent, /Preview/, "Reopened listings should still preserve unknown tags that survived the update.");
 }
 
 async function testExistingListingPublishOmitsUndefinedSeriesFields() {
@@ -409,8 +545,8 @@ function createHarness(options = {}) {
       this.listeners.set(type, handler);
     }
 
-    append(child) {
-      this.children.push(child);
+    append(...children) {
+      this.children.push(...children);
     }
 
     click() {
@@ -509,6 +645,9 @@ function createHarness(options = {}) {
     line: register("product-line", createElement("select")),
     series: register("product-series", createInput("")),
     productLineManagerInput: register("product-line-manager-input", createInput("")),
+    tagManagerGroupInput: register("tag-manager-group-input", createInput("")),
+    tagManagerGroupSelect: register("tag-manager-group-select", createElement("select")),
+    tagManagerTagInput: register("tag-manager-tag-input", createInput("")),
     format: register("product-format", createInput("PDF")),
     pageCount: register("product-page-count", createInput("24", "number")),
     price: register("product-price", createInput("4.99")),
@@ -521,7 +660,7 @@ function createHarness(options = {}) {
     shortDescription: register("product-short-description", createElement("textarea")),
     longDescription: register("product-long-description", createElement("textarea")),
     features: register("product-features", createElement("textarea")),
-    tags: register("product-tags", createInput("")),
+    tags: register("product-tags", createInput("", "hidden")),
     fulfillmentNote: register("product-fulfillment-note", createElement("textarea")),
     creationMethod: register("product-creation-method", createElement("textarea")),
     legalNote: register("product-legal-note", createElement("textarea")),
@@ -548,6 +687,11 @@ function createHarness(options = {}) {
     productLineManagerList: register("product-line-manager-list", createElement("div")),
     productLineManagerPanel: register("product-line-manager-panel", createElement("div")),
     productLineManagerStatus: register("product-line-manager-status", createElement("p")),
+    tagManagerList: register("tag-manager-list", createElement("div")),
+    tagManagerPanel: register("tag-manager-panel", createElement("div")),
+    tagManagerStatus: register("tag-manager-status", createElement("p")),
+    tagPreservedNote: register("product-tag-preserved-note", createElement("p")),
+    tagSelector: register("product-tag-selector", createElement("div")),
     modeIndicatorTitle: register("product-mode-indicator-title", createElement("span")),
     modeIndicatorCopy: register("product-mode-indicator-copy", createElement("span")),
     outputHeading: register("intake-output-heading", createElement("h2")),
@@ -581,11 +725,14 @@ function createHarness(options = {}) {
   const buttons = {
     analyze: register("analyze-listing-button", createElement("button")),
     addProductLine: register("add-product-line-button", createElement("button")),
+    addTag: register("add-tag-button", createElement("button")),
+    addTagGroup: register("add-tag-group-button", createElement("button")),
     applyAdvisor: register("apply-advisor-button", createElement("button")),
     ignoreAdvisor: register("ignore-advisor-button", createElement("button")),
     leaveListing: register("leave-listing-button", createElement("button")),
     loadExisting: register("product-existing-load", createElement("button")),
     manageProductLines: register("manage-product-lines-button", createElement("button")),
+    manageTags: register("manage-tags-button", createElement("button")),
     startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),
     publish: register("publish-button", createElement("button")),
@@ -637,7 +784,7 @@ function createHarness(options = {}) {
       slug: "agency",
       status: "preview-available",
       subtitle: "A test product",
-      tags: ["Test"],
+      tags: ["Fantasy", "Preview"],
       title: "Agency",
       version: "1.0"
     },
@@ -671,7 +818,7 @@ function createHarness(options = {}) {
       slug: "ringbound",
       status: "preview-available",
       subtitle: "A Tobacco Road Games catalog preview",
-      tags: ["Preview"],
+      tags: ["Fantasy", "Preview"],
       title: "Ringbound",
       version: "2026 catalog preview"
     },
@@ -707,7 +854,7 @@ function createHarness(options = {}) {
       slug: "tablecraft-primer",
       status: "preview-available",
       subtitle: "A practical guide for steadier tables",
-      tags: ["Tablecraft"],
+      tags: ["Tablecraft", "GM Advice"],
       title: "Tablecraft Primer",
       version: "1.0"
     }
@@ -770,6 +917,17 @@ function createHarness(options = {}) {
       }
       if (String(url).includes("/owner/api/publish")) {
         harness.lastPublishFormData = options.body || null;
+        if (harness.lastPublishFormData && typeof harness.lastPublishFormData.get === "function") {
+          const slug = String(harness.lastPublishFormData.get("slug") || "").trim();
+          const tags = String(harness.lastPublishFormData.get("tags") || "")
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean);
+          const matchingProduct = products.find((product) => product.slug === slug);
+          if (matchingProduct) {
+            matchingProduct.tags = tags;
+          }
+        }
         return harness.mockPublishResponse;
       }
       throw new Error(`Unexpected fetch: ${url}`);
@@ -833,6 +991,46 @@ function getProductLineRemoveButton(row) {
 }
 
 function getProductLineNote(row) {
+  return row.children?.[0]?.children?.[1]?.textContent || "";
+}
+
+function findTagCheckbox(harness, tagName) {
+  const groups = Array.isArray(harness.outputs.tagSelector.children)
+    ? harness.outputs.tagSelector.children
+    : [];
+
+  for (const group of groups) {
+    const optionGrid = group.children?.[1];
+    const options = Array.isArray(optionGrid?.children) ? optionGrid.children : [];
+    for (const option of options) {
+      const checkbox = option.children?.[0] || null;
+      const label = option.children?.[1]?.textContent || "";
+      if (label === tagName) {
+        return checkbox;
+      }
+    }
+  }
+
+  return null;
+}
+
+function findTagManagerGroup(harness, groupName) {
+  return Array.isArray(harness.outputs.tagManagerList.children)
+    ? harness.outputs.tagManagerList.children.find((child) => child.children?.[0]?.textContent === groupName) || null
+    : null;
+}
+
+function findTagManagerItem(groupRow, tagName) {
+  return Array.isArray(groupRow?.children)
+    ? groupRow.children.find((child, index) => index > 0 && child.children?.[0]?.children?.[0]?.textContent === tagName) || null
+    : null;
+}
+
+function getTagRemoveButton(row) {
+  return row.children[row.children.length - 1];
+}
+
+function getTagManagerNote(row) {
   return row.children?.[0]?.children?.[1]?.textContent || "";
 }
 

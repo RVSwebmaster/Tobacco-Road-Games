@@ -4,7 +4,14 @@
   const DISCARD_LISTING_CHANGES_MESSAGE = "Discard unsaved work? Any unpublished listing changes will be lost.";
   const EXISTING_LISTING_DRAFT_KEY = "trg_owner_existing_listing_draft_v1";
   const PRODUCT_LINE_LIBRARY_KEY = "trg_owner_product_lines_v1";
+  const TAG_LIBRARY_KEY = "trg_owner_tag_library_v1";
   const DEFAULT_PRODUCT_LINES = ["Tablecraft"];
+  const DEFAULT_TAG_GROUPS = Object.freeze([
+    Object.freeze({ name: "Product Lines", tags: Object.freeze(["Tablecraft", "Gazetteer", "Familiar Faces"]) }),
+    Object.freeze({ name: "Genre", tags: Object.freeze(["Family Gaming", "Fantasy", "Historical", "Horror", "Modern", "Science Fiction", "Other"]) }),
+    Object.freeze({ name: "Product Type", tags: Object.freeze(["Core Rules", "Supplement", "Rules Supplement", "Scenario", "Item", "Monster"]) }),
+    Object.freeze({ name: "Game System", tags: Object.freeze(["Dungeons & Dragons", "SRD 5.1", "SRD 5.21", "OGL", "Threshold Engine", "GURPS", "Champions", "Big Damn Sci-Fi", "System Agnostic", "Other System", "Traveller", "Call of Cthulhu", "Syzygy"]) })
+  ]);
   const statusLabels = {
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
@@ -30,6 +37,9 @@
     line: document.getElementById("product-line"),
     series: document.getElementById("product-series"),
     productLineManagerInput: document.getElementById("product-line-manager-input"),
+    tagManagerGroupInput: document.getElementById("tag-manager-group-input"),
+    tagManagerGroupSelect: document.getElementById("tag-manager-group-select"),
+    tagManagerTagInput: document.getElementById("tag-manager-tag-input"),
     format: document.getElementById("product-format"),
     pageCount: document.getElementById("product-page-count"),
     price: document.getElementById("product-price"),
@@ -62,6 +72,11 @@
     productLineManagerList: document.getElementById("product-line-manager-list"),
     productLineManagerPanel: document.getElementById("product-line-manager-panel"),
     productLineManagerStatus: document.getElementById("product-line-manager-status"),
+    tagManagerList: document.getElementById("tag-manager-list"),
+    tagManagerPanel: document.getElementById("tag-manager-panel"),
+    tagManagerStatus: document.getElementById("tag-manager-status"),
+    tagPreservedNote: document.getElementById("product-tag-preserved-note"),
+    tagSelector: document.getElementById("product-tag-selector"),
     modeIndicatorTitle: document.getElementById("product-mode-indicator-title"),
     modeIndicatorCopy: document.getElementById("product-mode-indicator-copy"),
     advisorPanel: document.getElementById("advisor-panel"),
@@ -96,10 +111,13 @@
     analyze: document.getElementById("analyze-listing-button"),
     applyAdvisor: document.getElementById("apply-advisor-button"),
     addProductLine: document.getElementById("add-product-line-button"),
+    addTag: document.getElementById("add-tag-button"),
+    addTagGroup: document.getElementById("add-tag-group-button"),
     ignoreAdvisor: document.getElementById("ignore-advisor-button"),
     leaveListing: document.getElementById("leave-listing-button"),
     loadExisting: document.getElementById("product-existing-load"),
     manageProductLines: document.getElementById("manage-product-lines-button"),
+    manageTags: document.getElementById("manage-tags-button"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
@@ -121,6 +139,9 @@
   let latestAdvisorRun = null;
   let draftBaseline = "";
   let ownerProductLines = [...DEFAULT_PRODUCT_LINES];
+  let ownerTagGroups = DEFAULT_TAG_GROUPS.map((group) => ({ name: group.name, tags: [...group.tags] }));
+  let selectedTagKeys = new Set();
+  let preservedUnknownTags = [];
 
   const slugify = (value) =>
     String(value || "")
@@ -174,6 +195,30 @@
   const canonicalizeProductLineName = (value) =>
     normalizeProductLineName(value).toLowerCase();
 
+  const normalizeTagGroupName = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const canonicalizeTagGroupName = (value) =>
+    normalizeTagGroupName(value).toLowerCase();
+
+  const normalizeTagName = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const canonicalizeTagName = (value) =>
+    normalizeTagName(value).toLowerCase();
+
+  const cloneTagGroups = (groups) =>
+    Array.isArray(groups)
+      ? groups.map((group) => ({
+        name: normalizeTagGroupName(group?.name),
+        tags: Array.isArray(group?.tags) ? group.tags.map((tag) => normalizeTagName(tag)).filter(Boolean) : []
+      })).filter((group) => group.name)
+      : [];
+
   const setJsonVisibility = (visible) => {
     if (outputs.jsonPanel) {
       outputs.jsonPanel.hidden = !visible;
@@ -206,6 +251,15 @@
     }
     if (buttons.manageProductLines) {
       buttons.manageProductLines.setAttribute("aria-expanded", visible ? "true" : "false");
+    }
+  };
+
+  const setTagManagerVisibility = (visible) => {
+    if (outputs.tagManagerPanel) {
+      outputs.tagManagerPanel.hidden = !visible;
+    }
+    if (buttons.manageTags) {
+      buttons.manageTags.setAttribute("aria-expanded", visible ? "true" : "false");
     }
   };
 
@@ -604,7 +658,9 @@
       refreshProductLineUi();
     }
 
-    fields.tags.value = latestAdvisorRun.suggested_tags.join(", ");
+    applyTagValues(latestAdvisorRun.suggested_tags, { mergePreservedUnknown: true });
+    renderTagSelector();
+    renderTagManager();
     selectedRelatedProducts = [...latestAdvisorRun.suggested_cross_sells];
     syncRelatedPicker();
     updatePreview();
@@ -773,6 +829,7 @@
     }
 
     refreshProductLineUi();
+    renderTagManager();
     syncRelatedPicker();
     updateEditModeCopy();
   }
@@ -843,7 +900,7 @@
       status: fields.status.value,
       statusLabel: statusLabels[fields.status.value] || "Unavailable",
       subtitle: fields.subtitle.value.trim(),
-      tags: parseList(fields.tags.value),
+      tags: getCurrentTagValues(),
       title,
       version: fields.version.value.trim() || "1.0"
     };
@@ -1250,7 +1307,7 @@
     fields.shortDescription.value = product.shortDescription || "";
     fields.longDescription.value = product.longDescription || "";
     fields.features.value = Array.isArray(product.features) ? product.features.join("\n") : "";
-    fields.tags.value = Array.isArray(product.tags) ? product.tags.join(", ") : "";
+    applyTagValues(Array.isArray(product.tags) ? product.tags : []);
     fields.fulfillmentNote.value = product.fulfillmentNote || "";
     fields.creationMethod.value = product.creationMethod || "Human-authored by RV Sawyer.";
     fields.legalNote.value = product.legalNote || "";
@@ -1266,6 +1323,8 @@
 
     clearAdvisorPanel();
     refreshProductLineUi();
+    renderTagSelector();
+    renderTagManager();
     syncRelatedPicker();
     updateRelatedSelectOptions();
     setListingDetailsVisibility(true);
@@ -1318,7 +1377,7 @@
     fields.shortDescription.value = draft.shortDescription ?? product.shortDescription ?? "";
     fields.longDescription.value = draft.longDescription ?? product.longDescription ?? "";
     fields.features.value = draft.features ?? (Array.isArray(product.features) ? product.features.join("\n") : "");
-    fields.tags.value = draft.tags ?? (Array.isArray(product.tags) ? product.tags.join(", ") : "");
+    applyTagValues(draft.tags ?? (Array.isArray(product.tags) ? product.tags : []));
     fields.fulfillmentNote.value = draft.fulfillmentNote ?? product.fulfillmentNote ?? "";
     fields.creationMethod.value = draft.creationMethod ?? product.creationMethod ?? "Human-authored by RV Sawyer.";
     fields.legalNote.value = draft.legalNote ?? product.legalNote ?? "";
@@ -1339,6 +1398,8 @@
 
     clearAdvisorPanel();
     refreshProductLineUi();
+    renderTagSelector();
+    renderTagManager();
     syncRelatedPicker();
     updateRelatedSelectOptions();
     setListingDetailsVisibility(true);
@@ -1387,6 +1448,12 @@
   buttons.addProductLine?.addEventListener("click", () => {
     addOwnerProductLine();
   });
+  buttons.addTag?.addEventListener("click", () => {
+    addOwnerTag();
+  });
+  buttons.addTagGroup?.addEventListener("click", () => {
+    addOwnerTagGroup();
+  });
   buttons.applyAdvisor?.addEventListener("click", applyAdvisorSuggestions);
   buttons.ignoreAdvisor?.addEventListener("click", () => {
     clearAdvisorPanel();
@@ -1396,6 +1463,9 @@
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
   buttons.manageProductLines?.addEventListener("click", () => {
     setProductLineManagerVisibility(Boolean(outputs.productLineManagerPanel?.hidden));
+  });
+  buttons.manageTags?.addEventListener("click", () => {
+    setTagManagerVisibility(Boolean(outputs.tagManagerPanel?.hidden));
   });
   buttons.leaveListing?.addEventListener("click", () => {
     if (hasUnsavedChanges() && !confirmDiscardChanges()) {
@@ -1441,6 +1511,22 @@
     addOwnerProductLine();
   });
 
+  fields.tagManagerTagInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    addOwnerTag();
+  });
+
+  fields.tagManagerGroupInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    addOwnerTagGroup();
+  });
+
   fields.relatedList.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
@@ -1483,7 +1569,7 @@
     fields.shortDescription.value = "";
     fields.longDescription.value = "";
     fields.features.value = "";
-    fields.tags.value = "";
+    applyTagValues([]);
     fields.fulfillmentNote.value = "";
     fields.creationMethod.value = "Human-authored by RV Sawyer.";
     fields.legalNote.value = "";
@@ -1502,6 +1588,8 @@
     clearAdvisorPanel();
     clearPersistedExistingListingDraft();
     refreshProductLineUi();
+    renderTagSelector();
+    renderTagManager();
     syncRelatedPicker();
     setListingDetailsVisibility(!hideDetails);
     updateEditModeCopy();
@@ -1558,6 +1646,431 @@
     } catch {
       return [...DEFAULT_PRODUCT_LINES];
     }
+  };
+
+  const persistOwnerTagGroups = () => {
+    const storage = getLocalStorage();
+    if (!storage) {
+      return;
+    }
+
+    try {
+      storage.setItem(TAG_LIBRARY_KEY, JSON.stringify(ownerTagGroups));
+    } catch {}
+  };
+
+  const readOwnerTagGroups = () => {
+    const storage = getLocalStorage();
+    if (!storage) {
+      return cloneTagGroups(DEFAULT_TAG_GROUPS);
+    }
+
+    try {
+      const raw = storage.getItem(TAG_LIBRARY_KEY);
+      if (!raw) {
+        return cloneTagGroups(DEFAULT_TAG_GROUPS);
+      }
+      const parsed = JSON.parse(raw);
+      const groups = cloneTagGroups(parsed);
+      if (!groups.length) {
+        return cloneTagGroups(DEFAULT_TAG_GROUPS);
+      }
+
+      return groups.map((group) => {
+        const seen = new Set();
+        return {
+          name: group.name,
+          tags: group.tags.filter((tag) => {
+            const key = canonicalizeTagName(tag);
+            if (!key || seen.has(key)) {
+              return false;
+            }
+            seen.add(key);
+            return true;
+          })
+        };
+      });
+    } catch {
+      return cloneTagGroups(DEFAULT_TAG_GROUPS);
+    }
+  };
+
+  const getKnownTagMap = () => {
+    const known = new Map();
+    ownerTagGroups.forEach((group) => {
+      group.tags.forEach((tag) => {
+        const key = canonicalizeTagName(tag);
+        if (key && !known.has(key)) {
+          known.set(key, normalizeTagName(tag));
+        }
+      });
+    });
+    return known;
+  };
+
+  const getSelectableTagGroups = () =>
+    cloneTagGroups(ownerTagGroups).map((group) => ({
+      name: group.name,
+      tags: group.tags.filter(Boolean)
+    }));
+
+  const getUsedTagUsage = () => {
+    const usage = new Map();
+    availableProducts.forEach((product) => {
+      const productTags = Array.isArray(product.tags) ? product.tags : [];
+      productTags.forEach((tag) => {
+        const normalized = normalizeTagName(tag);
+        const key = canonicalizeTagName(normalized);
+        if (!key) {
+          return;
+        }
+        const current = usage.get(key) || { count: 0, name: normalized };
+        current.count += 1;
+        usage.set(key, current);
+      });
+    });
+    return usage;
+  };
+
+  const getCurrentKnownTagsInOrder = () => {
+    const tags = [];
+    const appended = new Set();
+    ownerTagGroups.forEach((group) => {
+      group.tags.forEach((tag) => {
+        const key = canonicalizeTagName(tag);
+        if (!key || !selectedTagKeys.has(key) || appended.has(key)) {
+          return;
+        }
+        appended.add(key);
+        tags.push(normalizeTagName(tag));
+      });
+    });
+    return tags;
+  };
+
+  const getCurrentTagValues = () =>
+    [...getCurrentKnownTagsInOrder(), ...preservedUnknownTags];
+
+  const syncTagsFieldValue = () => {
+    if (!fields.tags) {
+      return;
+    }
+    fields.tags.value = getCurrentTagValues().join(", ");
+  };
+
+  const updatePreservedTagNote = () => {
+    if (!outputs.tagPreservedNote) {
+      return;
+    }
+
+    outputs.tagPreservedNote.textContent = preservedUnknownTags.length
+      ? `Additional existing tags preserved on update: ${preservedUnknownTags.join(", ")}.`
+      : "Only the selected checkbox tags will be published.";
+  };
+
+  const applyTagValues = (tags, options = {}) => {
+    const knownTags = getKnownTagMap();
+    const nextSelected = new Set();
+    const nextPreserved = [];
+    const seenUnknown = new Set();
+    const mergePreservedUnknown = Boolean(options.mergePreservedUnknown);
+
+    parseList(Array.isArray(tags) ? tags.join(", ") : tags).forEach((tag) => {
+      const normalized = normalizeTagName(tag);
+      const key = canonicalizeTagName(normalized);
+      if (!key) {
+        return;
+      }
+      if (knownTags.has(key)) {
+        nextSelected.add(key);
+        return;
+      }
+      if (!seenUnknown.has(key)) {
+        seenUnknown.add(key);
+        nextPreserved.push(normalized);
+      }
+    });
+
+    if (mergePreservedUnknown) {
+      preservedUnknownTags.forEach((tag) => {
+        const normalized = normalizeTagName(tag);
+        const key = canonicalizeTagName(normalized);
+        if (!key || seenUnknown.has(key)) {
+          return;
+        }
+        seenUnknown.add(key);
+        nextPreserved.push(normalized);
+      });
+    }
+
+    selectedTagKeys = nextSelected;
+    preservedUnknownTags = nextPreserved;
+    syncTagsFieldValue();
+    updatePreservedTagNote();
+  };
+
+  const renderTagSelector = () => {
+    if (!outputs.tagSelector) {
+      return;
+    }
+
+    const groups = getSelectableTagGroups();
+    outputs.tagSelector.replaceChildren(
+      ...groups.map((group) => {
+        const card = document.createElement("section");
+        card.className = "tag-selector__group";
+
+        const title = document.createElement("strong");
+        title.className = "tag-selector__group-title";
+        title.textContent = group.name;
+        card.append(title);
+
+        const optionGrid = document.createElement("div");
+        optionGrid.className = "tag-selector__options";
+
+        group.tags.forEach((tag) => {
+          const key = canonicalizeTagName(tag);
+          const option = document.createElement("label");
+          option.className = "tag-selector__option";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = selectedTagKeys.has(key);
+          checkbox.dataset.tagKey = key;
+          checkbox.dataset.tagLabel = tag;
+          checkbox.addEventListener("change", () => {
+            if (checkbox.checked) {
+              selectedTagKeys.add(key);
+            } else {
+              selectedTagKeys.delete(key);
+            }
+            syncTagsFieldValue();
+            updatePreservedTagNote();
+            updatePreview();
+          });
+
+          const labelText = document.createElement("span");
+          labelText.textContent = tag;
+
+          option.append(checkbox);
+          option.append(labelText);
+          optionGrid.append(option);
+        });
+
+        card.append(optionGrid);
+        return card;
+      })
+    );
+  };
+
+  const renderTagManager = () => {
+    if (fields.tagManagerGroupSelect) {
+      const previousValue = fields.tagManagerGroupSelect.value;
+      const options = [];
+      const emptyOption = document.createElement("option");
+      emptyOption.value = "";
+      emptyOption.textContent = "Select a tag group";
+      options.push(emptyOption);
+
+      ownerTagGroups.forEach((group) => {
+        const option = document.createElement("option");
+        option.value = group.name;
+        option.textContent = group.name;
+        options.push(option);
+      });
+
+      fields.tagManagerGroupSelect.replaceChildren(...options);
+      if (ownerTagGroups.some((group) => group.name === previousValue)) {
+        fields.tagManagerGroupSelect.value = previousValue;
+      }
+    }
+
+    if (!outputs.tagManagerList) {
+      return;
+    }
+
+    const usage = getUsedTagUsage();
+    outputs.tagManagerList.replaceChildren(
+      ...ownerTagGroups.map((group) => {
+        const groupCard = document.createElement("section");
+        groupCard.className = "tag-manager__group";
+
+        const title = document.createElement("strong");
+        title.className = "tag-manager__group-title";
+        title.textContent = group.name;
+        groupCard.append(title);
+
+        if (!group.tags.length) {
+          const empty = document.createElement("p");
+          empty.className = "tag-manager__group-empty";
+          empty.textContent = "No tags in this group yet.";
+          groupCard.append(empty);
+          return groupCard;
+        }
+
+        group.tags.forEach((tag) => {
+          const item = document.createElement("div");
+          item.className = "tag-manager__item";
+
+          const copy = document.createElement("div");
+          copy.className = "tag-manager__item-copy";
+
+          const name = document.createElement("span");
+          name.className = "tag-manager__item-name";
+          name.textContent = tag;
+          copy.append(name);
+
+          const note = document.createElement("span");
+          note.className = "tag-manager__item-note";
+          const key = canonicalizeTagName(tag);
+          const tagUsage = usage.get(key);
+          note.textContent = tagUsage
+            ? `Used by ${tagUsage.count} product${tagUsage.count === 1 ? "" : "s"}. Remove it from those listings before deleting it here.`
+            : "Unused owner tag. Safe to remove without changing any published listing.";
+          copy.append(note);
+
+          const removeButton = document.createElement("button");
+          removeButton.className = "button button--secondary";
+          removeButton.type = "button";
+          removeButton.textContent = "Remove";
+          removeButton.disabled = Boolean(tagUsage);
+          removeButton.addEventListener("click", () => {
+            removeOwnerTag(group.name, tag);
+          });
+
+          item.append(copy);
+          item.append(removeButton);
+          groupCard.append(item);
+        });
+
+        return groupCard;
+      })
+    );
+  };
+
+  const refreshTagUi = () => {
+    const currentTags = parseList(fields.tags?.value || "");
+    applyTagValues(currentTags);
+    renderTagSelector();
+    renderTagManager();
+  };
+
+  const addOwnerTagGroup = () => {
+    const groupName = normalizeTagGroupName(fields.tagManagerGroupInput?.value || "");
+    if (!groupName) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = "Enter a group name before adding it.";
+      }
+      return false;
+    }
+
+    const key = canonicalizeTagGroupName(groupName);
+    if (ownerTagGroups.some((group) => canonicalizeTagGroupName(group.name) === key)) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = `${groupName} is already available in the tag group list.`;
+      }
+      return false;
+    }
+
+    ownerTagGroups = [...ownerTagGroups, { name: groupName, tags: [] }];
+    if (fields.tagManagerGroupInput) {
+      fields.tagManagerGroupInput.value = "";
+    }
+    persistOwnerTagGroups();
+    refreshTagUi();
+    if (fields.tagManagerGroupSelect) {
+      fields.tagManagerGroupSelect.value = groupName;
+    }
+    if (outputs.tagManagerStatus) {
+      outputs.tagManagerStatus.textContent = `${groupName} added. You can add tags to it now.`;
+    }
+    return true;
+  };
+
+  const addOwnerTag = () => {
+    const groupName = normalizeTagGroupName(fields.tagManagerGroupSelect?.value || "");
+    const tagName = normalizeTagName(fields.tagManagerTagInput?.value || "");
+    if (!groupName) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = "Choose a tag group before adding a tag.";
+      }
+      return false;
+    }
+    if (!tagName) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = "Enter a tag name before adding it.";
+      }
+      return false;
+    }
+
+    const tagKey = canonicalizeTagName(tagName);
+    if (ownerTagGroups.some((group) => group.tags.some((tag) => canonicalizeTagName(tag) === tagKey))) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = `${tagName} is already available in the tag selector.`;
+      }
+      return false;
+    }
+
+    ownerTagGroups = ownerTagGroups.map((group) =>
+      group.name === groupName
+        ? { ...group, tags: [...group.tags, tagName] }
+        : group
+    );
+    if (fields.tagManagerTagInput) {
+      fields.tagManagerTagInput.value = "";
+    }
+    persistOwnerTagGroups();
+    refreshTagUi();
+    if (outputs.tagManagerStatus) {
+      outputs.tagManagerStatus.textContent = `${tagName} added to ${groupName}. It is available in the checkbox selector now.`;
+    }
+    return true;
+  };
+
+  const removeOwnerTag = (groupName, tagName) => {
+    const normalizedGroupName = normalizeTagGroupName(groupName);
+    const normalizedTagName = normalizeTagName(tagName);
+    const tagKey = canonicalizeTagName(normalizedTagName);
+    const usage = getUsedTagUsage().get(tagKey);
+    if (usage) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = `${normalizedTagName} cannot be removed because ${usage.count} product${usage.count === 1 ? "" : "s"} still use it.`;
+      }
+      return false;
+    }
+
+    let removed = false;
+    ownerTagGroups = ownerTagGroups.map((group) => {
+      if (canonicalizeTagGroupName(group.name) !== canonicalizeTagGroupName(normalizedGroupName)) {
+        return group;
+      }
+      const nextTags = group.tags.filter((tag) => {
+        const matches = canonicalizeTagName(tag) === tagKey;
+        if (matches) {
+          removed = true;
+        }
+        return !matches;
+      });
+      return { ...group, tags: nextTags };
+    });
+
+    if (!removed) {
+      if (outputs.tagManagerStatus) {
+        outputs.tagManagerStatus.textContent = `${normalizedTagName} is not available in the removable tag list.`;
+      }
+      return false;
+    }
+
+    selectedTagKeys.delete(tagKey);
+    preservedUnknownTags = preservedUnknownTags.filter((tag) => canonicalizeTagName(tag) !== tagKey);
+    syncTagsFieldValue();
+    persistOwnerTagGroups();
+    refreshTagUi();
+    updatePreview();
+    if (outputs.tagManagerStatus) {
+      outputs.tagManagerStatus.textContent = `${normalizedTagName} removed from the tag selector. No published listing was changed.`;
+    }
+    return true;
   };
 
   const getUsedProductLineUsage = () => {
@@ -1759,13 +2272,23 @@
 
   clearAdvisorPanel();
   ownerProductLines = readOwnerProductLines();
+  ownerTagGroups = readOwnerTagGroups();
   globalThis.TRGProductIntake = {
     addOwnerProductLine,
+    addOwnerTag,
+    addOwnerTagGroup,
     getModeLabels,
+    getPreservedUnknownTags: () => [...preservedUnknownTags],
     getSelectableProductLines,
+    getSelectableTagGroups,
+    loadAvailableProductsForTests: loadAvailableProducts,
+    loadExistingProductIntoFormForTests: loadExistingProductIntoForm,
+    getUsedTagUsage,
+    getCurrentTagValues,
     getUsedProductLineUsage,
     hasUnsavedChanges,
     removeOwnerProductLine,
+    removeOwnerTag,
     validateRequiredFields
   };
   void loadAvailableProducts().then(() => {
@@ -1774,7 +2297,9 @@
   syncRelatedPicker();
   syncBuyModeUi();
   refreshProductLineUi();
+  refreshTagUi();
   setProductLineManagerVisibility(false);
+  setTagManagerVisibility(false);
   setJsonVisibility(false);
   setChecklistVisibility(false);
   setListingDetailsVisibility(false);
