@@ -62,64 +62,74 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
     }, 405);
   }
 
-  const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
-    csrfExpiredMessage: "The publish form security token has expired. Reload the page and try again.",
-    csrfMismatchMessage: "The publish form security token did not match. Reload the page and try again.",
-    missingCsrfSecretMessage: "Owner publish is missing OWNER_CSRF_SECRET in Cloudflare.",
-    sameOriginMessage: "Publish requests must come from the Tobacco Road Games owner site."
-  });
-  if (!authState.valid) {
-    return jsonResponse({
-      error: authState.userMessage
-    }, authState.status);
-  }
+  try {
+    const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
+      csrfExpiredMessage: "The publish form security token has expired. Reload the page and try again.",
+      csrfMismatchMessage: "The publish form security token did not match. Reload the page and try again.",
+      missingCsrfSecretMessage: "Owner publish is missing OWNER_CSRF_SECRET in Cloudflare.",
+      sameOriginMessage: "Publish requests must come from the Tobacco Road Games owner site."
+    });
+    if (!authState.valid) {
+      return jsonResponse({
+        error: authState.userMessage
+      }, authState.status);
+    }
 
-  const formData = await request.formData();
-  const parsed = parsePublishForm(formData);
-  if (!parsed.valid) {
-    return jsonResponse({
-      error: parsed.userMessage
-    }, 400);
-  }
+    const formData = await request.formData();
+    const parsed = parsePublishForm(formData);
+    if (!parsed.valid) {
+      return jsonResponse({
+        error: parsed.userMessage
+      }, 400);
+    }
 
-  const bucket = env.TRG_PRODUCTS;
-  if (!bucket || typeof bucket.put !== "function") {
-    return jsonResponse({
-      error: "The product bucket binding is missing. Add TRG_PRODUCTS in Cloudflare before publishing."
-    }, 503);
-  }
+    const bucket = env.TRG_PRODUCTS;
+    if (!bucket || typeof bucket.put !== "function") {
+      return jsonResponse({
+        error: "The product bucket binding is missing. Add TRG_PRODUCTS in Cloudflare before publishing."
+      }, 503);
+    }
 
-  const uploadResult = await uploadRequiredProductFiles(bucket, parsed.payload);
-  if (!uploadResult.ok) {
-    return jsonResponse({
-      error: uploadResult.userMessage
-    }, 502);
-  }
+    const uploadResult = await uploadRequiredProductFiles(bucket, parsed.payload);
+    if (!uploadResult.ok) {
+      return jsonResponse({
+        error: uploadResult.userMessage
+      }, 502);
+    }
 
-  const publishId = `pub-${Date.now()}-${crypto.randomUUID()}`;
-  const dispatchPayload = {
-    folder: parsed.payload.folder,
-    metadata: parsed.payload.metadata,
-    publish_id: publishId,
-    ref: String(env.GITHUB_PUBLISH_REF || "main"),
-    requested_by: authState.username
-  };
+    const publishId = `pub-${Date.now()}-${crypto.randomUUID()}`;
+    const dispatchPayload = {
+      folder: parsed.payload.folder,
+      metadata: parsed.payload.metadata,
+      publish_id: publishId,
+      ref: String(env.GITHUB_PUBLISH_REF || "main"),
+      requested_by: authState.username
+    };
 
-  const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);
-  if (!dispatchResult.ok) {
+    const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);
+    if (!dispatchResult.ok) {
+      return jsonResponse({
+        error: `Files uploaded to R2, but the store was not published. ${dispatchResult.userMessage}`,
+        filesUploaded: uploadResult.uploadedKeys,
+        runUrl: dispatchResult.runUrl || ""
+      }, 502);
+    }
+
     return jsonResponse({
-      error: `Files uploaded to R2, but the store was not published. ${dispatchResult.userMessage}`,
       filesUploaded: uploadResult.uploadedKeys,
+      message: dispatchResult.pending
+        ? "Files uploaded and the GitHub rebuild workflow was accepted. The live store may take another minute to catch up."
+        : "Files uploaded and the store publish workflow completed successfully.",
+      ok: true,
+      pending: Boolean(dispatchResult.pending),
       runUrl: dispatchResult.runUrl || ""
-    }, dispatchResult.reason === "workflow_timeout" ? 504 : 502);
+    }, dispatchResult.pending ? 202 : 200);
+  } catch (error) {
+    logOwnerPublishException(request, error);
+    return jsonResponse({
+      error: "Owner publish could not be completed. Please try again. If the problem persists, check Cloudflare bindings and the GitHub workflow configuration."
+    }, 500);
   }
-
-  return jsonResponse({
-    filesUploaded: uploadResult.uploadedKeys,
-    message: "Files uploaded and the store publish workflow completed successfully.",
-    ok: true,
-    runUrl: dispatchResult.runUrl || ""
-  });
 }
 
 function parsePublishForm(formData) {
@@ -403,4 +413,17 @@ function normalizeMoneyText(value) {
     .trim()
     .replace(/\$/g, "")
     .replace(/,/g, "");
+}
+
+function logOwnerPublishException(request, error) {
+  const payload = {
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    event: "owner_publish_exception",
+    method: request.method,
+    path: new URL(request.url).pathname,
+    rayId: request.headers.get("cf-ray") || ""
+  };
+
+  console.error(JSON.stringify(payload));
 }

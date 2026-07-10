@@ -58,6 +58,9 @@ async function main() {
     await testOwnerPricingPublishAccepted(ownerPricing, baseEnv, authCookies);
     await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, baseEnv, authCookies);
     await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
+    await testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, baseEnv, authCookies);
+    await testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, baseEnv, authCookies);
+    await testUnexpectedPublishExceptionHandled(ownerPublish, baseEnv, authCookies);
     await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
     const accessCookies = await testAccessMiddlewareAllowsAuthorized(ownerMiddleware, accessEnv, accessContext.token);
     await testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, accessEnv);
@@ -738,6 +741,116 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
   } finally {
     Date.now = originalDateNow;
     crypto.randomUUID = originalRandomUuid;
+  }
+}
+
+async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, env, cookieHeader) {
+  const bucket = createMockBucket();
+  const formData = new FormData();
+  addRequiredTextFields(formData, {
+    folder: "sirrocans",
+    gameSystem: "5E Compatible",
+    gameSystemSlug: "5e-compatible",
+    longDescription: "Pending workflow metadata-only update.",
+    productLine: "Fifth Edition Fantasy Roleplaying",
+    productLineSlug: "fifth-edition-fantasy-roleplaying",
+    series: "",
+    seriesSlug: "",
+    shortDescription: "Pending workflow metadata-only update.",
+    slug: "sirrocans",
+    subtitle: "Pending workflow subtitle",
+    title: "Sirrocans"
+  });
+
+  const originalRandomUuid = crypto.randomUUID;
+  crypto.randomUUID = () => "pending-workflow";
+  try {
+    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+      ...env,
+      TRG_PRODUCTS: bucket
+    }, {
+      dispatchOptions: {
+        fetchImpl: async (url) => {
+          if (String(url).endsWith("/dispatches")) {
+            return new Response(null, { status: 204 });
+          }
+
+          return jsonResponse({
+            workflow_runs: []
+          });
+        },
+        pollIntervalMs: 1,
+        timeoutMs: 5
+      }
+    });
+
+    assert.equal(response.status, 202, "Publish should return 202 when GitHub accepted the request but the workflow is still running.");
+    const payload = await response.json();
+    assert.equal(payload.ok, true, "Pending publish should still use a successful JSON envelope.");
+    assert.equal(payload.pending, true, "Pending publish should tell the client the workflow is still running.");
+    assert.deepEqual(bucket.putKeys, [], "Metadata-only pending publish should not upload replacement assets.");
+  } finally {
+    crypto.randomUUID = originalRandomUuid;
+  }
+}
+
+async function testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, env, cookieHeader) {
+  const formData = new FormData();
+  addRequiredTextFields(formData);
+  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+
+  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+    ...env,
+    TRG_PRODUCTS: createMockBucket()
+  }, {
+    dispatchOptions: {
+      fetchImpl: async () => {
+        throw new Error("synthetic github outage");
+      }
+    }
+  });
+
+  assert.equal(response.status, 502, "GitHub dispatch failures should return a structured 502 instead of throwing.");
+  const payload = await response.json();
+  assert.match(payload.error, /could not be reached from Cloudflare/i, "GitHub dispatch failures should surface a safe, actionable message.");
+}
+
+async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHeader) {
+  const originalConsoleError = console.error;
+  const captured = [];
+  console.error = (entry) => {
+    captured.push(String(entry));
+  };
+
+  try {
+    const response = await ownerPublish.handleOwnerPublishRequest({
+      formData() {
+        throw new Error("synthetic publish failure");
+      },
+      headers: new Headers({
+        "cf-ray": "publish-test-ray",
+        cookie: cookieHeader,
+        origin: "https://example.com",
+        "x-csrf-token": readCookieFromHeader(cookieHeader, "trg_owner_csrf")
+      }),
+      method: "POST",
+      url: "https://example.com/owner/api/publish"
+    }, {
+      ...env,
+      TRG_PRODUCTS: createMockBucket()
+    });
+
+    assert.equal(response.status, 500, "Unexpected publish exceptions should be converted into a JSON 500 response.");
+    assert.match(response.headers.get("content-type") || "", /application\/json/i, "Unexpected publish exceptions should return JSON.");
+    const payload = await response.json();
+    assert.match(payload.error, /could not be completed/i, "Unexpected publish exceptions should return a safe owner-facing message.");
+    assert.equal(captured.length, 1, "Unexpected publish exceptions should be logged once.");
+    assert.match(captured[0], /owner_publish_exception/, "Unexpected publish exceptions should use the safe publish event log.");
+    assert.doesNotMatch(captured[0], /session-secret|csrf-secret|test-token|correct horse battery staple|pbkdf2_sha256/i, "Unexpected publish logs must not leak secrets.");
+  } finally {
+    console.error = originalConsoleError;
   }
 }
 

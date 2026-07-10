@@ -9,47 +9,57 @@ export async function handleOwnerPricingPublishRequest(request, env, options = {
     }, 405);
   }
 
-  const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
-    csrfExpiredMessage: "The pricing editor security token has expired. Reload the page and try again.",
-    csrfMismatchMessage: "The pricing editor security token did not match. Reload the page and try again.",
-    missingCsrfSecretMessage: "Owner pricing is missing OWNER_CSRF_SECRET in Cloudflare.",
-    sameOriginMessage: "Pricing updates must come from the Tobacco Road Games owner site."
-  });
-  if (!authState.valid) {
-    return jsonResponse({
-      error: authState.userMessage
-    }, authState.status);
-  }
+  try {
+    const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
+      csrfExpiredMessage: "The pricing editor security token has expired. Reload the page and try again.",
+      csrfMismatchMessage: "The pricing editor security token did not match. Reload the page and try again.",
+      missingCsrfSecretMessage: "Owner pricing is missing OWNER_CSRF_SECRET in Cloudflare.",
+      sameOriginMessage: "Pricing updates must come from the Tobacco Road Games owner site."
+    });
+    if (!authState.valid) {
+      return jsonResponse({
+        error: authState.userMessage
+      }, authState.status);
+    }
 
-  const parsed = await parsePricingRequest(request);
-  if (!parsed.valid) {
-    return jsonResponse({
-      error: parsed.userMessage
-    }, 400);
-  }
+    const parsed = await parsePricingRequest(request);
+    if (!parsed.valid) {
+      return jsonResponse({
+        error: parsed.userMessage
+      }, 400);
+    }
 
-  const dispatchPayload = {
-    metadata: parsed.metadata,
-    operation: "pricing_update",
-    pricingConfirmation: parsed.pricingConfirmation,
-    publish_id: `price-${Date.now()}-${crypto.randomUUID()}`,
-    ref: String(env.GITHUB_PUBLISH_REF || "main"),
-    requested_by: authState.username
-  };
+    const dispatchPayload = {
+      metadata: parsed.metadata,
+      operation: "pricing_update",
+      pricingConfirmation: parsed.pricingConfirmation,
+      publish_id: `price-${Date.now()}-${crypto.randomUUID()}`,
+      ref: String(env.GITHUB_PUBLISH_REF || "main"),
+      requested_by: authState.username
+    };
 
-  const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);
-  if (!dispatchResult.ok) {
+    const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);
+    if (!dispatchResult.ok) {
+      return jsonResponse({
+        error: `The pricing update could not be published. ${dispatchResult.userMessage}`,
+        runUrl: dispatchResult.runUrl || ""
+      }, 502);
+    }
+
     return jsonResponse({
-      error: `The pricing update could not be published. ${dispatchResult.userMessage}`,
+      message: dispatchResult.pending
+        ? "Pricing update accepted. The GitHub rebuild workflow is still running, so the live store may take another minute to update."
+        : "Pricing update published successfully.",
+      ok: true,
+      pending: Boolean(dispatchResult.pending),
       runUrl: dispatchResult.runUrl || ""
-    }, dispatchResult.reason === "workflow_timeout" ? 504 : 502);
+    }, dispatchResult.pending ? 202 : 200);
+  } catch (error) {
+    logOwnerPricingPublishException(request, error);
+    return jsonResponse({
+      error: "Owner pricing publish could not be completed. Please try again. If the problem persists, check Cloudflare bindings and the GitHub workflow configuration."
+    }, 500);
   }
-
-  return jsonResponse({
-    message: "Pricing update published successfully.",
-    ok: true,
-    runUrl: dispatchResult.runUrl || ""
-  });
 }
 
 async function parsePricingRequest(request) {
@@ -151,4 +161,17 @@ function normalizeDateText(value) {
 
 function isMoneyLike(value) {
   return /^\d+(?:\.\d{1,2})?$/.test(String(value || ""));
+}
+
+function logOwnerPricingPublishException(request, error) {
+  const payload = {
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorName: error instanceof Error ? error.name : "UnknownError",
+    event: "owner_pricing_publish_exception",
+    method: request.method,
+    path: new URL(request.url).pathname,
+    rayId: request.headers.get("cf-ray") || ""
+  };
+
+  console.error(JSON.stringify(payload));
 }
