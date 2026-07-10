@@ -538,7 +538,7 @@
     "fileList": [
       "PDF details coming soon"
     ],
-    "pageCount": null,
+    "pageCount": 12,
     "price": "",
     "priceCents": null,
     "minimumPrice": "",
@@ -585,8 +585,8 @@
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
     "excludeFromBundles": true,
-    "series": "",
-    "seriesSlug": ""
+    "series": "undefined",
+    "seriesSlug": "undefined"
   },
   {
     "slug": "yojimbo",
