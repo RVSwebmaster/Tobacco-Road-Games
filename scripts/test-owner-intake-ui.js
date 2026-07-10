@@ -9,6 +9,7 @@ async function main() {
   await testIntakeLabelsAndHelperText();
   await testIntakeModeSpecificLabels();
   await testIntakeReviewAndDiscardConfirmation();
+  await testNonJsonPublishErrorsShowHttpDetails();
   console.log("Owner intake UI tests passed.");
 }
 
@@ -64,6 +65,25 @@ async function testIntakeReviewAndDiscardConfirmation() {
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "Accepting discard should return the intake to new-product mode.");
   assert.equal(harness.fields.title.value, "", "Accepting discard should clear the form.");
   assert.match(harness.outputs.status.textContent, /Published data was not changed\./, "Discard confirmation should clearly state that published data was not changed.");
+}
+
+async function testNonJsonPublishErrorsShowHttpDetails() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+  harness.fields.shortDescription.value = "Updated preview copy";
+  harness.fields.shortDescription.dispatch("input");
+  harness.mockPublishResponse = createTextResponse("<!DOCTYPE html><html><body><h1>Failure</h1><p>Origin publish failed hard.</p></body></html>", 500, {
+    "content-type": "text/html; charset=utf-8"
+  });
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+
+  assert.match(harness.outputs.status.textContent, /HTTP 500/, "Non-JSON publish failures should include the HTTP status.");
+  assert.match(harness.outputs.status.textContent, /text\/html/, "Non-JSON publish failures should include the response content type.");
+  assert.match(harness.outputs.status.textContent, /Failure Origin publish failed hard/i, "Non-JSON publish failures should include a safe body summary.");
 }
 
 function createHarness() {
@@ -147,7 +167,7 @@ function createHarness() {
   };
 
   const document = {
-    cookie: "",
+    cookie: "trg_owner_csrf=test-token",
     createElement,
     getElementById(id) {
       return byId.get(id) || null;
@@ -302,6 +322,9 @@ function createHarness() {
     confirmResponse: true,
     fields,
     flush,
+    mockPublishResponse: createJsonResponse({
+      message: "Published."
+    }),
     outputs
   };
 
@@ -322,12 +345,15 @@ function createHarness() {
       return harness.confirmResponse;
     },
     document,
-    fetch: async (url) => {
+    fetch: async (url, options = {}) => {
       if (String(url).includes("/data/products.json")) {
         return createJsonResponse(products);
       }
       if (String(url).includes("/data/product-intake-map.json")) {
         return createJsonResponse(intakeMap);
+      }
+      if (String(url).includes("/owner/api/publish")) {
+        return harness.mockPublishResponse;
       }
       throw new Error(`Unexpected fetch: ${url}`);
     },
@@ -366,8 +392,37 @@ function createHarness() {
 
 function createJsonResponse(payload, status = 200) {
   return {
+    headers: {
+      get(name) {
+        return String(name || "").toLowerCase() === "content-type"
+          ? "application/json; charset=utf-8"
+          : "";
+      }
+    },
     async json() {
       return payload;
+    },
+    async text() {
+      return JSON.stringify(payload);
+    },
+    ok: status >= 200 && status < 300,
+    status
+  };
+}
+
+function createTextResponse(payload, status = 200, headers = {}) {
+  const normalizedHeaders = new Map(
+    Object.entries(headers).map(([key, value]) => [String(key).toLowerCase(), String(value)])
+  );
+
+  return {
+    headers: {
+      get(name) {
+        return normalizedHeaders.get(String(name || "").toLowerCase()) || "";
+      }
+    },
+    async text() {
+      return String(payload);
     },
     ok: status >= 200 && status < 300,
     status

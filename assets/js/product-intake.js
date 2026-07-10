@@ -852,24 +852,24 @@
         redirect: "manual"
       });
 
+      const responsePayload = await readResponsePayload(response);
+
       if (response.status === 401 || response.status === 403) {
-        const payload = await safeJson(response);
-        outputs.status.textContent = payload.error || "Your owner access session is no longer valid. Reloading the protected route...";
+        outputs.status.textContent = responsePayload.json.error || "Your owner access session is no longer valid. Reloading the protected route...";
         window.setTimeout(() => {
           window.location.assign("/owner/");
         }, 600);
         return;
       }
 
-      const responsePayload = await safeJson(response);
       if (!response.ok) {
-        outputs.status.textContent = responsePayload.error || "Publish failed.";
+        outputs.status.textContent = responsePayload.json.error || formatUnexpectedResponseError("Publish", responsePayload);
         return;
       }
 
-      outputs.status.textContent = responsePayload.runUrl
-        ? `${responsePayload.message} Workflow: ${responsePayload.runUrl}`
-        : responsePayload.message;
+      outputs.status.textContent = responsePayload.json.runUrl
+        ? `${responsePayload.json.message} Workflow: ${responsePayload.json.runUrl}`
+        : responsePayload.json.message;
       markDraftBaseline();
     } catch {
       outputs.status.textContent = "The publish request failed before the server could answer. Please try again.";
@@ -922,12 +922,54 @@
     return errors;
   }
 
-  async function safeJson(response) {
+  async function readResponsePayload(response) {
+    let rawText = "";
     try {
-      return await response.json();
+      rawText = await response.text();
     } catch {
-      return {};
+      rawText = "";
     }
+
+    let json = {};
+    try {
+      const parsed = JSON.parse(rawText);
+      if (parsed && typeof parsed === "object") {
+        json = parsed;
+      }
+    } catch {
+      json = {};
+    }
+
+    return {
+      bodySummary: summarizeResponseBody(rawText),
+      contentType: String(response.headers?.get?.("content-type") || "unknown").toLowerCase(),
+      json,
+      status: Number(response.status || 0)
+    };
+  }
+
+  function formatUnexpectedResponseError(actionLabel, payload) {
+    const statusText = payload.status ? `HTTP ${payload.status}` : "an unknown HTTP status";
+    const contentType = payload.contentType || "unknown";
+    const summary = payload.bodySummary || "No response body was returned.";
+    return `${actionLabel} failed with ${statusText}. Response type: ${contentType}. Response summary: ${summary}`;
+  }
+
+  function summarizeResponseBody(value) {
+    const cleaned = String(value || "")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleaned) {
+      return "";
+    }
+
+    return cleaned.length > 180
+      ? `${cleaned.slice(0, 177)}...`
+      : cleaned;
   }
 
   function updateAutoFields() {

@@ -598,15 +598,15 @@
         redirect: "manual"
       });
 
-      const payload = await safeJson(response);
+      const payload = await readResponsePayload(response);
       if (!response.ok) {
-        fields.pricingStatus.textContent = payload.error || "Pricing update failed.";
+        fields.pricingStatus.textContent = payload.json.error || formatUnexpectedResponseError("Pricing update", payload);
         return;
       }
 
-      fields.pricingStatus.textContent = payload.runUrl
-        ? `${payload.message} Workflow: ${payload.runUrl}`
-        : payload.message;
+      fields.pricingStatus.textContent = payload.json.runUrl
+        ? `${payload.json.message} Workflow: ${payload.json.runUrl}`
+        : payload.json.message;
     } catch {
       fields.pricingStatus.textContent = "The pricing update request failed before the server could answer. Please try again.";
     } finally {
@@ -615,12 +615,54 @@
     }
   }
 
-  async function safeJson(response) {
+  async function readResponsePayload(response) {
+    let rawText = "";
     try {
-      return await response.json();
+      rawText = await response.text();
     } catch {
-      return {};
+      rawText = "";
     }
+
+    let json = {};
+    try {
+      const parsed = JSON.parse(rawText);
+      if (parsed && typeof parsed === "object") {
+        json = parsed;
+      }
+    } catch {
+      json = {};
+    }
+
+    return {
+      bodySummary: summarizeResponseBody(rawText),
+      contentType: String(response.headers?.get?.("content-type") || "unknown").toLowerCase(),
+      json,
+      status: Number(response.status || 0)
+    };
+  }
+
+  function formatUnexpectedResponseError(actionLabel, payload) {
+    const statusText = payload.status ? `HTTP ${payload.status}` : "an unknown HTTP status";
+    const contentType = payload.contentType || "unknown";
+    const summary = payload.bodySummary || "No response body was returned.";
+    return `${actionLabel} failed with ${statusText}. Response type: ${contentType}. Response summary: ${summary}`;
+  }
+
+  function summarizeResponseBody(value) {
+    const cleaned = String(value || "")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!cleaned) {
+      return "";
+    }
+
+    return cleaned.length > 180
+      ? `${cleaned.slice(0, 177)}...`
+      : cleaned;
   }
 
   function escapeHtml(value) {
