@@ -12,6 +12,7 @@ async function main() {
   await testTablecraftListingStillLoadsWithProductLine();
   await testOwnerProductLineManagerAddsAndRemovesUnusedLine();
   await testOwnerProductLineManagerBlocksUsedLineRemoval();
+  await testSeriesFieldRemainsIndependentFromProductLineManager();
   await testBackToListingsLeavesUnchangedExistingListing();
   await testBackToListingsConfirmsEditedExistingListing();
   await testGeneratedJsonToggle();
@@ -42,23 +43,24 @@ async function testIntakeLabelsAndHelperText() {
 
 async function testProductLineTerminologyAndManagerLabels() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
-  assert.match(html, /<label for="product-line">Store Line<\/label>/, "The broader storefront line field should keep a distinct owner-facing label.");
-  assert.match(html, /<label for="product-series">Product Line<\/label>/, "The owner intake should relabel the series field as Product Line.");
+  assert.match(html, /<label for="product-line">Product Line<\/label>/, "The productLine field should be labeled Product Line again.");
+  assert.match(html, /<label for="product-series">Series<\/label>/, "The series field should be labeled Series again.");
   assert.match(html, />Manage Product Lines</, "The owner intake should expose a Manage Product Lines control.");
   assert.match(html, />Product Line Fit</, "Advisor copy should use Product Line terminology in the owner intake.");
-  assert.doesNotMatch(html, /<label for="product-series">Series<\/label>/, "The owner intake should stop showing the old Series field label.");
+  assert.doesNotMatch(html, /<label for="product-line">Store Line<\/label>/, "The old Store Line label should be removed.");
 }
 
 async function testTablecraftListingStillLoadsWithProductLine() {
   const harness = createHarness();
   await harness.flush();
 
-  assert.ok(getSelectOptionLabels(harness.fields.series).includes("Tablecraft"), "Tablecraft should stay available in the product line selector.");
+  assert.ok(getSelectOptionLabels(harness.fields.line).includes("Tablecraft"), "Tablecraft should stay available in the Product Line selector.");
 
   harness.fields.existingSelect.value = "tablecraft-primer";
   harness.buttons.loadExisting.click();
 
-  assert.equal(harness.fields.series.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve its underlying series-backed product line.");
+  assert.equal(harness.fields.line.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve productLine.");
+  assert.equal(harness.fields.series.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve series separately.");
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Tablecraft Primer", "Tablecraft listings should still load into existing-listing mode.");
   assert.equal(harness.fields.title.value, "Tablecraft Primer", "The existing Tablecraft listing should still populate the form.");
 }
@@ -73,18 +75,18 @@ async function testOwnerProductLineManagerAddsAndRemovesUnusedLine() {
   harness.fields.productLineManagerInput.value = "Night Roads";
   harness.buttons.addProductLine.click();
 
-  assert.ok(getSelectOptionLabels(harness.fields.series).includes("Night Roads"), "Adding a product line should make it immediately selectable.");
+  assert.ok(getSelectOptionLabels(harness.fields.line).includes("Night Roads"), "Adding a product line should make it immediately selectable in Product Line.");
   assert.match(harness.outputs.productLineManagerStatus.textContent, /Night Roads added/i, "Adding a product line should confirm success.");
 
-  harness.fields.series.value = "Night Roads";
-  harness.fields.series.dispatch("change");
-  assert.equal(harness.fields.series.value, "Night Roads", "A newly added product line should be selectable immediately.");
+  harness.fields.line.value = "Night Roads";
+  harness.fields.line.dispatch("change");
+  assert.equal(harness.fields.line.value, "Night Roads", "A newly added product line should be selectable immediately.");
 
   const addedRow = findProductLineManagerRow(harness, "Night Roads");
   assert.ok(addedRow, "The manager list should render the newly added product line.");
   getProductLineRemoveButton(addedRow).click();
 
-  assert.ok(!getSelectOptionLabels(harness.fields.series).includes("Night Roads"), "Removing an unused product line should remove it from the selector immediately.");
+  assert.ok(!getSelectOptionLabels(harness.fields.line).includes("Night Roads"), "Removing an unused product line should remove it from the Product Line selector immediately.");
   assert.match(harness.outputs.productLineManagerStatus.textContent, /Night Roads removed/i, "Removing an unused product line should explain that no published listing changed.");
 }
 
@@ -103,6 +105,20 @@ async function testOwnerProductLineManagerBlocksUsedLineRemoval() {
   const removed = harness.api.removeOwnerProductLine("Tablecraft");
   assert.equal(removed, false, "Removing a used product line should be blocked even if called directly.");
   assert.match(harness.outputs.productLineManagerStatus.textContent, /cannot be removed/i, "Blocked removal should explain that products still use the line.");
+}
+
+async function testSeriesFieldRemainsIndependentFromProductLineManager() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.fields.series.value = "Chronicles";
+  harness.buttons.manageProductLines.click();
+  harness.fields.productLineManagerInput.value = "Night Roads";
+  harness.buttons.addProductLine.click();
+  assert.equal(harness.fields.series.value, "Chronicles", "Adding a Product Line should not overwrite the Series field.");
+
+  getProductLineRemoveButton(findProductLineManagerRow(harness, "Night Roads")).click();
+  assert.equal(harness.fields.series.value, "Chronicles", "Removing an unused Product Line should not alter the Series field.");
 }
 
 async function testListingDetailsStayHiddenUntilWorkStarts() {
@@ -490,8 +506,8 @@ function createHarness(options = {}) {
     authors: register("product-authors", createInput("RV Sawyer")),
     publisher: register("product-publisher", createInput("Tobacco Road Games")),
     system: register("product-system", createInput("5E Compatible")),
-    line: register("product-line", createInput("Fifth Edition Fantasy Roleplaying")),
-    series: register("product-series", createElement("select")),
+    line: register("product-line", createElement("select")),
+    series: register("product-series", createInput("")),
     productLineManagerInput: register("product-line-manager-input", createInput("")),
     format: register("product-format", createInput("PDF")),
     pageCount: register("product-page-count", createInput("24", "number")),
@@ -679,8 +695,8 @@ function createHarness(options = {}) {
       price: "",
       previewImage: "/product-assets/tablecraft-primer/preview.webp",
       previewImages: [],
-      productLine: "Other Games & Experiments",
-      productLineSlug: "other-games-and-experiments",
+      productLine: "Tablecraft",
+      productLineSlug: "tablecraft",
       relatedProducts: [],
       releaseDate: "2026-06-17",
       saleEnabled: false,

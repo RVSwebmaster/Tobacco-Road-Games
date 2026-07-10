@@ -456,20 +456,15 @@
               </div>
 
               <div class="intake-field">
-                <label for="product-line">Store Line</label>
-                <input id="product-line" class="dock-input" type="text" value="Fifth Edition Fantasy Roleplaying">
-              </div>
-
-              <div class="intake-field">
                 <div class="intake-field__header">
-                  <label for="product-series">Product Line</label>
+                  <label for="product-line">Product Line</label>
                   <button id="manage-product-lines-button" class="button button--secondary" type="button" aria-controls="product-line-manager-panel" aria-expanded="false">Manage Product Lines</button>
                 </div>
-                <select id="product-series" class="dock-input">
+                <select id="product-line" class="dock-input">
                   <option value="">-</option>
-                  <option value="Tablecraft">Tablecraft</option>
+                  <option value="Fifth Edition Fantasy Roleplaying">Fifth Edition Fantasy Roleplaying</option>
                 </select>
-                <p class="intake-help">Owner-facing product lines still publish through the existing <code>series</code> data fields for now.</p>
+                <p class="intake-help">Choose the storefront product line for this listing. Used product lines cannot be removed while listings still reference them.</p>
                 <div id="product-line-manager-panel" class="product-line-manager" hidden>
                   <div class="product-line-manager__row">
                     <div class="intake-field">
@@ -481,6 +476,12 @@
                   <p id="product-line-manager-status" class="intake-help">Used product lines cannot be removed while listings still reference them.</p>
                   <div id="product-line-manager-list" class="product-line-manager__list" aria-live="polite"></div>
                 </div>
+              </div>
+
+              <div class="intake-field">
+                <label for="product-series">Series</label>
+                <input id="product-series" class="dock-input" type="text" placeholder="Optional series name">
+                <p class="intake-help">Optional subgroup within the selected product line. This field still publishes through the existing <code>series</code> data fields.</p>
               </div>
 
               <div class="intake-field">
@@ -789,6 +790,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710k"></script>
+  <script src="../assets/js/product-intake.js?v=20260710l"></script>
 </body>
 </html>

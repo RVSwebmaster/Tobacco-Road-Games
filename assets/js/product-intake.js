@@ -1563,7 +1563,7 @@
   const getUsedProductLineUsage = () => {
     const usage = new Map();
     availableProducts.forEach((product) => {
-      const name = normalizeProductLineName(product.series);
+      const name = normalizeProductLineName(product.productLine);
       if (!name) {
         return;
       }
@@ -1588,7 +1588,7 @@
       });
 
     availableProducts.forEach((product) => {
-      const entry = normalizeProductLineName(product.series);
+      const entry = normalizeProductLineName(product.productLine);
       if (!entry) {
         return;
       }
@@ -1598,7 +1598,7 @@
       }
     });
 
-    const currentValue = normalizeProductLineName(fields.series?.value || "");
+    const currentValue = normalizeProductLineName(fields.line?.value || "");
     if (currentValue) {
       const key = canonicalizeProductLineName(currentValue);
       if (!merged.has(key)) {
@@ -1610,11 +1610,11 @@
   };
 
   const syncProductLineOptions = () => {
-    if (!fields.series) {
+    if (!fields.line) {
       return;
     }
 
-    const previousValue = fields.series.value;
+    const previousValue = fields.line.value;
     const selectableProductLines = getSelectableProductLines();
     const options = [];
 
@@ -1630,8 +1630,8 @@
       options.push(option);
     });
 
-    fields.series.replaceChildren(...options);
-    fields.series.value = selectableProductLines.includes(previousValue) ? previousValue : "";
+    fields.line.replaceChildren(...options);
+    fields.line.value = selectableProductLines.includes(previousValue) ? previousValue : "";
   };
 
   const renderProductLineManager = () => {
@@ -1732,8 +1732,8 @@
       return false;
     }
 
-    if (canonicalizeProductLineName(fields.series?.value || "") === key) {
-      fields.series.value = "";
+    if (canonicalizeProductLineName(fields.line?.value || "") === key) {
+      fields.line.value = "";
     }
     persistOwnerProductLines();
     refreshProductLineUi();
