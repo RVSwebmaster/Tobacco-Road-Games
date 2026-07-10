@@ -125,13 +125,15 @@
       "gameSystem": "System TBD",
       "gameSystemSlug": "system-tbd",
       "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
+      "productLineSlug": "other-games-experiments",
       "format": [
         "PDF"
       ],
       "tags": [
         "Preview"
-      ]
+      ],
+      "series": "",
+      "seriesSlug": ""
     },
     {
       "slug": "silence-and-the-spotlight",

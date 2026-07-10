@@ -531,14 +531,14 @@
     "gameSystem": "System TBD",
     "gameSystemSlug": "system-tbd",
     "productLine": "Other Games & Experiments",
-    "productLineSlug": "other-games-and-experiments",
+    "productLineSlug": "other-games-experiments",
     "format": [
       "PDF"
     ],
     "fileList": [
       "PDF details coming soon"
     ],
-    "pageCount": null,
+    "pageCount": 12,
     "price": "",
     "priceCents": null,
     "minimumPrice": "",
@@ -584,7 +584,9 @@
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
-    "excludeFromBundles": true
+    "excludeFromBundles": true,
+    "series": "",
+    "seriesSlug": ""
   },
   {
     "slug": "yojimbo",
