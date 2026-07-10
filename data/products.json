@@ -185,7 +185,7 @@
     "fileList": [
       "PDF details coming soon"
     ],
-    "pageCount": null,
+    "pageCount": 14,
     "price": "0.00",
     "priceCents": 0,
     "minimumPrice": "",
@@ -199,7 +199,7 @@
     "saleStart": "",
     "saleEnd": "",
     "saleLabel": "",
-    "saleEnabled": true,
+    "saleEnabled": false,
     "currency": "USD",
     "status": "pay-what-you-want",
     "statusLabel": "Pay What You Want",
