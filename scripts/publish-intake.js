@@ -61,6 +61,10 @@ function loadClientPayload(options) {
 }
 
 async function applyPublishPayload(rootDir, clientPayload) {
+  if (String(clientPayload?.operation || "").trim() === "diagnostic_noop") {
+    return runDiagnosticNoop(clientPayload);
+  }
+
   if (String(clientPayload?.operation || "").trim() === "pricing_update") {
     return applyPricingUpdatePayload(rootDir, clientPayload);
   }
@@ -119,6 +123,36 @@ async function applyPricingUpdatePayload(rootDir, clientPayload) {
   return {
     folder: "",
     metadata
+  };
+}
+
+async function runDiagnosticNoop(clientPayload) {
+  const delaySeconds = normalizeDiagnosticDelay(clientPayload?.diagnostic_delay_seconds);
+  const payload = {
+    correlationId: String(clientPayload?.correlation_id || "").trim(),
+    delaySeconds,
+    operation: "diagnostic_noop",
+    publishId: String(clientPayload?.publish_id || "").trim(),
+    ref: String(clientPayload?.ref || "").trim()
+  };
+
+  console.log(JSON.stringify({
+    event: "diagnostic_noop_start",
+    ...payload,
+    timestamp: new Date().toISOString()
+  }));
+  await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+  console.log(JSON.stringify({
+    event: "diagnostic_noop_complete",
+    ...payload,
+    timestamp: new Date().toISOString()
+  }));
+
+  return {
+    folder: "",
+    metadata: {
+      slug: "diagnostic-noop"
+    }
   };
 }
 
@@ -500,6 +534,14 @@ function normalizeMoneyText(value) {
     .trim()
     .replace(/\$/g, "")
     .replace(/,/g, "");
+}
+
+function normalizeDiagnosticDelay(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 110;
+  }
+  return Math.min(Math.max(Math.round(numeric), 1), 180);
 }
 
 function chooseText(...values) {
