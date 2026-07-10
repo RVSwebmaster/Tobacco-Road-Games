@@ -7,7 +7,11 @@ const ROOT = path.resolve(__dirname, "..");
 
 async function main() {
   await testIntakeLabelsAndHelperText();
+  await testProductLineTerminologyAndManagerLabels();
   await testListingDetailsStayHiddenUntilWorkStarts();
+  await testTablecraftListingStillLoadsWithProductLine();
+  await testOwnerProductLineManagerAddsAndRemovesUnusedLine();
+  await testOwnerProductLineManagerBlocksUsedLineRemoval();
   await testBackToListingsLeavesUnchangedExistingListing();
   await testBackToListingsConfirmsEditedExistingListing();
   await testGeneratedJsonToggle();
@@ -34,6 +38,71 @@ async function testIntakeLabelsAndHelperText() {
   assert.match(html, /Discards unsaved work from this form only\. Published data is not affected\./, "Product intake should explain the discard action.");
   assert.match(html, /aria-describedby="intake-check-help"/, "Product intake actions should expose accessible helper text.");
   assert.doesNotMatch(html, /Analyze Listing|Publish Product|Reset Form/, "Product intake should not keep the vague old action labels.");
+}
+
+async function testProductLineTerminologyAndManagerLabels() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, /<label for="product-line">Store Line<\/label>/, "The broader storefront line field should keep a distinct owner-facing label.");
+  assert.match(html, /<label for="product-series">Product Line<\/label>/, "The owner intake should relabel the series field as Product Line.");
+  assert.match(html, />Manage Product Lines</, "The owner intake should expose a Manage Product Lines control.");
+  assert.match(html, />Product Line Fit</, "Advisor copy should use Product Line terminology in the owner intake.");
+  assert.doesNotMatch(html, /<label for="product-series">Series<\/label>/, "The owner intake should stop showing the old Series field label.");
+}
+
+async function testTablecraftListingStillLoadsWithProductLine() {
+  const harness = createHarness();
+  await harness.flush();
+
+  assert.ok(getSelectOptionLabels(harness.fields.series).includes("Tablecraft"), "Tablecraft should stay available in the product line selector.");
+
+  harness.fields.existingSelect.value = "tablecraft-primer";
+  harness.buttons.loadExisting.click();
+
+  assert.equal(harness.fields.series.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve its underlying series-backed product line.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Tablecraft Primer", "Tablecraft listings should still load into existing-listing mode.");
+  assert.equal(harness.fields.title.value, "Tablecraft Primer", "The existing Tablecraft listing should still populate the form.");
+}
+
+async function testOwnerProductLineManagerAddsAndRemovesUnusedLine() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.buttons.manageProductLines.click();
+  assert.equal(harness.outputs.productLineManagerPanel.hidden, false, "Manage Product Lines should reveal the management panel.");
+
+  harness.fields.productLineManagerInput.value = "Night Roads";
+  harness.buttons.addProductLine.click();
+
+  assert.ok(getSelectOptionLabels(harness.fields.series).includes("Night Roads"), "Adding a product line should make it immediately selectable.");
+  assert.match(harness.outputs.productLineManagerStatus.textContent, /Night Roads added/i, "Adding a product line should confirm success.");
+
+  harness.fields.series.value = "Night Roads";
+  harness.fields.series.dispatch("change");
+  assert.equal(harness.fields.series.value, "Night Roads", "A newly added product line should be selectable immediately.");
+
+  const addedRow = findProductLineManagerRow(harness, "Night Roads");
+  assert.ok(addedRow, "The manager list should render the newly added product line.");
+  getProductLineRemoveButton(addedRow).click();
+
+  assert.ok(!getSelectOptionLabels(harness.fields.series).includes("Night Roads"), "Removing an unused product line should remove it from the selector immediately.");
+  assert.match(harness.outputs.productLineManagerStatus.textContent, /Night Roads removed/i, "Removing an unused product line should explain that no published listing changed.");
+}
+
+async function testOwnerProductLineManagerBlocksUsedLineRemoval() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.buttons.manageProductLines.click();
+  const tablecraftRow = findProductLineManagerRow(harness, "Tablecraft");
+  assert.ok(tablecraftRow, "The manager should list the used Tablecraft product line.");
+
+  const removeButton = getProductLineRemoveButton(tablecraftRow);
+  assert.equal(removeButton.disabled, true, "Used product lines should not expose an active remove action.");
+  assert.match(getProductLineNote(tablecraftRow), /Used by 1 product/i, "Used product lines should explain why they cannot be removed.");
+
+  const removed = harness.api.removeOwnerProductLine("Tablecraft");
+  assert.equal(removed, false, "Removing a used product line should be blocked even if called directly.");
+  assert.match(harness.outputs.productLineManagerStatus.textContent, /cannot be removed/i, "Blocked removal should explain that products still use the line.");
 }
 
 async function testListingDetailsStayHiddenUntilWorkStarts() {
@@ -388,6 +457,7 @@ function createHarness(options = {}) {
     }
   };
   const sessionStorageStore = options.sessionStorageStore || new Map();
+  const localStorageStore = options.localStorageStore || new Map();
   const sessionStorage = {
     getItem(key) {
       return sessionStorageStore.has(key) ? sessionStorageStore.get(key) : null;
@@ -397,6 +467,17 @@ function createHarness(options = {}) {
     },
     setItem(key, value) {
       sessionStorageStore.set(key, String(value));
+    }
+  };
+  const localStorage = {
+    getItem(key) {
+      return localStorageStore.has(key) ? localStorageStore.get(key) : null;
+    },
+    removeItem(key) {
+      localStorageStore.delete(key);
+    },
+    setItem(key, value) {
+      localStorageStore.set(key, String(value));
     }
   };
 
@@ -411,6 +492,7 @@ function createHarness(options = {}) {
     system: register("product-system", createInput("5E Compatible")),
     line: register("product-line", createInput("Fifth Edition Fantasy Roleplaying")),
     series: register("product-series", createElement("select")),
+    productLineManagerInput: register("product-line-manager-input", createInput("")),
     format: register("product-format", createInput("PDF")),
     pageCount: register("product-page-count", createInput("24", "number")),
     price: register("product-price", createInput("4.99")),
@@ -447,6 +529,9 @@ function createHarness(options = {}) {
   const outputs = {
     editMode: register("product-edit-mode", createElement("p")),
     listingDetails: register("listing-details-section", createElement("section")),
+    productLineManagerList: register("product-line-manager-list", createElement("div")),
+    productLineManagerPanel: register("product-line-manager-panel", createElement("div")),
+    productLineManagerStatus: register("product-line-manager-status", createElement("p")),
     modeIndicatorTitle: register("product-mode-indicator-title", createElement("span")),
     modeIndicatorCopy: register("product-mode-indicator-copy", createElement("span")),
     outputHeading: register("intake-output-heading", createElement("h2")),
@@ -479,10 +564,12 @@ function createHarness(options = {}) {
 
   const buttons = {
     analyze: register("analyze-listing-button", createElement("button")),
+    addProductLine: register("add-product-line-button", createElement("button")),
     applyAdvisor: register("apply-advisor-button", createElement("button")),
     ignoreAdvisor: register("ignore-advisor-button", createElement("button")),
     leaveListing: register("leave-listing-button", createElement("button")),
     loadExisting: register("product-existing-load", createElement("button")),
+    manageProductLines: register("manage-product-lines-button", createElement("button")),
     startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),
     publish: register("publish-button", createElement("button")),
@@ -571,6 +658,42 @@ function createHarness(options = {}) {
       tags: ["Preview"],
       title: "Ringbound",
       version: "2026 catalog preview"
+    },
+    {
+      buyMode: "preview-only",
+      buyUrl: "",
+      coverImage: "/product-assets/tablecraft-primer/cover.webp",
+      creationMethod: "Human-authored by RV Sawyer.",
+      currency: "USD",
+      features: ["Practical GM advice"],
+      fileList: ["Tablecraft Primer.pdf"],
+      folder: "tablecraft-primer",
+      format: ["PDF"],
+      fulfillmentNote: "",
+      gameSystem: "System Neutral",
+      gameSystemSlug: "system-neutral",
+      lastUpdated: "2026-06-17",
+      legalNote: "",
+      longDescription: "System-neutral game-master advice.",
+      pageCount: 32,
+      price: "",
+      previewImage: "/product-assets/tablecraft-primer/preview.webp",
+      previewImages: [],
+      productLine: "Other Games & Experiments",
+      productLineSlug: "other-games-and-experiments",
+      relatedProducts: [],
+      releaseDate: "2026-06-17",
+      saleEnabled: false,
+      salePrice: "",
+      series: "Tablecraft",
+      seriesSlug: "tablecraft",
+      shortDescription: "A short Tablecraft guide.",
+      slug: "tablecraft-primer",
+      status: "preview-available",
+      subtitle: "A practical guide for steadier tables",
+      tags: ["Tablecraft"],
+      title: "Tablecraft Primer",
+      version: "1.0"
     }
   ];
   const intakeMap = {
@@ -582,6 +705,10 @@ function createHarness(options = {}) {
       {
         folder: "ringbound",
         slug: "ringbound"
+      },
+      {
+        folder: "tablecraft-primer",
+        slug: "tablecraft-primer"
       }
     ]
   };
@@ -632,12 +759,14 @@ function createHarness(options = {}) {
       throw new Error(`Unexpected fetch: ${url}`);
     },
     globalThis: null,
+    localStorage,
     sessionStorage,
     setTimeout,
     window: {
       location: {
         assign() {}
       },
+      localStorage,
       sessionStorage,
       setTimeout
     }
@@ -665,6 +794,30 @@ function createHarness(options = {}) {
   harness.api = context.TRGProductIntake;
 
   return harness;
+}
+
+function getSelectOptionLabels(selectElement) {
+  return Array.isArray(selectElement.children)
+    ? selectElement.children.map((child) => child.textContent)
+    : [];
+}
+
+function findProductLineManagerRow(harness, name) {
+  return Array.isArray(harness.outputs.productLineManagerList.children)
+    ? harness.outputs.productLineManagerList.children.find((child) => {
+      const copy = child.children?.[0];
+      const title = copy?.children?.[0];
+      return title?.textContent === name;
+    }) || null
+    : null;
+}
+
+function getProductLineRemoveButton(row) {
+  return row.children[row.children.length - 1];
+}
+
+function getProductLineNote(row) {
+  return row.children?.[0]?.children?.[1]?.textContent || "";
 }
 
 function createJsonResponse(payload, status = 200) {

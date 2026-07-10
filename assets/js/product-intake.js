@@ -3,6 +3,8 @@
   const CART_BUY_URL_PLACEHOLDER = "No buy URL needed for cart products.";
   const DISCARD_LISTING_CHANGES_MESSAGE = "Discard unsaved work? Any unpublished listing changes will be lost.";
   const EXISTING_LISTING_DRAFT_KEY = "trg_owner_existing_listing_draft_v1";
+  const PRODUCT_LINE_LIBRARY_KEY = "trg_owner_product_lines_v1";
+  const DEFAULT_PRODUCT_LINES = ["Tablecraft"];
   const statusLabels = {
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
@@ -27,6 +29,7 @@
     system: document.getElementById("product-system"),
     line: document.getElementById("product-line"),
     series: document.getElementById("product-series"),
+    productLineManagerInput: document.getElementById("product-line-manager-input"),
     format: document.getElementById("product-format"),
     pageCount: document.getElementById("product-page-count"),
     price: document.getElementById("product-price"),
@@ -56,6 +59,9 @@
   const outputs = {
     editMode: document.getElementById("product-edit-mode"),
     listingDetails: document.getElementById("listing-details-section"),
+    productLineManagerList: document.getElementById("product-line-manager-list"),
+    productLineManagerPanel: document.getElementById("product-line-manager-panel"),
+    productLineManagerStatus: document.getElementById("product-line-manager-status"),
     modeIndicatorTitle: document.getElementById("product-mode-indicator-title"),
     modeIndicatorCopy: document.getElementById("product-mode-indicator-copy"),
     advisorPanel: document.getElementById("advisor-panel"),
@@ -89,9 +95,11 @@
   const buttons = {
     analyze: document.getElementById("analyze-listing-button"),
     applyAdvisor: document.getElementById("apply-advisor-button"),
+    addProductLine: document.getElementById("add-product-line-button"),
     ignoreAdvisor: document.getElementById("ignore-advisor-button"),
     leaveListing: document.getElementById("leave-listing-button"),
     loadExisting: document.getElementById("product-existing-load"),
+    manageProductLines: document.getElementById("manage-product-lines-button"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
@@ -112,6 +120,7 @@
   let loadedProductRecord = null;
   let latestAdvisorRun = null;
   let draftBaseline = "";
+  let ownerProductLines = [...DEFAULT_PRODUCT_LINES];
 
   const slugify = (value) =>
     String(value || "")
@@ -157,6 +166,14 @@
       ? value.join(", ")
       : String(value || "").trim();
 
+  const normalizeProductLineName = (value) =>
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const canonicalizeProductLineName = (value) =>
+    normalizeProductLineName(value).toLowerCase();
+
   const setJsonVisibility = (visible) => {
     if (outputs.jsonPanel) {
       outputs.jsonPanel.hidden = !visible;
@@ -180,6 +197,15 @@
   const setListingDetailsVisibility = (visible) => {
     if (outputs.listingDetails) {
       outputs.listingDetails.hidden = !visible;
+    }
+  };
+
+  const setProductLineManagerVisibility = (visible) => {
+    if (outputs.productLineManagerPanel) {
+      outputs.productLineManagerPanel.hidden = !visible;
+    }
+    if (buttons.manageProductLines) {
+      buttons.manageProductLines.setAttribute("aria-expanded", visible ? "true" : "false");
     }
   };
 
@@ -575,6 +601,7 @@
 
     if (latestAdvisorRun.series_fit) {
       fields.series.value = latestAdvisorRun.series_fit;
+      refreshProductLineUi();
     }
 
     fields.tags.value = latestAdvisorRun.suggested_tags.join(", ");
@@ -745,6 +772,7 @@
       fields.existingSelect.innerHTML = options.join("");
     }
 
+    refreshProductLineUi();
     syncRelatedPicker();
     updateEditModeCopy();
   }
@@ -1237,6 +1265,7 @@
     folderTouched = true;
 
     clearAdvisorPanel();
+    refreshProductLineUi();
     syncRelatedPicker();
     updateRelatedSelectOptions();
     setListingDetailsVisibility(true);
@@ -1309,6 +1338,7 @@
     folderTouched = draft.folderTouched !== undefined ? Boolean(draft.folderTouched) : true;
 
     clearAdvisorPanel();
+    refreshProductLineUi();
     syncRelatedPicker();
     updateRelatedSelectOptions();
     setListingDetailsVisibility(true);
@@ -1354,6 +1384,9 @@
   });
 
   buttons.analyze?.addEventListener("click", analyzeCurrentListing);
+  buttons.addProductLine?.addEventListener("click", () => {
+    addOwnerProductLine();
+  });
   buttons.applyAdvisor?.addEventListener("click", applyAdvisorSuggestions);
   buttons.ignoreAdvisor?.addEventListener("click", () => {
     clearAdvisorPanel();
@@ -1361,6 +1394,9 @@
   });
   buttons.publish.addEventListener("click", publishProduct);
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
+  buttons.manageProductLines?.addEventListener("click", () => {
+    setProductLineManagerVisibility(Boolean(outputs.productLineManagerPanel?.hidden));
+  });
   buttons.leaveListing?.addEventListener("click", () => {
     if (hasUnsavedChanges() && !confirmDiscardChanges()) {
       outputs.status.textContent = "Unsaved listing changes are still in place.";
@@ -1395,6 +1431,14 @@
   });
   buttons.toggleChecklist?.addEventListener("click", () => {
     setChecklistVisibility(Boolean(outputs.checklistPanel?.hidden));
+  });
+
+  fields.productLineManagerInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    addOwnerProductLine();
   });
 
   fields.relatedList.addEventListener("click", (event) => {
@@ -1457,11 +1501,247 @@
     folderTouched = false;
     clearAdvisorPanel();
     clearPersistedExistingListingDraft();
+    refreshProductLineUi();
     syncRelatedPicker();
     setListingDetailsVisibility(!hideDetails);
     updateEditModeCopy();
     updatePreview();
     markDraftBaseline();
+  };
+
+  const getLocalStorage = () => {
+    try {
+      return globalThis.localStorage || globalThis.window?.localStorage || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const persistOwnerProductLines = () => {
+    const storage = getLocalStorage();
+    if (!storage) {
+      return;
+    }
+
+    try {
+      storage.setItem(PRODUCT_LINE_LIBRARY_KEY, JSON.stringify(ownerProductLines));
+    } catch {}
+  };
+
+  const readOwnerProductLines = () => {
+    const storage = getLocalStorage();
+    if (!storage) {
+      return [...DEFAULT_PRODUCT_LINES];
+    }
+
+    try {
+      const raw = storage.getItem(PRODUCT_LINE_LIBRARY_KEY);
+      if (!raw) {
+        return [...DEFAULT_PRODUCT_LINES];
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        return [...DEFAULT_PRODUCT_LINES];
+      }
+
+      const merged = new Map();
+      [...DEFAULT_PRODUCT_LINES, ...parsed]
+        .map((entry) => normalizeProductLineName(entry))
+        .filter(Boolean)
+        .forEach((entry) => {
+          const key = canonicalizeProductLineName(entry);
+          if (!merged.has(key)) {
+            merged.set(key, entry);
+          }
+        });
+      return [...merged.values()];
+    } catch {
+      return [...DEFAULT_PRODUCT_LINES];
+    }
+  };
+
+  const getUsedProductLineUsage = () => {
+    const usage = new Map();
+    availableProducts.forEach((product) => {
+      const name = normalizeProductLineName(product.series);
+      if (!name) {
+        return;
+      }
+      const key = canonicalizeProductLineName(name);
+      const current = usage.get(key) || { count: 0, name };
+      current.count += 1;
+      usage.set(key, current);
+    });
+    return usage;
+  };
+
+  const getSelectableProductLines = () => {
+    const merged = new Map();
+    [...DEFAULT_PRODUCT_LINES, ...ownerProductLines]
+      .map((entry) => normalizeProductLineName(entry))
+      .filter(Boolean)
+      .forEach((entry) => {
+        const key = canonicalizeProductLineName(entry);
+        if (!merged.has(key)) {
+          merged.set(key, entry);
+        }
+      });
+
+    availableProducts.forEach((product) => {
+      const entry = normalizeProductLineName(product.series);
+      if (!entry) {
+        return;
+      }
+      const key = canonicalizeProductLineName(entry);
+      if (!merged.has(key)) {
+        merged.set(key, entry);
+      }
+    });
+
+    const currentValue = normalizeProductLineName(fields.series?.value || "");
+    if (currentValue) {
+      const key = canonicalizeProductLineName(currentValue);
+      if (!merged.has(key)) {
+        merged.set(key, currentValue);
+      }
+    }
+
+    return [...merged.values()].sort((left, right) => left.localeCompare(right));
+  };
+
+  const syncProductLineOptions = () => {
+    if (!fields.series) {
+      return;
+    }
+
+    const previousValue = fields.series.value;
+    const selectableProductLines = getSelectableProductLines();
+    const options = [];
+
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "-";
+    options.push(emptyOption);
+
+    selectableProductLines.forEach((entry) => {
+      const option = document.createElement("option");
+      option.value = entry;
+      option.textContent = entry;
+      options.push(option);
+    });
+
+    fields.series.replaceChildren(...options);
+    fields.series.value = selectableProductLines.includes(previousValue) ? previousValue : "";
+  };
+
+  const renderProductLineManager = () => {
+    if (!outputs.productLineManagerList) {
+      return;
+    }
+
+    const usage = getUsedProductLineUsage();
+    const productLines = getSelectableProductLines();
+    outputs.productLineManagerList.replaceChildren();
+
+    productLines.forEach((name) => {
+      const item = document.createElement("div");
+      item.className = "product-line-manager__item";
+
+      const copy = document.createElement("div");
+      copy.className = "product-line-manager__item-copy";
+
+      const title = document.createElement("span");
+      title.className = "product-line-manager__item-name";
+      title.textContent = name;
+      copy.append(title);
+
+      const note = document.createElement("span");
+      note.className = "product-line-manager__item-note";
+      const usageRecord = usage.get(canonicalizeProductLineName(name));
+      note.textContent = usageRecord
+        ? `Used by ${usageRecord.count} product${usageRecord.count === 1 ? "" : "s"}. Remove it from those listings before deleting it here.`
+        : "Unused owner product line. Safe to remove without changing any published listing.";
+      copy.append(note);
+      item.append(copy);
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "button button--secondary";
+      removeButton.textContent = "Remove";
+      removeButton.disabled = Boolean(usageRecord);
+      removeButton.addEventListener("click", () => {
+        removeOwnerProductLine(name);
+      });
+      item.append(removeButton);
+
+      outputs.productLineManagerList.append(item);
+    });
+  };
+
+  const refreshProductLineUi = () => {
+    syncProductLineOptions();
+    renderProductLineManager();
+  };
+
+  const addOwnerProductLine = (value) => {
+    const name = normalizeProductLineName(value ?? (fields.productLineManagerInput?.value || ""));
+    if (!name) {
+      if (outputs.productLineManagerStatus) {
+        outputs.productLineManagerStatus.textContent = "Enter a product line name before adding it.";
+      }
+      return false;
+    }
+
+    const key = canonicalizeProductLineName(name);
+    if (getSelectableProductLines().some((entry) => canonicalizeProductLineName(entry) === key)) {
+      if (outputs.productLineManagerStatus) {
+        outputs.productLineManagerStatus.textContent = `${name} is already available in the product line list.`;
+      }
+      return false;
+    }
+
+    ownerProductLines = [...ownerProductLines, name];
+    persistOwnerProductLines();
+    refreshProductLineUi();
+    if (fields.productLineManagerInput) {
+      fields.productLineManagerInput.value = "";
+    }
+    if (outputs.productLineManagerStatus) {
+      outputs.productLineManagerStatus.textContent = `${name} added. You can select it from the product line list now.`;
+    }
+    return true;
+  };
+
+  const removeOwnerProductLine = (value) => {
+    const name = normalizeProductLineName(value);
+    const key = canonicalizeProductLineName(name);
+    const usage = getUsedProductLineUsage().get(key);
+    if (usage) {
+      if (outputs.productLineManagerStatus) {
+        outputs.productLineManagerStatus.textContent = `${name} cannot be removed because ${usage.count} product${usage.count === 1 ? "" : "s"} still use it.`;
+      }
+      return false;
+    }
+
+    const beforeCount = ownerProductLines.length;
+    ownerProductLines = ownerProductLines.filter((entry) => canonicalizeProductLineName(entry) !== key);
+    if (ownerProductLines.length === beforeCount) {
+      if (outputs.productLineManagerStatus) {
+        outputs.productLineManagerStatus.textContent = `${name} is not in the removable owner product line list.`;
+      }
+      return false;
+    }
+
+    if (canonicalizeProductLineName(fields.series?.value || "") === key) {
+      fields.series.value = "";
+    }
+    persistOwnerProductLines();
+    refreshProductLineUi();
+    updatePreview();
+    if (outputs.productLineManagerStatus) {
+      outputs.productLineManagerStatus.textContent = `${name} removed from the owner product line list. No published listing was changed.`;
+    }
+    return true;
   };
 
   buttons.reset.addEventListener("click", () => {
@@ -1478,9 +1758,14 @@
   });
 
   clearAdvisorPanel();
+  ownerProductLines = readOwnerProductLines();
   globalThis.TRGProductIntake = {
+    addOwnerProductLine,
     getModeLabels,
+    getSelectableProductLines,
+    getUsedProductLineUsage,
     hasUnsavedChanges,
+    removeOwnerProductLine,
     validateRequiredFields
   };
   void loadAvailableProducts().then(() => {
@@ -1488,6 +1773,8 @@
   });
   syncRelatedPicker();
   syncBuyModeUi();
+  refreshProductLineUi();
+  setProductLineManagerVisibility(false);
   setJsonVisibility(false);
   setChecklistVisibility(false);
   setListingDetailsVisibility(false);
