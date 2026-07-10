@@ -267,7 +267,7 @@
       outputCopy: "Check for missing or invalid information, then review the generated catalog entry and update plan before publishing changes.",
       outputHeading: "Review Listing Changes",
       publishButton: "Update Existing Listing",
-      publishHelp: "Updates the existing listing, uploads only selected replacement files, and rebuilds the store.",
+      publishHelp: "Updates the existing listing, uploads only selected replacement files, rebuilds the store, and returns you to the listing picker after success.",
       publishLabel: "Update Existing Listing",
       resetButton: "Discard Listing Changes",
       resetHelp: "Discards unsaved edits for the loaded listing. Published data is not affected.",
@@ -909,6 +909,22 @@
     return "";
   }
 
+  function getSubmitProgressLabel() {
+    return isEditingLoadedListing()
+      ? "Updating..."
+      : "Publishing...";
+  }
+
+  function formatPublishSuccessMessage(productTitle, responsePayload) {
+    const liveNote = responsePayload.json.pending
+      ? " The live store may take another minute to catch up."
+      : "";
+    const workflowNote = responsePayload.json.runUrl
+      ? ` Workflow: ${responsePayload.json.runUrl}`
+      : "";
+    return `${productTitle} updated successfully. The editor is closed and you are back at the listing picker.${liveNote}${workflowNote}`;
+  }
+
   async function publishProduct() {
     if (publishBusy) {
       return;
@@ -928,11 +944,13 @@
 
     publishBusy = true;
     buttons.publish.disabled = true;
+    buttons.publish.textContent = getSubmitProgressLabel();
     outputs.status.textContent = isEditingLoadedListing()
       ? "Uploading any selected replacement files and waiting for the existing-listing update workflow to finish..."
       : "Uploading files and waiting for the new-listing publish workflow to finish...";
 
     try {
+      const startedInExistingMode = isEditingLoadedListing();
       const payload = buildPayload();
       const formData = new FormData();
       formData.set("title", payload.title);
@@ -1001,6 +1019,16 @@
         return;
       }
 
+      if (startedInExistingMode) {
+        const updatedTitle = loadedProductRecord?.title || payload.title || payload.slug || "The listing";
+        resetFormToDefaults();
+        outputs.status.textContent = formatPublishSuccessMessage(updatedTitle, responsePayload);
+        if (typeof fields.existingSelect?.focus === "function") {
+          fields.existingSelect.focus();
+        }
+        return;
+      }
+
       outputs.status.textContent = responsePayload.json.runUrl
         ? `${responsePayload.json.message} Workflow: ${responsePayload.json.runUrl}`
         : responsePayload.json.message;
@@ -1011,6 +1039,7 @@
     } finally {
       publishBusy = false;
       buttons.publish.disabled = false;
+      updateActionLabels();
     }
   }
 

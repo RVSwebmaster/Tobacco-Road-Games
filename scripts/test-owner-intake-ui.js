@@ -10,6 +10,7 @@ async function main() {
   await testIntakeModeSpecificLabels();
   await testExistingListingDraftRestoresAfterReload();
   await testExistingListingPublishOmitsUndefinedSeriesFields();
+  await testExistingListingSuccessfulUpdateReturnsToPicker();
   await testIntakeReviewAndDiscardConfirmation();
   await testNonJsonPublishErrorsShowHttpDetails();
   console.log("Owner intake UI tests passed.");
@@ -131,6 +132,41 @@ async function testExistingListingPublishOmitsUndefinedSeriesFields() {
   assert.equal(harness.lastPublishFormData.get("seriesSlug"), "", "Existing-listing publish should submit an empty series slug instead of the string \"undefined\".");
 }
 
+async function testExistingListingSuccessfulUpdateReturnsToPicker() {
+  const harness = createHarness();
+  const deferred = createDeferred();
+  harness.mockPublishResponse = deferred.promise;
+  await harness.flush();
+  harness.fields.existingSelect.value = "ringbound";
+  harness.buttons.loadExisting.click();
+  harness.fields.pageCount.value = "12";
+  harness.fields.pageCount.dispatch("input");
+
+  harness.buttons.publish.click();
+  await harness.flush();
+
+  assert.equal(harness.buttons.publish.textContent, "Updating...", "Existing-listing updates should show an Updating button state while the request is in flight.");
+  assert.equal(harness.buttons.publish.disabled, true, "Existing-listing updates should disable the update button while the request is in flight.");
+  assert.match(harness.outputs.status.textContent, /waiting for the existing-listing update workflow to finish/i, "Existing-listing updates should show an in-progress status.");
+
+  deferred.resolve(createJsonResponse({
+    message: "Files uploaded and the GitHub rebuild workflow was accepted.",
+    ok: true,
+    pending: true,
+    runUrl: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/123"
+  }, 202));
+  await harness.flush();
+
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "A successful existing-listing update should close the editor and return to the picker state.");
+  assert.equal(harness.fields.existingSelect.value, "", "A successful existing-listing update should clear the loaded listing selection.");
+  assert.equal(harness.fields.title.value, "", "A successful existing-listing update should clear the form fields.");
+  assert.equal(harness.fields.slug.value, "", "A successful existing-listing update should clear the loaded slug.");
+  assert.equal(harness.buttons.publish.textContent, "Publish New Product", "A successful existing-listing update should restore the default publish action after returning to the picker.");
+  assert.equal(harness.buttons.publish.disabled, false, "A successful existing-listing update should re-enable the publish button.");
+  assert.match(harness.outputs.status.textContent, /Ringbound updated successfully\./, "A successful existing-listing update should show a clear success confirmation.");
+  assert.match(harness.outputs.status.textContent, /back at the listing picker/i, "A successful existing-listing update should explain that the editor closed and returned to the picker.");
+}
+
 async function testNonJsonPublishErrorsShowHttpDetails() {
   const harness = createHarness();
   await harness.flush();
@@ -148,6 +184,9 @@ async function testNonJsonPublishErrorsShowHttpDetails() {
   assert.match(harness.outputs.status.textContent, /HTTP 500/, "Non-JSON publish failures should include the HTTP status.");
   assert.match(harness.outputs.status.textContent, /text\/html/, "Non-JSON publish failures should include the response content type.");
   assert.match(harness.outputs.status.textContent, /Failure Origin publish failed hard/i, "Non-JSON publish failures should include a safe body summary.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Agency", "Failed existing-listing updates should keep the editor open.");
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Failed existing-listing updates should restore the update button label.");
+  assert.equal(harness.buttons.publish.disabled, false, "Failed existing-listing updates should re-enable the update button.");
 }
 
 function createHarness(options = {}) {
@@ -550,6 +589,16 @@ function createTextResponse(payload, status = 200, headers = {}) {
     ok: status >= 200 && status < 300,
     status
   };
+}
+
+function createDeferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 async function flush() {
