@@ -71,6 +71,7 @@
     advisorJson: document.getElementById("advisor-json"),
     jsonPanel: document.getElementById("generated-json-panel"),
     json: document.getElementById("generated-json"),
+    checklistPanel: document.getElementById("asset-checklist-panel"),
     checklist: document.getElementById("asset-checklist"),
     outputHeading: document.getElementById("intake-output-heading"),
     outputCopy: document.getElementById("intake-output-copy"),
@@ -93,7 +94,8 @@
     publish: document.getElementById("publish-button"),
     review: document.getElementById("review-listing-button"),
     reset: document.getElementById("reset-intake-button"),
-    toggleJson: document.getElementById("toggle-generated-json")
+    toggleJson: document.getElementById("toggle-generated-json"),
+    toggleChecklist: document.getElementById("toggle-asset-checklist")
   };
 
   let coverObjectUrl = "";
@@ -159,6 +161,16 @@
     if (buttons.toggleJson) {
       buttons.toggleJson.textContent = visible ? "Hide JSON" : "View JSON";
       buttons.toggleJson.setAttribute("aria-expanded", visible ? "true" : "false");
+    }
+  };
+
+  const setChecklistVisibility = (visible) => {
+    if (outputs.checklistPanel) {
+      outputs.checklistPanel.hidden = !visible;
+    }
+    if (buttons.toggleChecklist) {
+      buttons.toggleChecklist.textContent = visible ? "Hide Asset Checklist" : "View Asset Checklist";
+      buttons.toggleChecklist.setAttribute("aria-expanded", visible ? "true" : "false");
     }
   };
 
@@ -1343,6 +1355,9 @@
   buttons.toggleJson?.addEventListener("click", () => {
     setJsonVisibility(Boolean(outputs.jsonPanel?.hidden));
   });
+  buttons.toggleChecklist?.addEventListener("click", () => {
+    setChecklistVisibility(Boolean(outputs.checklistPanel?.hidden));
+  });
 
   fields.relatedList.addEventListener("click", (event) => {
     const target = event.target;
@@ -1435,6 +1450,7 @@
   syncRelatedPicker();
   syncBuyModeUi();
   setJsonVisibility(false);
+  setChecklistVisibility(false);
   updateActionLabels();
   updatePreview();
   markDraftBaseline();

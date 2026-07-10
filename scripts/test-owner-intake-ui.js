@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, "..");
 async function main() {
   await testIntakeLabelsAndHelperText();
   await testGeneratedJsonToggle();
+  await testAssetChecklistToggle();
   await testIntakeModeSpecificLabels();
   await testExistingListingDraftRestoresAfterReload();
   await testExistingListingPublishOmitsUndefinedSeriesFields();
@@ -63,6 +64,25 @@ async function testGeneratedJsonToggle() {
   harness.buttons.toggleJson.click();
   assert.equal(harness.outputs.jsonPanel.hidden, true, "Clicking the toggle again should hide the generated JSON panel.");
   assert.equal(harness.buttons.toggleJson.textContent, "View JSON", "The JSON toggle should return to the closed label after hiding.");
+}
+
+async function testAssetChecklistToggle() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, />View Asset Checklist</, "Product intake should expose a View Asset Checklist toggle button.");
+
+  const harness = createHarness();
+  await harness.flush();
+
+  assert.equal(harness.outputs.checklistPanel.hidden, true, "Asset checklist should stay hidden by default.");
+  assert.equal(harness.buttons.toggleChecklist.textContent, "View Asset Checklist", "The asset checklist toggle should start in the closed state.");
+
+  harness.buttons.toggleChecklist.click();
+  assert.equal(harness.outputs.checklistPanel.hidden, false, "Clicking View Asset Checklist should reveal the checklist panel.");
+  assert.equal(harness.buttons.toggleChecklist.textContent, "Hide Asset Checklist", "The asset checklist toggle should change label after opening.");
+
+  harness.buttons.toggleChecklist.click();
+  assert.equal(harness.outputs.checklistPanel.hidden, true, "Clicking the toggle again should hide the checklist panel.");
+  assert.equal(harness.buttons.toggleChecklist.textContent, "View Asset Checklist", "The asset checklist toggle should return to the closed label after hiding.");
 }
 
 async function testIntakeReviewAndDiscardConfirmation() {
@@ -381,6 +401,7 @@ function createHarness(options = {}) {
     advisorJson: register("advisor-json", createElement("textarea")),
     jsonPanel: register("generated-json-panel", createElement("div")),
     json: register("generated-json", createElement("textarea")),
+    checklistPanel: register("asset-checklist-panel", createElement("div")),
     checklist: register("asset-checklist", createElement("pre")),
     assetFolder: register("asset-folder-output", createElement("p")),
     assetFileList: register("asset-file-list", createElement("div")),
@@ -400,7 +421,8 @@ function createHarness(options = {}) {
     publish: register("publish-button", createElement("button")),
     review: register("review-listing-button", createElement("button")),
     reset: register("reset-intake-button", createElement("button")),
-    toggleJson: register("toggle-generated-json", createElement("button"))
+    toggleJson: register("toggle-generated-json", createElement("button")),
+    toggleChecklist: register("toggle-asset-checklist", createElement("button"))
   };
 
   register("intake-check-label", createElement("strong"));

@@ -671,8 +671,11 @@
         </div>
 
         <div class="intake-output">
-          <label for="asset-checklist">Asset checklist</label>
-          <pre id="asset-checklist"></pre>
+          <button id="toggle-asset-checklist" class="button button--secondary" type="button" aria-controls="asset-checklist-panel" aria-expanded="false">View Asset Checklist</button>
+          <div id="asset-checklist-panel" hidden>
+            <label for="asset-checklist">Asset checklist</label>
+            <pre id="asset-checklist"></pre>
+          </div>
         </div>
       </section>
     </main>
@@ -684,6 +687,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710g"></script>
+  <script src="../assets/js/product-intake.js?v=20260710h"></script>
 </body>
 </html>
