@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/owner/*", "/product-assets/*", "/api/cart/quote", "/api/cart/checkout", "/api/orders/pending", "/store/checkout/complete", "/store/checkout/canceled"],
+  "include": ["/owner/*", "/product-assets/*", "/api/cart/quote", "/api/cart/checkout", "/api/orders/pending", "/api/diagnostics/*", "/store/checkout/complete", "/store/checkout/canceled"],
   "exclude": []
 }
