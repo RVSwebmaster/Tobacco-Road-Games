@@ -275,7 +275,7 @@ function upsertIntakeMap(intakeMap, metadata, folder) {
   const next = clone(intakeMap);
   const existingProducts = Array.isArray(next.products) ? next.products : [];
   const index = existingProducts.findIndex((product) => product.slug === metadata.slug);
-  const existing = index >= 0 ? clone(existingProducts[index]) : {};
+  const existing = index >= 0 ? deleteMeaninglessSeriesFields(clone(existingProducts[index])) : {};
 
   const updated = {
     ...existing,
@@ -294,12 +294,7 @@ function upsertIntakeMap(intakeMap, metadata, folder) {
     tags: chooseArray(metadata.tags, existing.tags, ["Preview"])
   };
 
-  if (!Object.prototype.hasOwnProperty.call(existing, "series") && !String(metadata.series || "").trim()) {
-    delete updated.series;
-  }
-  if (!Object.prototype.hasOwnProperty.call(existing, "seriesSlug") && !String(metadata.seriesSlug || "").trim()) {
-    delete updated.seriesSlug;
-  }
+  deleteMeaninglessSeriesFields(updated);
 
   if (index >= 0) {
     existingProducts[index] = updated;
@@ -315,7 +310,7 @@ function upsertIntakeMap(intakeMap, metadata, folder) {
 function upsertProducts(products, metadata) {
   const nextProducts = clone(products);
   const index = nextProducts.findIndex((product) => product.slug === metadata.slug);
-  const existing = index >= 0 ? clone(nextProducts[index]) : {};
+  const existing = index >= 0 ? deleteMeaninglessSeriesFields(clone(nextProducts[index])) : {};
   const title = chooseText(metadata.title, existing.title, humanizeSlug(metadata.slug));
 
   const updated = {
@@ -382,12 +377,7 @@ function upsertProducts(products, metadata) {
     excludeFromBundles: chooseBoolean(existing.excludeFromBundles, true)
   };
 
-  if (!Object.prototype.hasOwnProperty.call(existing, "series") && !String(metadata.series || "").trim()) {
-    delete updated.series;
-  }
-  if (!Object.prototype.hasOwnProperty.call(existing, "seriesSlug") && !String(metadata.seriesSlug || "").trim()) {
-    delete updated.seriesSlug;
-  }
+  deleteMeaninglessSeriesFields(updated);
 
   if (index >= 0) {
     nextProducts[index] = updated;
@@ -490,6 +480,29 @@ function normalizeStringArray(value) {
 function normalizePriceCents(value) {
   const numeric = Number(normalizeMoneyText(value));
   return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
+}
+
+function isBogusOptionalText(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "undefined" || normalized === "null";
+}
+
+function deleteMeaninglessSeriesFields(record) {
+  if (!record || typeof record !== "object") {
+    return record;
+  }
+
+  const series = String(record.series || "").trim();
+  const seriesSlug = String(record.seriesSlug || "").trim();
+
+  if (!series || isBogusOptionalText(series)) {
+    delete record.series;
+  }
+  if (!seriesSlug || isBogusOptionalText(seriesSlug)) {
+    delete record.seriesSlug;
+  }
+
+  return record;
 }
 
 function isStrictMoneyText(value) {

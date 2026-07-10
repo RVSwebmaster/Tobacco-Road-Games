@@ -943,8 +943,8 @@
       formData.set("gameSystemSlug", payload.gameSystemSlug);
       formData.set("productLine", payload.productLine);
       formData.set("productLineSlug", payload.productLineSlug);
-      formData.set("series", payload.series);
-      formData.set("seriesSlug", payload.seriesSlug);
+      formData.set("series", Object.prototype.hasOwnProperty.call(payload, "series") ? payload.series : "");
+      formData.set("seriesSlug", Object.prototype.hasOwnProperty.call(payload, "seriesSlug") ? payload.seriesSlug : "");
       formData.set("format", payload.format.join(", "));
       formData.set("pageCount", payload.pageCount === null ? "" : String(payload.pageCount));
       formData.set("price", payload.price);

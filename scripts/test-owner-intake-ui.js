@@ -9,6 +9,7 @@ async function main() {
   await testIntakeLabelsAndHelperText();
   await testIntakeModeSpecificLabels();
   await testExistingListingDraftRestoresAfterReload();
+  await testExistingListingPublishOmitsUndefinedSeriesFields();
   await testIntakeReviewAndDiscardConfirmation();
   await testNonJsonPublishErrorsShowHttpDetails();
   console.log("Owner intake UI tests passed.");
@@ -112,6 +113,22 @@ async function testExistingListingDraftRestoresAfterReload() {
   reloadedHarness.buttons.review.click();
   assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Ringbound draft should still work.");
   assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "Reviewing the restored draft must not relabel the publish action.");
+}
+
+async function testExistingListingPublishOmitsUndefinedSeriesFields() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "ringbound";
+  harness.buttons.loadExisting.click();
+  harness.fields.pageCount.value = "12";
+  harness.fields.pageCount.dispatch("input");
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+
+  assert.ok(harness.lastPublishFormData, "Existing-listing publish should submit FormData.");
+  assert.equal(harness.lastPublishFormData.get("series"), "", "Existing-listing publish should submit an empty series field instead of the string \"undefined\".");
+  assert.equal(harness.lastPublishFormData.get("seriesSlug"), "", "Existing-listing publish should submit an empty series slug instead of the string \"undefined\".");
 }
 
 async function testNonJsonPublishErrorsShowHttpDetails() {
@@ -422,6 +439,7 @@ function createHarness(options = {}) {
     confirmResponse: true,
     fields,
     flush,
+    lastPublishFormData: null,
     mockPublishResponse: createJsonResponse({
       message: "Published."
     }),
@@ -454,6 +472,7 @@ function createHarness(options = {}) {
         return createJsonResponse(intakeMap);
       }
       if (String(url).includes("/owner/api/publish")) {
+        harness.lastPublishFormData = options.body || null;
         return harness.mockPublishResponse;
       }
       throw new Error(`Unexpected fetch: ${url}`);

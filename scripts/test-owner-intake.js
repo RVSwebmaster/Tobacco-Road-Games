@@ -952,13 +952,13 @@ async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript)
   assert.ok(ringboundProduct, "Ringbound fixture should exist in the product catalog.");
   assert.ok(ringboundIntake, "Ringbound fixture should exist in the intake map.");
 
-  delete ringboundProduct.series;
-  delete ringboundProduct.seriesSlug;
+  ringboundProduct.series = "undefined";
+  ringboundProduct.seriesSlug = "undefined";
   ringboundProduct.productLineSlug = "other-games-and-experiments";
   fs.writeFileSync(tempProductsPath, `${JSON.stringify(originalProducts, null, 2)}\n`);
 
-  delete ringboundIntake.series;
-  delete ringboundIntake.seriesSlug;
+  ringboundIntake.series = "undefined";
+  ringboundIntake.seriesSlug = "undefined";
   ringboundIntake.productLineSlug = "other-games-and-experiments";
   fs.writeFileSync(tempIntakeMapPath, `${JSON.stringify(originalIntakeMap, null, 2)}\n`);
 
