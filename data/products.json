@@ -449,7 +449,7 @@
   {
     "slug": "path-of-the-janky",
     "title": "Path of the Janky",
-    "subtitle": "A Tobacco Road Games catalog preview",
+    "subtitle": "A barbarian Subclass for Dungeons and Dragons 5e",
     "featured": false,
     "authors": [
       "RV Sawyer"
@@ -458,10 +458,10 @@
       "rv-sawyer"
     ],
     "publisher": "Tobacco Road Games",
-    "gameSystem": "System TBD",
-    "gameSystemSlug": "system-tbd",
-    "productLine": "Other Games & Experiments",
-    "productLineSlug": "other-games-and-experiments",
+    "gameSystem": "5e Fantasy Roleplaying",
+    "gameSystemSlug": "5e-fantasy-roleplaying",
+    "productLine": "5e Fantasy Roleplaying",
+    "productLineSlug": "5e-fantasy-roleplaying",
     "format": [
       "PDF"
     ],
