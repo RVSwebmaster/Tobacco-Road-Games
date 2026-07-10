@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, "..");
 
 async function main() {
   await testIntakeLabelsAndHelperText();
+  await testGeneratedJsonToggle();
   await testIntakeModeSpecificLabels();
   await testExistingListingDraftRestoresAfterReload();
   await testExistingListingPublishOmitsUndefinedSeriesFields();
@@ -43,6 +44,25 @@ async function testIntakeModeSpecificLabels() {
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Existing-listing mode should relabel the publish action.");
   assert.equal(harness.buttons.reset.textContent, "Discard Listing Changes", "Existing-listing mode should relabel the discard action.");
   assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Agency/i, "Existing-listing mode should explain that the owner is updating a current listing.");
+}
+
+async function testGeneratedJsonToggle() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, />View JSON</, "Product intake should expose a View JSON toggle button.");
+
+  const harness = createHarness();
+  await harness.flush();
+
+  assert.equal(harness.outputs.jsonPanel.hidden, true, "Generated JSON should stay hidden by default.");
+  assert.equal(harness.buttons.toggleJson.textContent, "View JSON", "The JSON toggle should start in the closed state.");
+
+  harness.buttons.toggleJson.click();
+  assert.equal(harness.outputs.jsonPanel.hidden, false, "Clicking View JSON should reveal the generated JSON panel.");
+  assert.equal(harness.buttons.toggleJson.textContent, "Hide JSON", "The JSON toggle should change label after opening.");
+
+  harness.buttons.toggleJson.click();
+  assert.equal(harness.outputs.jsonPanel.hidden, true, "Clicking the toggle again should hide the generated JSON panel.");
+  assert.equal(harness.buttons.toggleJson.textContent, "View JSON", "The JSON toggle should return to the closed label after hiding.");
 }
 
 async function testIntakeReviewAndDiscardConfirmation() {
@@ -241,6 +261,10 @@ function createHarness(options = {}) {
     replaceChildren(...children) {
       this.children = children;
     }
+
+    setAttribute(name, value) {
+      this[String(name)] = String(value);
+    }
   }
 
   const byId = new Map();
@@ -355,6 +379,7 @@ function createHarness(options = {}) {
     advisorCrossSells: register("advisor-cross-sells-output", createElement("textarea")),
     advisorReasoningList: register("advisor-reasoning-list", createElement("ol")),
     advisorJson: register("advisor-json", createElement("textarea")),
+    jsonPanel: register("generated-json-panel", createElement("div")),
     json: register("generated-json", createElement("textarea")),
     checklist: register("asset-checklist", createElement("pre")),
     assetFolder: register("asset-folder-output", createElement("p")),
@@ -374,7 +399,8 @@ function createHarness(options = {}) {
     addRelated: register("product-related-add", createElement("button")),
     publish: register("publish-button", createElement("button")),
     review: register("review-listing-button", createElement("button")),
-    reset: register("reset-intake-button", createElement("button"))
+    reset: register("reset-intake-button", createElement("button")),
+    toggleJson: register("toggle-generated-json", createElement("button"))
   };
 
   register("intake-check-label", createElement("strong"));

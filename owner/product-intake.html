@@ -663,8 +663,11 @@
         </section>
 
         <div class="intake-output">
-          <label for="generated-json">Generated products.json entry</label>
-          <textarea id="generated-json" spellcheck="false" aria-label="Generated JSON entry"></textarea>
+          <button id="toggle-generated-json" class="button button--secondary" type="button" aria-controls="generated-json-panel" aria-expanded="false">View JSON</button>
+          <div id="generated-json-panel" hidden>
+            <label for="generated-json">Generated products.json entry</label>
+            <textarea id="generated-json" spellcheck="false" aria-label="Generated JSON entry"></textarea>
+          </div>
         </div>
 
         <div class="intake-output">
@@ -681,6 +684,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710f"></script>
+  <script src="../assets/js/product-intake.js?v=20260710g"></script>
 </body>
 </html>

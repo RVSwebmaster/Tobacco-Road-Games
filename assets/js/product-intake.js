@@ -69,6 +69,7 @@
     advisorCrossSells: document.getElementById("advisor-cross-sells-output"),
     advisorReasoningList: document.getElementById("advisor-reasoning-list"),
     advisorJson: document.getElementById("advisor-json"),
+    jsonPanel: document.getElementById("generated-json-panel"),
     json: document.getElementById("generated-json"),
     checklist: document.getElementById("asset-checklist"),
     outputHeading: document.getElementById("intake-output-heading"),
@@ -91,7 +92,8 @@
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
     review: document.getElementById("review-listing-button"),
-    reset: document.getElementById("reset-intake-button")
+    reset: document.getElementById("reset-intake-button"),
+    toggleJson: document.getElementById("toggle-generated-json")
   };
 
   let coverObjectUrl = "";
@@ -149,6 +151,16 @@
     Array.isArray(value)
       ? value.join(", ")
       : String(value || "").trim();
+
+  const setJsonVisibility = (visible) => {
+    if (outputs.jsonPanel) {
+      outputs.jsonPanel.hidden = !visible;
+    }
+    if (buttons.toggleJson) {
+      buttons.toggleJson.textContent = visible ? "Hide JSON" : "View JSON";
+      buttons.toggleJson.setAttribute("aria-expanded", visible ? "true" : "false");
+    }
+  };
 
   const isEditingLoadedListing = () =>
     Boolean(loadedProductSlug);
@@ -1328,6 +1340,9 @@
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
   buttons.addRelated.addEventListener("click", addRelatedProduct);
   buttons.review?.addEventListener("click", reviewCurrentListing);
+  buttons.toggleJson?.addEventListener("click", () => {
+    setJsonVisibility(Boolean(outputs.jsonPanel?.hidden));
+  });
 
   fields.relatedList.addEventListener("click", (event) => {
     const target = event.target;
@@ -1419,6 +1434,7 @@
   });
   syncRelatedPicker();
   syncBuyModeUi();
+  setJsonVisibility(false);
   updateActionLabels();
   updatePreview();
   markDraftBaseline();
