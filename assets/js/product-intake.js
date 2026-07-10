@@ -2,6 +2,7 @@
   const CART_BUY_MODE = "cart";
   const CART_BUY_URL_PLACEHOLDER = "No buy URL needed for cart products.";
   const DISCARD_LISTING_CHANGES_MESSAGE = "Discard unsaved work? Any unpublished listing changes will be lost.";
+  const EXISTING_LISTING_DRAFT_KEY = "trg_owner_existing_listing_draft_v1";
   const statusLabels = {
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
@@ -147,6 +148,110 @@
 
   const isEditingLoadedListing = () =>
     Boolean(loadedProductSlug);
+
+  const getSessionStorage = () => {
+    try {
+      return globalThis.sessionStorage || globalThis.window?.sessionStorage || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const clearPersistedExistingListingDraft = () => {
+    const storage = getSessionStorage();
+    if (!storage) {
+      return;
+    }
+    try {
+      storage.removeItem(EXISTING_LISTING_DRAFT_KEY);
+    } catch {}
+  };
+
+  const buildPersistedExistingListingDraft = () => {
+    if (!isEditingLoadedListing()) {
+      return null;
+    }
+
+    return {
+      draft: {
+        buyMode: fields.buyMode.value,
+        buyUrl: fields.buyUrl.value,
+        creationMethod: fields.creationMethod.value,
+        currency: fields.currency.value,
+        features: fields.features.value,
+        folder: fields.folder.value,
+        format: fields.format.value,
+        fulfillmentNote: fields.fulfillmentNote.value,
+        gameSystem: fields.system.value,
+        lastUpdated: fields.lastUpdated.value,
+        legalNote: fields.legalNote.value,
+        line: fields.line.value,
+        longDescription: fields.longDescription.value,
+        pageCount: fields.pageCount.value,
+        price: fields.price.value,
+        releaseDate: fields.releaseDate.value,
+        saleEnabled: fields.saleEnabled.checked,
+        salePrice: fields.salePrice.value,
+        selectedRelatedProducts: [...selectedRelatedProducts],
+        series: fields.series.value,
+        shortDescription: fields.shortDescription.value,
+        slug: fields.slug.value,
+        slugTouched,
+        status: fields.status.value,
+        subtitle: fields.subtitle.value,
+        tags: fields.tags.value,
+        title: fields.title.value,
+        version: fields.version.value,
+        folderTouched
+      },
+      existingSelectValue: fields.existingSelect?.value || loadedProductSlug,
+      draftBaseline,
+      loadedProductFolder,
+      loadedProductRecord,
+      loadedProductSlug,
+      savedAt: new Date().toISOString(),
+      version: 1
+    };
+  };
+
+  const persistExistingListingDraft = () => {
+    const storage = getSessionStorage();
+    if (!storage) {
+      return;
+    }
+
+    const payload = buildPersistedExistingListingDraft();
+    if (!payload) {
+      return;
+    }
+
+    try {
+      storage.setItem(EXISTING_LISTING_DRAFT_KEY, JSON.stringify(payload));
+    } catch {}
+  };
+
+  const readPersistedExistingListingDraft = () => {
+    const storage = getSessionStorage();
+    if (!storage) {
+      return null;
+    }
+
+    try {
+      const raw = storage.getItem(EXISTING_LISTING_DRAFT_KEY);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.version !== 1 || !parsed.loadedProductSlug || !parsed.draft) {
+        clearPersistedExistingListingDraft();
+        return null;
+      }
+      return parsed;
+    } catch {
+      clearPersistedExistingListingDraft();
+      return null;
+    }
+  };
 
   const getModeLabels = () => isEditingLoadedListing()
     ? {
@@ -676,6 +781,7 @@
     outputs.checklist.textContent = buildChecklist(payload);
     renderAssetFileList(payload);
     updateCoverPreview();
+    persistExistingListingDraft();
   };
 
   function buildChecklist(payload) {
@@ -871,6 +977,7 @@
         ? `${responsePayload.json.message} Workflow: ${responsePayload.json.runUrl}`
         : responsePayload.json.message;
       markDraftBaseline();
+      persistExistingListingDraft();
     } catch {
       outputs.status.textContent = "The publish request failed before the server could answer. Please try again.";
     } finally {
@@ -1045,7 +1152,82 @@
     updateEditModeCopy();
     updatePreview();
     markDraftBaseline();
+    persistExistingListingDraft();
     outputs.status.textContent = `Loaded ${product.title} for editing.`;
+  }
+
+  function restorePersistedExistingListingDraft() {
+    const persisted = readPersistedExistingListingDraft();
+    if (!persisted) {
+      return false;
+    }
+
+    const fallbackRecord = persisted.loadedProductRecord && typeof persisted.loadedProductRecord === "object"
+      ? persisted.loadedProductRecord
+      : null;
+    const product = findAvailableProduct(persisted.loadedProductSlug) || fallbackRecord;
+    if (!product) {
+      clearPersistedExistingListingDraft();
+      return false;
+    }
+
+    const draft = persisted.draft || {};
+    loadedProductSlug = String(persisted.loadedProductSlug || product.slug || "").trim();
+    loadedProductFolder = String(persisted.loadedProductFolder || product.folder || loadedProductSlug).trim() || loadedProductSlug;
+    loadedProductRecord = product;
+
+    fields.title.value = draft.title ?? product.title ?? "";
+    fields.slug.value = draft.slug ?? product.slug ?? "";
+    fields.folder.value = draft.folder ?? product.folder ?? product.slug ?? "";
+    fields.subtitle.value = draft.subtitle ?? product.subtitle ?? "";
+    fields.authors.value = "RV Sawyer";
+    fields.publisher.value = "Tobacco Road Games";
+    fields.system.value = draft.gameSystem ?? product.gameSystem ?? "";
+    fields.line.value = draft.line ?? product.productLine ?? "";
+    fields.series.value = draft.series ?? product.series ?? "";
+    fields.format.value = draft.format ?? formatListValue(product.format) ?? "PDF";
+    fields.pageCount.value = draft.pageCount ?? (product.pageCount ?? "");
+    fields.price.value = draft.price ?? product.price ?? "";
+    fields.salePrice.value = draft.salePrice ?? product.salePrice ?? "";
+    fields.currency.value = draft.currency ?? product.currency ?? "USD";
+    fields.saleEnabled.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "saleEnabled") ? draft.saleEnabled : product.saleEnabled);
+    fields.status.value = draft.status ?? product.status ?? "coming-soon";
+    fields.buyMode.value = draft.buyMode ?? product.buyMode ?? "coming-soon";
+    fields.buyUrl.value = draft.buyUrl ?? product.buyUrl ?? "";
+    syncBuyModeUi();
+    fields.shortDescription.value = draft.shortDescription ?? product.shortDescription ?? "";
+    fields.longDescription.value = draft.longDescription ?? product.longDescription ?? "";
+    fields.features.value = draft.features ?? (Array.isArray(product.features) ? product.features.join("\n") : "");
+    fields.tags.value = draft.tags ?? (Array.isArray(product.tags) ? product.tags.join(", ") : "");
+    fields.fulfillmentNote.value = draft.fulfillmentNote ?? product.fulfillmentNote ?? "";
+    fields.creationMethod.value = draft.creationMethod ?? product.creationMethod ?? "Human-authored by RV Sawyer.";
+    fields.legalNote.value = draft.legalNote ?? product.legalNote ?? "";
+    fields.version.value = draft.version ?? product.version ?? "";
+    fields.releaseDate.value = draft.releaseDate ?? product.releaseDate ?? "";
+    fields.lastUpdated.value = draft.lastUpdated ?? product.lastUpdated ?? "";
+    fields.coverFile.value = "";
+    fields.previewFile.value = "";
+    fields.pdfFile.value = "";
+    if (fields.existingSelect) {
+      fields.existingSelect.value = persisted.existingSelectValue || loadedProductSlug;
+    }
+    selectedRelatedProducts = Array.isArray(draft.selectedRelatedProducts)
+      ? [...draft.selectedRelatedProducts]
+      : (Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : []);
+    slugTouched = draft.slugTouched !== undefined ? Boolean(draft.slugTouched) : true;
+    folderTouched = draft.folderTouched !== undefined ? Boolean(draft.folderTouched) : true;
+
+    clearAdvisorPanel();
+    syncRelatedPicker();
+    updateRelatedSelectOptions();
+    updateEditModeCopy();
+    updatePreview();
+    draftBaseline = typeof persisted.draftBaseline === "string" && persisted.draftBaseline
+      ? persisted.draftBaseline
+      : captureDraftState();
+    persistExistingListingDraft();
+    outputs.status.textContent = `Restored ${loadedProductRecord?.title || loadedProductSlug} for editing after the page was reloaded.`;
+    return true;
   }
 
   fields.slug.addEventListener("input", () => {
@@ -1149,6 +1331,7 @@
     slugTouched = false;
     folderTouched = false;
     clearAdvisorPanel();
+    clearPersistedExistingListingDraft();
     syncRelatedPicker();
     updateEditModeCopy();
     updatePreview();
@@ -1164,7 +1347,7 @@
 
     resetFormToDefaults();
     outputs.status.textContent = wasEditing
-      ? "Listing changes discarded. Published data was not changed."
+      ? "Listing changes discarded. You are now creating a new product. Published data was not changed."
       : "New product form cleared. Published data was not changed.";
   });
 
@@ -1174,7 +1357,9 @@
     hasUnsavedChanges,
     validateRequiredFields
   };
-  void loadAvailableProducts();
+  void loadAvailableProducts().then(() => {
+    restorePersistedExistingListingDraft();
+  });
   syncRelatedPicker();
   syncBuyModeUi();
   updateActionLabels();

@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, "..");
 async function main() {
   await testIntakeLabelsAndHelperText();
   await testIntakeModeSpecificLabels();
+  await testExistingListingDraftRestoresAfterReload();
   await testIntakeReviewAndDiscardConfirmation();
   await testNonJsonPublishErrorsShowHttpDetails();
   console.log("Owner intake UI tests passed.");
@@ -67,6 +68,37 @@ async function testIntakeReviewAndDiscardConfirmation() {
   assert.match(harness.outputs.status.textContent, /Published data was not changed\./, "Discard confirmation should clearly state that published data was not changed.");
 }
 
+async function testExistingListingDraftRestoresAfterReload() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "ringbound";
+  harness.buttons.loadExisting.click();
+
+  harness.fields.pageCount.value = "12";
+  harness.fields.pageCount.dispatch("input");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Editing Ringbound should stay in existing-listing mode before reload.");
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Ringbound should not offer a new-product publish action.");
+
+  const reloadedHarness = createHarness({
+    sessionStorageStore: harness.sessionStorageStore
+  });
+  await reloadedHarness.flush();
+
+  assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Reloading should restore the loaded Ringbound listing.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "A restored existing listing must not show the new-product publish action.");
+  assert.equal(reloadedHarness.buttons.reset.textContent, "Discard Listing Changes", "A restored existing listing must keep the existing-listing discard action.");
+  assert.equal(reloadedHarness.fields.title.value, "Ringbound", "Reloading should preserve the loaded title.");
+  assert.equal(reloadedHarness.fields.slug.value, "ringbound", "Reloading should preserve the loaded slug.");
+  assert.equal(reloadedHarness.fields.pageCount.value, "12", "Reloading should preserve the unsaved page-count edit.");
+  assert.match(reloadedHarness.outputs.status.textContent, /Restored Ringbound for editing after the page was reloaded\./, "Reloading should explain why the existing listing remained active.");
+  assert.equal(reloadedHarness.api.hasUnsavedChanges(), true, "Reloading should preserve the unsaved-changes baseline.");
+  assert.equal(reloadedHarness.api.validateRequiredFields().length, 0, "Reloading should not fall back to new-product validation errors for a restored existing listing.");
+
+  reloadedHarness.buttons.review.click();
+  assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Ringbound draft should still work.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "Reviewing the restored draft must not relabel the publish action.");
+}
+
 async function testNonJsonPublishErrorsShowHttpDetails() {
   const harness = createHarness();
   await harness.flush();
@@ -86,7 +118,7 @@ async function testNonJsonPublishErrorsShowHttpDetails() {
   assert.match(harness.outputs.status.textContent, /Failure Origin publish failed hard/i, "Non-JSON publish failures should include a safe body summary.");
 }
 
-function createHarness() {
+function createHarness(options = {}) {
   class FakeHTMLElement {
     constructor(tagName = "div") {
       this.tagName = String(tagName || "div").toUpperCase();
@@ -174,6 +206,18 @@ function createHarness() {
     },
     querySelectorAll() {
       return allElements;
+    }
+  };
+  const sessionStorageStore = options.sessionStorageStore || new Map();
+  const sessionStorage = {
+    getItem(key) {
+      return sessionStorageStore.has(key) ? sessionStorageStore.get(key) : null;
+    },
+    removeItem(key) {
+      sessionStorageStore.delete(key);
+    },
+    setItem(key, value) {
+      sessionStorageStore.set(key, String(value));
     }
   };
 
@@ -304,6 +348,39 @@ function createHarness() {
       tags: ["Test"],
       title: "Agency",
       version: "1.0"
+    },
+    {
+      buyMode: "preview-only",
+      buyUrl: "",
+      coverImage: "/product-assets/ringbound/cover.webp",
+      creationMethod: "Human-authored by RV Sawyer.",
+      currency: "USD",
+      features: [],
+      fileList: ["PDF details coming soon"],
+      folder: "ringbound",
+      format: ["PDF"],
+      fulfillmentNote: "",
+      gameSystem: "System TBD",
+      lastUpdated: "2026-06-17",
+      legalNote: "",
+      longDescription: "Product summary coming soon.",
+      pageCount: null,
+      price: "",
+      previewImage: "/product-assets/ringbound/preview.webp",
+      previewImages: [],
+      productLine: "Other Games & Experiments",
+      relatedProducts: [],
+      releaseDate: "2026-06-17",
+      saleEnabled: false,
+      salePrice: "",
+      series: "",
+      shortDescription: "Product summary coming soon.",
+      slug: "ringbound",
+      status: "preview-available",
+      subtitle: "A Tobacco Road Games catalog preview",
+      tags: ["Preview"],
+      title: "Ringbound",
+      version: "2026 catalog preview"
     }
   ];
   const intakeMap = {
@@ -311,6 +388,10 @@ function createHarness() {
       {
         folder: "agency",
         slug: "agency"
+      },
+      {
+        folder: "ringbound",
+        slug: "ringbound"
       }
     ]
   };
@@ -325,7 +406,8 @@ function createHarness() {
     mockPublishResponse: createJsonResponse({
       message: "Published."
     }),
-    outputs
+    outputs,
+    sessionStorageStore
   };
 
   const context = {
@@ -358,11 +440,13 @@ function createHarness() {
       throw new Error(`Unexpected fetch: ${url}`);
     },
     globalThis: null,
+    sessionStorage,
     setTimeout,
     window: {
       location: {
         assign() {}
       },
+      sessionStorage,
       setTimeout
     }
   };
@@ -386,6 +470,7 @@ function createHarness() {
   const scriptPath = path.join(ROOT, "assets", "js", "product-intake.js");
   const script = fs.readFileSync(scriptPath, "utf8");
   vm.runInNewContext(script, context, { filename: scriptPath });
+  harness.api = context.TRGProductIntake;
 
   return harness;
 }
