@@ -83,6 +83,8 @@ async function testExistingListingDraftRestoresAfterReload() {
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Editing Ringbound should stay in existing-listing mode before reload.");
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Ringbound should not offer a new-product publish action.");
   assert.equal(generatedBeforeReload.productLineSlug, "other-games-and-experiments", "Editing an existing listing should preserve the original product-line slug when the visible label is unchanged.");
+  assert.equal(generatedBeforeReload.priceCents, null, "Editing an existing listing should not convert an empty regular price into zero cents.");
+  assert.equal(generatedBeforeReload.salePriceCents, null, "Editing an existing listing should not convert an empty sale price into zero cents.");
   assert.equal(Object.prototype.hasOwnProperty.call(generatedBeforeReload, "series"), false, "Editing an existing listing should not invent empty series fields.");
   assert.equal(Object.prototype.hasOwnProperty.call(generatedBeforeReload, "seriesSlug"), false, "Editing an existing listing should not invent empty series slug fields.");
 
@@ -102,6 +104,8 @@ async function testExistingListingDraftRestoresAfterReload() {
   assert.equal(reloadedHarness.api.hasUnsavedChanges(), true, "Reloading should preserve the unsaved-changes baseline.");
   assert.equal(reloadedHarness.api.validateRequiredFields().length, 0, "Reloading should not fall back to new-product validation errors for a restored existing listing.");
   assert.equal(generatedAfterReload.productLineSlug, "other-games-and-experiments", "Reloading should preserve the original product-line slug.");
+  assert.equal(generatedAfterReload.priceCents, null, "Reloading should preserve an empty regular price as null cents.");
+  assert.equal(generatedAfterReload.salePriceCents, null, "Reloading should preserve an empty sale price as null cents.");
   assert.equal(Object.prototype.hasOwnProperty.call(generatedAfterReload, "series"), false, "Reloading should not invent empty series fields.");
   assert.equal(Object.prototype.hasOwnProperty.call(generatedAfterReload, "seriesSlug"), false, "Reloading should not invent empty series slug fields.");
 

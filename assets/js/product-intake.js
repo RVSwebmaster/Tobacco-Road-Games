@@ -132,7 +132,11 @@
       .replace(/,/g, "");
 
   const parsePriceNumber = (value) => {
-    const numeric = Number(normalizeMoneyText(value));
+    const normalized = normalizeMoneyText(value);
+    if (!normalized) {
+      return null;
+    }
+    const numeric = Number(normalized);
     return Number.isFinite(numeric) ? numeric : null;
   };
 
