@@ -76,6 +76,9 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
+  harness.buttons.analyze.click();
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Checking an existing listing must not fall back to the new-product publish action.");
+  assert.equal(harness.fields.slug.value, "ringbound", "Checking an existing listing must preserve the loaded slug.");
   const generatedBeforeReload = JSON.parse(harness.outputs.json.value);
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Editing Ringbound should stay in existing-listing mode before reload.");
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Ringbound should not offer a new-product publish action.");

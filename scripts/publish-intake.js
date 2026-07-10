@@ -128,7 +128,7 @@ function normalizePublishMetadata(metadata) {
   const hasSalePriceCents = Object.prototype.hasOwnProperty.call(metadata, "salePriceCents");
   const buyMode = chooseText(metadata.buyMode, "preview-only");
 
-  return {
+  const normalized = {
     authorSlugs: Array.isArray(metadata.authorSlugs) && metadata.authorSlugs.length ? metadata.authorSlugs : ["rv-sawyer"],
     authors: Array.isArray(metadata.authors) && metadata.authors.length ? metadata.authors : ["RV Sawyer"],
     bundleEligible: Boolean(metadata.bundleEligible),
@@ -174,6 +174,15 @@ function normalizePublishMetadata(metadata) {
     updateEligible: metadata.updateEligible !== false,
     version: chooseText(metadata.version, "1.0")
   };
+
+  if (!chooseText(metadata.series, "")) {
+    delete normalized.series;
+  }
+  if (!chooseText(metadata.seriesSlug, metadata.series, "")) {
+    delete normalized.seriesSlug;
+  }
+
+  return normalized;
 }
 
 function normalizePricingMetadata(metadata) {
@@ -284,6 +293,13 @@ function upsertIntakeMap(intakeMap, metadata, folder) {
     format: chooseArray(metadata.format, existing.format, ["PDF"]),
     tags: chooseArray(metadata.tags, existing.tags, ["Preview"])
   };
+
+  if (!Object.prototype.hasOwnProperty.call(existing, "series") && !String(metadata.series || "").trim()) {
+    delete updated.series;
+  }
+  if (!Object.prototype.hasOwnProperty.call(existing, "seriesSlug") && !String(metadata.seriesSlug || "").trim()) {
+    delete updated.seriesSlug;
+  }
 
   if (index >= 0) {
     existingProducts[index] = updated;

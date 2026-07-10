@@ -737,7 +737,7 @@
         ? [...loadedProductRecord.fileList]
         : [`${title || "Untitled Product"}.pdf`]);
 
-    return {
+    const payload = {
       authorSlugs: ["rv-sawyer"],
       authors: ["RV Sawyer"],
       buyMode: fields.buyMode.value,
@@ -782,6 +782,15 @@
       title,
       version: fields.version.value.trim() || "1.0"
     };
+
+    if (!series) {
+      delete payload.series;
+    }
+    if (!payload.seriesSlug) {
+      delete payload.seriesSlug;
+    }
+
+    return payload;
   };
 
   const updatePreview = () => {

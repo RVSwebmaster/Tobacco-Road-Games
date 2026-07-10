@@ -941,6 +941,26 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
 async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript) {
   const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
   const tempProductsPath = path.join(tempRoot, "data", "products.json");
+  const tempIntakeMapPath = path.join(tempRoot, "data", "product-intake-map.json");
+  const originalProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
+  const originalIntakeMap = JSON.parse(fs.readFileSync(tempIntakeMapPath, "utf8"));
+  const ringboundProduct = originalProducts.find((product) => product.slug === "ringbound");
+  const ringboundIntake = Array.isArray(originalIntakeMap.products)
+    ? originalIntakeMap.products.find((product) => product.slug === "ringbound")
+    : null;
+
+  assert.ok(ringboundProduct, "Ringbound fixture should exist in the product catalog.");
+  assert.ok(ringboundIntake, "Ringbound fixture should exist in the intake map.");
+
+  delete ringboundProduct.series;
+  delete ringboundProduct.seriesSlug;
+  ringboundProduct.productLineSlug = "other-games-and-experiments";
+  fs.writeFileSync(tempProductsPath, `${JSON.stringify(originalProducts, null, 2)}\n`);
+
+  delete ringboundIntake.series;
+  delete ringboundIntake.seriesSlug;
+  ringboundIntake.productLineSlug = "other-games-and-experiments";
+  fs.writeFileSync(tempIntakeMapPath, `${JSON.stringify(originalIntakeMap, null, 2)}\n`);
 
   await publishScript.applyPublishPayload(tempRoot, {
     folder: "ringbound",
@@ -962,11 +982,19 @@ async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript)
   });
 
   const updatedProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
+  const updatedIntakeMap = JSON.parse(fs.readFileSync(tempIntakeMapPath, "utf8"));
   const ringbound = updatedProducts.find((product) => product.slug === "ringbound");
+  const ringboundIntakeAfter = Array.isArray(updatedIntakeMap.products)
+    ? updatedIntakeMap.products.find((product) => product.slug === "ringbound")
+    : null;
   assert.equal(ringbound.productLineSlug, "other-games-and-experiments", "Existing metadata-only updates should preserve the original product-line slug when the visible label is unchanged.");
   assert.equal(Object.prototype.hasOwnProperty.call(ringbound, "series"), false, "Existing metadata-only updates should not invent empty series fields.");
   assert.equal(Object.prototype.hasOwnProperty.call(ringbound, "seriesSlug"), false, "Existing metadata-only updates should not invent empty series slug fields.");
   assert.equal(ringbound.pageCount, 12, "The requested page-count change should still apply.");
+  assert.ok(ringboundIntakeAfter, "The Ringbound intake-map record should still exist after publish.");
+  assert.equal(ringboundIntakeAfter.productLineSlug, "other-games-and-experiments", "Existing intake-map metadata should preserve the original product-line slug when the visible label is unchanged.");
+  assert.equal(Object.prototype.hasOwnProperty.call(ringboundIntakeAfter, "series"), false, "Existing intake-map updates should not invent empty series fields.");
+  assert.equal(Object.prototype.hasOwnProperty.call(ringboundIntakeAfter, "seriesSlug"), false, "Existing intake-map updates should not invent empty series slug fields.");
 }
 
 async function testPricingUpdatePreservesUnrelatedFields(publishScript) {
