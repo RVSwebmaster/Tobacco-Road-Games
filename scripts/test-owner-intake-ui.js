@@ -8,6 +8,8 @@ const ROOT = path.resolve(__dirname, "..");
 async function main() {
   await testIntakeLabelsAndHelperText();
   await testListingDetailsStayHiddenUntilWorkStarts();
+  await testBackToListingsLeavesUnchangedExistingListing();
+  await testBackToListingsConfirmsEditedExistingListing();
   await testGeneratedJsonToggle();
   await testAssetChecklistToggle();
   await testIntakeModeSpecificLabels();
@@ -50,6 +52,46 @@ async function testListingDetailsStayHiddenUntilWorkStarts() {
   harness.buttons.startNew.click();
   assert.equal(harness.outputs.listingDetails.hidden, false, "Starting a new listing should reveal the listing details workspace.");
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "Starting a new listing should keep the intake in new-product mode.");
+}
+
+async function testBackToListingsLeavesUnchangedExistingListing() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+  assert.equal(harness.confirmMessages.length, 0, "Loading an existing listing should not prompt for confirmation.");
+
+  harness.buttons.leaveListing.click();
+
+  assert.equal(harness.confirmMessages.length, 0, "Leaving an unchanged existing listing should not ask for confirmation.");
+  assert.equal(harness.outputs.listingDetails.hidden, true, "Leaving an unchanged existing listing should hide the workspace.");
+  assert.equal(harness.fields.existingSelect.value, "", "Leaving an unchanged existing listing should clear the picker selection.");
+  assert.equal(harness.fields.slug.value, "", "Leaving an unchanged existing listing should clear the loaded slug.");
+  assert.match(harness.outputs.status.textContent, /Returned to the listing picker\. Published data was not changed\./, "Leaving an unchanged existing listing should explain that nothing was published.");
+}
+
+async function testBackToListingsConfirmsEditedExistingListing() {
+  const harness = createHarness();
+  await harness.flush();
+
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+  harness.fields.shortDescription.value = "Changed copy";
+  harness.fields.shortDescription.dispatch("input");
+
+  harness.confirmResponse = false;
+  harness.buttons.leaveListing.click();
+  assert.equal(harness.confirmMessages.length, 1, "Leaving an edited existing listing should ask for confirmation.");
+  assert.equal(harness.outputs.listingDetails.hidden, false, "Canceling the discard should keep the workspace open.");
+  assert.equal(harness.fields.slug.value, "agency", "Canceling the discard should preserve the loaded listing.");
+
+  harness.confirmResponse = true;
+  harness.buttons.leaveListing.click();
+  assert.equal(harness.confirmMessages.length, 2, "Confirming the discard should prompt exactly once per leave attempt.");
+  assert.equal(harness.outputs.listingDetails.hidden, true, "Confirming the discard should return to the listing picker.");
+  assert.equal(harness.fields.slug.value, "", "Confirming the discard should clear the loaded listing state.");
+  assert.match(harness.outputs.status.textContent, /Returned to the listing picker\. Published data was not changed\./, "Confirming the discard should explain that no published data changed.");
 }
 
 async function testIntakeModeSpecificLabels() {
@@ -439,6 +481,7 @@ function createHarness(options = {}) {
     analyze: register("analyze-listing-button", createElement("button")),
     applyAdvisor: register("apply-advisor-button", createElement("button")),
     ignoreAdvisor: register("ignore-advisor-button", createElement("button")),
+    leaveListing: register("leave-listing-button", createElement("button")),
     loadExisting: register("product-existing-load", createElement("button")),
     startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),

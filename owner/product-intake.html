@@ -170,6 +170,12 @@
       line-height: 1.6;
     }
 
+    .intake-mode__actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.75rem;
+    }
+
     .intake-action-card {
       display: grid;
       gap: 10px;
@@ -339,6 +345,9 @@
             <strong>Current Mode</strong>
             <span id="product-mode-indicator-title">Creating New Product</span>
             <span id="product-mode-indicator-copy">Publishing will create a new listing from the form values and selected files.</span>
+            <div class="intake-mode__actions">
+              <button id="leave-listing-button" class="button button--secondary" type="button">Back to Listings</button>
+            </div>
           </div>
 
           <div class="intake-grid">
@@ -703,6 +712,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710i"></script>
+  <script src="../assets/js/product-intake.js?v=20260710j"></script>
 </body>
 </html>

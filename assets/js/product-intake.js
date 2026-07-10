@@ -90,6 +90,7 @@
     analyze: document.getElementById("analyze-listing-button"),
     applyAdvisor: document.getElementById("apply-advisor-button"),
     ignoreAdvisor: document.getElementById("ignore-advisor-button"),
+    leaveListing: document.getElementById("leave-listing-button"),
     loadExisting: document.getElementById("product-existing-load"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
@@ -1360,6 +1361,18 @@
   });
   buttons.publish.addEventListener("click", publishProduct);
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
+  buttons.leaveListing?.addEventListener("click", () => {
+    if (hasUnsavedChanges() && !confirmDiscardChanges()) {
+      outputs.status.textContent = "Unsaved listing changes are still in place.";
+      return;
+    }
+
+    resetFormToDefaults({ hideDetails: true });
+    outputs.status.textContent = "Returned to the listing picker. Published data was not changed.";
+    if (typeof fields.existingSelect?.focus === "function") {
+      fields.existingSelect.focus();
+    }
+  });
   buttons.startNew?.addEventListener("click", () => {
     const wasEditing = isEditingLoadedListing();
     if (hasUnsavedChanges() && !confirmDiscardChanges()) {
