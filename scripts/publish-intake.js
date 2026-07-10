@@ -61,6 +61,10 @@ function loadClientPayload(options) {
 }
 
 async function applyPublishPayload(rootDir, clientPayload) {
+  if (String(clientPayload?.operation || "").trim() === "pricing_update") {
+    return applyPricingUpdatePayload(rootDir, clientPayload);
+  }
+
   const metadata = normalizePublishMetadata(clientPayload.metadata || {});
   const folder = normalizeFolderName(clientPayload.folder);
   if (!metadata.slug || !folder) {
@@ -90,6 +94,30 @@ async function applyPublishPayload(rootDir, clientPayload) {
 
   return {
     folder,
+    metadata
+  };
+}
+
+async function applyPricingUpdatePayload(rootDir, clientPayload) {
+  const metadata = normalizePricingMetadata(clientPayload.metadata || {});
+  if (!metadata.slug) {
+    throw new Error("Pricing updates require an existing product slug.");
+  }
+
+  const productsPath = path.join(rootDir, "data", "products.json");
+  const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
+  const index = products.findIndex((product) => product.slug === metadata.slug);
+  if (index === -1) {
+    throw new Error(`Pricing updates require an existing product slug. No product matched "${metadata.slug}".`);
+  }
+
+  const existing = clone(products[index]);
+  validatePricingMetadata(existing, metadata, clientPayload.pricingConfirmation || {});
+  products[index] = applyPricingMetadata(existing, metadata);
+  fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
+
+  return {
+    folder: "",
     metadata
   };
 }
@@ -148,6 +176,27 @@ function normalizePublishMetadata(metadata) {
   };
 }
 
+function normalizePricingMetadata(metadata) {
+  const price = normalizeMoneyText(metadata.price);
+  const salePrice = normalizeMoneyText(metadata.salePrice);
+  return {
+    currency: String(metadata.currency || "").trim().toUpperCase(),
+    price,
+    priceCents: chooseNullableInteger(metadata.priceCents, normalizePriceCents(price)),
+    regularPrice: price,
+    regularPriceCents: chooseNullableInteger(metadata.priceCents, normalizePriceCents(price)),
+    saleEnabled: Boolean(metadata.saleEnabled),
+    saleEnd: chooseText(metadata.saleEnd, ""),
+    saleLabel: chooseText(metadata.saleLabel, ""),
+    salePrice,
+    salePriceCents: salePrice
+      ? chooseNullableInteger(metadata.salePriceCents, normalizePriceCents(salePrice))
+      : null,
+    saleStart: chooseText(metadata.saleStart, ""),
+    slug: normalizeSlug(metadata.slug)
+  };
+}
+
 function validatePublishMetadata(metadata) {
   if (metadata.buyMode !== "cart") {
     return;
@@ -159,6 +208,57 @@ function validatePublishMetadata(metadata) {
 
   if (!Number.isInteger(metadata.priceCents) || metadata.priceCents <= 0) {
     throw new Error("Cart products require a positive price.");
+  }
+}
+
+function validatePricingMetadata(existing, metadata, confirmation) {
+  if (!/^[A-Z]{3}$/.test(metadata.currency)) {
+    throw new Error("Currency must be a three-letter code such as USD.");
+  }
+
+  if (!metadata.price || !isStrictMoneyText(metadata.price)) {
+    throw new Error("Regular price must be a valid dollar amount.");
+  }
+
+  if (!Number.isInteger(metadata.priceCents) || metadata.priceCents <= 0) {
+    throw new Error("Regular price must be a positive amount greater than zero.");
+  }
+
+  if (metadata.priceCents !== normalizePriceCents(metadata.price)) {
+    throw new Error("Regular price display and cents must match.");
+  }
+
+  if (metadata.salePrice) {
+    if (!isStrictMoneyText(metadata.salePrice)) {
+      throw new Error("Sale price must be a valid dollar amount.");
+    }
+    if (!Number.isInteger(metadata.salePriceCents) || metadata.salePriceCents <= 0) {
+      throw new Error("Sale price must be a positive amount greater than zero.");
+    }
+    if (metadata.salePriceCents !== normalizePriceCents(metadata.salePrice)) {
+      throw new Error("Sale price display and cents must match.");
+    }
+    if (metadata.salePriceCents >= metadata.priceCents) {
+      throw new Error("Sale price must be lower than the regular price.");
+    }
+  }
+
+  if (metadata.saleEnabled && !metadata.salePrice) {
+    throw new Error("A sale price is required when sale mode is enabled.");
+  }
+
+  if (!isValidDateText(metadata.saleStart)) {
+    throw new Error("Sale start must be a valid date.");
+  }
+  if (!isValidDateText(metadata.saleEnd)) {
+    throw new Error("Sale end must be a valid date.");
+  }
+  if (metadata.saleStart && metadata.saleEnd && Date.parse(metadata.saleEnd) < Date.parse(metadata.saleStart)) {
+    throw new Error("Sale end cannot be earlier than sale start.");
+  }
+
+  if (!usesPaidPricingIntent(existing) && hasAnySaleField(metadata) && !Boolean(confirmation.nonPurchasableSaleConfirmed)) {
+    throw new Error("Confirm catalog-only sale metadata before saving sale fields on a product that is not currently in a paid storefront mode.");
   }
 }
 
@@ -275,6 +375,23 @@ function upsertProducts(products, metadata) {
   return nextProducts;
 }
 
+function applyPricingMetadata(existing, metadata) {
+  return {
+    ...existing,
+    currency: metadata.currency,
+    price: metadata.price,
+    priceCents: metadata.priceCents,
+    regularPrice: metadata.regularPrice,
+    regularPriceCents: metadata.regularPriceCents,
+    saleEnabled: metadata.saleEnabled,
+    saleEnd: metadata.saleEnd,
+    saleLabel: metadata.saleLabel,
+    salePrice: metadata.salePrice,
+    salePriceCents: metadata.salePriceCents,
+    saleStart: metadata.saleStart
+  };
+}
+
 async function loadSharedFolderMap(modulePath) {
   const moduleUrl = `${pathToFileURL(modulePath).href}?cacheBust=${Date.now()}`;
   const imported = await import(moduleUrl);
@@ -352,6 +469,32 @@ function normalizePriceCents(value) {
   return Number.isFinite(numeric) ? Math.round(numeric * 100) : null;
 }
 
+function isStrictMoneyText(value) {
+  return /^\d+(?:\.\d{1,2})?$/.test(String(value || ""));
+}
+
+function isValidDateText(value) {
+  if (!value) {
+    return true;
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value)) && !Number.isNaN(Date.parse(String(value)));
+}
+
+function usesPaidPricingIntent(product) {
+  return product?.status === "available-direct"
+    || ["cart", "fixed-price", "manual-invoice", "pay-what-you-want"].includes(String(product?.buyMode || "").trim());
+}
+
+function hasAnySaleField(metadata) {
+  return Boolean(
+    metadata.saleEnabled
+    || metadata.salePrice
+    || metadata.saleStart
+    || metadata.saleEnd
+    || metadata.saleLabel
+  );
+}
+
 function normalizeMoneyText(value) {
   return String(value || "")
     .trim()
@@ -423,6 +566,7 @@ function clone(value) {
 module.exports = {
   SHARED_FOLDER_MAP_PATH,
   applyPublishPayload,
+  applyPricingUpdatePayload,
   normalizePublishMetadata,
   renderSharedFolderMapModule
 };

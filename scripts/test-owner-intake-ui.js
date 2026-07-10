@@ -1,0 +1,385 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
+
+const ROOT = path.resolve(__dirname, "..");
+
+async function main() {
+  await testIntakeLabelsAndHelperText();
+  await testIntakeModeSpecificLabels();
+  await testIntakeReviewAndDiscardConfirmation();
+  console.log("Owner intake UI tests passed.");
+}
+
+async function testIntakeLabelsAndHelperText() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, /Creating New Product/, "Product intake should show a clear new-product mode indicator.");
+  assert.match(html, />Check New Listing</, "Product intake should expose a Check New Listing action.");
+  assert.match(html, />Review New Product</, "Product intake should expose a Review New Product action.");
+  assert.match(html, />Publish New Product</, "Product intake should expose a Publish New Product action.");
+  assert.match(html, />Clear New Product Form</, "Product intake should expose a Clear New Product Form action.");
+  assert.match(html, /Checks the form for missing or invalid information and refreshes advisory suggestions\. Does not save changes\./, "Product intake should explain the check action.");
+  assert.match(html, /Shows the generated product data and file plan so you can confirm exactly what will be published\./, "Product intake should explain the review action.");
+  assert.match(html, /Discards unsaved work from this form only\. Published data is not affected\./, "Product intake should explain the discard action.");
+  assert.match(html, /aria-describedby="intake-check-help"/, "Product intake actions should expose accessible helper text.");
+  assert.doesNotMatch(html, /Analyze Listing|Publish Product|Reset Form/, "Product intake should not keep the vague old action labels.");
+}
+
+async function testIntakeModeSpecificLabels() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Agency", "Loading an existing product should switch the prominent mode indicator.");
+  assert.match(harness.outputs.outputHeading.textContent, /Review Listing Changes/, "Existing-listing mode should use a review heading for updates.");
+  assert.equal(harness.buttons.analyze.textContent, "Check Existing Listing", "Existing-listing mode should relabel the check action.");
+  assert.equal(harness.buttons.review.textContent, "Review Listing Changes", "Existing-listing mode should relabel the review action.");
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Existing-listing mode should relabel the publish action.");
+  assert.equal(harness.buttons.reset.textContent, "Discard Listing Changes", "Existing-listing mode should relabel the discard action.");
+  assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Agency/i, "Existing-listing mode should explain that the owner is updating a current listing.");
+}
+
+async function testIntakeReviewAndDiscardConfirmation() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "agency";
+  harness.buttons.loadExisting.click();
+
+  harness.fields.shortDescription.value = "Updated preview copy";
+  harness.fields.shortDescription.dispatch("input");
+  harness.buttons.review.click();
+  assert.match(harness.outputs.status.textContent, /Review ready\./, "Review should clearly stay in a pre-publish state.");
+
+  harness.confirmResponse = false;
+  harness.buttons.reset.click();
+  assert.equal(harness.confirmMessages.length, 1, "Discarding unsaved intake edits should require confirmation.");
+  assert.equal(harness.fields.shortDescription.value, "Updated preview copy", "Declining discard should keep unsaved edits intact.");
+
+  harness.fields.shortDescription.value = "Updated preview copy";
+  harness.fields.shortDescription.dispatch("input");
+  harness.confirmResponse = true;
+  harness.buttons.reset.click();
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "Accepting discard should return the intake to new-product mode.");
+  assert.equal(harness.fields.title.value, "", "Accepting discard should clear the form.");
+  assert.match(harness.outputs.status.textContent, /Published data was not changed\./, "Discard confirmation should clearly state that published data was not changed.");
+}
+
+function createHarness() {
+  class FakeHTMLElement {
+    constructor(tagName = "div") {
+      this.tagName = String(tagName || "div").toUpperCase();
+      this.checked = false;
+      this.children = [];
+      this.className = "";
+      this.dataset = {};
+      this.disabled = false;
+      this.files = [];
+      this.hidden = false;
+      this.innerHTML = "";
+      this.listeners = new Map();
+      this.placeholder = "";
+      this.src = "";
+      this.textContent = "";
+      this.type = this.tagName === "TEXTAREA" ? "textarea" : "";
+      this._value = "";
+      Object.defineProperty(this, "value", {
+        get: () => this._value,
+        set: (nextValue) => {
+          this._value = nextValue === null || nextValue === undefined ? "" : String(nextValue);
+        }
+      });
+      this.value = "";
+    }
+
+    addEventListener(type, handler) {
+      this.listeners.set(type, handler);
+    }
+
+    append(child) {
+      this.children.push(child);
+    }
+
+    click() {
+      const handler = this.listeners.get("click");
+      if (handler) {
+        handler({ currentTarget: this, preventDefault() {}, target: this });
+      }
+    }
+
+    dispatch(type) {
+      const handler = this.listeners.get(type);
+      if (handler) {
+        handler({ currentTarget: this, preventDefault() {}, target: this });
+      }
+    }
+
+    replaceChildren(...children) {
+      this.children = children;
+    }
+  }
+
+  const byId = new Map();
+  const allElements = [];
+  const register = (id, element) => {
+    element.id = id;
+    byId.set(id, element);
+    allElements.push(element);
+    return element;
+  };
+  const createElement = (tagName = "div") => new FakeHTMLElement(tagName);
+  const createInput = (value = "", type = "text") => {
+    const element = createElement("input");
+    element.type = type;
+    element.value = value;
+    return element;
+  };
+  const createFileInput = () => {
+    const element = createInput("", "file");
+    element.files = [];
+    return element;
+  };
+  const createCheckbox = (checked = false) => {
+    const element = createInput("", "checkbox");
+    element.checked = checked;
+    return element;
+  };
+
+  const document = {
+    cookie: "",
+    createElement,
+    getElementById(id) {
+      return byId.get(id) || null;
+    },
+    querySelectorAll() {
+      return allElements;
+    }
+  };
+
+  const fields = {
+    existingSelect: register("product-existing-select", createElement("select")),
+    title: register("product-title", createInput("")),
+    slug: register("product-slug", createInput("")),
+    folder: register("product-folder", createInput("")),
+    subtitle: register("product-subtitle", createInput("")),
+    authors: register("product-authors", createInput("RV Sawyer")),
+    publisher: register("product-publisher", createInput("Tobacco Road Games")),
+    system: register("product-system", createInput("5E Compatible")),
+    line: register("product-line", createInput("Fifth Edition Fantasy Roleplaying")),
+    series: register("product-series", createElement("select")),
+    format: register("product-format", createInput("PDF")),
+    pageCount: register("product-page-count", createInput("24", "number")),
+    price: register("product-price", createInput("4.99")),
+    salePrice: register("product-sale-price", createInput("")),
+    currency: register("product-currency", createInput("USD")),
+    saleEnabled: register("product-sale-enabled", createCheckbox(false)),
+    status: register("product-status", createElement("select")),
+    buyMode: register("product-buy-mode", createElement("select")),
+    buyUrl: register("product-buy-url", createInput("")),
+    shortDescription: register("product-short-description", createElement("textarea")),
+    longDescription: register("product-long-description", createElement("textarea")),
+    features: register("product-features", createElement("textarea")),
+    tags: register("product-tags", createInput("")),
+    fulfillmentNote: register("product-fulfillment-note", createElement("textarea")),
+    creationMethod: register("product-creation-method", createElement("textarea")),
+    legalNote: register("product-legal-note", createElement("textarea")),
+    version: register("product-version", createInput("1.0")),
+    releaseDate: register("product-release-date", createInput("", "date")),
+    lastUpdated: register("product-last-updated", createInput("", "date")),
+    relatedSelect: register("product-related-select", createElement("select")),
+    relatedList: register("product-related-list", createElement("div")),
+    coverFile: register("product-cover-file", createFileInput()),
+    previewFile: register("product-preview-file", createFileInput()),
+    pdfFile: register("product-pdf-file", createFileInput())
+  };
+  fields.status.value = "preview-available";
+  fields.buyMode.value = "preview-only";
+  fields.shortDescription.value = "Original preview copy";
+  fields.longDescription.value = "Long description";
+  fields.features.value = "Feature one";
+  fields.fulfillmentNote.value = "Manual note";
+  fields.creationMethod.value = "Human-authored by RV Sawyer.";
+
+  const outputs = {
+    editMode: register("product-edit-mode", createElement("p")),
+    modeIndicatorTitle: register("product-mode-indicator-title", createElement("span")),
+    modeIndicatorCopy: register("product-mode-indicator-copy", createElement("span")),
+    outputHeading: register("intake-output-heading", createElement("h2")),
+    outputCopy: register("intake-output-copy", createElement("p")),
+    status: register("intake-status", createElement("p")),
+    advisorPanel: register("advisor-panel", createElement("section")),
+    advisorSummaryCopy: register("advisor-summary-copy", createElement("p")),
+    advisorSuggestedPrice: register("advisor-suggested-price", createElement("span")),
+    advisorSuggestedSalePrice: register("advisor-suggested-sale-price", createElement("span")),
+    advisorConfidence: register("advisor-confidence", createElement("span")),
+    advisorProductType: register("advisor-product-type", createElement("span")),
+    advisorSeriesFit: register("advisor-series-fit", createElement("span")),
+    advisorAudience: register("advisor-audience", createElement("span")),
+    advisorTags: register("advisor-tags-output", createElement("textarea")),
+    advisorCrossSells: register("advisor-cross-sells-output", createElement("textarea")),
+    advisorReasoningList: register("advisor-reasoning-list", createElement("ol")),
+    advisorJson: register("advisor-json", createElement("textarea")),
+    json: register("generated-json", createElement("textarea")),
+    checklist: register("asset-checklist", createElement("pre")),
+    assetFolder: register("asset-folder-output", createElement("p")),
+    assetFileList: register("asset-file-list", createElement("div")),
+    previewStatus: register("preview-status", createElement("span")),
+    previewTitle: register("preview-title", createElement("h3")),
+    previewSubtitle: register("preview-subtitle", createElement("p")),
+    previewCopy: register("preview-copy", createElement("p")),
+    previewCoverImage: register("preview-cover-image", createElement("img"))
+  };
+
+  const buttons = {
+    analyze: register("analyze-listing-button", createElement("button")),
+    applyAdvisor: register("apply-advisor-button", createElement("button")),
+    ignoreAdvisor: register("ignore-advisor-button", createElement("button")),
+    loadExisting: register("product-existing-load", createElement("button")),
+    addRelated: register("product-related-add", createElement("button")),
+    publish: register("publish-button", createElement("button")),
+    review: register("review-listing-button", createElement("button")),
+    reset: register("reset-intake-button", createElement("button"))
+  };
+
+  register("intake-check-label", createElement("strong"));
+  register("intake-check-help", createElement("p"));
+  register("intake-review-label", createElement("strong"));
+  register("intake-review-help", createElement("p"));
+  register("intake-publish-label", createElement("strong"));
+  register("intake-publish-help", createElement("p"));
+  register("intake-reset-label", createElement("strong"));
+  register("intake-reset-help", createElement("p"));
+
+  const products = [
+    {
+      buyMode: "preview-only",
+      buyUrl: "",
+      coverImage: "/product-assets/agency/cover.webp",
+      creationMethod: "Human-authored by RV Sawyer.",
+      currency: "USD",
+      features: ["Feature one"],
+      fileList: ["Agency.pdf"],
+      folder: "agency",
+      format: ["PDF"],
+      fulfillmentNote: "Manual note",
+      gameSystem: "5E Compatible",
+      lastUpdated: "",
+      legalNote: "",
+      longDescription: "Long description",
+      pageCount: 24,
+      price: "4.99",
+      previewImage: "/product-assets/agency/preview.webp",
+      previewImages: [],
+      productLine: "Fifth Edition Fantasy Roleplaying",
+      relatedProducts: [],
+      releaseDate: "",
+      saleEnabled: false,
+      salePrice: "",
+      series: "",
+      shortDescription: "Original preview copy",
+      slug: "agency",
+      status: "preview-available",
+      subtitle: "A test product",
+      tags: ["Test"],
+      title: "Agency",
+      version: "1.0"
+    }
+  ];
+  const intakeMap = {
+    products: [
+      {
+        folder: "agency",
+        slug: "agency"
+      }
+    ]
+  };
+
+  const confirmMessages = [];
+  const harness = {
+    buttons,
+    confirmMessages,
+    confirmResponse: true,
+    fields,
+    flush,
+    outputs
+  };
+
+  const context = {
+    Date,
+    FormData,
+    HTMLElement: FakeHTMLElement,
+    JSON,
+    URL: {
+      createObjectURL() {
+        return "blob:cover";
+      },
+      revokeObjectURL() {}
+    },
+    console,
+    confirm(message) {
+      confirmMessages.push(String(message));
+      return harness.confirmResponse;
+    },
+    document,
+    fetch: async (url) => {
+      if (String(url).includes("/data/products.json")) {
+        return createJsonResponse(products);
+      }
+      if (String(url).includes("/data/product-intake-map.json")) {
+        return createJsonResponse(intakeMap);
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    },
+    globalThis: null,
+    setTimeout,
+    window: {
+      location: {
+        assign() {}
+      },
+      setTimeout
+    }
+  };
+  context.globalThis = context;
+  context.TRGProductAdvisor = {
+    analyzeProductListing() {
+      return {
+        audience: ["GMs"],
+        price_confidence: 0.8,
+        product_type: "Guide",
+        reasoning: ["Fixture reasoning"],
+        series_fit: "",
+        suggested_cross_sells: [],
+        suggested_price: 4.99,
+        suggested_sale_price: 2.99,
+        suggested_tags: ["Test"]
+      };
+    }
+  };
+
+  const scriptPath = path.join(ROOT, "assets", "js", "product-intake.js");
+  const script = fs.readFileSync(scriptPath, "utf8");
+  vm.runInNewContext(script, context, { filename: scriptPath });
+
+  return harness;
+}
+
+function createJsonResponse(payload, status = 200) {
+  return {
+    async json() {
+      return payload;
+    },
+    ok: status >= 200 && status < 300,
+    status
+  };
+}
+
+async function flush() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

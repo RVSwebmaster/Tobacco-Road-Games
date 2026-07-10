@@ -1,6 +1,7 @@
 (() => {
   const CART_BUY_MODE = "cart";
   const CART_BUY_URL_PLACEHOLDER = "No buy URL needed for cart products.";
+  const DISCARD_LISTING_CHANGES_MESSAGE = "Discard unsaved work? Any unpublished listing changes will be lost.";
   const statusLabels = {
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
@@ -53,6 +54,8 @@
 
   const outputs = {
     editMode: document.getElementById("product-edit-mode"),
+    modeIndicatorTitle: document.getElementById("product-mode-indicator-title"),
+    modeIndicatorCopy: document.getElementById("product-mode-indicator-copy"),
     advisorPanel: document.getElementById("advisor-panel"),
     advisorSummaryCopy: document.getElementById("advisor-summary-copy"),
     advisorSuggestedPrice: document.getElementById("advisor-suggested-price"),
@@ -67,6 +70,8 @@
     advisorJson: document.getElementById("advisor-json"),
     json: document.getElementById("generated-json"),
     checklist: document.getElementById("asset-checklist"),
+    outputHeading: document.getElementById("intake-output-heading"),
+    outputCopy: document.getElementById("intake-output-copy"),
     status: document.getElementById("intake-status"),
     assetFolder: document.getElementById("asset-folder-output"),
     assetFileList: document.getElementById("asset-file-list"),
@@ -84,6 +89,7 @@
     loadExisting: document.getElementById("product-existing-load"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
+    review: document.getElementById("review-listing-button"),
     reset: document.getElementById("reset-intake-button")
   };
 
@@ -97,6 +103,7 @@
   let loadedProductFolder = "";
   let loadedProductRecord = null;
   let latestAdvisorRun = null;
+  let draftBaseline = "";
 
   const slugify = (value) =>
     String(value || "")
@@ -141,6 +148,44 @@
   const isEditingLoadedListing = () =>
     Boolean(loadedProductSlug);
 
+  const getModeLabels = () => isEditingLoadedListing()
+    ? {
+      checkButton: "Check Existing Listing",
+      checkHelp: "Checks the form for missing or invalid information and refreshes advisory suggestions. Does not save changes.",
+      editMode: `Editing existing listing: ${loadedProductRecord?.title || loadedProductSlug}. Load another listing to switch targets, or keep editing this one.`,
+      modeCopy: "Publishing will update only this existing listing. Unchanged fields remain as they are in the source catalog.",
+      modeTitle: `Editing Existing Listing: ${loadedProductRecord?.title || loadedProductSlug}`,
+      outputCopy: "Check for missing or invalid information, then review the generated catalog entry and update plan before publishing changes.",
+      outputHeading: "Review Listing Changes",
+      publishButton: "Update Existing Listing",
+      publishHelp: "Updates the existing listing, uploads only selected replacement files, and rebuilds the store.",
+      publishLabel: "Update Existing Listing",
+      resetButton: "Discard Listing Changes",
+      resetHelp: "Discards unsaved edits for the loaded listing. Published data is not affected.",
+      resetLabel: "Discard Listing Changes",
+      reviewButton: "Review Listing Changes",
+      reviewHelp: "Shows the generated product data and file plan so you can confirm exactly what will change before updating the listing.",
+      reviewLabel: "Review Listing Changes"
+    }
+    : {
+      checkButton: "Check New Listing",
+      checkHelp: "Checks the form for missing or invalid information and refreshes advisory suggestions. Does not save changes.",
+      editMode: "Creating a new listing. Load an existing one only when you intend to update a current product or replace selected files.",
+      modeCopy: "Publishing will create a new listing from the form values and selected files.",
+      modeTitle: "Creating New Product",
+      outputCopy: "Check for missing or invalid information, then review the generated catalog entry and file plan before publishing.",
+      outputHeading: "Review New Product",
+      publishButton: "Publish New Product",
+      publishHelp: "Creates a new listing, uploads the selected files, and rebuilds the store.",
+      publishLabel: "Publish New Product",
+      resetButton: "Clear New Product Form",
+      resetHelp: "Clears unsaved work from the new-product form only. Published data is not affected.",
+      resetLabel: "Clear New Product Form",
+      reviewButton: "Review New Product",
+      reviewHelp: "Shows the generated product data and file plan so you can confirm exactly what will be published.",
+      reviewLabel: "Review New Product"
+    };
+
   const requiresFullAssetSet = () => {
     if (!isEditingLoadedListing()) {
       return true;
@@ -149,6 +194,99 @@
     const currentSlug = fields.slug.value.trim() || slugify(fields.title.value);
     const currentFolder = fields.folder.value.trim() || currentSlug;
     return currentSlug !== loadedProductSlug || currentFolder !== loadedProductFolder;
+  };
+
+  const updateActionLabels = () => {
+    const labels = getModeLabels();
+    if (outputs.editMode) {
+      outputs.editMode.textContent = labels.editMode;
+    }
+    if (outputs.modeIndicatorTitle) {
+      outputs.modeIndicatorTitle.textContent = labels.modeTitle;
+    }
+    if (outputs.modeIndicatorCopy) {
+      outputs.modeIndicatorCopy.textContent = labels.modeCopy;
+    }
+    if (outputs.outputHeading) {
+      outputs.outputHeading.textContent = labels.outputHeading;
+    }
+    if (outputs.outputCopy) {
+      outputs.outputCopy.textContent = labels.outputCopy;
+    }
+
+    const setText = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) {
+        node.textContent = value;
+      }
+    };
+
+    if (buttons.analyze) {
+      buttons.analyze.textContent = labels.checkButton;
+    }
+    if (buttons.review) {
+      buttons.review.textContent = labels.reviewButton;
+    }
+    if (buttons.publish) {
+      buttons.publish.textContent = labels.publishButton;
+    }
+    if (buttons.reset) {
+      buttons.reset.textContent = labels.resetButton;
+    }
+
+    setText("intake-check-label", labels.checkButton);
+    setText("intake-check-help", labels.checkHelp);
+    setText("intake-review-label", labels.reviewLabel);
+    setText("intake-review-help", labels.reviewHelp);
+    setText("intake-publish-label", labels.publishLabel);
+    setText("intake-publish-help", labels.publishHelp);
+    setText("intake-reset-label", labels.resetLabel);
+    setText("intake-reset-help", labels.resetHelp);
+  };
+
+  const captureDraftState = () => JSON.stringify({
+    buyMode: fields.buyMode.value,
+    buyUrl: fields.buyUrl.value,
+    coverFileName: fields.coverFile.files[0]?.name || "",
+    currency: fields.currency.value,
+    folder: fields.folder.value,
+    format: fields.format.value,
+    fulfillmentNote: fields.fulfillmentNote.value,
+    gameSystem: fields.system.value,
+    lastUpdated: fields.lastUpdated.value,
+    legalNote: fields.legalNote.value,
+    line: fields.line.value,
+    longDescription: fields.longDescription.value,
+    pageCount: fields.pageCount.value,
+    pdfFileName: fields.pdfFile.files[0]?.name || "",
+    previewFileName: fields.previewFile.files[0]?.name || "",
+    price: fields.price.value,
+    relatedProducts: [...selectedRelatedProducts],
+    releaseDate: fields.releaseDate.value,
+    saleEnabled: fields.saleEnabled.checked,
+    salePrice: fields.salePrice.value,
+    series: fields.series.value,
+    shortDescription: fields.shortDescription.value,
+    slug: fields.slug.value,
+    status: fields.status.value,
+    subtitle: fields.subtitle.value,
+    tags: fields.tags.value,
+    title: fields.title.value,
+    version: fields.version.value
+  });
+
+  const markDraftBaseline = () => {
+    draftBaseline = captureDraftState();
+  };
+
+  const hasUnsavedChanges = () => captureDraftState() !== draftBaseline;
+
+  const confirmDiscardChanges = () => {
+    const confirmFn = globalThis.confirm;
+    if (typeof confirmFn !== "function") {
+      return true;
+    }
+    return confirmFn(DISCARD_LISTING_CHANGES_MESSAGE);
   };
 
   const findAvailableProduct = (slug) =>
@@ -170,19 +308,15 @@
   };
 
   const updateEditModeCopy = () => {
-    if (!outputs.editMode) {
-      return;
-    }
-
-    if (!isEditingLoadedListing()) {
-      outputs.editMode.textContent = "Creating a new listing. Load an existing one to revise metadata or replace only the files you choose.";
+    updateActionLabels();
+    if (!outputs.editMode || !isEditingLoadedListing()) {
       return;
     }
 
     const renameWarning = requiresFullAssetSet()
-      ? " Because the slug or folder changed, the next publish needs a full replacement set of cover, preview, and PDF files."
+      ? " Because the slug or folder changed, the next update needs a full replacement set of cover, preview, and PDF files."
       : " Leave file inputs blank to keep the live assets, or choose only the replacement files you want to swap in.";
-    outputs.editMode.textContent = `Editing ${loadedProductRecord?.title || loadedProductSlug}.${renameWarning}`;
+    outputs.editMode.textContent = `${getModeLabels().editMode}${renameWarning}`;
   };
 
   const formatConfidenceLabel = (value) => {
@@ -255,8 +389,15 @@
   };
 
   const analyzeCurrentListing = () => {
+    const validationErrors = validateRequiredFields();
+    if (validationErrors.length) {
+      clearAdvisorPanel();
+      outputs.status.textContent = validationErrors.join(" ");
+      return;
+    }
+
     if (!globalThis.TRGProductAdvisor?.analyzeProductListing) {
-      outputs.status.textContent = "The pricing advisor is not available on this page right now.";
+      outputs.status.textContent = "Listing information looks valid so far. The pricing advisor is not available on this page right now.";
       return;
     }
 
@@ -265,12 +406,25 @@
     });
     latestAdvisorRun = advisorRun;
     renderAdvisorPanel(advisorRun);
-    outputs.status.textContent = "Listing analysis is ready. Review the suggestions, then apply or ignore them.";
+    outputs.status.textContent = "Listing information looks valid so far. Review the generated output and any advisory suggestions before publishing.";
+  };
+
+  const reviewCurrentListing = () => {
+    const validationErrors = validateRequiredFields();
+    if (validationErrors.length) {
+      outputs.status.textContent = validationErrors.join(" ");
+      return;
+    }
+
+    updatePreview();
+    outputs.status.textContent = isEditingLoadedListing()
+      ? "Review ready. No changes have been published yet. Confirm the listing update details below before you update the existing listing."
+      : "Review ready. No changes have been published yet. Confirm the new product details below before you publish the listing.";
   };
 
   const applyAdvisorSuggestions = () => {
     if (!latestAdvisorRun) {
-      outputs.status.textContent = "Run Analyze Listing first.";
+      outputs.status.textContent = `Run ${getModeLabels().checkButton} first.`;
       return;
     }
 
@@ -530,7 +684,7 @@
 
     return [
       `R2 folder: ${payload.folder}`,
-      existingMode ? `Editing existing listing: ${loadedProductRecord?.title || loadedProductSlug}` : "Publishing mode: New listing",
+      existingMode ? `Editing existing listing: ${loadedProductRecord?.title || loadedProductSlug}` : "Creating new listing",
       "",
       requiresFiles ? "Required uploaded files:" : "Optional replacement files:",
       requiresFiles
@@ -640,7 +794,9 @@
 
     publishBusy = true;
     buttons.publish.disabled = true;
-    outputs.status.textContent = "Uploading to R2 and waiting for the GitHub publish workflow to finish...";
+    outputs.status.textContent = isEditingLoadedListing()
+      ? "Uploading any selected replacement files and waiting for the existing-listing update workflow to finish..."
+      : "Uploading files and waiting for the new-listing publish workflow to finish...";
 
     try {
       const payload = buildPayload();
@@ -714,6 +870,7 @@
       outputs.status.textContent = responsePayload.runUrl
         ? `${responsePayload.message} Workflow: ${responsePayload.runUrl}`
         : responsePayload.message;
+      markDraftBaseline();
     } catch {
       outputs.status.textContent = "The publish request failed before the server could answer. Please try again.";
     } finally {
@@ -845,6 +1002,7 @@
     updateRelatedSelectOptions();
     updateEditModeCopy();
     updatePreview();
+    markDraftBaseline();
     outputs.status.textContent = `Loaded ${product.title} for editing.`;
   }
 
@@ -888,6 +1046,7 @@
   buttons.publish.addEventListener("click", publishProduct);
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
   buttons.addRelated.addEventListener("click", addRelatedProduct);
+  buttons.review?.addEventListener("click", reviewCurrentListing);
 
   fields.relatedList.addEventListener("click", (event) => {
     const target = event.target;
@@ -903,7 +1062,7 @@
     removeRelatedProduct(slug);
   });
 
-  buttons.reset.addEventListener("click", () => {
+  const resetFormToDefaults = () => {
     document.querySelectorAll("input, textarea, select").forEach((field) => {
       if (field.type === "file") {
         field.value = "";
@@ -947,16 +1106,36 @@
     loadedProductRecord = null;
     slugTouched = false;
     folderTouched = false;
-    outputs.status.textContent = "Form reset.";
     clearAdvisorPanel();
     syncRelatedPicker();
     updateEditModeCopy();
     updatePreview();
+    markDraftBaseline();
+  };
+
+  buttons.reset.addEventListener("click", () => {
+    const wasEditing = isEditingLoadedListing();
+    if (hasUnsavedChanges() && !confirmDiscardChanges()) {
+      outputs.status.textContent = "Unsaved listing changes are still in place.";
+      return;
+    }
+
+    resetFormToDefaults();
+    outputs.status.textContent = wasEditing
+      ? "Listing changes discarded. Published data was not changed."
+      : "New product form cleared. Published data was not changed.";
   });
 
   clearAdvisorPanel();
+  globalThis.TRGProductIntake = {
+    getModeLabels,
+    hasUnsavedChanges,
+    validateRequiredFields
+  };
   void loadAvailableProducts();
   syncRelatedPicker();
   syncBuyModeUi();
+  updateActionLabels();
   updatePreview();
+  markDraftBaseline();
 })();

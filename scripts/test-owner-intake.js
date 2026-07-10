@@ -14,6 +14,7 @@ async function main() {
   const ownerLogin = await importModule("functions/_lib/owner-login.mjs");
   const ownerMiddleware = await importModule("functions/_lib/owner-middleware.mjs");
   const ownerPublish = await importModule("functions/_lib/owner-publish.mjs");
+  const ownerPricing = await importModule("functions/_lib/owner-pricing-publish.mjs");
   const productAdvisor = require(path.join(ROOT, "shared", "product-advisor.js"));
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
   const accessContext = await createAccessTestContext();
@@ -54,6 +55,8 @@ async function main() {
     await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, authCookies);
     await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, authCookies);
     await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, authCookies);
+    await testOwnerPricingPublishAccepted(ownerPricing, baseEnv, authCookies);
+    await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, baseEnv, authCookies);
     await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
     await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
     const accessCookies = await testAccessMiddlewareAllowsAuthorized(ownerMiddleware, accessEnv, accessContext.token);
@@ -62,6 +65,12 @@ async function main() {
     await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
     await testProductAdvisorSuggestions(productAdvisor);
     await testExistingProductUpdatePreservesFields(publishScript);
+    await testPricingUpdatePreservesUnrelatedFields(publishScript);
+    await testPricingUpdateRejectsInvalidMoney(publishScript);
+    await testPricingUpdateRejectsSaleAboveRegular(publishScript);
+    await testPricingUpdateRejectsInvalidDates(publishScript);
+    await testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publishScript);
+    await testPricingUpdateBuildConsistency(publishScript);
     await testPublishScriptRejectsInvalidCartMetadata(publishScript);
     await testPublishScriptNormalizesCartBuyUrl(publishScript);
     await testNewProductBuildAndSharedMap(publishScript);
@@ -521,6 +530,90 @@ async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieH
   }
 }
 
+async function testOwnerPricingPublishAccepted(ownerPricing, env, cookieHeader) {
+  const calls = [];
+  const fixedNow = 1760000000004;
+  const originalDateNow = Date.now;
+  const originalRandomUuid = crypto.randomUUID;
+  Date.now = () => fixedNow;
+  crypto.randomUUID = () => "pricing-publish-uuid";
+
+  try {
+    const response = await ownerPricing.handleOwnerPricingPublishRequest(buildAuthenticatedPricingRequest({
+      currency: "USD",
+      nonPurchasableSaleConfirmed: true,
+      price: "4.99",
+      priceCents: 499,
+      saleEnabled: true,
+      saleEnd: "2026-07-31",
+      saleLabel: "Launch Sale",
+      salePrice: "3.99",
+      salePriceCents: 399,
+      saleStart: "2026-07-01",
+      slug: "sirrocans"
+    }, cookieHeader), env, {
+      dispatchOptions: {
+        fetchImpl: async (url, options = {}) => {
+          calls.push({ url: String(url), options });
+          if (String(url).endsWith("/dispatches")) {
+            return new Response(null, { status: 204 });
+          }
+          return jsonResponse({
+            workflow_runs: [
+              {
+                conclusion: "success",
+                created_at: "2025-10-09T08:53:20.000Z",
+                display_title: "Owner publish price-1760000000004-pricing-publish-uuid",
+                html_url: "https://example.com/run",
+                id: 1,
+                status: "completed"
+              }
+            ]
+          });
+        },
+        pollIntervalMs: 1,
+        timeoutMs: 25
+      }
+    });
+
+    assert.equal(response.status, 200, "Authenticated pricing updates should publish successfully.");
+    const payload = await response.json();
+    assert.equal(payload.ok, true, "Successful pricing updates should return ok.");
+    const dispatchCall = calls.find((call) => call.url.endsWith("/dispatches"));
+    assert.ok(dispatchCall, "Pricing updates should dispatch the GitHub publish workflow.");
+    const dispatchPayload = JSON.parse(dispatchCall.options.body);
+    assert.equal(dispatchPayload.client_payload.operation, "pricing_update", "Pricing updates should use a dedicated workflow operation.");
+    assert.equal(dispatchPayload.client_payload.metadata.slug, "sirrocans", "Pricing updates should dispatch the target product slug.");
+    assert.equal(dispatchPayload.client_payload.metadata.priceCents, 499, "Pricing updates should dispatch derived price cents.");
+  } finally {
+    Date.now = originalDateNow;
+    crypto.randomUUID = originalRandomUuid;
+  }
+}
+
+async function testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, env, cookieHeader) {
+  const response = await ownerPricing.handleOwnerPricingPublishRequest(buildAuthenticatedPricingRequest({
+    currency: "USD",
+    price: "4.999",
+    priceCents: 500,
+    saleEnabled: false,
+    saleEnd: "",
+    saleLabel: "",
+    salePrice: "",
+    salePriceCents: null,
+    saleStart: "",
+    slug: "sirrocans"
+  }, cookieHeader), env, {
+    dispatchOptions: {
+      fetchImpl: async () => new Response(null, { status: 204 })
+    }
+  });
+
+  assert.equal(response.status, 400, "Invalid pricing payloads should be rejected before GitHub dispatch.");
+  const payload = await response.json();
+  assert.match(payload.error, /valid dollar amount|must match/i, "Pricing validation failures should be human-readable.");
+}
+
 async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieHeader) {
   const bucket = createMockBucket();
   const formData = new FormData();
@@ -731,6 +824,206 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
   assert.equal(sirrocans.shortDescription, "Updated short copy.", "Explicit new copy should apply.");
 }
 
+async function testPricingUpdatePreservesUnrelatedFields(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  const productsPath = path.join(tempRoot, "data", "products.json");
+  const originalProducts = JSON.parse(fs.readFileSync(productsPath, "utf8"));
+  const original = originalProducts.find((product) => product.slug === "agency");
+
+  await publishScript.applyPublishPayload(tempRoot, {
+    metadata: {
+      currency: "USD",
+      price: "6.99",
+      priceCents: 699,
+      saleEnabled: true,
+      saleEnd: "2026-07-31",
+      saleLabel: "Event Sale",
+      salePrice: "4.99",
+      salePriceCents: 499,
+      saleStart: "2026-07-01",
+      slug: "agency"
+    },
+    operation: "pricing_update",
+    pricingConfirmation: {
+      nonPurchasableSaleConfirmed: true
+    }
+  });
+
+  const updatedProducts = JSON.parse(fs.readFileSync(productsPath, "utf8"));
+  assert.equal(updatedProducts.length, originalProducts.length, "Pricing updates must not create duplicate product records.");
+  const updated = updatedProducts.find((product) => product.slug === "agency");
+  assert.equal(updated.price, "6.99", "Pricing updates should change the regular display price.");
+  assert.equal(updated.priceCents, 699, "Pricing updates should change the regular cent value.");
+  assert.equal(updated.regularPrice, "6.99", "Pricing updates should synchronize the derived regular price display.");
+  assert.equal(updated.regularPriceCents, 699, "Pricing updates should synchronize the derived regular price cents.");
+  assert.equal(updated.salePrice, "4.99", "Pricing updates should change the sale display price.");
+  assert.equal(updated.salePriceCents, 499, "Pricing updates should change the sale cent value.");
+  assert.equal(updated.saleStart, "2026-07-01", "Pricing updates should persist sale start dates.");
+  assert.equal(updated.saleEnd, "2026-07-31", "Pricing updates should persist sale end dates.");
+  assert.equal(updated.saleLabel, "Event Sale", "Pricing updates should persist sale labels.");
+  assert.equal(updated.status, original.status, "Pricing updates must not change product status.");
+  assert.equal(updated.buyMode, original.buyMode, "Pricing updates must not change buy mode.");
+  assert.equal(updated.buyUrl, original.buyUrl, "Pricing updates must not change buy URLs.");
+  assert.equal(updated.shortDescription, original.shortDescription, "Pricing updates must preserve unrelated copy.");
+  assert.deepEqual(updated.authors, original.authors, "Pricing updates must preserve authors.");
+  assert.equal(updated.coverImage, original.coverImage, "Pricing updates must preserve artwork paths.");
+}
+
+async function testPricingUpdateRejectsInvalidMoney(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await assert.rejects(
+    publishScript.applyPublishPayload(tempRoot, {
+      metadata: {
+        currency: "USD",
+        price: "4.999",
+        priceCents: 500,
+        saleEnabled: false,
+        saleEnd: "",
+        saleLabel: "",
+        salePrice: "",
+        salePriceCents: null,
+        saleStart: "",
+        slug: "agency"
+      },
+      operation: "pricing_update",
+      pricingConfirmation: {
+        nonPurchasableSaleConfirmed: true
+      }
+    }),
+    /valid dollar amount|must match/,
+    "Pricing updates should reject malformed or mismatched prices."
+  );
+}
+
+async function testPricingUpdateRejectsSaleAboveRegular(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await assert.rejects(
+    publishScript.applyPublishPayload(tempRoot, {
+      metadata: {
+        currency: "USD",
+        price: "4.99",
+        priceCents: 499,
+        saleEnabled: true,
+        saleEnd: "",
+        saleLabel: "",
+        salePrice: "4.99",
+        salePriceCents: 499,
+        saleStart: "",
+        slug: "agency"
+      },
+      operation: "pricing_update",
+      pricingConfirmation: {
+        nonPurchasableSaleConfirmed: true
+      }
+    }),
+    /Sale price must be lower than the regular price/,
+    "Pricing updates should reject sale prices that are not lower than the regular price."
+  );
+}
+
+async function testPricingUpdateRejectsInvalidDates(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await assert.rejects(
+    publishScript.applyPublishPayload(tempRoot, {
+      metadata: {
+        currency: "USD",
+        price: "4.99",
+        priceCents: 499,
+        saleEnabled: true,
+        saleEnd: "2026-07-01",
+        saleLabel: "",
+        salePrice: "3.99",
+        salePriceCents: 399,
+        saleStart: "2026-07-15",
+        slug: "agency"
+      },
+      operation: "pricing_update",
+      pricingConfirmation: {
+        nonPurchasableSaleConfirmed: true
+      }
+    }),
+    /Sale end cannot be earlier than sale start/,
+    "Pricing updates should reject inverted sale schedules."
+  );
+}
+
+async function testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publishScript) {
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await assert.rejects(
+    publishScript.applyPublishPayload(tempRoot, {
+      metadata: {
+        currency: "USD",
+        price: "5.99",
+        priceCents: 599,
+        saleEnabled: true,
+        saleEnd: "",
+        saleLabel: "Preview Sale",
+        salePrice: "4.99",
+        salePriceCents: 499,
+        saleStart: "",
+        slug: "sirrocans"
+      },
+      operation: "pricing_update",
+      pricingConfirmation: {
+        nonPurchasableSaleConfirmed: false
+      }
+    }),
+    /Confirm catalog-only sale metadata/,
+    "Preview-mode products should require explicit confirmation before sale metadata is saved."
+  );
+}
+
+async function testPricingUpdateBuildConsistency(publishScript) {
+  const tempRoot = createTempRepo([
+    "data/authors.js",
+    "data/products.json",
+    "scripts/build-runtime-catalog.mjs",
+    "scripts/build-store.js",
+    "shared/pricing.js"
+  ]);
+  const productsPath = path.join(tempRoot, "data", "products.json");
+  const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
+  const fixtureAgency = products.find((product) => product.slug === "agency");
+  fixtureAgency.status = "available-direct";
+  fixtureAgency.statusLabel = "Available Direct";
+  fixtureAgency.buyMode = "fixed-price";
+  fixtureAgency.buyUrl = "https://example.com/buy/agency";
+  fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
+
+  await publishScript.applyPublishPayload(tempRoot, {
+    metadata: {
+      currency: "USD",
+      price: "6.99",
+      priceCents: 699,
+      saleEnabled: true,
+      saleEnd: "2026-08-15",
+      saleLabel: "Event Sale",
+      salePrice: "4.99",
+      salePriceCents: 499,
+      saleStart: "2026-08-01",
+      slug: "agency"
+    },
+    operation: "pricing_update",
+    pricingConfirmation: {
+      nonPurchasableSaleConfirmed: true
+    }
+  });
+
+  const build = spawnSync(process.execPath, [path.join(tempRoot, "scripts", "build-store.js")], {
+    cwd: tempRoot,
+    encoding: "utf8"
+  });
+  assert.equal(build.status, 0, `Pricing update build should succeed. ${build.stderr || build.stdout}`);
+
+  const runtimeCatalogModule = await import(`${pathToFileURL(path.join(tempRoot, "shared", "runtime-catalog.mjs")).href}?cacheBust=${Date.now()}`);
+  const runtimeAgency = runtimeCatalogModule.RUNTIME_CATALOG_PRODUCTS.find((product) => product.slug === "agency");
+  assert.equal(runtimeAgency.priceCents, 699, "Runtime catalog should regenerate with the updated regular price.");
+  assert.equal(runtimeAgency.salePriceCents, 499, "Runtime catalog should regenerate with the updated sale price.");
+
+  const productPagePath = path.join(tempRoot, "store", "products", "agency", "index.html");
+  assert.ok(fs.existsSync(productPagePath), "Generated store pages should be rebuilt after a pricing update.");
+}
+
 async function testPublishScriptRejectsInvalidCartMetadata(publishScript) {
   const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
   await assert.rejects(
@@ -861,6 +1154,20 @@ function buildAuthenticatedPublishRequest(formData, cookieHeader) {
   return new Request("https://example.com/owner/api/publish", {
     body: formData,
     headers: {
+      cookie: cookieHeader,
+      origin: "https://example.com",
+      "x-csrf-token": csrfToken
+    },
+    method: "POST"
+  });
+}
+
+function buildAuthenticatedPricingRequest(payload, cookieHeader) {
+  const csrfToken = readCookieFromHeader(cookieHeader, "trg_owner_csrf");
+  return new Request("https://example.com/owner/api/pricing", {
+    body: JSON.stringify(payload),
+    headers: {
+      "content-type": "application/json",
       cookie: cookieHeader,
       origin: "https://example.com",
       "x-csrf-token": csrfToken

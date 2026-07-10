@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tobacco Road Games Pricing Editor</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../assets/logo.png?v=20260709c">
+  <link rel="stylesheet" href="../styles.css?v=20260709c">
+  <style>
+    .pricing-grid,
+    .pricing-form-grid,
+    .pricing-summary-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .pricing-grid {
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      align-items: start;
+    }
+
+    .pricing-form-grid,
+    .pricing-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .pricing-panel,
+    .pricing-confirmation,
+    .pricing-preview {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(242, 216, 170, 0.16);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .pricing-panel[hidden],
+    .pricing-confirmation[hidden],
+    .pricing-warning[hidden] {
+      display: none;
+    }
+
+    .pricing-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .pricing-field--full {
+      grid-column: 1 / -1;
+    }
+
+    .pricing-field label,
+    .pricing-kv strong,
+    .pricing-confirmation th {
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pricing-picker {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .pricing-kv {
+      display: grid;
+      gap: 6px;
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(242, 216, 170, 0.12);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.5);
+    }
+
+    .pricing-kv span,
+    .pricing-copy,
+    .pricing-confirmation td {
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    .pricing-copy {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .pricing-mode,
+    .pricing-action-card {
+      padding: 0.95rem 1rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.46);
+    }
+
+    .pricing-mode strong,
+    .pricing-action-card strong {
+      display: block;
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .pricing-mode span,
+    .pricing-action-card p {
+      display: block;
+      margin-top: 0.45rem;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    .pricing-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .pricing-action-card {
+      display: grid;
+      gap: 10px;
+    }
+
+    .pricing-action-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .pricing-warning {
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(242, 216, 170, 0.18);
+      border-radius: 12px;
+      background: rgba(94, 48, 11, 0.28);
+    }
+
+    .pricing-warning label {
+      display: flex;
+      gap: 10px;
+      align-items: start;
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    .pricing-confirmation table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .pricing-confirmation th,
+    .pricing-confirmation td {
+      padding: 0.7rem 0.55rem;
+      border-top: 1px solid rgba(242, 216, 170, 0.12);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .pricing-status {
+      min-height: 1.4rem;
+      margin: 0;
+      color: var(--accent-strong);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 980px) {
+      .pricing-grid,
+      .pricing-form-grid,
+      .pricing-summary-grid,
+      .pricing-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="view-section">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="../index.html" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="../assets/logo.png?v=20260709c" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
+          <span class="brand__tag">Owner pricing editor for existing storefront listings</span>
+        </div>
+      </a>
+
+      <nav class="site-nav" aria-label="Owner navigation">
+        <a href="../index.html">Home</a>
+        <a href="../store/">Store</a>
+        <a href="product-intake.html">Product Intake</a>
+        <a href="pricing.html" aria-current="page">Pricing Editor</a>
+        <a href="/owner/logout">Logout</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="store-section" aria-labelledby="pricing-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Owner Tool</p>
+          <h1 id="pricing-heading">Existing Product Pricing Editor</h1>
+          <p>Load an existing product, revise only its pricing fields, confirm the exact changes, and publish through the normal source-of-truth GitHub rebuild path. This editor does not change availability, buy mode, files, descriptions, authors, or artwork.</p>
+          <p>The listed store policy remains tax-inclusive: displayed prices are the final listed prices, with any applicable sales tax included.</p>
+        </div>
+
+        <div class="pricing-mode" aria-live="polite">
+          <strong>Current Mode</strong>
+          <span id="pricing-mode-indicator">Editing Existing Listing: Select a product to begin.</span>
+        </div>
+
+        <div class="pricing-grid">
+          <section class="pricing-panel" aria-labelledby="pricing-form-heading">
+            <div class="section-heading">
+              <p class="section-heading__kicker">Pricing Fields</p>
+              <h2 id="pricing-form-heading">Load and revise one product</h2>
+            </div>
+
+            <div class="pricing-field pricing-field--full">
+              <label for="pricing-product-select">Existing product</label>
+              <div class="pricing-picker">
+                <select id="pricing-product-select" class="dock-input">
+                  <option value="">Loading products...</option>
+                </select>
+                <button id="pricing-load-button" class="button button--secondary" type="button">Load Existing Listing</button>
+              </div>
+              <p id="pricing-load-copy" class="pricing-copy">Select a current listing by title or slug to edit its pricing only.</p>
+            </div>
+
+            <div id="pricing-editor-panel" hidden>
+              <div class="pricing-summary-grid">
+                <div class="pricing-kv">
+                  <strong>Title</strong>
+                  <span id="pricing-current-title">Not loaded</span>
+                </div>
+                <div class="pricing-kv">
+                  <strong>Slug</strong>
+                  <span id="pricing-current-slug">-</span>
+                </div>
+                <div class="pricing-kv">
+                  <strong>Status</strong>
+                  <span id="pricing-current-status">-</span>
+                </div>
+                <div class="pricing-kv">
+                  <strong>Buy Mode</strong>
+                  <span id="pricing-current-buy-mode">-</span>
+                </div>
+              </div>
+
+              <div class="pricing-form-grid">
+                <div class="pricing-field">
+                  <label for="pricing-regular-price">Regular Price (USD style)</label>
+                  <input id="pricing-regular-price" class="dock-input" type="text" inputmode="decimal" placeholder="4.99">
+                </div>
+
+                <div class="pricing-field">
+                  <label for="pricing-currency">Currency</label>
+                  <input id="pricing-currency" class="dock-input" type="text" value="USD" maxlength="3">
+                </div>
+
+                <div class="pricing-field">
+                  <label for="pricing-sale-enabled">Sale Enabled</label>
+                  <input id="pricing-sale-enabled" type="checkbox">
+                </div>
+
+                <div class="pricing-field">
+                  <label for="pricing-sale-price">Sale Price</label>
+                  <input id="pricing-sale-price" class="dock-input" type="text" inputmode="decimal" placeholder="3.99">
+                </div>
+
+                <div class="pricing-field">
+                  <label for="pricing-sale-start">Sale Start</label>
+                  <input id="pricing-sale-start" class="dock-input" type="date">
+                </div>
+
+                <div class="pricing-field">
+                  <label for="pricing-sale-end">Sale End</label>
+                  <input id="pricing-sale-end" class="dock-input" type="date">
+                </div>
+
+                <div class="pricing-field pricing-field--full">
+                  <label for="pricing-sale-label">Sale Label</label>
+                  <input id="pricing-sale-label" class="dock-input" type="text" placeholder="Summer Sale">
+                </div>
+              </div>
+
+              <div id="pricing-sale-warning" class="pricing-warning" hidden>
+                <label for="pricing-nonpurchasable-confirm">
+                  <input id="pricing-nonpurchasable-confirm" type="checkbox">
+                  <span>This product is not currently configured for an active paid storefront mode. Confirm that any sale fields you save here are catalog-only metadata and do not change product availability or purchase mode.</span>
+                </label>
+              </div>
+
+              <div class="pricing-preview">
+                <div class="section-heading">
+                  <p class="section-heading__kicker">Preview</p>
+                  <h3>Resulting price state</h3>
+                </div>
+                <div class="pricing-summary-grid">
+                  <div class="pricing-kv">
+                    <strong>Current Display</strong>
+                    <span id="pricing-current-display">$0.00</span>
+                  </div>
+                  <div class="pricing-kv">
+                    <strong>New Display</strong>
+                    <span id="pricing-next-display">$0.00</span>
+                  </div>
+                  <div class="pricing-kv">
+                    <strong>Current Effective</strong>
+                    <span id="pricing-current-effective">$0.00</span>
+                  </div>
+                  <div class="pricing-kv">
+                    <strong>Projected Effective</strong>
+                    <span id="pricing-next-effective">$0.00</span>
+                  </div>
+                </div>
+                <p id="pricing-preview-copy" class="pricing-copy">Sale schedules are previewed against the current date. Final storefront output will still be regenerated from `data/products.json` through the normal build workflow.</p>
+              </div>
+
+              <div class="pricing-actions">
+                <div class="pricing-action-card">
+                  <strong>Check Pricing</strong>
+                  <button id="pricing-check-button" class="button button--secondary" type="button" aria-describedby="pricing-check-help">Check Pricing</button>
+                  <p id="pricing-check-help">Checks pricing fields for missing or invalid information. Does not save changes.</p>
+                </div>
+                <div class="pricing-action-card">
+                  <strong>Review Pricing Changes</strong>
+                  <button id="pricing-review-button" class="button button--primary" type="button" aria-describedby="pricing-review-help">Review Pricing Changes</button>
+                  <p id="pricing-review-help">Shows exactly what will change before anything is published.</p>
+                </div>
+                <div class="pricing-action-card">
+                  <strong>Discard Pricing Changes</strong>
+                  <button id="pricing-reset-button" class="button button--secondary" type="button" aria-describedby="pricing-reset-help">Discard Pricing Changes</button>
+                  <p id="pricing-reset-help">Clears unsaved pricing edits and restores the loaded values. Published data is not affected.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="pricing-confirmation" id="pricing-confirmation" aria-labelledby="pricing-confirmation-heading" hidden>
+            <div class="section-heading">
+              <p class="section-heading__kicker">Confirmation</p>
+              <h2 id="pricing-confirmation-heading">Exact fields that will change</h2>
+            </div>
+
+            <p class="pricing-copy">Only the pricing fields below will be published. Status, buy mode, buy URL, files, descriptions, authors, artwork, and fulfillment settings stay untouched.</p>
+
+            <div class="pricing-summary-grid">
+              <div class="pricing-kv">
+                <strong>Product Title</strong>
+                <span id="pricing-confirm-title">Not loaded</span>
+              </div>
+              <div class="pricing-kv">
+                <strong>Product Slug</strong>
+                <span id="pricing-confirm-slug">-</span>
+              </div>
+              <div class="pricing-kv">
+                <strong>Current Effective Price</strong>
+                <span id="pricing-confirm-current-effective">$0.00</span>
+              </div>
+              <div class="pricing-kv">
+                <strong>Resulting Effective Price</strong>
+                <span id="pricing-confirm-next-effective">$0.00</span>
+              </div>
+              <div class="pricing-kv">
+                <strong>Current Sale State</strong>
+                <span id="pricing-confirm-current-sale-state">No active sale</span>
+              </div>
+              <div class="pricing-kv">
+                <strong>Proposed Sale State</strong>
+                <span id="pricing-confirm-next-sale-state">No active sale</span>
+              </div>
+            </div>
+
+            <p id="pricing-confirm-preservation" class="pricing-copy">Status, purchase mode, availability, files, artwork, descriptions, authors, and fulfillment settings will not change.</p>
+
+            <div id="pricing-confirmation-empty" class="pricing-copy">No pricing changes are queued yet.</div>
+            <table id="pricing-confirmation-table" hidden>
+              <thead>
+                <tr>
+                  <th scope="col">Field</th>
+                  <th scope="col">Current</th>
+                  <th scope="col">New</th>
+                </tr>
+              </thead>
+              <tbody id="pricing-confirmation-body"></tbody>
+            </table>
+
+            <div class="pricing-actions">
+              <div class="pricing-action-card">
+                <strong>Update Pricing</strong>
+                <button id="pricing-publish-button" class="button button--primary" type="button" aria-describedby="pricing-publish-help">Update Pricing</button>
+                <p id="pricing-publish-help">Updates the existing listing pricing fields and rebuilds the store through the normal workflow.</p>
+              </div>
+              <div class="pricing-action-card">
+                <strong>Continue Editing</strong>
+                <button id="pricing-cancel-review-button" class="button button--secondary" type="button" aria-describedby="pricing-cancel-help">Back to Pricing Edit</button>
+                <p id="pricing-cancel-help">Closes this review without publishing so you can keep editing.</p>
+              </div>
+            </div>
+            <p id="pricing-status" class="pricing-status" aria-live="polite"></p>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; 2026 Tobacco Road Games.</p>
+      <p>Pricing-only owner workflow for existing catalog listings.</p>
+    </footer>
+  </div>
+
+  <script src="../assets/js/owner-pricing-editor.js?v=20260709c"></script>
+</body>
+</html>

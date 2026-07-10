@@ -1,22 +1,11 @@
 import { dispatchPublishWorkflow } from "./github-dispatch.mjs";
 import {
-  CSRF_COOKIE_NAME,
-  SESSION_COOKIE_NAME,
-  getOwnerSecrets,
   isSafeFolderName,
   jsonResponse,
   normalizeFolderName,
-  normalizeSlug,
-  parseCookieHeader,
-  readCookie,
-  validateSameOriginRequest,
-  verifyCsrfToken,
-  verifySessionToken
+  normalizeSlug
 } from "./owner-auth.mjs";
-import {
-  getOwnerAccessConfig,
-  verifyOwnerAccessRequest
-} from "./owner-access.mjs";
+import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
 import {
   getFolderForSlug,
   hasFolderForSlug
@@ -73,17 +62,16 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
     }, 405);
   }
 
-  const authState = await verifyAuthenticatedPublishRequest(request, env);
+  const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
+    csrfExpiredMessage: "The publish form security token has expired. Reload the page and try again.",
+    csrfMismatchMessage: "The publish form security token did not match. Reload the page and try again.",
+    missingCsrfSecretMessage: "Owner publish is missing OWNER_CSRF_SECRET in Cloudflare.",
+    sameOriginMessage: "Publish requests must come from the Tobacco Road Games owner site."
+  });
   if (!authState.valid) {
     return jsonResponse({
       error: authState.userMessage
     }, authState.status);
-  }
-
-  if (!validateSameOriginRequest(request)) {
-    return jsonResponse({
-      error: "Publish requests must come from the Tobacco Road Games owner site."
-    }, 403);
   }
 
   const formData = await request.formData();
@@ -324,108 +312,6 @@ async function rollbackUploads(bucket, uploadedKeys) {
       // Best-effort cleanup only.
     }
   }
-}
-
-async function verifyAuthenticatedPublishRequest(request, env) {
-  const accessConfig = getOwnerAccessConfig(env);
-  if (accessConfig.enabled) {
-    return verifyAccessProtectedPublishRequest(request, env, accessConfig);
-  }
-
-  const secrets = getOwnerSecrets(env);
-  const sessionToken = readCookie(request, SESSION_COOKIE_NAME);
-  if (!secrets.sessionSecret || !sessionToken) {
-    return {
-      valid: false,
-      status: 401,
-      userMessage: "Your owner session is missing. Please sign in again."
-    };
-  }
-
-  const sessionState = await verifySessionToken(sessionToken, secrets.sessionSecret);
-  if (!sessionState.valid) {
-    return {
-      valid: false,
-      status: 401,
-      userMessage: "Your owner session is no longer valid. Please sign in again."
-    };
-  }
-
-  const csrfToken = request.headers.get("x-csrf-token") || "";
-  const csrfCookie = parseCookieHeader(request.headers.get("cookie")).get(CSRF_COOKIE_NAME) || "";
-  if (!csrfToken || !csrfCookie || csrfToken !== csrfCookie || !secrets.csrfSecret) {
-    return {
-      valid: false,
-      status: 403,
-      userMessage: "The publish form security token did not match. Reload the page and try again."
-    };
-  }
-
-  const csrfState = await verifyCsrfToken(csrfToken, sessionState.username, secrets.csrfSecret);
-  if (!csrfState.valid) {
-    return {
-      valid: false,
-      status: 403,
-      userMessage: "The publish form security token has expired. Reload the page and try again."
-    };
-  }
-
-  return {
-    valid: true,
-    username: sessionState.username
-  };
-}
-
-async function verifyAccessProtectedPublishRequest(request, env, accessConfig) {
-  if (!accessConfig.ready) {
-    return {
-      valid: false,
-      status: 503,
-      userMessage: "Owner access is partially configured. Add OWNER_ACCESS_TEAM_DOMAIN and OWNER_ACCESS_AUD together."
-    };
-  }
-
-  const accessState = await verifyOwnerAccessRequest(request, env);
-  if (!accessState.valid) {
-    return {
-      valid: false,
-      status: accessState.reason === "config_incomplete" ? 503 : 403,
-      userMessage: accessState.userMessage
-    };
-  }
-
-  const secrets = getOwnerSecrets(env);
-  if (!secrets.csrfSecret) {
-    return {
-      valid: false,
-      status: 503,
-      userMessage: "Owner publish is missing OWNER_CSRF_SECRET in Cloudflare."
-    };
-  }
-
-  const csrfToken = request.headers.get("x-csrf-token") || "";
-  const csrfCookie = parseCookieHeader(request.headers.get("cookie")).get(CSRF_COOKIE_NAME) || "";
-  if (!csrfToken || !csrfCookie || csrfToken !== csrfCookie) {
-    return {
-      valid: false,
-      status: 403,
-      userMessage: "The publish form security token did not match. Reload the page and try again."
-    };
-  }
-
-  const csrfState = await verifyCsrfToken(csrfToken, accessState.csrfSubject, secrets.csrfSecret);
-  if (!csrfState.valid) {
-    return {
-      valid: false,
-      status: 403,
-      userMessage: "The publish form security token has expired. Reload the page and try again."
-    };
-  }
-
-  return {
-    valid: true,
-    username: accessState.email || accessState.csrfSubject
-  };
 }
 
 function validateRequiredFile(file, label, expectedType, expectedExtension, options = {}) {

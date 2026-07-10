@@ -4,7 +4,7 @@
   "description": "Tobacco Road Games storefront and Pages Functions",
   "main": "releases.js",
   "scripts": {
-    "test": "node scripts/test-owner-intake.js && node scripts/test-storefront-cart.js && node scripts/test-cart-quote.js && node scripts/test-orders-d1.js && node scripts/test-cart-checkout.js"
+    "test": "node scripts/test-owner-intake.js && node scripts/test-owner-intake-ui.js && node scripts/test-owner-pricing-editor.js && node scripts/test-storefront-cart.js && node scripts/test-cart-quote.js && node scripts/test-orders-d1.js && node scripts/test-cart-checkout.js"
   },
   "repository": {
     "type": "git",

@@ -139,9 +139,45 @@
     }
 
     .intake-actions {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+    }
+
+    .intake-mode,
+    .intake-action-card {
+      padding: 0.95rem 1rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(10, 7, 5, 0.46);
+    }
+
+    .intake-mode strong,
+    .intake-action-card strong {
+      display: block;
+      color: var(--muted);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .intake-mode span,
+    .intake-action-card p {
+      display: block;
+      margin-top: 0.45rem;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    .intake-action-card {
+      display: grid;
+      gap: 10px;
+    }
+
+    .intake-action-card p {
+      margin: 0;
+      color: var(--muted);
     }
 
     .intake-picker-row {
@@ -237,7 +273,8 @@
 
     @media (max-width: 980px) {
       .intake-grid,
-      .intake-form-grid {
+      .intake-form-grid,
+      .intake-actions {
         grid-template-columns: 1fr;
       }
     }
@@ -258,6 +295,7 @@
         <a href="../index.html">Home</a>
         <a href="../store/">Store</a>
         <a href="product-intake.html" aria-current="page">Product Intake</a>
+        <a href="pricing.html">Pricing Editor</a>
         <a href="/owner/logout">Logout</a>
       </nav>
     </header>
@@ -271,6 +309,12 @@
           <p>Required files: one cover WebP, one preview WebP, and one product PDF. The intake stores them under the standard internal object keys after upload. Cover and preview become public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
+        <div class="intake-mode" aria-live="polite">
+          <strong>Current Mode</strong>
+          <span id="product-mode-indicator-title">Creating New Product</span>
+          <span id="product-mode-indicator-copy">Publishing will create a new listing from the form values and selected files.</span>
+        </div>
+
         <div class="intake-grid">
           <section class="intake-form" aria-labelledby="intake-form-heading">
             <div class="section-heading">
@@ -280,14 +324,14 @@
 
             <div class="intake-form-grid">
               <div class="intake-field intake-field--full">
-                <label for="product-existing-select">Edit Existing Listing</label>
+                <label for="product-existing-select">Load Existing Listing for Updates</label>
                 <div class="intake-picker-row">
                   <select id="product-existing-select" class="dock-input">
                     <option value="">Loading listings...</option>
                   </select>
-                  <button id="product-existing-load" class="button button--secondary" type="button">Load Listing</button>
+                  <button id="product-existing-load" class="button button--secondary" type="button">Load Existing Listing</button>
                 </div>
-                <p id="product-edit-mode" class="intake-help">Creating a new listing. Load an existing one to revise metadata or replace only the files you choose.</p>
+                <p id="product-edit-mode" class="intake-help">Stay in new-product mode to create a listing, or load an existing one when you want to update metadata or replace only selected files.</p>
               </div>
 
               <div class="intake-field">
@@ -516,8 +560,8 @@
               <ol class="intake-list">
                 <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
                 <li>For a new listing, choose the three required files: one cover WebP, one preview WebP, and the product PDF. For an existing listing, leave file inputs blank to keep the current assets or add only the replacements you want.</li>
-                <li>Use the generated metadata preview below as a final sanity check.</li>
-                <li>Click Publish. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
+                <li>Use Check to validate missing or invalid information, then use Review to inspect the generated metadata and asset plan.</li>
+                <li>Use Publish or Update only after the review looks right. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
               </ol>
             </div>
           </aside>
@@ -526,14 +570,32 @@
 
       <section class="store-section intake-output" aria-labelledby="intake-output-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Generated Output</p>
-          <h2 id="intake-output-heading">Publish preview + asset checklist</h2>
+          <p class="section-heading__kicker">Check And Review</p>
+          <h2 id="intake-output-heading">Review New Product</h2>
+          <p id="intake-output-copy" class="intake-help">Check for missing or invalid information, then review the generated catalog entry and file plan before publishing.</p>
         </div>
 
         <div class="intake-actions">
-          <button id="analyze-listing-button" class="button button--secondary" type="button">Analyze Listing</button>
-          <button id="publish-button" class="button button--primary" type="button">Publish Product</button>
-          <button id="reset-intake-button" class="button button--secondary" type="button">Reset Form</button>
+          <div class="intake-action-card">
+            <strong id="intake-check-label">Check New Listing</strong>
+            <button id="analyze-listing-button" class="button button--secondary" type="button" aria-describedby="intake-check-help">Check New Listing</button>
+            <p id="intake-check-help">Checks the form for missing or invalid information and refreshes advisory suggestions. Does not save changes.</p>
+          </div>
+          <div class="intake-action-card">
+            <strong id="intake-review-label">Review New Product</strong>
+            <button id="review-listing-button" class="button button--secondary" type="button" aria-describedby="intake-review-help">Review New Product</button>
+            <p id="intake-review-help">Shows the generated product data and file plan so you can confirm exactly what will be published.</p>
+          </div>
+          <div class="intake-action-card">
+            <strong id="intake-publish-label">Publish New Product</strong>
+            <button id="publish-button" class="button button--primary" type="button" aria-describedby="intake-publish-help">Publish New Product</button>
+            <p id="intake-publish-help">Creates a new listing or updates the loaded listing, uploads any selected replacement files, and rebuilds the store.</p>
+          </div>
+          <div class="intake-action-card">
+            <strong id="intake-reset-label">Clear New Product Form</strong>
+            <button id="reset-intake-button" class="button button--secondary" type="button" aria-describedby="intake-reset-help">Clear New Product Form</button>
+            <p id="intake-reset-help">Discards unsaved work from this form only. Published data is not affected.</p>
+          </div>
         </div>
         <p id="intake-status" class="intake-status" aria-live="polite"></p>
 
