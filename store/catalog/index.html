@@ -81,7 +81,7 @@
         <span>Category / Line</span>
         <select class="dock-input" data-filter-line>
           <option value="">All Categories and Lines</option>
-          <option value="fifth-edition-fantasy-roleplaying">Fifth Edition Fantasy Roleplaying</option><option value="other-games-and-experiments">Other Games &amp; Experiments</option><option value="tablecraft">Tablecraft</option>
+          <option value="fifth-edition-fantasy-roleplaying">Fifth Edition Fantasy Roleplaying</option><option value="other-games-experiments">Other Games &amp; Experiments</option><option value="other-games-and-experiments">Other Games &amp; Experiments</option><option value="tablecraft">Tablecraft</option>
         </select>
       </label>
 
@@ -97,7 +97,7 @@
         <span>Status</span>
         <select class="dock-input" data-filter-status>
           <option value="">All Statuses</option>
-          <option value="coming-soon">Coming Soon</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-available">Preview Available</option>
+          <option value="available-direct">Available Direct</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-available">Preview Available</option>
         </select>
       </label>
 
@@ -113,11 +113,19 @@
         <span>Price Type</span>
         <select class="dock-input" data-filter-price-type>
           <option value="">All Price Types</option>
-          <option value="coming-soon">Coming Soon</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-only">Preview Only</option>
+          <option value="cart">Cart</option><option value="pay-what-you-want">Pay What You Want</option><option value="preview-only">Preview Only</option>
         </select>
       </label>
 
       
+      <label class="catalog-control catalog-control--toggle">
+        <span>Sale Filter</span>
+        <span class="catalog-toggle">
+          <input type="checkbox" data-filter-sale>
+          <span>On Sale Only</span>
+        </span>
+      </label>
+    
 
       <label class="catalog-control">
         <span>Sort</span>
@@ -146,14 +154,14 @@
         
         <div class="product-card-grid" data-store-grid>
           
-    <article class="product-card" id="product-agency" data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="coming-soon" data-format="pdf" data-price-type="coming-soon" data-price-cents="499" data-release="1782259200000" data-updated="1782259200000" data-sale-active="false" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft coming soon coming soon">
+    <article class="product-card" id="product-agency" data-product-card="true" data-slug="agency" data-title="agency" data-author="rv-sawyer" data-system="system-agnotic" data-line="tablecraft" data-series="tablecraft" data-status="available-direct" data-format="pdf" data-price-type="cart" data-price-cents="300" data-release="1782259200000" data-updated="1782259200000" data-sale-active="true" data-search="agency share the wheel or crash the game rv sawyer system agnotic tablecraft tablecraft tablecraft available direct cart">
       <div class="product-card__media">
         <img src="/product-assets/agency/cover.webp" alt="Agency thumbnail">
       </div>
       <div class="product-card__body">
         <div class="product-card__topline">
-          <span class="status-badge status-badge--coming-soon">Coming Soon</span>
-          <span class="product-card__price">$4.99</span>
+          <span class="status-badge status-badge--available-direct">Available Direct</span>
+          <span class="product-card__price">$3.00</span>
         </div>
         <h3 class="product-card__title">Agency</h3>
         <p class="product-card__subtitle">Share the wheel or crash the game</p>
@@ -161,20 +169,20 @@
         <p class="product-card__meta">System Agnotic | Tablecraft</p>
         <p class="product-card__meta">PDF</p>
         <div class="product-card__actions">
-          
+          <button type="button" class="button button--primary product-card__button" data-cart-add="agency">Add to Cart</button>
           <a class="button button--secondary product-card__button" href="/store/products/agency/">View Product</a>
         </div>
       </div>
     </article>
   
-    <article class="product-card" id="product-circle-of-cinder" data-product-card="true" data-slug="circle-of-cinder" data-title="circle of cinder" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-and-experiments" data-series="" data-status="preview-available" data-format="pdf" data-price-type="preview-only" data-price-cents="-1" data-release="1781654400000" data-updated="1781654400000" data-sale-active="false" data-search="circle of cinder a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview preview available preview only">
+    <article class="product-card" id="product-circle-of-cinder" data-product-card="true" data-slug="circle-of-cinder" data-title="circle of cinder" data-author="rv-sawyer" data-system="system-tbd" data-line="other-games-experiments" data-series="" data-status="available-direct" data-format="pdf" data-price-type="cart" data-price-cents="200" data-release="1781654400000" data-updated="1781654400000" data-sale-active="true" data-search="circle of cinder a tobacco road games catalog preview rv sawyer system tbd other games &amp; experiments  preview available direct cart">
       <div class="product-card__media">
         <img src="/product-assets/circle-of-cinder/cover.webp" alt="Circle of Cinder thumbnail">
       </div>
       <div class="product-card__body">
         <div class="product-card__topline">
-          <span class="status-badge status-badge--preview-available">Preview Available</span>
-          <span class="product-card__price">Preview Available</span>
+          <span class="status-badge status-badge--available-direct">Available Direct</span>
+          <span class="product-card__price">$2.00</span>
         </div>
         <h3 class="product-card__title">Circle of Cinder</h3>
         <p class="product-card__subtitle">A Tobacco Road Games catalog preview</p>
@@ -182,7 +190,7 @@
         <p class="product-card__meta">System TBD | Other Games &amp; Experiments</p>
         <p class="product-card__meta">PDF</p>
         <div class="product-card__actions">
-          
+          <button type="button" class="button button--primary product-card__button" data-cart-add="circle-of-cinder">Add to Cart</button>
           <a class="button button--secondary product-card__button" href="/store/products/circle-of-cinder/">View Product</a>
         </div>
       </div>
