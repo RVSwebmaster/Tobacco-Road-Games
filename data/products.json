@@ -519,7 +519,7 @@
   {
     "slug": "ringbound",
     "title": "Ringbound",
-    "subtitle": "A Tobacco Road Games catalog preview",
+    "subtitle": "A Tobacco Road Games Charater Class",
     "featured": false,
     "authors": [
       "RV Sawyer"
@@ -528,17 +528,17 @@
       "rv-sawyer"
     ],
     "publisher": "Tobacco Road Games",
-    "gameSystem": "System TBD",
-    "gameSystemSlug": "system-tbd",
-    "productLine": "Other Games & Experiments",
-    "productLineSlug": "other-games-experiments",
+    "gameSystem": "5e Fantasy Role Playing",
+    "gameSystemSlug": "5e-fantasy-role-playing",
+    "productLine": "5e Fantasy Roleplaying",
+    "productLineSlug": "5e-fantasy-roleplaying",
     "format": [
       "PDF"
     ],
     "fileList": [
       "PDF details coming soon"
     ],
-    "pageCount": null,
+    "pageCount": 24,
     "price": "",
     "priceCents": null,
     "minimumPrice": "",
@@ -576,7 +576,7 @@
     "legalNote": "",
     "version": "2026 catalog preview",
     "releaseDate": "2026-06-17",
-    "lastUpdated": "2026-06-17",
+    "lastUpdated": "2026-07-10",
     "relatedProducts": [],
     "libraryEligible": true,
     "updateEligible": true,

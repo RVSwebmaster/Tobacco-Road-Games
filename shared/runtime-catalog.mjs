@@ -151,7 +151,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "currency": "USD",
     "effectivePriceCents": null,
     "fulfillmentEligible": true,
-    "lastUpdated": "2026-06-17",
+    "lastUpdated": "2026-07-10",
     "priceCents": null,
     "saleActive": false,
     "saleEnabled": false,

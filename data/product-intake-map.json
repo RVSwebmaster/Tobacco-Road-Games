@@ -120,12 +120,12 @@
       "slug": "ringbound",
       "folder": "ringbound",
       "title": "Ringbound",
-      "subtitle": "A Tobacco Road Games catalog preview",
+      "subtitle": "A Tobacco Road Games Charater Class",
       "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-experiments",
+      "gameSystem": "5e Fantasy Role Playing",
+      "gameSystemSlug": "5e-fantasy-role-playing",
+      "productLine": "5e Fantasy Roleplaying",
+      "productLineSlug": "5e-fantasy-roleplaying",
       "format": [
         "PDF"
       ],
