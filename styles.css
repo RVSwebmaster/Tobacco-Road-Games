@@ -1310,13 +1310,18 @@ h4 {
   line-height: 1.7;
 }
 
+.bookshelf-stack {
+  display: grid;
+  gap: 18px;
+}
+
 .bookshelf-grid {
-  --bookshelf-spine-width: 70px;
+  --bookshelf-spine-width: 60px;
   --bookshelf-cover-width: clamp(188px, 16vw, 236px);
   position: relative;
   display: grid;
-  grid-template-columns: repeat(10, 70px);
-  gap: 14px;
+  grid-template-columns: repeat(12, 60px);
+  gap: 10px;
   align-items: end;
   padding: 16px 18px 20px;
   border: 1px solid rgba(242, 216, 170, 0.14);
@@ -1332,7 +1337,7 @@ h4 {
 }
 
 .bookshelf-grid--compact {
-  grid-template-columns: repeat(3, 70px);
+  grid-template-columns: repeat(3, 60px);
   width: fit-content;
   max-width: 100%;
 }

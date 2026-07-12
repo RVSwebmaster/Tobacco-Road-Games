@@ -13,7 +13,7 @@ const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260712-shelf10";
+const CACHE_BUST = "20260712-shelf12";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -980,11 +980,11 @@ function renderStoreBrowser(products, indexes, options = {}) {
               ${shelfDescription ? `<p>${escapeHtml(shelfDescription)}</p>` : ""}
             </div>
           ` : ""}
-          <div class="bookshelf-grid" data-store-shelf>
-            ${products.map((product) => renderBookshelfBook(product, {
+          <div class="bookshelf-stack" data-store-shelf>
+            ${renderBookshelfRows(products, (product) => renderBookshelfBook(product, {
               withDataset: true,
               forceOpenRight: forceOpenRightSlugSet.has(product.slug)
-            })).join("")}
+            }))}
           </div>
         </section>
       ` : ""}
@@ -1126,6 +1126,14 @@ function renderBookshelfBook(product, options = {}) {
       </span>
     </a>
   `;
+}
+
+function renderBookshelfRows(products, renderBook) {
+  const shelves = [];
+  for (let index = 0; index < products.length; index += 12) {
+    shelves.push(`<div class="bookshelf-grid">${products.slice(index, index + 12).map(renderBook).join("")}</div>`);
+  }
+  return shelves.join("");
 }
 
 function renderProductCard(product, options = {}) {
@@ -1308,8 +1316,8 @@ function renderAuthorProfilePage(author) {
             <h2 id="author-products-heading">Author Products</h2>
           </div>
           ${author.products.length ? `
-            <div class="bookshelf-grid author-product-bookshelf">
-              ${sortProducts(author.products, "title").map((product) => renderBookshelfBook(product)).join("")}
+            <div class="bookshelf-stack author-product-bookshelf">
+              ${renderBookshelfRows(sortProducts(author.products, "title"), (product) => renderBookshelfBook(product))}
             </div>
           ` : `
             <div class="about__panel">

@@ -192,7 +192,20 @@
       shelfItems.forEach((item) => {
         item.hidden = !visibleSlugs.has(item.dataset.slug);
       });
-      sortedShelfItems.forEach((item) => shelf.appendChild(item));
+      const hiddenShelfItems = shelfItems.filter((item) => !visibleSlugs.has(item.dataset.slug));
+      shelf.replaceChildren();
+      for (let index = 0; index < sortedShelfItems.length; index += 12) {
+        const shelfRow = document.createElement("div");
+        shelfRow.className = "bookshelf-grid";
+        sortedShelfItems.slice(index, index + 12).forEach((item) => shelfRow.appendChild(item));
+        shelf.appendChild(shelfRow);
+      }
+      if (hiddenShelfItems.length) {
+        const holdingArea = document.createElement("div");
+        holdingArea.hidden = true;
+        hiddenShelfItems.forEach((item) => holdingArea.appendChild(item));
+        shelf.appendChild(holdingArea);
+      }
     }
 
     if (grid) {
