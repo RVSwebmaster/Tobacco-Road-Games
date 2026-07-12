@@ -17,7 +17,7 @@ const CACHE_BUST = "20260712-video2";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
-const BOOKSHELF_LIMIT = 10;
+const BOOKS_PER_SHELF = 10;
 
 const STATUS_LABELS = {
   "available-direct": "Available Direct",
@@ -931,7 +931,6 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
   }
 
   const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
-  const shelfProducts = products.slice(0, BOOKSHELF_LIMIT);
 
   return `
     <section class="store-section" aria-labelledby="${escapeAttribute(id)}">
@@ -940,10 +939,10 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
         <h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2>
         <p>${escapeHtml(description)}</p>
       </div>
-      <div class="bookshelf-grid">
-        ${shelfProducts.map((product) => renderBookshelfBook(product, {
+      <div class="bookshelf-stack">
+        ${renderBookshelfRows(products, (product) => renderBookshelfBook(product, {
           forceOpenRight: forceOpenRightSlugSet.has(product.slug)
-        })).join("")}
+        }))}
       </div>
     </section>
   `;
@@ -964,7 +963,6 @@ function renderStoreBrowser(products, indexes, options = {}) {
   } = options;
   const initials = includeTitleIndex ? buildTitleIndex(products) : [];
   const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
-  const shelfProducts = products.slice(0, BOOKSHELF_LIMIT);
 
   return `
     <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}"${showShelf ? ' data-store-view="shelf" data-store-has-views="true"' : ""}>
@@ -992,11 +990,11 @@ function renderStoreBrowser(products, indexes, options = {}) {
               ${shelfDescription ? `<p>${escapeHtml(shelfDescription)}</p>` : ""}
             </div>
           ` : ""}
-          <div class="bookshelf-grid" data-store-shelf>
-            ${shelfProducts.map((product) => renderBookshelfBook(product, {
+          <div class="bookshelf-stack" data-store-shelf>
+            ${renderBookshelfRows(products, (product) => renderBookshelfBook(product, {
               withDataset: true,
               forceOpenRight: forceOpenRightSlugSet.has(product.slug)
-            })).join("")}
+            }))}
           </div>
         </section>
       ` : ""}
@@ -1898,6 +1896,14 @@ function pickExistingPath(...pathsToTry) {
     }
   }
   return "";
+}
+
+function renderBookshelfRows(products, renderBook) {
+  const rows = [];
+  for (let index = 0; index < products.length; index += BOOKS_PER_SHELF) {
+    rows.push(`<div class="bookshelf-grid">${products.slice(index, index + BOOKS_PER_SHELF).map(renderBook).join("")}</div>`);
+  }
+  return rows.join("");
 }
 
 function sitePathExists(sitePath) {
