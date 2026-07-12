@@ -393,7 +393,7 @@ function renderStoreHome(products, indexes) {
   const featured = chooseFeaturedProduct(products);
   const featuredShelf = chooseFeaturedProducts(products);
   const newReleases = chooseNewReleases(products);
-  const browserProducts = sortProducts(products, "newest");
+  const browserProducts = sortProducts(products, "title");
 
   return renderLayout({
     pageTitle: `${STORE_TITLE} | Digital Roleplaying Titles and Previews`,
@@ -476,7 +476,7 @@ function renderStoreHome(products, indexes) {
             browserId: "store-home-browser",
             showShelf: true,
             includeTitleIndex: false,
-            defaultSort: "newest",
+            defaultSort: "title",
             countLabel: "titles currently shown",
             shelfHeading: "Bookshelf View",
             shelfDescription: "Hover or focus a spine to turn it toward the cover, then open the full product page.",
@@ -1820,11 +1820,11 @@ function chooseFeaturedProduct(products) {
 }
 
 function chooseFeaturedProducts(products) {
-  return sortProducts(products.filter((product) => product.featured), "updated");
+  return sortProducts(products.filter((product) => product.featured), "title");
 }
 
 function chooseNewReleases(products) {
-  return sortProducts(products, "newest").slice(0, 8);
+  return sortProducts(sortProducts(products, "newest").slice(0, 8), "title");
 }
 
 function sortProducts(products, mode) {
