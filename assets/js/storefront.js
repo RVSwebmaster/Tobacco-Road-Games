@@ -196,8 +196,10 @@
       shelf.replaceChildren();
       for (let index = 0; index < sortedShelfItems.length; index += 12) {
         const shelfRow = document.createElement("div");
+        const rowItems = sortedShelfItems.slice(index, index + 12);
         shelfRow.className = "bookshelf-grid";
-        sortedShelfItems.slice(index, index + 12).forEach((item) => shelfRow.appendChild(item));
+        shelfRow.style.setProperty("--shelf-items", String(rowItems.length));
+        rowItems.forEach((item) => shelfRow.appendChild(item));
         shelf.appendChild(shelfRow);
       }
       if (hiddenShelfItems.length) {

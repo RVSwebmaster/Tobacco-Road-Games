@@ -1320,7 +1320,7 @@ h4 {
   --bookshelf-cover-width: clamp(188px, 16vw, 236px);
   position: relative;
   display: grid;
-  grid-template-columns: repeat(12, 60px);
+  grid-template-columns: repeat(var(--shelf-items, 12), 60px);
   gap: 10px;
   align-items: end;
   padding: 16px 18px 20px;
@@ -1334,6 +1334,8 @@ h4 {
     0 18px 34px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   isolation: isolate;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .bookshelf-grid--compact {

@@ -1131,7 +1131,8 @@ function renderBookshelfBook(product, options = {}) {
 function renderBookshelfRows(products, renderBook) {
   const shelves = [];
   for (let index = 0; index < products.length; index += 12) {
-    shelves.push(`<div class="bookshelf-grid">${products.slice(index, index + 12).map(renderBook).join("")}</div>`);
+    const shelfProducts = products.slice(index, index + 12);
+    shelves.push(`<div class="bookshelf-grid" style="--shelf-items: ${shelfProducts.length}">${shelfProducts.map(renderBook).join("")}</div>`);
   }
   return shelves.join("");
 }
