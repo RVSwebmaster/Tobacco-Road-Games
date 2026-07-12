@@ -44,11 +44,11 @@
           return;
         }
 
-        const rightmost = autoEdgeCandidates.reduce((candidate, item) => {
-          return item.offsetLeft > candidate.offsetLeft ? item : candidate;
-        }, autoEdgeCandidates[0]);
+        const inwardOpeningItems = rowItems.length >= 11
+          ? autoEdgeCandidates.slice(-2)
+          : autoEdgeCandidates.slice(-1);
 
-        rightmost.classList.add("bookshelf-book--edge-right");
+        inwardOpeningItems.forEach((item) => item.classList.add("bookshelf-book--edge-right"));
       });
     });
   };

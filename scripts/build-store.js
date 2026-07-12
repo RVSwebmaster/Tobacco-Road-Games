@@ -13,7 +13,7 @@ const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260712-shelf12-fit";
+const CACHE_BUST = "20260712-shelf12-edges";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -471,7 +471,6 @@ function renderStoreHome(products, indexes) {
             countLabel: "titles currently shown",
             shelfHeading: "Bookshelf View",
             shelfDescription: "Hover or focus a spine to turn it toward the cover, then open the full product page.",
-            forceOpenRightSlugs: ["sirrocans", "janni"],
             gridHeading: "Catalog View",
             gridDescription: "The same filtered titles stay available as cards for touch devices, scanning, and no-hover browsing."
           })}
@@ -1362,6 +1361,7 @@ function renderAuthorProfilePage(author) {
           </form>
           <div class="discussion-list" data-discussion-list><p>Loading discussions…</p></div>
         </section>
+        <script src="/assets/js/storefront.js?v=${CACHE_BUST}" defer></script>
         <script src="/assets/js/author-discussions.js?v=${CACHE_BUST}" defer></script>
       </main>
     `
