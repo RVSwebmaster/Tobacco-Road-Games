@@ -83,6 +83,26 @@
       ]
     },
     {
+      "folder": "janni",
+      "slug": "janni",
+      "title": "janni",
+      "subtitle": "A Mortal Kind of Immortality",
+      "featured": false,
+      "gameSystem": "5E Compatible",
+      "gameSystemSlug": "5e-compatible",
+      "productLine": "Fifth Edition Fantasy Roleplaying",
+      "productLineSlug": "fifth-edition-fantasy-roleplaying",
+      "format": [
+        "PDF"
+      ],
+      "tags": [
+        "Fantasy",
+        "Supplement",
+        "Dungeons & Dragons",
+        "SRD 5.1"
+      ]
+    },
+    {
       "slug": "mouthy-monsters",
       "folder": "mouthy-monsters",
       "title": "Mouthy Monsters",
