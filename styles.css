@@ -2190,7 +2190,7 @@ body.view-section .site-footer {
 
 .product-card__video video {
   display: block;
-  width: min(50%, 360px);
+  width: min(25%, 180px);
   aspect-ratio: 16 / 9;
   height: auto;
   margin: 0.75rem auto 0;
@@ -2201,6 +2201,6 @@ body.view-section .site-footer {
 
 @media (max-width: 640px) {
   .product-card__video video {
-    width: min(100%, 360px);
+    width: min(50%, 180px);
   }
 }
