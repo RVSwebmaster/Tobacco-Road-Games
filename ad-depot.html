@@ -72,9 +72,17 @@
           <p>These are public advertising files. Right-click a file link and choose Copy link address.</p>
         </div>
 
-        <ul>
+        <ul id="ad-video-list">
           <li><a href="/media/ads/siroccan-ad.mp4">siroccan-ad.mp4</a></li>
+          <li><a href="/media/ads/janni-promo.mp4">janni-promo.mp4</a></li>
         </ul>
+        <script>
+          fetch('/api/ads').then(r => r.ok ? r.json() : {videos: []}).then(({videos = []}) => {
+            const list = document.querySelector('#ad-video-list');
+            const existing = new Set([...list.querySelectorAll('a')].map(a => a.getAttribute('href')));
+            videos.forEach(({file}) => { const href = `/ad-media/${file}`; if (existing.has(href)) return; const li = document.createElement('li'); const a = document.createElement('a'); a.href = href; a.textContent = file; li.append(a); list.append(li); });
+          }).catch(() => {});
+        </script>
       </section>
     </main>
 

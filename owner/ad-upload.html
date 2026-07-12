@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Advertising Video Upload | Tobacco Road Games</title><link rel="stylesheet" href="/styles.css">
+<style>.upload-shell{max-width:760px;margin:4rem auto;padding:0 1.25rem}.upload-card{border:1px solid #6e5a3a;background:#17130f;padding:2rem;border-radius:10px}.upload-card label{display:block;margin:1rem 0 .35rem}.upload-card input[type=text],.upload-card input[type=file]{box-sizing:border-box;width:100%;padding:.8rem;background:#0d0b09;color:#fff;border:1px solid #8a7655;border-radius:5px}.upload-card button{margin-top:1.25rem;padding:.8rem 1.2rem;font-weight:700}.upload-card progress{width:100%;margin-top:1rem}.fine{opacity:.8;font-size:.92rem}.status{min-height:1.5em;margin-top:1rem}.result a{overflow-wrap:anywhere}</style></head>
+<body><main class="upload-shell"><section class="upload-card"><p class="eyebrow">Owner tools</p><h1>Advertising Video Upload</h1><p>Upload a public MP4 and receive a direct advertising URL. Files appear automatically in the public ad depot.</p>
+<form id="ad-upload-form"><label for="video">MP4 video</label><input id="video" name="video" type="file" accept="video/mp4,.mp4" required>
+<label for="filename">Public filename</label><input id="filename" name="filename" type="text" pattern="[a-z0-9][a-z0-9-]*\.mp4" placeholder="my-promo.mp4" required><p class="fine">Lowercase letters, numbers, and hyphens; maximum 100 MB.</p>
+<label><input id="overwrite" type="checkbox"> Replace an existing file with the same name</label>
+<button id="upload-button" type="submit">Upload video</button><progress id="upload-progress" max="100" value="0" hidden></progress><p id="upload-status" class="status" role="status" aria-live="polite"></p><p id="upload-result" class="result"></p></form>
+<p><a href="/ad-depot">Open public ad depot</a> · <a href="/owner/product-intake.html">Product intake</a> · <a href="/owner/logout">Log out</a></p></section></main><script src="/assets/js/owner-ad-upload.js"></script></body></html>
