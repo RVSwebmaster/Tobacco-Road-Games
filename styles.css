@@ -2190,15 +2190,17 @@ body.view-section .site-footer {
 
 .product-card__video video {
   display: block;
-  width: 50%;
-  max-height: 320px;
+  width: min(50%, 360px);
+  aspect-ratio: 16 / 9;
+  height: auto;
   margin: 0.75rem auto 0;
   border-radius: 8px;
   background: #000;
+  object-fit: contain;
 }
 
 @media (max-width: 640px) {
   .product-card__video video {
-    width: 100%;
+    width: min(100%, 360px);
   }
 }

@@ -133,7 +133,7 @@
       "/assets/products/spriggans/preview-03.webp"
     ],
     "previewPdf": "/assets/products/spriggans/sample.pdf",
-    "teaserVideo": "/media/ads/janni-promo.mp4",
+    "teaserVideo": "",
     "buyMode": "preview-only",
     "buyUrl": "",
     "fulfillmentNote": "",
@@ -857,7 +857,7 @@
     "frontCoverImage": "/product-assets/janni/cover.webp",
     "previewImages": [],
     "previewPdf": "",
-    "teaserVideo": "",
+    "teaserVideo": "/media/ads/janni-promo.mp4",
     "buyMode": "cart",
     "buyUrl": "",
     "fulfillmentNote": "",
