@@ -108,7 +108,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "slug": "janni",
     "status": "available-direct",
-    "title": "janni",
+    "title": "Janni",
     "updateEligible": true,
     "version": "1.0"
   },
