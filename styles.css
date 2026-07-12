@@ -865,7 +865,9 @@ h4 {
 }
 
 .store-spotlight__media img {
-  min-height: 100%;
+  width: 75%;
+  min-height: 0;
+  margin: 0 auto;
 }
 
 .store-spotlight__copy {
