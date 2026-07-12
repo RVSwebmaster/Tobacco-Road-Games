@@ -199,7 +199,10 @@
         const rowItems = sortedShelfItems.slice(index, index + 12);
         shelfRow.className = "bookshelf-grid";
         shelfRow.style.setProperty("--shelf-items", String(rowItems.length));
-        rowItems.forEach((item) => shelfRow.appendChild(item));
+        rowItems.forEach((item, rowIndex) => {
+          item.classList.toggle("bookshelf-book--edge-right", rowItems.length >= 11 && rowIndex >= rowItems.length - 2);
+          shelfRow.appendChild(item);
+        });
         shelf.appendChild(shelfRow);
       }
       if (hiddenShelfItems.length) {

@@ -13,7 +13,7 @@ const AUTHORS_PATH = path.join(ROOT, "data", "authors.js");
 const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
-const CACHE_BUST = "20260712-shelf12-edges";
+const CACHE_BUST = "20260712-shelf12-hinges";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -980,9 +980,10 @@ function renderStoreBrowser(products, indexes, options = {}) {
             </div>
           ` : ""}
           <div class="bookshelf-stack" data-store-shelf>
-            ${renderBookshelfRows(products, (product) => renderBookshelfBook(product, {
+            ${renderBookshelfRows(products, (product, shelfIndex) => renderBookshelfBook(product, {
               withDataset: true,
-              forceOpenRight: forceOpenRightSlugSet.has(product.slug)
+              forceOpenRight: forceOpenRightSlugSet.has(product.slug),
+              edgeRight: shelfIndex >= 10
             }))}
           </div>
         </section>
@@ -1095,13 +1096,14 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
 }
 
 function renderBookshelfBook(product, options = {}) {
-  const { withDataset = false, forceOpenRight = false } = options;
+  const { withDataset = false, forceOpenRight = false, edgeRight = false } = options;
   const dataset = withDataset ? renderProductDatasetAttributes(product) : "";
   const forceOpenRightAttribute = forceOpenRight ? ' data-bookshelf-force-right="true"' : "";
+  const edgeClass = edgeRight ? " bookshelf-book--edge-right" : "";
   const authorName = product.authors.join(", ") || product.publisher;
 
   return `
-    <a class="bookshelf-book" href="${product.url}"${forceOpenRightAttribute} ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
+    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">${escapeHtml(product.statusLabel)}</span>
@@ -1317,7 +1319,7 @@ function renderAuthorProfilePage(author) {
           </div>
           ${author.products.length ? `
             <div class="bookshelf-stack author-product-bookshelf">
-              ${renderBookshelfRows(sortProducts(author.products, "title"), (product) => renderBookshelfBook(product))}
+              ${renderBookshelfRows(sortProducts(author.products, "title"), (product, shelfIndex) => renderBookshelfBook(product, { edgeRight: shelfIndex >= 10 }))}
             </div>
           ` : `
             <div class="about__panel">
