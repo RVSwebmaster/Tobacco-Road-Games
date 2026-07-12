@@ -1308,8 +1308,8 @@ function renderAuthorProfilePage(author) {
             <h2 id="author-products-heading">Author Products</h2>
           </div>
           ${author.products.length ? `
-            <div class="product-card-grid">
-              ${author.products.map((product) => renderProductCard(product)).join("")}
+            <div class="bookshelf-grid author-product-bookshelf">
+              ${sortProducts(author.products, "title").map((product) => renderBookshelfBook(product)).join("")}
             </div>
           ` : `
             <div class="about__panel">
