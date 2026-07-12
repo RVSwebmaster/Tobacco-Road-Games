@@ -1313,6 +1313,9 @@ h4 {
 .bookshelf-stack {
   display: grid;
   gap: 18px;
+  justify-items: start;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .bookshelf-grid {
