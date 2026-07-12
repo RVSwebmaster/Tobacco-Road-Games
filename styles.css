@@ -1661,7 +1661,8 @@ h4 {
 }
 
 .preview-feature {
-  width: calc((100% - 18px) * 0.56);
+  width: fit-content;
+  max-width: calc((100% - 18px) * 0.56);
   margin: 0;
   overflow: hidden;
   border: 1px solid rgba(242, 216, 170, 0.16);
@@ -1671,8 +1672,11 @@ h4 {
 
 .preview-feature img {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: min(78vh, 760px);
   height: auto;
+  object-fit: contain;
 }
 
 .preview-note {
@@ -1969,6 +1973,7 @@ body.view-section .site-footer {
 
   .preview-feature {
     width: 100%;
+    max-width: 100%;
   }
 
   .store-browser__view-switcher {

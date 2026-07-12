@@ -17,6 +17,7 @@ const CACHE_BUST = "20260712-video2";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
+const BOOKSHELF_LIMIT = 10;
 
 const STATUS_LABELS = {
   "available-direct": "Available Direct",
@@ -930,6 +931,7 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
   }
 
   const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
+  const shelfProducts = products.slice(0, BOOKSHELF_LIMIT);
 
   return `
     <section class="store-section" aria-labelledby="${escapeAttribute(id)}">
@@ -939,7 +941,7 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
         <p>${escapeHtml(description)}</p>
       </div>
       <div class="bookshelf-grid">
-        ${products.map((product) => renderBookshelfBook(product, {
+        ${shelfProducts.map((product) => renderBookshelfBook(product, {
           forceOpenRight: forceOpenRightSlugSet.has(product.slug)
         })).join("")}
       </div>
@@ -962,6 +964,7 @@ function renderStoreBrowser(products, indexes, options = {}) {
   } = options;
   const initials = includeTitleIndex ? buildTitleIndex(products) : [];
   const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
+  const shelfProducts = products.slice(0, BOOKSHELF_LIMIT);
 
   return `
     <div class="store-browser" data-store-browser="${escapeAttribute(browserId)}"${showShelf ? ' data-store-view="shelf" data-store-has-views="true"' : ""}>
@@ -990,7 +993,7 @@ function renderStoreBrowser(products, indexes, options = {}) {
             </div>
           ` : ""}
           <div class="bookshelf-grid" data-store-shelf>
-            ${products.map((product) => renderBookshelfBook(product, {
+            ${shelfProducts.map((product) => renderBookshelfBook(product, {
               withDataset: true,
               forceOpenRight: forceOpenRightSlugSet.has(product.slug)
             })).join("")}
