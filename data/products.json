@@ -48,7 +48,7 @@
       "/assets/products/sirrocans/preview-02.webp"
     ],
     "previewPdf": "",
-    "teaserVideo": "/media/ads/siroccan-ad.mp4",
+    "teaserVideo": "",
     "buyMode": "preview-only",
     "buyUrl": "",
     "fulfillmentNote": "",
@@ -857,7 +857,7 @@
     "frontCoverImage": "/product-assets/janni/cover.webp",
     "previewImages": [],
     "previewPdf": "",
-    "teaserVideo": "/media/ads/janni-promo.mp4",
+    "teaserVideo": "",
     "buyMode": "cart",
     "buyUrl": "",
     "fulfillmentNote": "",
