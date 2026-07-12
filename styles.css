@@ -1308,11 +1308,6 @@ h4 {
   line-height: 1.7;
 }
 
-.bookshelf-stack {
-  display: grid;
-  gap: 18px;
-}
-
 .bookshelf-grid {
   --bookshelf-spine-width: clamp(70px, 6.3vw, 94px);
   --bookshelf-cover-width: clamp(188px, 16vw, 236px);
