@@ -455,7 +455,7 @@ function renderStoreHome(products, indexes) {
           title: "Featured Shelf",
           description: "Manually chosen titles stay at eye level here so the shelf can spotlight work Tobacco Road Games wants front and center.",
           products: featuredShelf,
-          forceOpenRightSlugs: ["sirrocans"]
+          forceOpenRightSlugs: ["sirrocans", "janni"]
         }) : ""}
 
         ${newReleases.length ? renderBookshelfSection({
@@ -480,7 +480,7 @@ function renderStoreHome(products, indexes) {
             countLabel: "titles currently shown",
             shelfHeading: "Bookshelf View",
             shelfDescription: "Hover or focus a spine to turn it toward the cover, then open the full product page.",
-            forceOpenRightSlugs: ["sirrocans"],
+            forceOpenRightSlugs: ["sirrocans", "janni"],
             gridHeading: "Catalog View",
             gridDescription: "The same filtered titles stay available as cards for touch devices, scanning, and no-hover browsing."
           })}
