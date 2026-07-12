@@ -1814,7 +1814,7 @@ function chooseFeaturedProducts(products) {
 }
 
 function chooseNewReleases(products) {
-  return sortProducts(products, "newest").slice(0, 8);
+  return sortProducts(products, "newest").slice(0, 3);
 }
 
 function sortProducts(products, mode) {
