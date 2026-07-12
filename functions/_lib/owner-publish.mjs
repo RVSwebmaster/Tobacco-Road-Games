@@ -206,6 +206,7 @@ function parsePublishForm(formData) {
       fileList: [],
       format: formatList,
       fulfillmentNote: String(formData.get("fulfillmentNote") || "").trim(),
+      teaserVideo: normalizeTeaserVideo(formData.get("teaserVideo")),
       gameSystem: metadata.gameSystem,
       gameSystemSlug: String(formData.get("gameSystemSlug") || "").trim(),
       lastUpdated: String(formData.get("lastUpdated") || "").trim(),
@@ -280,6 +281,18 @@ function parsePublishForm(formData) {
     valid: true,
     payload
   };
+}
+
+function normalizeTeaserVideo(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, "https://tobaccoroadgames.com");
+    if (url.hostname !== "tobaccoroadgames.com" || !url.pathname.toLowerCase().endsWith(".mp4")) return "";
+    return url.pathname;
+  } catch {
+    return "";
+  }
 }
 
 async function uploadRequiredProductFiles(bucket, payload) {

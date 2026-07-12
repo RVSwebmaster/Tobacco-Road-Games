@@ -2174,3 +2174,25 @@ body.view-section .site-footer {
     transition-duration: 120ms;
   }
 }
+.product-card__video {
+  margin-top: 0.85rem;
+}
+
+.product-card__video summary {
+  cursor: pointer;
+  list-style: none;
+  text-align: center;
+}
+
+.product-card__video summary::-webkit-details-marker {
+  display: none;
+}
+
+.product-card__video video {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  margin-top: 0.75rem;
+  border-radius: 8px;
+  background: #000;
+}

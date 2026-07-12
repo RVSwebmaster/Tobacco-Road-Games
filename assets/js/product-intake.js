@@ -54,6 +54,7 @@
     features: document.getElementById("product-features"),
     tags: document.getElementById("product-tags"),
     fulfillmentNote: document.getElementById("product-fulfillment-note"),
+    teaserVideo: document.getElementById("product-teaser-video"),
     creationMethod: document.getElementById("product-creation-method"),
     legalNote: document.getElementById("product-legal-note"),
     version: document.getElementById("product-version"),
@@ -871,6 +872,7 @@
       folder,
       format: parseList(fields.format.value).length ? parseList(fields.format.value) : ["PDF"],
       fulfillmentNote: fields.fulfillmentNote.value.trim(),
+      teaserVideo: fields.teaserVideo?.value.trim() || "",
       gameSystem,
       gameSystemSlug: isEditingLoadedListing() && gameSystem === existingGameSystem
         ? (existingGameSystemSlug || slugify(gameSystem))
@@ -1095,6 +1097,7 @@
       formData.set("features", payload.features.join("\n"));
       formData.set("tags", payload.tags.join(", "));
       formData.set("fulfillmentNote", payload.fulfillmentNote);
+      formData.set("teaserVideo", payload.teaserVideo);
       formData.set("creationMethod", payload.creationMethod);
       formData.set("legalNote", payload.legalNote);
       formData.set("version", payload.version);
@@ -1303,6 +1306,7 @@
     fields.status.value = product.status || "coming-soon";
     fields.buyMode.value = product.buyMode || "coming-soon";
     fields.buyUrl.value = product.buyUrl || "";
+    if (fields.teaserVideo) fields.teaserVideo.value = product.teaserVideo || "";
     syncBuyModeUi();
     fields.shortDescription.value = product.shortDescription || "";
     fields.longDescription.value = product.longDescription || "";
