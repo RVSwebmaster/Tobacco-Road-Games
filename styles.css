@@ -1331,6 +1331,12 @@ h4 {
   isolation: isolate;
 }
 
+.bookshelf-grid--compact {
+  grid-template-columns: repeat(3, 94px);
+  width: fit-content;
+  max-width: 100%;
+}
+
 .bookshelf-book {
   --bookshelf-cover-left: 0;
   --bookshelf-cover-right: auto;
@@ -1992,6 +1998,7 @@ body.view-section .site-footer {
 
   .bookshelf-grid {
     grid-template-columns: 1fr;
+    width: 100%;
     padding: 0;
     border: 0;
     background: transparent;

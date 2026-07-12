@@ -453,7 +453,8 @@ function renderStoreHome(products, indexes) {
           kicker: "New Releases",
           title: "New Releases",
           description: "Newest books are shelved by release date first so recent work is easy to scan.",
-          products: newReleases
+          products: newReleases,
+          compact: true
         }) : ""}
 
         <section class="store-section" id="store-bookshelf" aria-labelledby="bookshelf-browser-heading">
@@ -914,7 +915,7 @@ function renderFeatureSpotlight(product) {
   `;
 }
 
-function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [] }) {
+function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false }) {
   if (!products.length) {
     return "";
   }
@@ -928,7 +929,7 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
         <h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2>
         <p>${escapeHtml(description)}</p>
       </div>
-      <div class="bookshelf-grid">
+      <div class="bookshelf-grid${compact ? " bookshelf-grid--compact" : ""}">
         ${products.map((product) => renderBookshelfBook(product, {
           forceOpenRight: forceOpenRightSlugSet.has(product.slug)
         })).join("")}
