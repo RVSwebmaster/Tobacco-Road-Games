@@ -2,6 +2,7 @@ export const PRODUCT_FOLDER_MAP = Object.freeze({
   "agency": "agency",
   "circle-of-cinder": "circleofcinder",
   "final-flame": "finalflame",
+  "janni": "janni",
   "mouthy-monsters": "mouthy-monsters",
   "path-of-the-janky": "path of the janky",
   "ringbound": "ringbound",

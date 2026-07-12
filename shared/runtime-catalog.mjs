@@ -94,6 +94,32 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
+    "buyMode": "cart",
+    "coverUrl": "/product-assets/janni/cover.webp",
+    "currency": "USD",
+    "effectivePriceCents": 499,
+    "fulfillmentEligible": true,
+    "lastUpdated": "",
+    "priceCents": 499,
+    "saleActive": false,
+    "saleEnabled": false,
+    "saleEnd": "",
+    "salePriceCents": 499,
+    "saleStart": "",
+    "slug": "janni",
+    "status": "available-direct",
+    "title": "janni",
+    "updateEligible": true,
+    "version": "1.0"
+  },
+  {
+    "authorDisplay": "RV Sawyer",
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
+    "authors": [
+      "RV Sawyer"
+    ],
     "buyMode": "preview-only",
     "coverUrl": "/product-assets/mouthy-monsters/cover.webp",
     "currency": "USD",

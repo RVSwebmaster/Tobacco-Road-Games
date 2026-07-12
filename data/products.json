@@ -810,5 +810,80 @@
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
     "excludeFromBundles": true
+  },
+  {
+    "slug": "janni",
+    "title": "janni",
+    "subtitle": "A Mortal Kind of Immortality",
+    "featured": false,
+    "authors": [
+      "RV Sawyer"
+    ],
+    "authorSlugs": [
+      "rv-sawyer"
+    ],
+    "publisher": "Tobacco Road Games",
+    "gameSystem": "5E Compatible",
+    "gameSystemSlug": "5e-compatible",
+    "productLine": "Fifth Edition Fantasy Roleplaying",
+    "productLineSlug": "fifth-edition-fantasy-roleplaying",
+    "format": [
+      "PDF"
+    ],
+    "fileList": [
+      "Janni.pdf"
+    ],
+    "pageCount": 16,
+    "price": "4.99",
+    "priceCents": 499,
+    "minimumPrice": "",
+    "minimumPriceCents": null,
+    "suggestedPrice": "",
+    "suggestedPriceCents": null,
+    "regularPrice": "",
+    "regularPriceCents": null,
+    "salePrice": "4.99",
+    "salePriceCents": 499,
+    "saleStart": "",
+    "saleEnd": "",
+    "saleLabel": "",
+    "saleEnabled": false,
+    "currency": "USD",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
+    "coverImage": "/product-assets/janni/cover.webp",
+    "previewImage": "/product-assets/janni/preview.webp",
+    "thumbnailImage": "",
+    "frontCoverImage": "/product-assets/janni/cover.webp",
+    "previewImages": [],
+    "previewPdf": "",
+    "teaserVideo": "",
+    "buyMode": "cart",
+    "buyUrl": "",
+    "fulfillmentNote": "",
+    "shortDescription": "Born of mortal flesh and elemental blood, the Janni live between two worlds without fully belonging to either. They hunger, dream, bleed, and die like mortals, yet death may not be the end. Janni: A Mortal Kind of Immortality introduces a complete 5E-compatible player character ancestry with four elemental heritages, each carrying the mark of an immortal parent and the burden of a life that may begin again.",
+    "longDescription": "Born of mortal flesh and elemental blood, the Janni stand between two worlds without fully belonging to either. Each is the child of a Jinn and a mortal, carrying an inheritance that marks the body, shapes the spirit, and refuses to let an ordinary life remain ordinary.\r\n\r\nJanni eat, sleep, dream, bleed, and die as mortals do. Age does not claim them so easily, and death may prove less final than expected. Yet every gift carried from an immortal parent comes with a cost, and even a life that begins again cannot continue forever.\r\n\r\nJanni: A Mortal Kind of Immortality presents a complete player character ancestry for 5E-compatible fantasy roleplaying, including four elemental heritages tied to Air, Earth, Fire, and Water. Each heritage bears the unmistakable touch of its Jinn lineage, but none determines the Jann’s personality, loyalties, morality, or destiny.\r\n\r\nWithin these pages, players and Game Masters will find the history, nature, and strange inheritance of the Janni, along with the rules needed to bring one into play. Their lives may stretch far beyond those of ordinary mortals, but survival is never guaranteed, and some doors should not be opened merely because death failed to keep them closed.\r\n\r\nA Jann is not a lesser Jinn.\r\n\r\nThey are not a mortal who merely brushed against elemental power.\r\n\r\nThey are something rarer, stranger, and far more dangerous to underestimate.",
+    "features": [
+      "Full original player character race with four Subrace paths."
+    ],
+    "tags": [
+      "Fantasy",
+      "Supplement",
+      "Dungeons & Dragons",
+      "SRD 5.1"
+    ],
+    "creationMethod": "Human-authored by RV Sawyer.",
+    "legalNote": "",
+    "version": "1.0",
+    "releaseDate": "",
+    "lastUpdated": "",
+    "relatedProducts": [],
+    "libraryEligible": true,
+    "updateEligible": true,
+    "bundleEligible": false,
+    "bundleMinPriceCents": 100,
+    "bundleGroup": "standard-digital",
+    "allowSeasonalBundle": false,
+    "excludeFromBundles": true
   }
 ]
