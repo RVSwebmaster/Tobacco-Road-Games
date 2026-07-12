@@ -1333,6 +1333,27 @@ function renderAuthorProfilePage(author) {
             </div>
           `}
         </section>
+
+        <section class="store-section author-discussions" id="author-discussions" aria-labelledby="author-discussions-heading" data-author-discussions data-author-slug="${escapeAttribute(author.slug)}">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Conversation</p>
+            <h2 id="author-discussions-heading">Messages for ${escapeHtml(author.name)}</h2>
+            <p>Start a public discussion or read the author’s responses. A valid email address and discussion notifications are required to participate; email addresses are never shown publicly.</p>
+          </div>
+          <form class="discussion-form" data-discussion-form>
+            <div class="discussion-form__fields">
+              <label>Display name<input class="dock-input" name="displayName" maxlength="60" autocomplete="name" required></label>
+              <label>Email address<input class="dock-input" name="email" type="email" maxlength="254" autocomplete="email" required></label>
+            </div>
+            <label>Subject<input class="dock-input" name="subject" maxlength="120" required></label>
+            <label>Message<textarea class="dock-input" name="message" rows="6" maxlength="4000" required></textarea></label>
+            <label class="discussion-consent"><input name="notificationsAccepted" type="checkbox" required> I agree to receive required email notifications about this discussion. My message will not be recorded without this agreement.</label>
+            <button class="button button--primary" type="submit">Verify Email and Post</button>
+            <p class="discussion-status" data-discussion-status role="status" aria-live="polite"></p>
+          </form>
+          <div class="discussion-list" data-discussion-list><p>Loading discussions…</p></div>
+        </section>
+        <script src="/assets/js/author-discussions.js?v=${CACHE_BUST}" defer></script>
       </main>
     `
   });
