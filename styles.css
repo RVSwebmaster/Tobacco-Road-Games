@@ -2174,33 +2174,3 @@ body.view-section .site-footer {
     transition-duration: 120ms;
   }
 }
-.product-card__video {
-  margin-top: 0.85rem;
-}
-
-.product-card__video summary {
-  cursor: pointer;
-  list-style: none;
-  text-align: center;
-}
-
-.product-card__video summary::-webkit-details-marker {
-  display: none;
-}
-
-.product-card__video video {
-  display: block;
-  width: min(25%, 180px);
-  aspect-ratio: 16 / 9;
-  height: auto;
-  margin: 0.75rem auto 0;
-  border-radius: 8px;
-  background: #000;
-  object-fit: contain;
-}
-
-@media (max-width: 640px) {
-  .product-card__video video {
-    width: min(50%, 180px);
-  }
-}

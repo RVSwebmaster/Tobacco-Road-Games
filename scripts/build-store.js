@@ -1176,7 +1176,6 @@ function renderProductCard(product, options = {}) {
           ${cartAction || ""}
           <a class="button button--secondary product-card__button" href="${product.url}">View Product</a>
         </div>
-        ${(product.assetSet.teaserVideo || product.teaserVideo) ? `<details class="product-card__video"><summary class="button button--secondary">Watch Video Preview</summary><video controls preload="metadata" playsinline src="${escapeAttribute(product.assetSet.teaserVideo || product.teaserVideo)}"></video></details>` : ""}
       </div>
     </article>
   `;
