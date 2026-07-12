@@ -1311,11 +1311,11 @@ h4 {
 }
 
 .bookshelf-grid {
-  --bookshelf-spine-width: 100%;
+  --bookshelf-spine-width: 70px;
   --bookshelf-cover-width: clamp(188px, 16vw, 236px);
   position: relative;
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  grid-template-columns: repeat(10, 70px);
   gap: 14px;
   align-items: end;
   padding: 16px 18px 20px;
@@ -1332,7 +1332,7 @@ h4 {
 }
 
 .bookshelf-grid--compact {
-  grid-template-columns: repeat(3, 94px);
+  grid-template-columns: repeat(3, 70px);
   width: fit-content;
   max-width: 100%;
 }
@@ -1348,7 +1348,7 @@ h4 {
   display: block;
   position: relative;
   z-index: 0;
-  width: 100%;
+  width: var(--bookshelf-spine-width);
   min-height: 310px;
   text-decoration: none;
   perspective: 1200px;
@@ -2081,6 +2081,7 @@ body.view-section .site-footer {
   }
 
   .bookshelf-grid {
+    --bookshelf-spine-width: 100%;
     grid-template-columns: 1fr;
     width: 100%;
     padding: 0;
@@ -2100,6 +2101,7 @@ body.view-section .site-footer {
 
   .bookshelf-book,
   .bookshelf-book__scene {
+    width: 100%;
     min-height: auto;
   }
 
