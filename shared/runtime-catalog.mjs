@@ -99,7 +99,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "currency": "USD",
     "effectivePriceCents": 499,
     "fulfillmentEligible": true,
-    "lastUpdated": "",
+    "lastUpdated": "2026-07-11",
     "priceCents": 499,
     "saleActive": false,
     "saleEnabled": false,
@@ -108,7 +108,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "slug": "janni",
     "status": "available-direct",
-    "title": "janni",
+    "title": "Janni",
     "updateEligible": true,
     "version": "1.0"
   },

@@ -813,7 +813,7 @@
   },
   {
     "slug": "janni",
-    "title": "janni",
+    "title": "Janni",
     "subtitle": "A Mortal Kind of Immortality",
     "featured": false,
     "authors": [
@@ -875,8 +875,8 @@
     "creationMethod": "Human-authored by RV Sawyer.",
     "legalNote": "",
     "version": "1.0",
-    "releaseDate": "",
-    "lastUpdated": "",
+    "releaseDate": "2026-07-11",
+    "lastUpdated": "2026-07-11",
     "relatedProducts": [],
     "libraryEligible": true,
     "updateEligible": true,
