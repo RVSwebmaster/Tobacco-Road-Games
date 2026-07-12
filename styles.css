@@ -1661,6 +1661,7 @@ h4 {
 }
 
 .preview-feature {
+  width: calc((100% - 18px) * 0.56);
   margin: 0;
   overflow: hidden;
   border: 1px solid rgba(242, 216, 170, 0.16);
@@ -1964,6 +1965,10 @@ body.view-section .site-footer {
   .catalog-controls,
   .identity-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preview-feature {
+    width: 100%;
   }
 
   .store-browser__view-switcher {
