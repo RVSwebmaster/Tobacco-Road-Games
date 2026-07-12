@@ -391,7 +391,6 @@ function buildIndexes(products, authors) {
 
 function renderStoreHome(products, indexes) {
   const featured = chooseFeaturedProduct(products);
-  const featuredShelf = chooseFeaturedProducts(products);
   const newReleases = chooseNewReleases(products);
   const browserProducts = sortProducts(products, "title");
 
@@ -448,15 +447,6 @@ function renderStoreHome(products, indexes) {
             ${renderFeatureSpotlight(featured)}
           </section>
         ` : ""}
-
-        ${featuredShelf.length ? renderBookshelfSection({
-          id: "featured-bookshelf-heading",
-          kicker: "Featured",
-          title: "Featured Shelf",
-          description: "Manually chosen titles stay at eye level here so the shelf can spotlight work Tobacco Road Games wants front and center.",
-          products: featuredShelf,
-          forceOpenRightSlugs: ["sirrocans", "janni"]
-        }) : ""}
 
         ${newReleases.length ? renderBookshelfSection({
           id: "new-releases-bookshelf-heading",
