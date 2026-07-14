@@ -11,3 +11,7 @@ binding = "TRG_ORDERS"
 database_name = "trg-orders-staging"
 database_id = "d92594e8-a45c-4f84-8f48-7c3aeba17f29"
 migrations_dir = "../../migrations"
+
+[[r2_buckets]]
+binding = "TRG_PRODUCTS"
+bucket_name = "trg-products"

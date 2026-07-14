@@ -1,6 +1,6 @@
 import { getFolderForSlug } from "../../../shared/product-folder-map.mjs";
+import { isPublicProductAsset } from "../../_lib/product-asset-policy.mjs";
 
-const PUBLIC_ASSET_FILES = new Set(["cover.webp", "preview.webp"]);
 const R2_PRODUCT_BUCKET_BINDING = "TRG_PRODUCTS";
 const DEFAULT_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 
@@ -50,7 +50,7 @@ function normalizeParam(value) {
 }
 
 function buildObjectKey(slug, assetName) {
-  if (!PUBLIC_ASSET_FILES.has(assetName)) {
+  if (!isPublicProductAsset(assetName)) {
     return "";
   }
 

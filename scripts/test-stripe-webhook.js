@@ -8,7 +8,8 @@ const ROOT = path.resolve(__dirname, "..");
 const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
   path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
-  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql")
+  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql"),
+  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql")
 ];
 const NOW = Date.parse("2026-07-14T16:00:00.000Z");
 const WEBHOOK_SECRET = "whsec_test_signing_secret";
@@ -86,6 +87,9 @@ async function testCompletedPaidAndDuplicate(webhook, ordersD1) {
   const record = await getOnlyWebhookEvent(fixture.d1);
   assert.equal(record.processing_status, "processed", "The unique webhook record should remain processed.");
   assert.equal(record.attempt_count, 1, "A duplicate processed event must not be processed twice.");
+  assert.equal(await countRows(fixture.d1, "download_entitlements"), 1, "Duplicate paid webhook delivery must keep one entitlement.");
+  order = await getOrder(fixture.d1, fixture.order.id);
+  assert.equal(order.fulfillment_status, "ready", "A paid Agency order with an existing R2 object should become fulfillment-ready.");
 }
 
 async function testFailedProcessingThenRetry(webhook, ordersD1) {
@@ -306,7 +310,12 @@ function webhookEnv(d1) {
   return {
     PAYMENT_PIPELINE_STAGE: "staging",
     STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
-    TRG_ORDERS: d1
+    TRG_ORDERS: d1,
+    TRG_PRODUCTS: {
+      async head(key) {
+        return key === "agency/product.pdf" ? { size: 9630946 } : null;
+      }
+    }
   };
 }
 

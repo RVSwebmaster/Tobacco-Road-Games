@@ -8,7 +8,8 @@ const ROOT = path.resolve(__dirname, "..");
 const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
   path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
-  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql")
+  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql"),
+  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql")
 ];
 const NOW = Date.parse("2026-07-14T15:00:00.000Z");
 const ATTEMPT_ONE = "trgca_10000000-0000-4000-8000-000000000001";

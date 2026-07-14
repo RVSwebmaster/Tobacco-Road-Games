@@ -8,7 +8,8 @@ const ROOT = path.resolve(__dirname, "..");
 const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
   path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
-  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql")
+  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql"),
+  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql")
 ];
 const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
@@ -430,7 +431,8 @@ async function testCheckoutReturnPages(completePage, cookieHelpers) {
   body = await response.text();
   assert.match(body, /Payment confirmed/i, "Completion page should report the server-recorded paid state.");
   assert.match(body, /verified payment confirmation from Stripe/i, "Paid completion pages should identify the verified server confirmation.");
-  assert.match(body, /fulfillment are not enabled/i, "Paid completion pages must not claim fulfillment or provide downloads.");
+  assert.match(body, /download is being prepared/i, "Paid orders without a ready entitlement should show the preparation state.");
+  assert.doesNotMatch(body, /Download Agency PDF/i, "Paid orders without an entitlement must not offer a download.");
   assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Paid completion pages should clear the checkout cookie.");
 
   response = await completePage.handleCheckoutCompletePage(new Request("https://example.com/store/checkout/complete?session_id=wrong-session", {

@@ -1,4 +1,6 @@
 import { clearCheckoutAccessCookie, readCheckoutAccessCookie } from "./checkout-cookie.mjs";
+import { createDownloadCredential, isDownloadSigningSecretConfigured } from "./download-authorization.mjs";
+import { getOrderEntitlements } from "./order-fulfillment.mjs";
 import { getOrderByPublicId } from "./orders-d1.mjs";
 
 const CACHE_BUST = "20260709b";
@@ -20,15 +22,10 @@ export async function handleCheckoutCompletePage(request, env = {}) {
   );
 
   const paid = matched && order.payment_status === "paid";
+  const paidBody = paid ? await renderPaidOrderBody(order, env) : "";
   return htmlPage({
     body: paid
-      ? `
-        <p class="section-heading__kicker">Checkout Return</p>
-        <h1>Payment confirmed.</h1>
-        <p class="cart-summary__copy">Order reference: <strong>${escapeHtml(order.public_id)}</strong></p>
-        <p class="cart-summary__copy">Tobacco Road Games has received verified payment confirmation from Stripe. Delivery and fulfillment are not enabled yet.</p>
-        <p class="cart-summary__copy"><a class="button button--secondary" href="/store/cart/">Return to Cart</a></p>
-      `
+      ? paidBody
       : matched
         ? `
         <p class="section-heading__kicker">Checkout Return</p>
@@ -46,6 +43,37 @@ export async function handleCheckoutCompletePage(request, env = {}) {
       `,
     title: "Checkout Complete | Tobacco Road Games"
   }, paid || !matched ? clearCheckoutAccessCookie() : null);
+}
+
+async function renderPaidOrderBody(order, env) {
+  let fulfillmentBody = `
+    <p class="cart-summary__copy">Your payment is confirmed. Your download is being prepared. Refresh this page shortly.</p>
+  `;
+  if (order.fulfillment_status === "failed") {
+    fulfillmentBody = `
+      <p class="cart-summary__copy">We received your payment, but your download needs attention. Please contact Tobacco Road Games support and include the order reference below.</p>
+    `;
+  } else if (["ready", "fulfilled"].includes(order.fulfillment_status)) {
+    const entitlements = await getOrderEntitlements(env.TRG_ORDERS, Number(order.id), { activeOnly: true });
+    const entitlement = entitlements.length === 1 ? entitlements[0] : null;
+    if (entitlement && isDownloadSigningSecretConfigured(env.DOWNLOAD_SIGNING_SECRET)) {
+      const credential = await createDownloadCredential(entitlement, env.DOWNLOAD_SIGNING_SECRET);
+      fulfillmentBody = `
+        <p class="cart-summary__copy">Your Agency PDF is ready.</p>
+        <p class="cart-summary__copy"><a class="button" href="/store/download?credential=${encodeURIComponent(credential)}">Download Agency PDF</a></p>
+        <p class="cart-summary__copy">This private download link expires shortly. Browser retries are allowed while it remains active.</p>
+      `;
+    }
+  }
+
+  return `
+    <p class="section-heading__kicker">Checkout Return</p>
+    <h1>Payment confirmed.</h1>
+    <p class="cart-summary__copy">Order reference: <strong>${escapeHtml(order.public_id)}</strong></p>
+    <p class="cart-summary__copy">Tobacco Road Games has received verified payment confirmation from Stripe.</p>
+    ${fulfillmentBody}
+    <p class="cart-summary__copy"><a class="button button--secondary" href="/store/cart/">Return to Cart</a></p>
+  `;
 }
 
 export async function handleCheckoutCanceledPage(request, env = {}) {

@@ -5,6 +5,7 @@ import {
   getWebhookEventById,
   markWebhookEventFailure
 } from "./orders-d1.mjs";
+import { repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
@@ -68,7 +69,8 @@ export async function handleStripeWebhookRequest(request, env = {}, options = {}
     const result = await processStripeWebhookEvent(env.TRG_ORDERS, stripeEvent, {
       nowMs: options.nowMs,
       pipelineStage: env.PAYMENT_PIPELINE_STAGE,
-      processingToken: options.processingToken
+      processingToken: options.processingToken,
+      productsBucket: env.TRG_PRODUCTS
     });
     return jsonResponse({
       duplicate: result.duplicate,
@@ -149,9 +151,16 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   });
 
   if (["processed", "ignored"].includes(eventRecord.event.processing_status)) {
+    const fulfillment = await repairProcessedPaidOrder(
+      database,
+      eventRecord.event,
+      options.productsBucket,
+      options.nowMs
+    );
     return {
       duplicate: true,
       event: eventRecord.event,
+      fulfillment,
       processingResult: eventRecord.event.processing_result || "duplicate_noop"
     };
   }
@@ -162,9 +171,16 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   });
   if (!claimed.claimed) {
     if (["processed", "ignored"].includes(claimed.event?.processing_status)) {
+      const fulfillment = await repairProcessedPaidOrder(
+        database,
+        claimed.event,
+        options.productsBucket,
+        options.nowMs
+      );
       return {
         duplicate: true,
         event: claimed.event,
+        fulfillment,
         processingResult: claimed.event.processing_result || "duplicate_noop"
       };
     }
@@ -243,8 +259,9 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     processingResult = order.payment_status === "paid" ? "already_paid_noop" : "async_payment_failed";
   }
 
+  let result;
   try {
-    const result = await finalizeWebhookEvent(database, eventRecord.event, processingToken, {
+    result = await finalizeWebhookEvent(database, eventRecord.event, processingToken, {
       internalOrderId: Number(order.id),
       order,
       orderAction,
@@ -254,7 +271,6 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       processingStatus: "processed",
       processedAt: receivedAt
     });
-    return { ...result, duplicate: false };
   } catch (error) {
     try {
       await markWebhookEventFailure(database, Number(eventRecord.event.id), processingToken, {
@@ -272,6 +288,25 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       httpStatus: 500
     });
   }
+
+  const fulfillment = orderAction === "paid"
+    ? await repairPaidOrderFulfillment(database, options.productsBucket, Number(order.id), {
+      nowMs: options.nowMs
+    })
+    : null;
+  return { ...result, duplicate: false, fulfillment };
+}
+
+async function repairProcessedPaidOrder(database, eventRecord, productsBucket, nowMs) {
+  const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
+  if (!orderId || eventRecord?.processing_status !== "processed") {
+    return null;
+  }
+  const order = await getOrderById(database, orderId);
+  if (!order || order.payment_status !== "paid") {
+    return null;
+  }
+  return repairPaidOrderFulfillment(database, productsBucket, orderId, { nowMs });
 }
 
 async function finalizeWebhookEvent(database, eventRecord, processingToken, outcome) {
