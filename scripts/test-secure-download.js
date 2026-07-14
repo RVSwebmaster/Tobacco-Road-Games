@@ -119,12 +119,15 @@ async function testPaidUnpaidDuplicateAndRepair(orders, fulfillment) {
   result = await fulfillment.repairPaidOrderFulfillment(paid.d1, createBucket(), paid.order.id, { nowMs: NOW });
   assert.equal(result.ready, true, "A paid Agency order should be repairable into a ready state.");
   assert.equal(result.entitlements.length, 1, "Paid repair should create one entitlement per order item.");
+  const originalFulfillmentUpdatedAt = result.order.fulfillment_updated_at;
   result = await fulfillment.repairPaidOrderFulfillment(paid.d1, createBucket(), paid.order.id, { nowMs: NOW + 1000 });
   assert.equal(result.ready, true, "Repeating paid repair should be safe.");
+  assert.equal(result.result, "already_fulfillment_ready", "A ready order should take the timestamp-preserving no-op path.");
   assert.equal(await countRows(paid.d1, "download_entitlements"), 1, "Duplicate repair must not duplicate entitlements.");
   const repaired = await orders.getOrderById(paid.d1, paid.order.id);
   assert.equal(repaired.fulfillment_status, "ready");
   assert.equal(repaired.paid_at, paidAt, "Fulfillment repair must not alter the payment timestamp.");
+  assert.equal(repaired.fulfillment_updated_at, originalFulfillmentUpdatedAt, "Fulfillment repair must preserve its original ready timestamp.");
 }
 
 async function testMissingObject(orders, fulfillment) {

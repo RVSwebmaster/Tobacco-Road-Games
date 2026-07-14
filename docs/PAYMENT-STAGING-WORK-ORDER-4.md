@@ -92,4 +92,13 @@ All staging duplicate-delivery proofs use:
 
 The operation uses Stripe's supported `stripe events resend <event_id> --webhook-endpoint=<staging_endpoint_id> --confirm` command. It accepts only a Stripe Event ID, explicitly verifies that the Event is not live mode, discovers exactly one endpoint matching `https://tobacco-road-games-staging.pages.dev/api/stripe/webhook`, and refuses every other endpoint. The CLI response is captured and discarded so the Event payload and customer information are not printed.
 
+Registered TRG Stripe sandbox endpoint:
+
+- Endpoint ID: `we_1Tt8kt2Ou58YVanKsawLJ14G`
+- URL: `https://tobacco-road-games-staging.pages.dev/api/stripe/webhook`
+- Stripe mode: test (`livemode: false`)
+- Status at verification: enabled
+
+The first automated resend identified and corrected a timestamp idempotency defect: the duplicate could refresh `fulfillment_updated_at` even though the entitlement was already ready. The repair now verifies the private R2 object and exact active entitlement, then returns a no-op without any D1 write. Tests require both `paid_at` and `fulfillment_updated_at` to remain unchanged on duplicate repair.
+
 Stripe CLI authorization is stored by the CLI outside the repository and is a one-time sandbox setup. No Stripe key or CLI credential belongs in this repository. The script is for deliberate staging verification only; production webhook retry handling remains fully automatic and does not depend on this operation.

@@ -78,6 +78,7 @@ async function testCompletedPaidAndDuplicate(webhook, ordersD1) {
   assert.equal(order.payment_status, "paid", "A matching paid Session should mark the order paid.");
   assert.equal(order.stripe_payment_intent_id, event.data.object.payment_intent, "The Payment Intent ID should be attached to the paid order.");
   assert.equal(order.paid_at, new Date(event.created * 1000).toISOString(), "The paid timestamp should come from the verified Stripe Event.");
+  const originalFulfillmentUpdatedAt = order.fulfillment_updated_at;
 
   response = await deliver(webhook, fixture.d1, event);
   assert.equal(response.status, 200, "Duplicate successful deliveries should return success.");
@@ -90,6 +91,7 @@ async function testCompletedPaidAndDuplicate(webhook, ordersD1) {
   assert.equal(await countRows(fixture.d1, "download_entitlements"), 1, "Duplicate paid webhook delivery must keep one entitlement.");
   order = await getOrder(fixture.d1, fixture.order.id);
   assert.equal(order.fulfillment_status, "ready", "A paid Agency order with an existing R2 object should become fulfillment-ready.");
+  assert.equal(order.fulfillment_updated_at, originalFulfillmentUpdatedAt, "Duplicate webhook repair must preserve the original fulfillment timestamp.");
 }
 
 async function testFailedProcessingThenRetry(webhook, ordersD1) {

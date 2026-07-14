@@ -7,9 +7,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ExpectedWebhookUrl = "https://tobacco-road-games-staging.pages.dev/api/stripe/webhook"
-# Filled from Stripe after the one-time CLI authorization. The URL match below
-# remains mandatory even after this ID is documented.
-$ExpectedWebhookEndpointId = ""
+# Registered Stripe sandbox endpoint for the TRG staging webhook. Both this ID
+# and the exact URL below must match before a resend is permitted.
+$ExpectedWebhookEndpointId = "we_1Tt8kt2Ou58YVanKsawLJ14G"
 
 function Get-StripeCliPath {
   $command = Get-Command stripe -ErrorAction SilentlyContinue

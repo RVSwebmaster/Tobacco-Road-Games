@@ -61,6 +61,25 @@ export async function repairPaidOrderFulfillment(database, productsBucket, order
     return { order: failedOrder, ready: false, result: "storage_unavailable" };
   }
 
+  const existingEntitlements = await getOrderEntitlements(database, normalizedOrderId, { activeOnly: true });
+  const alreadyReady = ["ready", "fulfilled"].includes(order.fulfillment_status)
+    && existingEntitlements.length === verifiedDeliveries.length
+    && verifiedDeliveries.every(({ item, product, objectSize }) => {
+      const entitlement = existingEntitlements.find(
+        (candidate) => Number(candidate.order_item_id) === Number(item.id)
+      );
+      return isExactDeliveryMapping(entitlement, product)
+        && Number(entitlement.object_size_bytes) === objectSize;
+    });
+  if (alreadyReady) {
+    return {
+      entitlements: existingEntitlements,
+      order,
+      ready: true,
+      result: "already_fulfillment_ready"
+    };
+  }
+
   if (typeof database?.batch !== "function") {
     throw new Error("Fulfillment repair requires D1 transactional batch support.");
   }
