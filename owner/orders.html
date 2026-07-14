@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Tobacco Road Games Order Recovery</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png?v=20260709c">
+  <link rel="stylesheet" href="../styles.css?v=20260709c">
+  <style>
+    .orders-shell,.orders-results,.orders-card,.orders-grid,.orders-actions,.orders-list{display:grid;gap:14px}
+    .orders-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+    .orders-card{padding:18px;border:1px solid rgba(242,216,170,.16);border-radius:16px;background:rgba(255,255,255,.045)}
+    .orders-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .orders-kv{padding:12px;border:1px solid rgba(242,216,170,.12);border-radius:10px;background:rgba(10,7,5,.5)}
+    .orders-kv strong{display:block;color:var(--muted);font:700 .78rem "Trebuchet MS","Segoe UI",sans-serif;letter-spacing:.08em;text-transform:uppercase}
+    .orders-kv span{display:block;margin-top:6px;overflow-wrap:anywhere}
+    .orders-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .orders-list{margin:0;padding-left:1.2rem}
+    .orders-status{min-height:1.5rem;color:var(--accent-strong)}
+    @media(max-width:980px){.orders-grid,.orders-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.orders-search,.orders-grid,.orders-actions{grid-template-columns:1fr}}
+  </style>
+</head>
+<body class="view-section">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/owner/" aria-label="Owner tools home"><img class="brand__logo" src="../assets/logo.png?v=20260709c" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Order Recovery</span><span class="brand__tag">Authenticated owner controls</span></div></a>
+      <nav class="site-nav" aria-label="Owner navigation"><a href="/owner/product-intake.html">Product Intake</a><a href="/owner/pricing.html">Pricing</a><a href="/owner/orders.html" aria-current="page">Orders</a><a href="/owner/logout">Log Out</a></nav>
+    </header>
+    <main><section class="store-section statement-page"><div class="statement-content orders-shell">
+      <p class="section-heading__kicker">Owner Controls</p><h1>Customer delivery and recovery</h1>
+      <p>Find an order by its complete public order number or the customer’s complete email address.</p>
+      <form class="orders-search" id="order-search"><input id="order-query" type="text" required autocomplete="off" placeholder="TRG-… or customer@example.com" aria-label="Public order number or customer email"><button class="button" type="submit">Find Order</button></form>
+      <p class="orders-status" id="orders-status" role="status"></p><div class="orders-results" id="orders-results"></div>
+    </div></section></main>
+  </div>
+  <script>
+    const form=document.querySelector('#order-search');const query=document.querySelector('#order-query');const status=document.querySelector('#orders-status');const results=document.querySelector('#orders-results');
+    form.addEventListener('submit',async(event)=>{event.preventDefault();await lookup(query.value)});
+    async function lookup(value){setStatus('Looking up orders…');results.replaceChildren();try{const response=await fetch('/owner/api/orders?query='+encodeURIComponent(value),{headers:{accept:'application/json'}});const body=await response.json();if(!response.ok)throw new Error(body.error||'Lookup failed.');if(!body.orders.length){setStatus('No matching orders found.');return}setStatus(body.orders.length+' order'+(body.orders.length===1?'':'s')+' found.');body.orders.forEach(renderOrder)}catch(error){setStatus(error.message,true)}}
+    function renderOrder(order){const card=node('article','orders-card');card.append(node('h2','',order.publicId),grid([
+      ['Customer',order.customerEmail],['Payment',order.paymentStatus+(order.paidAt?' · '+formatDate(order.paidAt):'')],['Fulfillment',order.fulfillmentStatus],['Email',order.emailStatus],['Amount',money(order.totalCents,order.currency)],['Entitlements',String(order.entitlements.length)],['Downloads',String(order.downloads.successfulCount)],['Access credential',order.access?'Active generation '+order.access.generation:'None']
+    ]));card.append(section('Products',order.items.map(item=>item.title)),section('Email messages',order.emails.map(email=>'#'+email.message_number+' '+email.purpose+' — '+email.status+(email.provider_message_id?' ('+email.provider_message_id+')':''))),section('Recent owner audit',order.audits.map(audit=>formatDate(audit.createdAt)+' — '+audit.action+' — '+audit.outcome)));
+      const actions=node('div','orders-actions');[['resend_delivery','Resend Delivery Email'],['repair_fulfillment','Repair Fulfillment'],['revoke_access','Revoke Access'],['regenerate_access','Regenerate Access']].forEach(([action,label])=>{const button=node('button','button button--secondary',label);button.type='button';button.addEventListener('click',()=>mutate(order.publicId,action));actions.append(button)});card.append(actions);results.append(card)}
+    async function mutate(publicOrderId,action){if(!confirm('Run '+action.replaceAll('_',' ')+' for '+publicOrderId+'?'))return;setStatus('Running owner action…');try{const response=await fetch('/owner/api/orders',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':cookie('trg_owner_csrf')},body:JSON.stringify({action,publicOrderId})});const body=await response.json();if(!response.ok)throw new Error(body.error||'Owner action failed.');setStatus('Owner action completed.');await lookup(publicOrderId)}catch(error){setStatus(error.message,true)}}
+    function grid(entries){const wrap=node('div','orders-grid');entries.forEach(([label,value])=>{const item=node('div','orders-kv');item.append(node('strong','',label),node('span','',value||'—'));wrap.append(item)});return wrap}
+    function section(title,items){const wrap=node('section','');wrap.append(node('h3','',title));const list=node('ul','orders-list');(items.length?items:['None']).forEach(item=>list.append(node('li','',item)));wrap.append(list);return wrap}
+    function node(tag,className,text){const element=document.createElement(tag);if(className)element.className=className;if(text!==undefined)element.textContent=text;return element}
+    function cookie(name){return document.cookie.split(';').map(v=>v.trim()).find(v=>v.startsWith(name+'='))?.slice(name.length+1)||''}
+    function money(cents,currency){return new Intl.NumberFormat('en-US',{style:'currency',currency:currency||'USD'}).format((cents||0)/100)}
+    function formatDate(value){return value?new Date(value).toLocaleString():'—'}function setStatus(message,isError=false){status.textContent=message;status.style.color=isError?'#ffb3a7':''}
+  </script>
+</body>
+</html>

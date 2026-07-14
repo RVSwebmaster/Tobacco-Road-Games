@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/owner/*", "/product-assets/*", "/ad-media/*", "/api/ads", "/api/cart/quote", "/api/cart/checkout", "/api/stripe/webhook", "/api/orders/pending", "/api/orders/repair-fulfillment", "/api/discussions", "/api/discussions/*", "/store/checkout/complete", "/store/checkout/canceled", "/store/download"],
+  "include": ["/owner/*", "/product-assets/*", "/ad-media/*", "/api/ads", "/api/cart/quote", "/api/cart/checkout", "/api/stripe/webhook", "/api/resend/webhook", "/api/orders/pending", "/api/orders/repair-fulfillment", "/api/discussions", "/api/discussions/*", "/store/checkout/complete", "/store/checkout/canceled", "/store/order-access", "/store/download"],
   "exclude": []
 }

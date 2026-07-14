@@ -127,6 +127,11 @@ export async function processResendWebhookEvent(database, event, options = {}) {
   if (["processed", "ignored"].includes(record.processing_status)) {
     return { duplicate: true, event: record };
   }
+  if (record.event_type !== eventType
+    || String(record.provider_message_id || "") !== String(providerMessageId || "")) {
+    await markEmailWebhookFailure(database, record, "provider_event_payload_mismatch", receivedAt);
+    throw new Error("provider_event_payload_mismatch");
+  }
 
   if (!RESEND_WEBHOOK_EVENT_TYPES.includes(eventType)) {
     await database.prepare(`
@@ -164,8 +169,18 @@ export async function processResendWebhookEvent(database, event, options = {}) {
       Number(outbox.id)
     ),
     database.prepare(`
-      UPDATE orders SET email_status = ? WHERE id = ?
-    `).bind(transition.orderEmailStatus, Number(outbox.order_id)),
+      UPDATE orders
+      SET email_status = CASE (
+        SELECT status FROM email_outbox WHERE id = ?
+      )
+        WHEN 'accepted' THEN 'sent'
+        WHEN 'delivered' THEN 'sent'
+        WHEN 'pending' THEN 'pending'
+        WHEN 'delayed' THEN 'pending'
+        ELSE 'failed'
+      END
+      WHERE id = ?
+    `).bind(Number(outbox.id), Number(outbox.order_id)),
     database.prepare(`
       UPDATE email_webhook_events
       SET processing_status = 'processed', email_outbox_id = ?,

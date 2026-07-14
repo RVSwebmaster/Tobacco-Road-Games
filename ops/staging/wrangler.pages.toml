@@ -5,6 +5,8 @@ compatibility_date = "2026-06-18"
 [vars]
 PAYMENT_PIPELINE_STAGE = "staging"
 STAGING_CHECKOUT_PRODUCT_SLUG = "agency"
+PUBLIC_SITE_ORIGIN = "https://tobacco-road-games-staging.pages.dev"
+RESEND_DELIVERY_ENABLED = "true"
 
 [[d1_databases]]
 binding = "TRG_ORDERS"

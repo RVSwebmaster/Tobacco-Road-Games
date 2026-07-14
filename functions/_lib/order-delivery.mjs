@@ -132,6 +132,16 @@ export async function dispatchOrderEmail(database, env, outboxId, options = {}) 
   if (outbox.status === "failed") {
     return { duplicate: true, outbox, retryable: false };
   }
+  if (Number(outbox.attempt_count) > 0 && providerIdempotencyWindowExpired(outbox.last_attempt_at, options.nowMs)) {
+    const failed = await markOutboxFailure(
+      database,
+      outbox,
+      "provider_idempotency_window_expired",
+      false,
+      options.nowMs
+    );
+    return { duplicate: true, errorCode: "provider_idempotency_window_expired", outbox: failed, retryable: false };
+  }
 
   const order = await getOrderById(database, Number(outbox.order_id));
   const items = await getOrderItems(database, Number(outbox.order_id));
@@ -306,6 +316,12 @@ function normalizeOrigin(value) {
 function safeFailureCode(value) {
   const normalized = String(value || "provider_failure").toLowerCase();
   return /^[a-z0-9_-]{1,80}$/.test(normalized) ? normalized : "provider_failure";
+}
+
+function providerIdempotencyWindowExpired(lastAttemptAt, nowMs) {
+  const attemptedAt = Date.parse(String(lastAttemptAt || ""));
+  const current = Number.isFinite(nowMs) ? Number(nowMs) : Date.now();
+  return Number.isFinite(attemptedAt) && current - attemptedAt >= 23 * 60 * 60 * 1000;
 }
 
 function positiveInteger(value) {
