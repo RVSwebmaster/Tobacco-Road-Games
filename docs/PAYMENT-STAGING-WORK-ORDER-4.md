@@ -101,4 +101,16 @@ Registered TRG Stripe sandbox endpoint:
 
 The first automated resend identified and corrected a timestamp idempotency defect: the duplicate could refresh `fulfillment_updated_at` even though the entitlement was already ready. The repair now verifies the private R2 object and exact active entitlement, then returns a no-op without any D1 write. Tests require both `paid_at` and `fulfillment_updated_at` to remain unchanged on duplicate repair.
 
+The corrected operation resent `evt_1TtACr2Ou58YVanK1HOXI3w3` to `we_1Tt8kt2Ou58YVanKsawLJ14G`. Post-resend remote D1 verification showed:
+
+- Event rows for that Stripe Event ID: 1
+- Agency entitlements for the order: 1
+- Payment state: `paid`
+- Original `paid_at`: `2026-07-14T17:33:21.000Z`
+- Fulfillment state: `ready`
+- Original `fulfillment_updated_at`: `2026-07-14T17:33:22.583Z`
+- Original entitlement `created_at`: `2026-07-14T17:33:22.583Z`
+- Original first download timestamp: `2026-07-14T17:34:05.130Z`
+- Successful download count: 2
+
 Stripe CLI authorization is stored by the CLI outside the repository and is a one-time sandbox setup. No Stripe key or CLI credential belongs in this repository. The script is for deliberate staging verification only; production webhook retry handling remains fully automatic and does not depend on this operation.
