@@ -240,6 +240,33 @@ async function testQuoteEndpoint(cartQuote) {
   }), { catalogProducts, now });
   assert.equal(quantityResponse.status, 400, "Quantities greater than one should be rejected.");
 
+  const stagingRestrictionResponse = await cartQuote.handleCartQuoteRequest(new Request("https://example.com/api/cart/quote", {
+    body: JSON.stringify({
+      items: [
+        { quantity: 1, slug: "agency" },
+        { quantity: 1, slug: "fixed-mode" }
+      ]
+    }),
+    method: "POST"
+  }), {
+    allowedProductSlug: "agency",
+    catalogProducts: catalogProducts.map((product) => product.slug === "fixed-mode"
+      ? { ...product, buyMode: "cart" }
+      : product),
+    now
+  });
+  const stagingRestrictionPayload = await stagingRestrictionResponse.json();
+  assert.deepEqual(
+    stagingRestrictionPayload.items.map((item) => item.slug),
+    ["agency"],
+    "Staging quotes should allow Agency as the sole pipeline test product."
+  );
+  assert.deepEqual(
+    stagingRestrictionPayload.unavailableItems.map((item) => item.slug),
+    ["fixed-mode"],
+    "Staging quotes should reject otherwise purchasable products outside the Agency gate."
+  );
+
   const oversizedItems = Array.from({ length: 26 }, (_, index) => ({
     quantity: 1,
     slug: `item-${index}`

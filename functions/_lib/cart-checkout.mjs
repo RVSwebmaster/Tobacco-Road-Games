@@ -5,7 +5,8 @@ import { parsePendingOrderRequest, resolvePendingOrderItems } from "./orders-pen
 import {
   getRuntimeCatalogMap,
   getRuntimeCatalogProducts,
-  getRuntimePricingPolicy
+  getRuntimePricingPolicy,
+  normalizeSlug
 } from "./runtime-catalog.mjs";
 import { createStripeHostedCheckoutSession } from "./stripe-checkout.mjs";
 
@@ -65,9 +66,13 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     : Array.isArray(options.catalogProducts)
       ? new Map(catalogProducts.map((product) => [String(product.slug || "").trim().toLowerCase(), product]))
       : getRuntimeCatalogMap();
+  const allowedProductSlug = normalizeSlug(options.allowedProductSlug || env.STAGING_CHECKOUT_PRODUCT_SLUG);
+  const checkoutCatalogMap = allowedProductSlug
+    ? new Map(catalogMap.has(allowedProductSlug) ? [[allowedProductSlug, catalogMap.get(allowedProductSlug)]] : [])
+    : catalogMap;
   const now = Number.isFinite(options.now) ? options.now : Date.now();
   const pricingPolicy = options.pricingPolicy || getRuntimePricingPolicy();
-  const resolution = resolvePendingOrderItems(parsed.body.items, catalogMap, { now });
+  const resolution = resolvePendingOrderItems(parsed.body.items, checkoutCatalogMap, { now });
 
   if (resolution.unavailableItems.length) {
     return jsonResponse({

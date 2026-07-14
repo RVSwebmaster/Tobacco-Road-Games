@@ -12,7 +12,9 @@ const MAX_BODY_BYTES = 8192;
 const MAX_CART_ITEMS = 25;
 
 export async function onRequestPost(context) {
-  return handleCartQuoteRequest(context.request);
+  return handleCartQuoteRequest(context.request, {
+    allowedProductSlug: context.env?.STAGING_CHECKOUT_PRODUCT_SLUG
+  });
 }
 
 export async function handleCartQuoteRequest(request, options = {}) {
@@ -36,6 +38,10 @@ export async function handleCartQuoteRequest(request, options = {}) {
     : Array.isArray(options.catalogProducts)
       ? buildCatalogMap(catalogProducts)
       : getRuntimeCatalogMap();
+  const allowedProductSlug = normalizeSlug(options.allowedProductSlug);
+  const quoteCatalogMap = allowedProductSlug
+    ? new Map(catalogMap.has(allowedProductSlug) ? [[allowedProductSlug, catalogMap.get(allowedProductSlug)]] : [])
+    : catalogMap;
   const now = Number.isFinite(options.now) ? options.now : Date.now();
   const policy = options.pricingPolicy || getRuntimePricingPolicy();
 
@@ -44,7 +50,7 @@ export async function handleCartQuoteRequest(request, options = {}) {
   let subtotalCents = 0;
 
   for (const item of parsed.items) {
-    const product = catalogMap.get(item.slug);
+    const product = quoteCatalogMap.get(item.slug);
     if (!product) {
       unavailableItems.push(buildUnavailableItem(item.slug, "unknown_slug", "This item is not available for checkout."));
       continue;

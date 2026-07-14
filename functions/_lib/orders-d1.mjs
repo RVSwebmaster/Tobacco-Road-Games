@@ -26,69 +26,32 @@ export async function createPendingOrder(database, orderInput, itemSnapshots, op
     totalCents: requiredInteger(orderInput?.totalCents, "totalCents")
   };
 
-  return withTransaction(database, async () => {
-    const insertResult = await database.prepare(`
-      INSERT INTO orders (
-        public_id,
-        customer_email,
-        customer_email_normalized,
-        customer_email_hash,
-        stripe_checkout_session_id,
-        stripe_payment_intent_id,
-        currency,
-        subtotal_cents,
-        included_tax_cents,
-        total_cents,
-        processor_fee_cents,
-        net_proceeds_cents,
-        payment_status,
-        fulfillment_status,
-        email_status,
-        created_at,
-        paid_at,
-        completed_at,
-        refunded_at,
-        disputed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      normalizedOrder.publicId,
-      normalizedOrder.customerEmail,
-      normalizedOrder.customerEmailNormalized,
-      normalizedOrder.customerEmailHash,
-      normalizedOrder.stripeCheckoutSessionId,
-      normalizedOrder.stripePaymentIntentId,
-      normalizedOrder.currency,
-      normalizedOrder.subtotalCents,
-      normalizedOrder.includedTaxCents,
-      normalizedOrder.totalCents,
-      normalizedOrder.processorFeeCents,
-      normalizedOrder.netProceedsCents,
-      normalizedOrder.paymentStatus,
-      normalizedOrder.fulfillmentStatus,
-      normalizedOrder.emailStatus,
-      normalizedOrder.createdAt,
-      normalizedOrder.paidAt,
-      normalizedOrder.completedAt,
-      normalizedOrder.refundedAt,
-      normalizedOrder.disputedAt
-    ).run();
+  const normalizedItems = normalizeItemSnapshots(itemSnapshots);
+  if (!normalizedItems.length) {
+    throw new Error("At least one order item snapshot is required.");
+  }
 
-    const orderId = getLastInsertId(insertResult);
-    if (!Number.isInteger(orderId) || orderId <= 0) {
-      throw new Error("Pending order creation did not return an order identifier.");
-    }
+  // Cloudflare D1 rejects SQL BEGIN/COMMIT statements. D1 batch() executes its
+  // prepared statements sequentially as one transaction and rolls everything
+  // back if any statement fails.
+  if (typeof database?.batch === "function") {
+    await database.batch([
+      prepareOrderInsert(database, normalizedOrder),
+      ...normalizedItems.map((item) => prepareOrderItemInsertByPublicId(
+        database,
+        normalizedOrder.publicId,
+        item
+      ))
+    ]);
 
-    await insertOrderItemSnapshots(database, orderId, itemSnapshots, {
-      transactional: false
-    });
-
-    const order = await getOrderById(database, orderId);
+    const order = await getOrderByPublicId(database, normalizedOrder.publicId);
     if (!order) {
       throw new Error("Pending order creation could not reload the inserted order.");
     }
-
     return order;
-  });
+  }
+
+  throw new Error("Pending order creation requires D1 transactional batch support.");
 }
 
 export async function insertOrderItemSnapshots(database, orderId, itemSnapshots, options = {}) {
@@ -103,37 +66,7 @@ export async function insertOrderItemSnapshots(database, orderId, itemSnapshots,
 
   const insertAll = async () => {
     for (const item of normalizedItems) {
-      await database.prepare(`
-        INSERT INTO order_items (
-          order_id,
-          product_slug,
-          product_title_snapshot,
-          primary_author_slug,
-          author_slugs_json,
-          quantity,
-          list_price_cents,
-          effective_unit_price_cents,
-          line_total_cents,
-          currency,
-          version_snapshot,
-          last_updated_snapshot,
-          created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        orderId,
-        item.productSlug,
-        item.productTitleSnapshot,
-        item.primaryAuthorSlug,
-        item.authorSlugsJson,
-        item.quantity,
-        item.listPriceCents,
-        item.effectiveUnitPriceCents,
-        item.lineTotalCents,
-        item.currency,
-        item.versionSnapshot,
-        item.lastUpdatedSnapshot,
-        item.createdAt
-      ).run();
+      await prepareOrderItemInsertById(database, orderId, item).run();
     }
   };
 
@@ -142,8 +75,12 @@ export async function insertOrderItemSnapshots(database, orderId, itemSnapshots,
     return normalizedItems.length;
   }
 
-  await withTransaction(database, insertAll);
-  return normalizedItems.length;
+  if (typeof database?.batch === "function") {
+    await database.batch(normalizedItems.map((item) => prepareOrderItemInsertById(database, orderId, item)));
+    return normalizedItems.length;
+  }
+
+  throw new Error("Atomic order item insertion requires D1 transactional batch support.");
 }
 
 export async function getOrderById(database, orderId) {
@@ -271,24 +208,120 @@ export async function getWebhookEventById(database, eventId) {
   return firstRow(database.prepare("SELECT * FROM webhook_events WHERE id = ?").bind(eventId));
 }
 
-async function withTransaction(database, callback) {
-  if (typeof database?.exec !== "function") {
-    return callback();
-  }
+function prepareOrderInsert(database, order) {
+  return database.prepare(`
+    INSERT INTO orders (
+      public_id,
+      customer_email,
+      customer_email_normalized,
+      customer_email_hash,
+      stripe_checkout_session_id,
+      stripe_payment_intent_id,
+      currency,
+      subtotal_cents,
+      included_tax_cents,
+      total_cents,
+      processor_fee_cents,
+      net_proceeds_cents,
+      payment_status,
+      fulfillment_status,
+      email_status,
+      created_at,
+      paid_at,
+      completed_at,
+      refunded_at,
+      disputed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    order.publicId,
+    order.customerEmail,
+    order.customerEmailNormalized,
+    order.customerEmailHash,
+    order.stripeCheckoutSessionId,
+    order.stripePaymentIntentId,
+    order.currency,
+    order.subtotalCents,
+    order.includedTaxCents,
+    order.totalCents,
+    order.processorFeeCents,
+    order.netProceedsCents,
+    order.paymentStatus,
+    order.fulfillmentStatus,
+    order.emailStatus,
+    order.createdAt,
+    order.paidAt,
+    order.completedAt,
+    order.refundedAt,
+    order.disputedAt
+  );
+}
 
-  await database.exec("BEGIN IMMEDIATE TRANSACTION");
-  try {
-    const result = await callback();
-    await database.exec("COMMIT");
-    return result;
-  } catch (error) {
-    try {
-      await database.exec("ROLLBACK");
-    } catch {
-      // Best effort rollback only.
-    }
-    throw error;
-  }
+function prepareOrderItemInsertById(database, orderId, item) {
+  return database.prepare(`
+    INSERT INTO order_items (
+      order_id,
+      product_slug,
+      product_title_snapshot,
+      primary_author_slug,
+      author_slugs_json,
+      quantity,
+      list_price_cents,
+      effective_unit_price_cents,
+      line_total_cents,
+      currency,
+      version_snapshot,
+      last_updated_snapshot,
+      created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    orderId,
+    item.productSlug,
+    item.productTitleSnapshot,
+    item.primaryAuthorSlug,
+    item.authorSlugsJson,
+    item.quantity,
+    item.listPriceCents,
+    item.effectiveUnitPriceCents,
+    item.lineTotalCents,
+    item.currency,
+    item.versionSnapshot,
+    item.lastUpdatedSnapshot,
+    item.createdAt
+  );
+}
+
+function prepareOrderItemInsertByPublicId(database, publicId, item) {
+  return database.prepare(`
+    INSERT INTO order_items (
+      order_id,
+      product_slug,
+      product_title_snapshot,
+      primary_author_slug,
+      author_slugs_json,
+      quantity,
+      list_price_cents,
+      effective_unit_price_cents,
+      line_total_cents,
+      currency,
+      version_snapshot,
+      last_updated_snapshot,
+      created_at
+    ) VALUES ((SELECT id FROM orders WHERE public_id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    publicId,
+    item.productSlug,
+    item.productTitleSnapshot,
+    item.primaryAuthorSlug,
+    item.authorSlugsJson,
+    item.quantity,
+    item.listPriceCents,
+    item.effectiveUnitPriceCents,
+    item.lineTotalCents,
+    item.currency,
+    item.versionSnapshot,
+    item.lastUpdatedSnapshot,
+    item.createdAt
+  );
 }
 
 function normalizeItemSnapshots(itemSnapshots) {

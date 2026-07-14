@@ -853,6 +853,20 @@ function createD1Database() {
 
 function createD1Adapter(raw) {
   return {
+    async batch(statements) {
+      raw.exec("BEGIN IMMEDIATE TRANSACTION");
+      try {
+        const results = [];
+        for (const statement of statements) {
+          results.push(await statement.run());
+        }
+        raw.exec("COMMIT");
+        return results;
+      } catch (error) {
+        raw.exec("ROLLBACK");
+        throw error;
+      }
+    },
     async exec(sql) {
       raw.exec(sql);
       return { success: true };

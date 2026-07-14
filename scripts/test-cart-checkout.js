@@ -180,6 +180,33 @@ async function testCheckoutValidation(cartCheckout) {
   });
   assert.equal(response.status, 400, "Checkout should reject unknown products.");
 
+  const stagingRestrictionDb = createD1Database().d1;
+  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    body: JSON.stringify({
+      email: "buyer@example.com",
+      emailConfirmation: "buyer@example.com",
+      items: [{ quantity: 1, slug: "janni" }]
+    }),
+    method: "POST"
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    ORDER_EMAIL_HASH_SECRET: "email-secret",
+    STAGING_CHECKOUT_PRODUCT_SLUG: "agency",
+    STRIPE_SECRET_KEY: "sk_test_mocked",
+    TRG_ORDERS: stagingRestrictionDb
+  }, {
+    catalogProducts: [
+      ...validCatalog,
+      { ...validCatalog[0], slug: "janni", title: "Janni" }
+    ],
+    now: Date.parse("2026-07-09T12:00:00.000Z"),
+    stripeFetchImpl: async () => {
+      throw new Error("stripe should not be called");
+    }
+  });
+  assert.equal(response.status, 400, "Staging checkout should reject products outside the Agency-only gate.");
+  assert.equal(await countRows(stagingRestrictionDb, "orders"), 0, "Rejected staging products must not create pending orders.");
+
   const failureDb = createD1Database().d1;
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
@@ -444,6 +471,20 @@ function createD1Database() {
 
 function createD1Adapter(raw) {
   return {
+    async batch(statements) {
+      raw.exec("BEGIN IMMEDIATE TRANSACTION");
+      try {
+        const results = [];
+        for (const statement of statements) {
+          results.push(await statement.run());
+        }
+        raw.exec("COMMIT");
+        return results;
+      } catch (error) {
+        raw.exec("ROLLBACK");
+        throw error;
+      }
+    },
     async exec(sql) {
       raw.exec(sql);
       return { success: true };
