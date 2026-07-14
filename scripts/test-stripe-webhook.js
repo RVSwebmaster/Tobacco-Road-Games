@@ -12,7 +12,7 @@ const MIGRATION_PATHS = [
 ];
 const NOW = Date.parse("2026-07-14T16:00:00.000Z");
 const WEBHOOK_SECRET = "whsec_test_signing_secret";
-const STRIPE_API_VERSION = "2026-02-25.clover";
+const STRIPE_API_VERSION = "2026-06-24.dahlia";
 let fixtureSequence = 0;
 let eventSequence = 0;
 
@@ -151,6 +151,7 @@ async function testUnknownOrder(webhook, ordersD1) {
 async function testReconciliationMismatches(webhook, ordersD1) {
   const scenarios = [
     ["checkout_session_id_mismatch", { session: { id: "cs_test_wrong" } }],
+    ["checkout_ui_mode_mismatch", { session: { ui_mode: "hosted" } }],
     ["amount_total_mismatch", { session: { amount_total: 401 } }],
     ["currency_mismatch", { session: { currency: "cad" } }],
     ["payment_intent_id_mismatch", { existingPaymentIntentId: "pi_test_original", paymentIntent: "pi_test_different" }]
@@ -280,6 +281,7 @@ function makeEvent(order, overrides = {}) {
         object: "checkout.session",
         payment_intent: overrides.paymentIntent === undefined ? `pi_test_${eventSequence}` : overrides.paymentIntent,
         payment_status: overrides.paymentStatus || "paid",
+        ui_mode: "hosted_page",
         ...sessionOverrides
       }
     },
@@ -401,4 +403,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-

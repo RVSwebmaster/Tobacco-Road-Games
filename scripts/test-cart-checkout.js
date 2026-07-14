@@ -57,6 +57,7 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
     return createJsonResponse({
       id: "cs_test_created",
       livemode: false,
+      ui_mode: "hosted_page",
       url: "https://checkout.stripe.com/c/pay/cs_test_created"
     });
   };
@@ -111,7 +112,8 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
   assert.equal(capturedForm.get("client_reference_id"), payload.publicOrderReference, "Stripe checkout should reconcile with the public order reference.");
   assert.equal(capturedForm.get("customer_email"), "buyer@example.com", "Stripe checkout should use the canonical confirmed buyer email for stable idempotent parameters.");
   assert.equal(capturedHeaders["idempotency-key"], "trg-checkout-trgca_00000000-0000-4000-8000-000000000001", "Stripe checkout should use the stable attempt as its idempotency key.");
-  assert.equal(capturedHeaders["stripe-version"], "2026-02-25.clover", "Stripe checkout should pin the documented API version.");
+  assert.equal(capturedHeaders["stripe-version"], "2026-06-24.dahlia", "Stripe checkout should pin the documented stable Dahlia API version.");
+  assert.equal(capturedForm.get("ui_mode"), "hosted_page", "Dahlia Checkout should explicitly use the renamed hosted-page UI mode.");
   assert.equal(capturedForm.get("metadata[trg_order_public_id]"), payload.publicOrderReference, "Stripe Session metadata should include the public TRG order reference.");
   assert.equal(capturedForm.get("metadata[trg_checkout_attempt_id]"), payload.checkoutAttemptId, "Stripe Session metadata should include the checkout attempt identifier.");
   assert.equal(capturedForm.get("line_items[0][price_data][currency]"), "usd", "Stripe line items should send server-authoritative currency.");
@@ -242,14 +244,44 @@ async function testCheckoutValidation(cartCheckout) {
     stripeFetchImpl: async () => createJsonResponse({
       id: "cs_test_created",
       livemode: false,
+      ui_mode: "hosted_page",
       url: "https://checkout.stripe.com/c/pay/cs_test_created"
     })
   });
   assert.equal(response.status, 502, "Checkout should reject non-sandbox Stripe keys in this phase.");
 
+  const retiredUiModeDb = createD1Database().d1;
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
       checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000006",
+      email: "buyer@example.com",
+      emailConfirmation: "buyer@example.com",
+      items: [{ quantity: 1, slug: "agency" }]
+    }),
+    method: "POST"
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    ORDER_EMAIL_HASH_SECRET: "email-secret",
+    STRIPE_SECRET_KEY: "sk_test_mocked",
+    TRG_ORDERS: retiredUiModeDb
+  }, {
+    catalogProducts: validCatalog,
+    now: Date.parse("2026-07-09T12:00:00.000Z"),
+    stripeFetchImpl: async () => createJsonResponse({
+      id: "cs_test_retired_ui_mode",
+      livemode: false,
+      ui_mode: "hosted",
+      url: "https://checkout.stripe.com/c/pay/cs_test_retired_ui_mode"
+    })
+  });
+  assert.equal(response.status, 503, "Checkout should reject a Session response using Dahlia's retired hosted UI mode.");
+  const retiredUiModeOrder = await findSingleRow(retiredUiModeDb, "SELECT * FROM orders");
+  assert.equal(retiredUiModeOrder.checkout_session_status, "retryable", "An incompatible Stripe response should preserve the attempt for safe recovery.");
+  assert.equal(retiredUiModeOrder.stripe_checkout_session_id, null, "An incompatible Session response must not be attached to D1.");
+
+  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000007",
       email: "buyer@example.com",
       emailConfirmation: "buyer@example.com",
       items: [{ quantity: 1, slug: "agency" }]

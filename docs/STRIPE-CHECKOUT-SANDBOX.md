@@ -43,7 +43,7 @@ Do not commit these values:
 
 `STRIPE_SECRET_KEY` must be a Stripe sandbox test key. The checkout code rejects non-test keys. `STRIPE_WEBHOOK_SECRET` must be the endpoint-specific sandbox signing secret and is used only against the untouched raw request body.
 
-Checkout requests and webhook events are pinned to Stripe API version `2026-02-25.clover`.
+Checkout requests and webhook events are pinned to the stable Stripe API version `2026-06-24.dahlia`; the preview channel is not used. Dahlia renamed hosted Checkout's UI mode from `hosted` to `hosted_page`, so TRG explicitly sends and validates `ui_mode=hosted_page`.
 
 ## Required Stripe behavior
 

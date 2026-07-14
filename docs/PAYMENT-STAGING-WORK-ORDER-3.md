@@ -7,7 +7,7 @@ This document records the verified Stripe payment-confirmation design for Tobacc
 - HTTPS endpoint: `https://tobacco-road-games-staging.pages.dev/api/stripe/webhook`
 - HTTP method: `POST`
 - Cloudflare encrypted secret: `STRIPE_WEBHOOK_SECRET`
-- Stripe API version: `2026-02-25.clover`
+- Stripe API version: `2026-06-24.dahlia` (stable GA; not preview)
 - Environment: Stripe sandbox/test mode only
 
 Register only these event types:
@@ -23,9 +23,11 @@ Store the endpoint-specific `whsec_...` value as the Cloudflare Pages secret nam
 
 The handler reads the request body exactly once as raw bytes. It verifies the `Stripe-Signature` HMAC against those untouched bytes before decoding JSON, accepts only signatures within a five-minute tolerance, and never logs the signing secret or raw payload. Missing or invalid signatures are rejected before D1 is touched.
 
-Checkout Session creation sends the explicit `Stripe-Version: 2026-02-25.clover` request header. The Stripe event destination must use that same explicit version. Events with another API version fail safely and remain reviewable. The staging handler rejects live-mode events and any Session whose mode does not match its Event.
+Checkout Session creation sends the explicit `Stripe-Version: 2026-06-24.dahlia` request header. The Stripe event destination must use that same explicit stable version. Events with another API version fail safely and remain reviewable. The staging handler rejects live-mode events and any Session whose mode does not match its Event.
 
-References: [Stripe webhook signatures](https://docs.stripe.com/webhooks/signature), [Stripe webhook handling](https://docs.stripe.com/webhooks), and [Stripe API versioning](https://docs.stripe.com/api/versioning).
+The Clover-to-Dahlia review identified one breaking Checkout change used by this pipeline: Dahlia replaces the `hosted` UI mode with `hosted_page`. TRG now explicitly creates hosted Sessions with `ui_mode=hosted_page`, requires Stripe's creation response to report that value, and reconciles the same value from webhook Session snapshots. A fixture using the retired `hosted` value must fail without changing the order. Dahlia's `integration_identifier` is additive and optional. The Checkout Session metadata, Payment Intent, amount, currency, `payment_status`, and four selected event types used by TRG remain part of the Dahlia contract.
+
+References: [Stripe Dahlia changelog](https://docs.stripe.com/changelog/dahlia), [Dahlia Checkout UI mode change](https://docs.stripe.com/changelog/dahlia/2026-03-25/updates-available-checkout-session-ui-modes), [Stripe webhook signatures](https://docs.stripe.com/webhooks/signature), [Stripe webhook handling](https://docs.stripe.com/webhooks), and [Stripe API versioning](https://docs.stripe.com/api/versioning).
 
 ## Durable processing contract
 
@@ -63,4 +65,3 @@ The pending page retains the short-lived signed cookie so the customer can refre
 ## Manual checkpoint
 
 Deploy the endpoint and migration, then stop. The owner must register the sandbox event destination and add its endpoint signing secret to Cloudflare. Only after the owner confirms that secret is installed may the staging project be redeployed and a genuine Agency purchase be performed.
-

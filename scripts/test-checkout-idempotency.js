@@ -282,6 +282,7 @@ function createStripeHarness(options = {}) {
       session = {
         id: `cs_test_idempotent_${sequence}`,
         livemode: false,
+        ui_mode: "hosted_page",
         url: `https://checkout.stripe.com/c/pay/cs_test_idempotent_${sequence}`
       };
       sessions.set(idempotencyKey, session);

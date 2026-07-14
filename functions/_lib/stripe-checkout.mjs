@@ -60,7 +60,11 @@ export async function createStripeHostedCheckoutSession(input, options = {}) {
     );
   }
 
-  if (!payload || typeof payload.id !== "string" || typeof payload.url !== "string" || payload.livemode !== false) {
+  if (!payload
+    || typeof payload.id !== "string"
+    || typeof payload.url !== "string"
+    || payload.livemode !== false
+    || payload.ui_mode !== "hosted_page") {
     throw new StripeCheckoutError("The Stripe response could not be safely confirmed.", {
       classification: "indeterminate",
       code: "stripe_response_indeterminate",
@@ -91,6 +95,7 @@ export function validateStripeSandboxKey(secretKey) {
 function buildStripeCheckoutFormBody(input) {
   const params = new URLSearchParams();
   params.set("mode", "payment");
+  params.set("ui_mode", "hosted_page");
   params.set("success_url", requiredString(input?.successUrl, "successUrl"));
   params.set("cancel_url", requiredString(input?.cancelUrl, "cancelUrl"));
   params.set("client_reference_id", requiredString(input?.clientReferenceId, "clientReferenceId"));

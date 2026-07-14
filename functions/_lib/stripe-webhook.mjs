@@ -345,6 +345,9 @@ async function finalizeWebhookEvent(database, eventRecord, processingToken, outc
 }
 
 function reconcileCheckoutSession(order, session, paymentIntentId) {
+  if (session.ui_mode !== "hosted_page") {
+    return "checkout_ui_mode_mismatch";
+  }
   if (normalizeStripeId(session.id) !== order.stripe_checkout_session_id) {
     return "checkout_session_id_mismatch";
   }
