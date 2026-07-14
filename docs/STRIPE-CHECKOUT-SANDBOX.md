@@ -1,6 +1,6 @@
 # Stripe Checkout Sandbox
 
-Phase 3B adds sandbox-only Stripe-hosted Checkout Session creation.
+The staging payment pipeline uses sandbox-only Stripe-hosted Checkout Session creation and verified Stripe webhook confirmation.
 
 Added route:
 
@@ -15,17 +15,18 @@ Minimal return pages:
 - `/store/checkout/complete`
 - `/store/checkout/canceled`
 
+Verified webhook route:
+
+- `POST /api/stripe/webhook`
+
 Reserved for a later phase:
 
 - `GET /store/checkout/status`
 
-## Phase limits
+## Current limits
 
 This phase intentionally does not add:
 
-- webhooks
-- payment confirmation
-- order-paid transitions
 - email delivery
 - PDF fulfillment
 - download tokens
@@ -38,8 +39,11 @@ Do not commit these values:
 - `STRIPE_SECRET_KEY`
 - `CHECKOUT_ACCESS_COOKIE_SECRET`
 - `ORDER_EMAIL_HASH_SECRET`
+- `STRIPE_WEBHOOK_SECRET`
 
-For this phase, `STRIPE_SECRET_KEY` must be a Stripe sandbox test key. The checkout code rejects non-test keys.
+`STRIPE_SECRET_KEY` must be a Stripe sandbox test key. The checkout code rejects non-test keys. `STRIPE_WEBHOOK_SECRET` must be the endpoint-specific sandbox signing secret and is used only against the untouched raw request body.
+
+Checkout requests and webhook events are pinned to Stripe API version `2026-02-25.clover`.
 
 ## Required Stripe behavior
 
@@ -64,7 +68,7 @@ The checkout route sets a short-lived cookie:
 - flags: `HttpOnly`, `Secure`, `SameSite=Lax`
 - path: `/store/checkout/`
 
-This cookie exists so the Stripe Checkout Session ID is not treated as authorization by itself. The return pages compare the query-string Session ID against the cookie-backed server record and then clear the cookie.
+This cookie exists so the Stripe Checkout Session ID is not treated as authorization by itself. The return pages compare the query-string Session ID against the cookie-backed server record, then display D1's server-recorded payment state. A pending return retains the short-lived cookie for refresh; a paid or unmatched return clears it.
 
 This cookie is temporary. It is:
 
@@ -85,6 +89,7 @@ Bindings and secrets must be configured outside the repo:
 - Pages secret: `ORDER_EMAIL_HASH_SECRET`
 - Pages secret: `CHECKOUT_ACCESS_COOKIE_SECRET`
 - Pages secret: `STRIPE_SECRET_KEY`
+- Pages secret: `STRIPE_WEBHOOK_SECRET`
 
 If you add or change bindings or secrets in the Cloudflare dashboard, redeploy the Pages project afterward.
 

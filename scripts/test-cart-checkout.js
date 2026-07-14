@@ -7,7 +7,8 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
-  path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql")
+  path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
+  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql")
 ];
 const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
@@ -110,6 +111,7 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
   assert.equal(capturedForm.get("client_reference_id"), payload.publicOrderReference, "Stripe checkout should reconcile with the public order reference.");
   assert.equal(capturedForm.get("customer_email"), "buyer@example.com", "Stripe checkout should use the canonical confirmed buyer email for stable idempotent parameters.");
   assert.equal(capturedHeaders["idempotency-key"], "trg-checkout-trgca_00000000-0000-4000-8000-000000000001", "Stripe checkout should use the stable attempt as its idempotency key.");
+  assert.equal(capturedHeaders["stripe-version"], "2026-02-25.clover", "Stripe checkout should pin the documented API version.");
   assert.equal(capturedForm.get("metadata[trg_order_public_id]"), payload.publicOrderReference, "Stripe Session metadata should include the public TRG order reference.");
   assert.equal(capturedForm.get("metadata[trg_checkout_attempt_id]"), payload.checkoutAttemptId, "Stripe Session metadata should include the checkout attempt identifier.");
   assert.equal(capturedForm.get("line_items[0][price_data][currency]"), "usd", "Stripe line items should send server-authoritative currency.");
@@ -376,10 +378,28 @@ async function testCheckoutReturnPages(completePage, cookieHelpers) {
   assert.equal(response.status, 200, "Completion page should render.");
   let body = await response.text();
   assert.match(body, new RegExp(order.public_id), "Completion page should show the public order reference when cookie and session match.");
-  assert.match(body, /payment status is still/i, "Completion page should avoid claiming fulfillment or payment confirmation in this phase.");
-  assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Completion page should clear the checkout cookie after use.");
+  assert.match(body, /Payment processing/i, "Completion page should report the server-recorded pending state.");
+  assert.match(body, /not yet received verified webhook confirmation/i, "Completion page should not treat the browser return as proof of payment.");
+  assert.equal(response.headers.get("set-cookie"), null, "Pending completion pages should retain the signed cookie so status can be refreshed.");
   assert.equal(response.headers.get("cache-control"), "no-store", "Completion responses should not be cacheable.");
   assert.equal(response.headers.get("referrer-policy"), "no-referrer", "Completion responses should prevent referrer leakage.");
+
+  await ordersD1.updateOrderPaymentStatus(d1, Number(order.id), {
+    paidAt: "2026-07-14T15:00:00.000Z",
+    paymentStatus: "paid",
+    stripePaymentIntentId: "pi_test_cookie"
+  });
+  response = await completePage.handleCheckoutCompletePage(new Request("https://example.com/store/checkout/complete?session_id=cs_test_cookie", {
+    headers: { cookie }
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    TRG_ORDERS: d1
+  });
+  body = await response.text();
+  assert.match(body, /Payment confirmed/i, "Completion page should report the server-recorded paid state.");
+  assert.match(body, /verified payment confirmation from Stripe/i, "Paid completion pages should identify the verified server confirmation.");
+  assert.match(body, /fulfillment are not enabled/i, "Paid completion pages must not claim fulfillment or provide downloads.");
+  assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/, "Paid completion pages should clear the checkout cookie.");
 
   response = await completePage.handleCheckoutCompletePage(new Request("https://example.com/store/checkout/complete?session_id=wrong-session", {
     headers: {

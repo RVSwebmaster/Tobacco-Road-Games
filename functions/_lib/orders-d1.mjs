@@ -319,6 +319,130 @@ export async function getWebhookEventById(database, eventId) {
   return firstRow(database.prepare("SELECT * FROM webhook_events WHERE id = ?").bind(eventId));
 }
 
+export async function getWebhookEventByProviderEventId(database, provider, providerEventId) {
+  const normalizedProvider = nullableString(provider);
+  const normalizedEventId = nullableString(providerEventId);
+  if (!normalizedProvider || !normalizedEventId) {
+    return null;
+  }
+  return firstRow(database.prepare(`
+    SELECT *
+    FROM webhook_events
+    WHERE provider = ? AND provider_event_id = ?
+  `).bind(normalizedProvider, normalizedEventId));
+}
+
+export async function createOrGetWebhookEvent(database, eventInput) {
+  const provider = requiredString(eventInput?.provider, "provider");
+  const providerEventId = requiredString(eventInput?.providerEventId, "providerEventId");
+  const existing = await getWebhookEventByProviderEventId(database, provider, providerEventId);
+  if (existing) {
+    return { created: false, event: existing };
+  }
+
+  try {
+    await database.prepare(`
+      INSERT INTO webhook_events (
+        provider,
+        provider_event_id,
+        event_type,
+        processing_status,
+        internal_order_id,
+        error_text,
+        received_at,
+        processed_at,
+        attempt_count,
+        failure_code,
+        processing_result,
+        event_livemode,
+        stripe_api_version,
+        stripe_checkout_session_id,
+        stripe_payment_intent_id,
+        event_amount_total_cents,
+        event_currency
+      ) VALUES (?, ?, ?, 'pending', ?, NULL, ?, NULL, 0, NULL, NULL, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      provider,
+      providerEventId,
+      requiredString(eventInput?.eventType, "eventType"),
+      nullableInteger(eventInput?.internalOrderId),
+      String(eventInput?.receivedAt || new Date().toISOString()),
+      eventInput?.eventLivemode === true ? 1 : eventInput?.eventLivemode === false ? 0 : null,
+      nullableString(eventInput?.stripeApiVersion),
+      nullableString(eventInput?.stripeCheckoutSessionId),
+      nullableString(eventInput?.stripePaymentIntentId),
+      nullableInteger(eventInput?.eventAmountTotalCents),
+      nullableString(eventInput?.eventCurrency)?.toUpperCase() || null
+    ).run();
+  } catch (error) {
+    const concurrent = await getWebhookEventByProviderEventId(database, provider, providerEventId);
+    if (concurrent) {
+      return { created: false, event: concurrent };
+    }
+    throw error;
+  }
+
+  const created = await getWebhookEventByProviderEventId(database, provider, providerEventId);
+  if (!created) {
+    throw new Error("Webhook event insertion could not reload the inserted event.");
+  }
+  return { created: true, event: created };
+}
+
+export async function claimWebhookEvent(database, eventId, processingToken, options = {}) {
+  const normalizedEventId = requiredInteger(eventId, "eventId");
+  const token = requiredString(processingToken, "processingToken");
+  const attemptedAt = String(options.attemptedAt || new Date().toISOString());
+  const staleBefore = String(options.staleBefore || new Date(Date.parse(attemptedAt) - 5 * 60 * 1000).toISOString());
+  const result = await database.prepare(`
+    UPDATE webhook_events
+    SET processing_token = ?,
+        processing_started_at = ?,
+        last_attempt_at = ?,
+        attempt_count = attempt_count + 1,
+        processing_status = 'pending',
+        failure_code = NULL,
+        error_text = NULL
+    WHERE id = ?
+      AND processing_status IN ('pending', 'failed')
+      AND (
+        processing_token IS NULL
+        OR processing_started_at IS NULL
+        OR processing_started_at < ?
+      )
+  `).bind(token, attemptedAt, attemptedAt, normalizedEventId, staleBefore).run();
+
+  return {
+    claimed: getRunChangeCount(result) === 1,
+    event: await getWebhookEventById(database, normalizedEventId)
+  };
+}
+
+export async function markWebhookEventFailure(database, eventId, processingToken, failureInput = {}) {
+  const normalizedEventId = requiredInteger(eventId, "eventId");
+  const token = requiredString(processingToken, "processingToken");
+  await database.prepare(`
+    UPDATE webhook_events
+    SET processing_status = 'failed',
+        internal_order_id = COALESCE(?, internal_order_id),
+        failure_code = ?,
+        error_text = ?,
+        processing_result = ?,
+        processing_token = NULL,
+        processing_started_at = NULL,
+        processed_at = NULL
+    WHERE id = ? AND processing_token = ?
+  `).bind(
+    nullableInteger(failureInput?.internalOrderId),
+    requiredString(failureInput?.failureCode, "failureCode"),
+    nullableString(failureInput?.errorText) || "Webhook processing failed safely.",
+    nullableString(failureInput?.processingResult),
+    normalizedEventId,
+    token
+  ).run();
+  return getWebhookEventById(database, normalizedEventId);
+}
+
 function prepareOrderInsert(database, order) {
   return database.prepare(`
     INSERT INTO orders (
@@ -485,6 +609,14 @@ function getLastInsertId(runResult) {
     return Number(candidate);
   }
   return Number.isInteger(candidate) ? candidate : Number(candidate);
+}
+
+function getRunChangeCount(runResult) {
+  const candidate = runResult?.meta?.changes ?? runResult?.changes;
+  if (typeof candidate === "bigint") {
+    return Number(candidate);
+  }
+  return Number(candidate || 0);
 }
 
 function ensureArray(value) {

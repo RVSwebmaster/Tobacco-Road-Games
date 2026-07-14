@@ -1,3 +1,5 @@
+import { STRIPE_API_VERSION } from "./stripe-api.mjs";
+
 const STRIPE_API_BASE = "https://api.stripe.com/v1";
 
 export class StripeCheckoutError extends Error {
@@ -29,7 +31,8 @@ export async function createStripeHostedCheckoutSession(input, options = {}) {
       headers: {
         authorization: `Bearer ${secretKey}`,
         "content-type": "application/x-www-form-urlencoded",
-        "idempotency-key": idempotencyKey
+        "idempotency-key": idempotencyKey,
+        "stripe-version": STRIPE_API_VERSION
       },
       method: "POST"
     });

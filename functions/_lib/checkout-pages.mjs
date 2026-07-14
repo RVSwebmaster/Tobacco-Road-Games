@@ -19,23 +19,33 @@ export async function handleCheckoutCompletePage(request, env = {}) {
       && order.stripe_checkout_session_id === sessionId
   );
 
+  const paid = matched && order.payment_status === "paid";
   return htmlPage({
-    body: matched
+    body: paid
       ? `
         <p class="section-heading__kicker">Checkout Return</p>
-        <h1>Stripe sent you back to Tobacco Road Games.</h1>
+        <h1>Payment confirmed.</h1>
         <p class="cart-summary__copy">Order reference: <strong>${escapeHtml(order.public_id)}</strong></p>
-        <p class="cart-summary__copy">Payment status is still <strong>${escapeHtml(order.payment_status)}</strong> in this phase. Delivery and fulfillment are not enabled yet.</p>
+        <p class="cart-summary__copy">Tobacco Road Games has received verified payment confirmation from Stripe. Delivery and fulfillment are not enabled yet.</p>
         <p class="cart-summary__copy"><a class="button button--secondary" href="/store/cart/">Return to Cart</a></p>
       `
-      : `
+      : matched
+        ? `
+        <p class="section-heading__kicker">Checkout Return</p>
+        <h1>Payment processing.</h1>
+        <p class="cart-summary__copy">Order reference: <strong>${escapeHtml(order.public_id)}</strong></p>
+        <p class="cart-summary__copy">Stripe returned your browser, but Tobacco Road Games has not yet received verified webhook confirmation. Refresh this page shortly to check the server-recorded status.</p>
+        <p class="cart-summary__copy">Delivery and fulfillment are not enabled yet.</p>
+        <p class="cart-summary__copy"><a class="button button--secondary" href="/store/cart/">Return to Cart</a></p>
+      `
+        : `
         <p class="section-heading__kicker">Checkout Return</p>
         <h1>Stripe returned you to Tobacco Road Games.</h1>
-        <p class="cart-summary__copy">This phase does not use the Checkout Session ID as authorization. If you need help, return to the cart and start a fresh checkout attempt.</p>
+        <p class="cart-summary__copy">The browser return is not proof of payment. If you need help, return to the cart and start a fresh checkout attempt.</p>
         <p class="cart-summary__copy"><a class="button button--secondary" href="/store/cart/">Return to Cart</a></p>
       `,
     title: "Checkout Complete | Tobacco Road Games"
-  }, clearCheckoutAccessCookie());
+  }, paid || !matched ? clearCheckoutAccessCookie() : null);
 }
 
 export async function handleCheckoutCanceledPage(request, env = {}) {
@@ -58,6 +68,14 @@ export async function handleCheckoutCanceledPage(request, env = {}) {
 }
 
 function htmlPage({ title, body }, setCookie) {
+  const headers = {
+    "cache-control": "no-store",
+    "content-type": "text/html; charset=utf-8",
+    "referrer-policy": "no-referrer"
+  };
+  if (setCookie) {
+    headers["set-cookie"] = setCookie;
+  }
   return new Response(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,12 +112,7 @@ function htmlPage({ title, body }, setCookie) {
   </div>
 </body>
 </html>`, {
-    headers: {
-      "cache-control": "no-store",
-      "content-type": "text/html; charset=utf-8",
-      "referrer-policy": "no-referrer",
-      "set-cookie": setCookie
-    },
+    headers,
     status: 200
   });
 }

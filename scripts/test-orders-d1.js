@@ -7,7 +7,8 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
-  path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql")
+  path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
+  path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql")
 ];
 const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
