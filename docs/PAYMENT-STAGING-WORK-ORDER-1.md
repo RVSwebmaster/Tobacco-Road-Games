@@ -6,6 +6,7 @@ This document records the isolated Cloudflare and Stripe test environment for To
 
 - Cloudflare Pages project: `tobacco-road-games-staging`
 - Deployed storefront: `https://tobacco-road-games-staging.pages.dev`
+- Clean final deployment: `https://bebcfd06.tobacco-road-games-staging.pages.dev`
 - Production branch label used for direct uploads: `staging`
 - D1 binding: `TRG_ORDERS`
 - Remote D1 database: `trg-orders-staging`
@@ -50,7 +51,7 @@ Configure these on the `production` environment of the separate `tobacco-road-ga
 
 - `ORDER_EMAIL_HASH_SECRET`: generated random secret; configured.
 - `CHECKOUT_ACCESS_COOKIE_SECRET`: generated random secret; configured.
-- `STRIPE_SECRET_KEY`: Stripe test secret beginning with `sk_test_`; configure manually in Cloudflare without placing it in Git, documentation, terminal history, or chat.
+- `STRIPE_SECRET_KEY`: Stripe test secret beginning with `sk_test_`; configured manually in Cloudflare without placing it in Git, documentation, terminal history, or chat.
 
 After changing a secret, redeploy staging before exercising checkout.
 
@@ -73,9 +74,12 @@ The object was not renamed, relocated, overwritten, or exposed through a public 
 - Deployed checkout preflight: `POST /api/cart/checkout` with an empty JSON body returns HTTP 400 request validation, proving the deployed route no longer returns the missing `TRG_ORDERS` binding error.
 - Deployed Agency-only quote: Agency is quoted; Janni is returned as unavailable.
 - Remote D1 write-path probe: public order `TRG-FA971A41B0B0-446EAF0F` exists as a pending $3.00 Agency order with one item snapshot. Its Checkout Session is intentionally null because this probe ran before the Stripe secret was configured.
-- Genuine Stripe test Checkout Session and its matching remote D1 order: pending final test-secret configuration.
-- Repository suite: pending final run after the genuine Checkout Session.
-- Commit: pending final verification.
+- Genuine deployed checkout: public order `TRG-203B7E0E5808-4443AA20` was created on July 14, 2026 at `2026-07-14T14:02:41.217Z` through `https://tobacco-road-games-staging.pages.dev/api/cart/checkout`.
+- Stripe returned a test-mode Session with the redacted identifier `cs_test_a1nAX...Ohch7OQ`. The application accepts the response only when Stripe reports `livemode: false`.
+- Matching remote D1 state: payment, fulfillment, and email statuses are `pending`; currency is USD; subtotal and total are 300 cents; exactly one `agency`/`Agency` item snapshot exists; the test Session identifier is attached to the order.
+- Remote D1 verification: no migrations remain to apply; the matching order query returned one pending $3.00 Agency order, one item snapshot, and a `cs_test_` Session attachment.
+- Repository suite: all seven repository test groups passed after the clean final deployment: owner intake, owner intake UI, owner pricing editor, storefront cart, cart quote, orders D1, and cart checkout.
+- Commit: recorded in the final Work Order 1 handoff because a commit cannot contain its own resulting hash.
 
 ## Gate
 
