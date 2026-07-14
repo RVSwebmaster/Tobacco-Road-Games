@@ -6,6 +6,7 @@ import {
   markWebhookEventFailure
 } from "./orders-d1.mjs";
 import { repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
+import { OrderDeliveryError, deliverPaidOrderEmail } from "./order-delivery.mjs";
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
@@ -70,7 +71,9 @@ export async function handleStripeWebhookRequest(request, env = {}, options = {}
       nowMs: options.nowMs,
       pipelineStage: env.PAYMENT_PIPELINE_STAGE,
       processingToken: options.processingToken,
-      productsBucket: env.TRG_PRODUCTS
+      productsBucket: env.TRG_PRODUCTS,
+      deliveryEnv: env,
+      deliveryFetchImpl: options.deliveryFetchImpl
     });
     return jsonResponse({
       duplicate: result.duplicate,
@@ -157,8 +160,15 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       options.productsBucket,
       options.nowMs
     );
+    const delivery = await deliverProcessedPaidOrder(
+      database,
+      eventRecord.event,
+      fulfillment,
+      options
+    );
     return {
       duplicate: true,
+      delivery,
       event: eventRecord.event,
       fulfillment,
       processingResult: eventRecord.event.processing_result || "duplicate_noop"
@@ -177,8 +187,15 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
         options.productsBucket,
         options.nowMs
       );
+      const delivery = await deliverProcessedPaidOrder(
+        database,
+        claimed.event,
+        fulfillment,
+        options
+      );
       return {
         duplicate: true,
+        delivery,
         event: claimed.event,
         fulfillment,
         processingResult: claimed.event.processing_result || "duplicate_noop"
@@ -294,7 +311,45 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       nowMs: options.nowMs
     })
     : null;
-  return { ...result, duplicate: false, fulfillment };
+  const delivery = orderAction === "paid"
+    ? await deliverProcessedPaidOrder(database, result.event, fulfillment, options)
+    : null;
+  return { ...result, duplicate: false, delivery, fulfillment };
+}
+
+async function deliverProcessedPaidOrder(database, eventRecord, fulfillment, options) {
+  if (String(options.deliveryEnv?.RESEND_DELIVERY_ENABLED || "").toLowerCase() !== "true") {
+    return null;
+  }
+  const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
+  if (!orderId || !fulfillment?.ready) {
+    return null;
+  }
+  try {
+    const delivery = await deliverPaidOrderEmail(database, options.deliveryEnv, orderId, {
+      fetchImpl: options.deliveryFetchImpl,
+      nowMs: options.nowMs
+    });
+    if (delivery?.retryable) {
+      throw new StripeWebhookError("Email delivery remains retryable.", {
+        code: "order_email_retryable",
+        httpStatus: 500
+      });
+    }
+    return delivery;
+  } catch (error) {
+    if (error instanceof StripeWebhookError) {
+      throw error;
+    }
+    if (error instanceof OrderDeliveryError && error.retryable) {
+      throw new StripeWebhookError("Email delivery remains retryable.", {
+        cause: error,
+        code: error.code,
+        httpStatus: 500
+      });
+    }
+    return { errorCode: error instanceof OrderDeliveryError ? error.code : "order_email_failed", retryable: false };
+  }
 }
 
 async function repairProcessedPaidOrder(database, eventRecord, productsBucket, nowMs) {
