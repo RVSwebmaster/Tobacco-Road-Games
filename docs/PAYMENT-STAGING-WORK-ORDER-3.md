@@ -65,3 +65,31 @@ The pending page retains the short-lived signed cookie so the customer can refre
 ## Manual checkpoint
 
 Deploy the endpoint and migration, then stop. The owner must register the sandbox event destination and add its endpoint signing secret to Cloudflare. Only after the owner confirms that secret is installed may the staging project be redeployed and a genuine Agency purchase be performed.
+
+The owner completed this checkpoint on July 14, 2026. The encrypted `STRIPE_WEBHOOK_SECRET` was present in Cloudflare before the post-configuration deployment. An invalid-signature probe then returned HTTP 400 and left `webhook_events` empty, proving the deployed endpoint had advanced from configuration gating to signature verification.
+
+## Final remote evidence
+
+Deployment after secret installation: `https://92f0b950.tobacco-road-games-staging.pages.dev`
+
+A genuine Stripe sandbox card purchase of Agency completed through the deployed storefront:
+
+- Internal D1 order ID: `5`
+- Public TRG order reference: `TRG-28B861F71A4D-419DAF28`
+- Checkout attempt, safely truncated: `trgca_ee8f9f04-2477-...`
+- Stripe test Checkout Session: `cs_test_a1E9UEEDiVAGH0uXvkmXRDCMHXKk2OalkmCeFb8JZuDyYJywg2e4f4VNBR`
+- Stripe test Payment Intent: `pi_3Tt8yH2Ou58YVanK0lsB80Mn`
+- Stripe Event: `evt_1Tt8yI2Ou58YVanKNU6JYmDy`
+- Event type: `checkout.session.completed`
+- API version recorded from the Event: `2026-06-24.dahlia`
+- D1 total: `300 USD`
+- D1 payment status: `paid`
+- D1 paid timestamp: `2026-07-14T16:14:14.000Z`
+- Webhook processed timestamp: `2026-07-14T16:14:14.678Z`
+- Order item snapshot: one Agency item at `300 USD`
+
+The customer return page displayed **Payment confirmed** and stated that fulfillment is not enabled. It did not expose a download or treat the browser return as payment proof; the displayed state came from the paid D1 order.
+
+The owner manually redelivered that exact Stripe Event from Workbench. Remote D1 still contained exactly one row for the Event, with `processing_status=processed`, `processing_result=paid`, and `attempt_count=1`. The order remained paid with the original paid timestamp. This demonstrates that a successfully processed duplicate returns before claiming or mutating the Event or order again.
+
+The complete repository test command passed all nine groups: owner intake, owner intake UI, owner pricing editor, storefront cart, cart quote, orders D1, cart checkout, checkout idempotency, and Stripe webhook. The Cloudflare Pages Functions bundle also compiled successfully before deployment.
