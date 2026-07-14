@@ -5,6 +5,23 @@ param(
 $ErrorActionPreference = "Stop"
 $projectName = "tobacco-road-games-staging"
 
+function Set-PagesSecret([string]$Name, [string]$Value) {
+  $output = $Value | npx wrangler pages secret put $Name --project-name $projectName 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "Cloudflare rejected $Name. Wrangler output: $($output -join ' ')"
+  }
+  Write-Output "Installed $Name."
+}
+
+function Convert-SecureValue([Security.SecureString]$Value) {
+  $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Value)
+  try {
+    return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+  } finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+  }
+}
+
 if (-not $ReplyTo) {
   $ReplyTo = Read-Host "Confirmed working Reply-To mailbox"
 }
@@ -44,21 +61,4 @@ try {
   $webhookSecret = $null
   $orderAccessSecret = $null
   [Array]::Clear($randomBytes, 0, $randomBytes.Length)
-}
-
-function Set-PagesSecret([string]$Name, [string]$Value) {
-  $output = $Value | npx wrangler pages secret put $Name --project-name $projectName 2>&1
-  if ($LASTEXITCODE -ne 0) {
-    throw "Cloudflare rejected $Name. Wrangler output: $($output -join ' ')"
-  }
-  Write-Output "Installed $Name."
-}
-
-function Convert-SecureValue([Security.SecureString]$Value) {
-  $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Value)
-  try {
-    return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
-  } finally {
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
-  }
 }
