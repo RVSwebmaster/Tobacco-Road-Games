@@ -5,7 +5,10 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const MIGRATION_PATH = path.join(ROOT, "migrations", "001_direct_storefront.sql");
+const MIGRATION_PATHS = [
+  path.join(ROOT, "migrations", "001_direct_storefront.sql"),
+  path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql")
+];
 const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
 async function main() {
@@ -45,9 +48,11 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
   ];
 
   let capturedForm = null;
+  let capturedHeaders = null;
   const stripeFetchImpl = async (url, options = {}) => {
     assert.match(String(url), /\/checkout\/sessions$/, "Checkout should call Stripe's Checkout Session creation endpoint.");
     capturedForm = new URLSearchParams(String(options.body || ""));
+    capturedHeaders = options.headers || {};
     return createJsonResponse({
       id: "cs_test_created",
       livemode: false,
@@ -57,6 +62,7 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
 
   const response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000001",
       email: " Buyer@Example.com ",
       emailConfirmation: "buyer@example.com",
       items: [
@@ -102,7 +108,10 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
 
   assert.equal(capturedForm.get("mode"), "payment", "Stripe checkout should use payment mode.");
   assert.equal(capturedForm.get("client_reference_id"), payload.publicOrderReference, "Stripe checkout should reconcile with the public order reference.");
-  assert.equal(capturedForm.get("customer_email"), "Buyer@Example.com", "Stripe checkout should use the confirmed buyer email.");
+  assert.equal(capturedForm.get("customer_email"), "buyer@example.com", "Stripe checkout should use the canonical confirmed buyer email for stable idempotent parameters.");
+  assert.equal(capturedHeaders["idempotency-key"], "trg-checkout-trgca_00000000-0000-4000-8000-000000000001", "Stripe checkout should use the stable attempt as its idempotency key.");
+  assert.equal(capturedForm.get("metadata[trg_order_public_id]"), payload.publicOrderReference, "Stripe Session metadata should include the public TRG order reference.");
+  assert.equal(capturedForm.get("metadata[trg_checkout_attempt_id]"), payload.checkoutAttemptId, "Stripe Session metadata should include the checkout attempt identifier.");
   assert.equal(capturedForm.get("line_items[0][price_data][currency]"), "usd", "Stripe line items should send server-authoritative currency.");
   assert.equal(capturedForm.get("line_items[0][price_data][unit_amount]"), "400", "Stripe line items should send server-authoritative effective prices.");
   assert.equal(capturedForm.get("line_items[0][price_data][tax_behavior]"), "inclusive", "Stripe line items should preserve tax-inclusive pricing.");
@@ -112,6 +121,7 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
   assert.match(capturedForm.get("cancel_url") || "", /\/store\/checkout\/canceled$/, "Stripe checkout should return to the TRG cancellation page.");
 
   const order = await findSingleRow(d1, "SELECT * FROM orders");
+  assert.equal(capturedForm.get("metadata[trg_order_id]"), String(order.id), "Stripe Session metadata should include the server-controlled internal TRG order ID.");
   assert.equal(order.payment_status, "pending", "Checkout must not mark orders paid in this phase.");
   assert.equal(order.stripe_checkout_session_id, "cs_test_created", "Checkout should attach the Stripe Checkout Session ID after creation.");
 
@@ -140,6 +150,7 @@ async function testCheckoutValidation(cartCheckout) {
 
   let response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000002",
       email: "buyer@example.com",
       emailConfirmation: "different@example.com",
       items: [{ quantity: 1, slug: "agency" }]
@@ -161,6 +172,7 @@ async function testCheckoutValidation(cartCheckout) {
 
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000003",
       email: "buyer@example.com",
       emailConfirmation: "buyer@example.com",
       items: [{ quantity: 1, slug: "unknown" }]
@@ -183,6 +195,7 @@ async function testCheckoutValidation(cartCheckout) {
   const stagingRestrictionDb = createD1Database().d1;
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000004",
       email: "buyer@example.com",
       emailConfirmation: "buyer@example.com",
       items: [{ quantity: 1, slug: "janni" }]
@@ -210,6 +223,7 @@ async function testCheckoutValidation(cartCheckout) {
   const failureDb = createD1Database().d1;
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000005",
       email: "buyer@example.com",
       emailConfirmation: "buyer@example.com",
       items: [{ quantity: 1, slug: "agency" }]
@@ -233,6 +247,7 @@ async function testCheckoutValidation(cartCheckout) {
 
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
     body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000006",
       email: "buyer@example.com",
       emailConfirmation: "buyer@example.com",
       items: [{ quantity: 1, slug: "agency" }]
@@ -250,10 +265,12 @@ async function testCheckoutValidation(cartCheckout) {
       throw new Error("synthetic stripe failure");
     }
   });
-  assert.equal(response.status, 502, "Checkout should surface Stripe session creation failures safely.");
+  assert.equal(response.status, 503, "Indeterminate Stripe connection failures should be explicitly retryable.");
   assert.equal(await countRows(failureDb, "orders"), 1, "Checkout should create the pending order before attempting Stripe session creation.");
   const failedOrder = await findSingleRow(failureDb, "SELECT * FROM orders");
   assert.equal(failedOrder.stripe_checkout_session_id, null, "Failed Stripe session creation should not attach a session ID.");
+  assert.equal(failedOrder.checkout_session_status, "retryable", "Indeterminate Stripe failures should preserve a retryable checkout attempt.");
+  assert.equal(failedOrder.payment_status, "pending", "Indeterminate Stripe failures must remain pending for recovery.");
 }
 
 async function testCheckoutAccessCookie(cookieHelpers) {
@@ -462,7 +479,9 @@ async function testPendingRouteDisabled(pendingRoute) {
 function createD1Database() {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys = ON;");
-  raw.exec(fs.readFileSync(MIGRATION_PATH, "utf8"));
+  for (const migrationPath of MIGRATION_PATHS) {
+    raw.exec(fs.readFileSync(migrationPath, "utf8"));
+  }
   return {
     d1: createD1Adapter(raw),
     raw

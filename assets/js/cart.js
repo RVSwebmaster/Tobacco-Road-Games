@@ -184,8 +184,16 @@
     };
   }
 
-  function createCheckoutRequest(cart, email, emailConfirmation) {
+  function createCheckoutAttemptId(cryptoImpl = globalThis.crypto) {
+    if (!cryptoImpl || typeof cryptoImpl.randomUUID !== "function") {
+      throw new Error("Secure checkout attempt generation is unavailable.");
+    }
+    return `trgca_${cryptoImpl.randomUUID().toLowerCase()}`;
+  }
+
+  function createCheckoutRequest(cart, email, emailConfirmation, checkoutAttemptId) {
     return {
+      checkoutAttemptId: String(checkoutAttemptId || ""),
       email,
       emailConfirmation,
       items: createQuoteRequest(cart).items
@@ -216,13 +224,13 @@
     return payload;
   }
 
-  async function requestCheckout(cart, email, emailConfirmation, fetchImpl = globalThis.fetch) {
+  async function requestCheckout(cart, email, emailConfirmation, checkoutAttemptId, fetchImpl = globalThis.fetch) {
     if (typeof fetchImpl !== "function") {
       throw new Error("Checkout request is unavailable.");
     }
 
     const response = await fetchImpl(CHECKOUT_ENDPOINT, {
-      body: JSON.stringify(createCheckoutRequest(cart, email, emailConfirmation)),
+      body: JSON.stringify(createCheckoutRequest(cart, email, emailConfirmation, checkoutAttemptId)),
       headers: {
         "content-type": "application/json"
       },
@@ -231,7 +239,9 @@
 
     const payload = await safeJson(response);
     if (!response.ok) {
-      throw new Error(payload?.error || "Checkout could not be started.");
+      const error = new Error(payload?.error || "Checkout could not be started.");
+      error.retryable = payload?.retryable;
+      throw error;
     }
     if (!payload || typeof payload.checkoutUrl !== "string") {
       throw new Error("Checkout response was not valid.");
@@ -308,6 +318,8 @@
   function getCartPageState(pageRoot) {
     if (!pageRoot.__trgCartState) {
       pageRoot.__trgCartState = {
+        checkoutAttemptFingerprint: "",
+        checkoutAttemptId: "",
         checkoutBusy: false,
         checkoutFeedbackMode: "validation",
         latestModel: null,
@@ -614,7 +626,21 @@
 
     try {
       const cart = readCart(storage);
-      const payload = await requestCheckout(cart, email, emailConfirmation, options.fetchImpl || globalThis.fetch);
+      const checkoutAttemptFingerprint = JSON.stringify({
+        email: email.toLowerCase(),
+        items: createQuoteRequest(cart).items
+      });
+      if (!state.checkoutAttemptId || state.checkoutAttemptFingerprint !== checkoutAttemptFingerprint) {
+        state.checkoutAttemptId = createCheckoutAttemptId(options.crypto || globalThis.crypto);
+        state.checkoutAttemptFingerprint = checkoutAttemptFingerprint;
+      }
+      const payload = await requestCheckout(
+        cart,
+        email,
+        emailConfirmation,
+        state.checkoutAttemptId,
+        options.fetchImpl || globalThis.fetch
+      );
       if (options.onCheckoutRedirect) {
         options.onCheckoutRedirect(payload.checkoutUrl, payload);
       } else if (options.window?.location) {
@@ -623,6 +649,10 @@
         globalThis.location.assign(payload.checkoutUrl);
       }
     } catch (error) {
+      if (error?.retryable === false) {
+        state.checkoutAttemptId = "";
+        state.checkoutAttemptFingerprint = "";
+      }
       state.checkoutFeedbackMode = "server";
       setCheckoutFeedback(nodes, error instanceof Error ? error.message : "Checkout could not be started.");
       state.checkoutBusy = false;
@@ -724,6 +754,7 @@
     addItem,
     clearCart,
     countItems,
+    createCheckoutAttemptId,
     createCheckoutRequest,
     createEmptyCart,
     createQuoteRequest,

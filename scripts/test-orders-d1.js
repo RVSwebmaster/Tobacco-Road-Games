@@ -5,7 +5,10 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const MIGRATION_PATH = path.join(ROOT, "migrations", "001_direct_storefront.sql");
+const MIGRATION_PATHS = [
+  path.join(ROOT, "migrations", "001_direct_storefront.sql"),
+  path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql")
+];
 const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
 async function main() {
@@ -844,7 +847,9 @@ async function testPendingOrderValidation(ordersPending) {
 function createD1Database() {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys = ON;");
-  raw.exec(fs.readFileSync(MIGRATION_PATH, "utf8"));
+  for (const migrationPath of MIGRATION_PATHS) {
+    raw.exec(fs.readFileSync(migrationPath, "utf8"));
+  }
   return {
     d1: createD1Adapter(raw),
     raw

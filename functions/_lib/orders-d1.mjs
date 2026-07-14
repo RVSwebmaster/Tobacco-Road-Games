@@ -3,7 +3,17 @@ import { generatePublicOrderReference } from "./order-privacy.mjs";
 export async function createPendingOrder(database, orderInput, itemSnapshots, options = {}) {
   const createdAt = String(orderInput?.createdAt || new Date().toISOString());
   const publicId = String(orderInput?.publicId || options.publicIdGenerator?.() || generatePublicOrderReference());
+  const checkoutAttemptId = nullableString(orderInput?.checkoutAttemptId);
+  const checkoutRequestHash = nullableString(orderInput?.checkoutRequestHash);
+  if (checkoutAttemptId && !checkoutRequestHash) {
+    throw new Error("checkoutRequestHash is required when checkoutAttemptId is present.");
+  }
   const normalizedOrder = {
+    checkoutAttemptId,
+    checkoutFailureCode: nullableString(orderInput?.checkoutFailureCode),
+    checkoutRequestHash,
+    checkoutSessionStatus: String(orderInput?.checkoutSessionStatus || (checkoutAttemptId ? "creating" : "legacy")),
+    checkoutUpdatedAt: orderInput?.checkoutUpdatedAt || (checkoutAttemptId ? createdAt : null),
     completedAt: orderInput?.completedAt || null,
     createdAt,
     currency: requiredString(orderInput?.currency, "currency"),
@@ -21,6 +31,7 @@ export async function createPendingOrder(database, orderInput, itemSnapshots, op
     publicId,
     refundedAt: orderInput?.refundedAt || null,
     stripeCheckoutSessionId: nullableString(orderInput?.stripeCheckoutSessionId),
+    stripeCheckoutSessionUrl: nullableString(orderInput?.stripeCheckoutSessionUrl),
     stripePaymentIntentId: nullableString(orderInput?.stripePaymentIntentId),
     subtotalCents: requiredInteger(orderInput?.subtotalCents, "subtotalCents"),
     totalCents: requiredInteger(orderInput?.totalCents, "totalCents")
@@ -98,6 +109,33 @@ export async function getOrderByPublicId(database, publicId) {
   return firstRow(database.prepare("SELECT * FROM orders WHERE public_id = ?").bind(normalizedPublicId));
 }
 
+export async function getOrderByCheckoutAttemptId(database, checkoutAttemptId) {
+  const normalizedAttemptId = nullableString(checkoutAttemptId);
+  if (!normalizedAttemptId) {
+    return null;
+  }
+  return firstRow(database.prepare("SELECT * FROM orders WHERE checkout_attempt_id = ?").bind(normalizedAttemptId));
+}
+
+export async function createOrGetPendingOrderByCheckoutAttempt(database, orderInput, itemSnapshots, options = {}) {
+  const checkoutAttemptId = requiredString(orderInput?.checkoutAttemptId, "checkoutAttemptId");
+  const existingOrder = await getOrderByCheckoutAttemptId(database, checkoutAttemptId);
+  if (existingOrder) {
+    return { created: false, order: existingOrder };
+  }
+
+  try {
+    const order = await createPendingOrder(database, orderInput, itemSnapshots, options);
+    return { created: true, order };
+  } catch (error) {
+    const concurrentOrder = await getOrderByCheckoutAttemptId(database, checkoutAttemptId);
+    if (concurrentOrder) {
+      return { created: false, order: concurrentOrder };
+    }
+    throw error;
+  }
+}
+
 export async function getOrderByStripeCheckoutSessionId(database, checkoutSessionId) {
   const normalizedSessionId = nullableString(checkoutSessionId);
   if (!normalizedSessionId) {
@@ -114,6 +152,79 @@ export async function attachStripeCheckoutSessionId(database, orderId, checkoutS
     WHERE id = ?
   `).bind(normalizedSessionId, requiredInteger(orderId, "orderId")).run();
   return getOrderById(database, orderId);
+}
+
+export async function attachStripeCheckoutSession(database, orderId, sessionInput, options = {}) {
+  const normalizedOrderId = requiredInteger(orderId, "orderId");
+  const checkoutSessionId = requiredString(sessionInput?.id, "checkoutSessionId");
+  const checkoutSessionUrl = requiredString(sessionInput?.url, "checkoutSessionUrl");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+
+  await database.prepare(`
+    UPDATE orders
+    SET stripe_checkout_session_id = ?,
+        stripe_checkout_session_url = ?,
+        checkout_session_status = 'active',
+        checkout_failure_code = NULL,
+        checkout_updated_at = ?
+    WHERE id = ?
+      AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id = ?)
+  `).bind(
+    checkoutSessionId,
+    checkoutSessionUrl,
+    updatedAt,
+    normalizedOrderId,
+    checkoutSessionId
+  ).run();
+
+  const order = await getOrderById(database, normalizedOrderId);
+  if (!order
+    || order.stripe_checkout_session_id !== checkoutSessionId
+    || order.stripe_checkout_session_url !== checkoutSessionUrl
+    || order.checkout_session_status !== "active") {
+    throw new Error("The Stripe Checkout Session could not be attached to the order.");
+  }
+  return order;
+}
+
+export async function markCheckoutAttemptTerminalFailure(database, orderId, failureCode, options = {}) {
+  const normalizedOrderId = requiredInteger(orderId, "orderId");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+  await database.prepare(`
+    UPDATE orders
+    SET payment_status = 'failed',
+        fulfillment_status = 'canceled',
+        email_status = 'skipped',
+        checkout_session_status = 'failed_terminal',
+        checkout_failure_code = ?,
+        checkout_updated_at = ?
+    WHERE id = ?
+      AND stripe_checkout_session_id IS NULL
+  `).bind(
+    requiredString(failureCode, "failureCode"),
+    updatedAt,
+    normalizedOrderId
+  ).run();
+  return getOrderById(database, normalizedOrderId);
+}
+
+export async function markCheckoutAttemptRetryable(database, orderId, failureCode, options = {}) {
+  const normalizedOrderId = requiredInteger(orderId, "orderId");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+  await database.prepare(`
+    UPDATE orders
+    SET checkout_session_status = 'retryable',
+        checkout_failure_code = ?,
+        checkout_updated_at = ?
+    WHERE id = ?
+      AND payment_status = 'pending'
+      AND stripe_checkout_session_id IS NULL
+  `).bind(
+    requiredString(failureCode, "failureCode"),
+    updatedAt,
+    normalizedOrderId
+  ).run();
+  return getOrderById(database, normalizedOrderId);
 }
 
 export async function updateOrderPaymentStatus(database, orderId, patch) {
@@ -212,10 +323,15 @@ function prepareOrderInsert(database, order) {
   return database.prepare(`
     INSERT INTO orders (
       public_id,
+      checkout_attempt_id,
+      checkout_request_hash,
+      checkout_session_status,
+      checkout_failure_code,
       customer_email,
       customer_email_normalized,
       customer_email_hash,
       stripe_checkout_session_id,
+      stripe_checkout_session_url,
       stripe_payment_intent_id,
       currency,
       subtotal_cents,
@@ -230,14 +346,20 @@ function prepareOrderInsert(database, order) {
       paid_at,
       completed_at,
       refunded_at,
-      disputed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      disputed_at,
+      checkout_updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     order.publicId,
+    order.checkoutAttemptId,
+    order.checkoutRequestHash,
+    order.checkoutSessionStatus,
+    order.checkoutFailureCode,
     order.customerEmail,
     order.customerEmailNormalized,
     order.customerEmailHash,
     order.stripeCheckoutSessionId,
+    order.stripeCheckoutSessionUrl,
     order.stripePaymentIntentId,
     order.currency,
     order.subtotalCents,
@@ -252,7 +374,8 @@ function prepareOrderInsert(database, order) {
     order.paidAt,
     order.completedAt,
     order.refundedAt,
-    order.disputedAt
+    order.disputedAt,
+    order.checkoutUpdatedAt
   );
 }
 

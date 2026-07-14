@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const vm = require("node:vm");
+const { webcrypto } = require("node:crypto");
 const { spawnSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -259,7 +260,7 @@ async function testCartCheckoutRedirect() {
   }));
 
   let quoteCount = 0;
-  let checkoutBody = null;
+  const checkoutBodies = [];
   let redirectedTo = "";
   const fetchImpl = async (url, options = {}) => {
     if (String(url).includes("/api/cart/quote")) {
@@ -290,7 +291,13 @@ async function testCartCheckoutRedirect() {
     }
 
     assert.equal(String(url), "/api/cart/checkout", "Checkout should post to the checkout endpoint.");
-    checkoutBody = JSON.parse(options.body);
+    checkoutBodies.push(JSON.parse(options.body));
+    if (checkoutBodies.length === 1) {
+      return createJsonResponse({
+        error: "The Stripe result is uncertain. Retry this same checkout attempt.",
+        retryable: true
+      }, 503);
+    }
     return createJsonResponse({
       checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test_123",
       createdAt: new Date().toISOString(),
@@ -345,8 +352,19 @@ async function testCartCheckoutRedirect() {
     preventDefault() {}
   });
 
-  assert.ok(checkoutBody, "Successful checkout should submit a checkout request.");
-  assert.deepEqual(checkoutBody, {
+  assert.equal(redirectedTo, "", "An uncertain checkout response should remain on the cart for retry.");
+  assert.equal(document.checkoutSubmitButton.disabled, false, "A retryable checkout response should re-enable the checkout control.");
+  await submitHandler({
+    currentTarget: document.checkoutForm,
+    preventDefault() {}
+  });
+
+  assert.equal(checkoutBodies.length, 2, "A retry should submit the checkout request again.");
+  assert.equal(checkoutBodies[0].checkoutAttemptId, checkoutBodies[1].checkoutAttemptId, "Retrying unchanged checkout details should reuse the stable attempt identifier.");
+  const checkoutBody = checkoutBodies[1];
+  assert.match(checkoutBody.checkoutAttemptId, /^trgca_[0-9a-f-]{36}$/, "Checkout should include a non-sensitive random attempt identifier.");
+  const { checkoutAttemptId, ...checkoutDetails } = checkoutBody;
+  assert.deepEqual(checkoutDetails, {
     email: "buyer@example.com",
     emailConfirmation: "buyer@example.com",
     items: [
@@ -451,6 +469,7 @@ function loadCartScript({ document, fetchImpl, storage, window }) {
   const script = fs.readFileSync(scriptPath, "utf8");
   const context = {
     console,
+    crypto: webcrypto,
     Date,
     Intl,
     JSON,
