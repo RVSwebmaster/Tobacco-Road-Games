@@ -21,18 +21,91 @@ async function main() {
   const fulfillment = await importModule("functions/_lib/order-fulfillment.mjs");
   const authorization = await importModule("functions/_lib/download-authorization.mjs");
   const download = await importModule("functions/_lib/download-route.mjs");
+  const fulfillmentRepairRoute = await importModule("functions/_lib/fulfillment-repair-route.mjs");
   const checkoutPages = await importModule("functions/_lib/checkout-pages.mjs");
   const checkoutCookie = await importModule("functions/_lib/checkout-cookie.mjs");
   const publicAssetPolicy = await importModule("functions/_lib/product-asset-policy.mjs");
 
   await testPaidUnpaidDuplicateAndRepair(orders, fulfillment);
   await testMissingObject(orders, fulfillment);
+  await testOperationalRepairRoute(orders, fulfillmentRepairRoute);
   await testCredentialsAndDelivery(orders, fulfillment, authorization, download);
   await testSubstitutionAndRevocation(orders, fulfillment, authorization, download);
   await testCompletionPageStates(orders, fulfillment, checkoutPages, checkoutCookie);
   await testNoPublicPdfAccess(publicAssetPolicy);
 
   console.log("Secure Agency download tests passed.");
+}
+
+async function testOperationalRepairRoute(orders, fulfillmentRepairRoute) {
+  const fixture = await createFixture(orders, true);
+  const paidAt = (await orders.getOrderById(fixture.d1, fixture.order.id)).paid_at;
+  const stripeSession = matchingStripeSession(fixture.order);
+  const fetchImpl = async (url, init) => {
+    assert.match(url, new RegExp(`/checkout/sessions/${fixture.order.stripe_checkout_session_id}$`));
+    assert.equal(init.headers["stripe-version"], "2026-06-24.dahlia");
+    return new Response(JSON.stringify(stripeSession), {
+      headers: { "content-type": "application/json" },
+      status: 200
+    });
+  };
+  const request = () => new Request("https://example.com/api/orders/repair-fulfillment", {
+    body: JSON.stringify({ sessionId: fixture.order.stripe_checkout_session_id }),
+    headers: { "content-type": "application/json", origin: "https://example.com" },
+    method: "POST"
+  });
+  const env = {
+    PAYMENT_PIPELINE_STAGE: "staging",
+    STRIPE_SECRET_KEY: "sk_test_secure_repair_fixture",
+    TRG_ORDERS: fixture.d1,
+    TRG_PRODUCTS: createBucket()
+  };
+
+  let response = await fulfillmentRepairRoute.handleFulfillmentRepairRequest(request(), env, {
+    fetchImpl,
+    nowMs: NOW
+  });
+  assert.equal(response.status, 200, "A server-verified paid Stripe Session should repair fulfillment.");
+  response = await fulfillmentRepairRoute.handleFulfillmentRepairRequest(request(), env, {
+    fetchImpl,
+    nowMs: NOW + 1000
+  });
+  assert.equal(response.status, 200, "The operational repair route should be idempotent.");
+  assert.equal(await countRows(fixture.d1, "download_entitlements"), 1);
+  assert.equal((await orders.getOrderById(fixture.d1, fixture.order.id)).paid_at, paidAt);
+
+  const mismatch = await createFixture(orders, true);
+  response = await fulfillmentRepairRoute.handleFulfillmentRepairRequest(
+    new Request("https://example.com/api/orders/repair-fulfillment", {
+      body: JSON.stringify({ sessionId: mismatch.order.stripe_checkout_session_id }),
+      headers: { "content-type": "application/json", origin: "https://example.com" },
+      method: "POST"
+    }),
+    {
+      ...env,
+      TRG_ORDERS: mismatch.d1
+    },
+    {
+      fetchImpl: async () => new Response(JSON.stringify({
+        ...matchingStripeSession(mismatch.order),
+        amount_total: Number(mismatch.order.total_cents) + 1
+      }), { status: 200 })
+    }
+  );
+  assert.equal(response.status, 409, "A Stripe/order mismatch must not repair fulfillment.");
+  assert.equal(await countRows(mismatch.d1, "download_entitlements"), 0);
+
+  const unpaid = await createFixture(orders, false);
+  response = await fulfillmentRepairRoute.handleFulfillmentRepairRequest(
+    new Request("https://example.com/api/orders/repair-fulfillment", {
+      body: JSON.stringify({ sessionId: unpaid.order.stripe_checkout_session_id }),
+      headers: { "content-type": "application/json", origin: "https://example.com" },
+      method: "POST"
+    }),
+    { ...env, TRG_ORDERS: unpaid.d1 }
+  );
+  assert.equal(response.status, 409, "An unpaid order must not be repairable.");
+  assert.equal(await countRows(unpaid.d1, "download_entitlements"), 0);
 }
 
 async function testPaidUnpaidDuplicateAndRepair(orders, fulfillment) {
@@ -288,6 +361,24 @@ function createBucket(options = {}) {
       }
       return { size: 9630946 };
     }
+  };
+}
+
+function matchingStripeSession(order) {
+  return {
+    amount_total: Number(order.total_cents),
+    currency: String(order.currency).toLowerCase(),
+    id: order.stripe_checkout_session_id,
+    livemode: false,
+    metadata: {
+      trg_checkout_attempt_id: order.checkout_attempt_id,
+      trg_order_id: String(order.id),
+      trg_order_public_id: order.public_id
+    },
+    object: "checkout.session",
+    payment_intent: order.stripe_payment_intent_id,
+    payment_status: "paid",
+    status: "complete"
   };
 }
 

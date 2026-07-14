@@ -24,7 +24,7 @@ Migration `005_secure_download_entitlements.sql` adds:
 - an append-only successful-download attempt record;
 - safe fulfillment failure classification on the paid order.
 
-The verified Stripe webhook runs the idempotent paid-order repair after payment finalization. A duplicate processed webhook also runs the repair, allowing an order paid across an outage or deployment boundary to recover without changing `paid_at`. R2 is checked before an order becomes fulfillment-ready. A missing or unavailable object leaves the order paid and records a recoverable fulfillment failure.
+The verified Stripe webhook runs the idempotent paid-order repair after payment finalization. A duplicate processed webhook also runs the repair. Staging additionally exposes `POST /api/orders/repair-fulfillment` for operational recovery: it accepts only a Stripe test Session ID, retrieves that Session server-to-server with the encrypted Stripe key, revalidates the paid state and every stored order field, and only then runs the same repair. This allows an order paid across an outage or deployment boundary to recover without changing `paid_at`. R2 is checked before an order becomes fulfillment-ready. A missing or unavailable object leaves the order paid and records a recoverable fulfillment failure.
 
 ## Download authorization
 
@@ -56,4 +56,4 @@ The route validates the signature and expiration, reloads the entitlement and pa
 
 ## Manual checkpoint
 
-Deployment is intentionally stopped before repairing the existing Work Order 3 paid order or making a new sandbox purchase. After `DOWNLOAD_SIGNING_SECRET` is installed, redeploy and resume Work Order 4. The existing paid order can then be repaired idempotently by redelivering its already-processed paid Stripe Event; the duplicate webhook path performs fulfillment repair without duplicating the webhook record or entitlement.
+Deployment was intentionally stopped before repairing the existing Work Order 3 paid order or making a new sandbox purchase. After `DOWNLOAD_SIGNING_SECRET` is installed, redeploy and resume Work Order 4. The existing paid order can then be repaired idempotently through the server-verified staging repair route or by redelivering its already-processed paid Stripe Event. Both paths use the same fulfillment repair and cannot duplicate an entitlement.
