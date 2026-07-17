@@ -539,8 +539,8 @@
       "PDF details coming soon"
     ],
     "pageCount": 24,
-    "price": "",
-    "priceCents": null,
+    "price": "5.00",
+    "priceCents": 500,
     "minimumPrice": "",
     "minimumPriceCents": null,
     "suggestedPrice": "",
@@ -554,8 +554,8 @@
     "saleLabel": "",
     "saleEnabled": false,
     "currency": "USD",
-    "status": "preview-available",
-    "statusLabel": "Preview Available",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
     "coverImage": "/product-assets/ringbound/cover.webp",
     "previewImage": "/product-assets/ringbound/preview.webp",
     "thumbnailImage": "",
@@ -563,13 +563,21 @@
     "previewImages": [],
     "previewPdf": "",
     "teaserVideo": "",
-    "buyMode": "preview-only",
+    "buyMode": "cart",
     "buyUrl": "",
     "fulfillmentNote": "",
-    "shortDescription": "Product summary coming soon.",
-    "longDescription": "Product summary coming soon.",
-    "features": [],
+    "shortDescription": "Ringbound introduces a complete 5e-compatible martial class built to control the battlefield with strength, balance, and sheer presence. Claim enemy attention, protect your allies, break opposing momentum, and choose from five distinct Subclass Paths that shape how you hold the line.",
+    "longDescription": "Ringbound is a complete martial class for 5e-compatible fantasy roleplaying, built for players who want to control the fight without relying on armor, spellcasting, or oversized weapon damage.\r\n\r\nA Ringbound is a champion of weight, balance, contest, and claimed ground. Where fighters master weapons and monks master motion, the Ringbound masters the space between bodies. They break enemy momentum, interrupt movement, protect nearby allies, and make dangerous foes deal with them first.\r\n\r\nThe class is built around Balance, a renewable resource used to brace against forced movement, drive enemies across the battlefield, break their footing, lock them into a clinch, and weather attacks that would put a lesser warrior down. Its signature Claim Focus feature lets the Ringbound seize an enemy’s attention, punish attempts to disengage, and make attacking anyone else a costly mistake.\r\n\r\nAs the Ringbound advances, raw physical presence grows into something nearly mythic. The class becomes harder to move, capable of controlling increasingly massive enemies, and eventually able to declare the surrounding battlefield as its personal ring. This is not a class designed to chase the highest damage total. It is designed to hold the line, shape enemy choices, and keep the rest of the party alive long enough to win.\r\n\r\nFive Subclass Paths provide distinct approaches to ringcraft:\r\n\r\nThe Path of the Driving Palm drives, herds, and scatters enemy formations.\r\n\r\nThe Path of the Iron Clinch seizes opponents, denies escape, and turns close combat into a cage.\r\n\r\nThe Path of the Salt Bearer marks sacred ground, protects allies, and makes crossing the line carry a price.\r\n\r\nThe Path of the Thunder Hand breaks rhythm and courage through concussive, battlefield-shaking force.\r\n\r\nThe Path of the Turning Step redirects attacks, manipulates position, and lets enemy momentum become its own punishment.\r\n\r\nRingbound is for players who want to be the wall the enemy cannot ignore, the hand that decides where the fight happens, and the last person still standing when the dust settles.\r\n\r\nThe Ringbound is the line.",
+    "features": [
+      "Class Features",
+      "Unarmored martial combat, powerful open-hand strikes, battlefield control, enemy focus, forced movement, grappling techniques, ally protection, growing physical presence, and five distinct Subclass Paths.",
+      "The Ringbound is built to hold the line, dictate where the fight happens, and make enemies regret trying to ignore them."
+    ],
     "tags": [
+      "Nippon Folio",
+      "Fantasy",
+      "Supplement",
+      "SRD 5.1",
       "Preview"
     ],
     "creationMethod": "Human-authored by RV Sawyer.",
@@ -577,7 +585,9 @@
     "version": "2026 catalog preview",
     "releaseDate": "2026-06-17",
     "lastUpdated": "2026-07-10",
-    "relatedProducts": [],
+    "relatedProducts": [
+      "yojimbo"
+    ],
     "libraryEligible": true,
     "updateEligible": true,
     "bundleEligible": false,
