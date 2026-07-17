@@ -7,7 +7,7 @@
   const TAG_LIBRARY_KEY = "trg_owner_tag_library_v1";
   const DEFAULT_PRODUCT_LINES = ["Tablecraft"];
   const DEFAULT_TAG_GROUPS = Object.freeze([
-    Object.freeze({ name: "Product Lines", tags: Object.freeze(["Tablecraft", "Gazetteer", "Familiar Faces"]) }),
+    Object.freeze({ name: "Product Lines", tags: Object.freeze(["Tablecraft", "Gazetteer", "Familiar Faces", "Nippon Folio"]) }),
     Object.freeze({ name: "Genre", tags: Object.freeze(["Family Gaming", "Fantasy", "Historical", "Horror", "Modern", "Science Fiction", "Other"]) }),
     Object.freeze({ name: "Product Type", tags: Object.freeze(["Core Rules", "Supplement", "Rules Supplement", "Scenario", "Item", "Monster"]) }),
     Object.freeze({ name: "Game System", tags: Object.freeze(["Dungeons & Dragons", "SRD 5.1", "SRD 5.21", "OGL", "Threshold Engine", "GURPS", "Champions", "Big Damn Sci-Fi", "System Agnostic", "Other System", "Traveller", "Call of Cthulhu", "Syzygy"]) })

@@ -86,6 +86,8 @@ async function testExistingListingLoadsMatchingTagCheckboxes() {
   const harness = createHarness();
   await harness.flush();
 
+  assert.ok(findTagCheckbox(harness, "Nippon Folio"), "Nippon Folio should be available as a Product Lines tag checkbox.");
+
   harness.fields.existingSelect.value = "agency";
   harness.buttons.loadExisting.click();
 
