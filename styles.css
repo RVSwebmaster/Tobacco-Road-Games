@@ -154,6 +154,8 @@ html.trg-intro-pending .page-shell {
 .site-header,
 .hero,
 .latest,
+.workshop,
+.commitment,
 .about,
 .pillars,
 .releases,
@@ -236,6 +238,8 @@ html.trg-intro-pending .page-shell {
 
 .hero,
 .latest,
+.workshop,
+.commitment,
 .about,
 .pillars,
 .releases,
@@ -250,6 +254,8 @@ html.trg-intro-pending .page-shell {
 
 .hero,
 .latest,
+.workshop,
+.commitment,
 .about,
 .pillars,
 .releases,
@@ -275,6 +281,8 @@ html.trg-intro-pending .page-shell {
 .hero__panel,
 .hero__bench,
 .latest,
+.workshop,
+.commitment,
 .about,
 .pillars,
 .releases,
@@ -489,11 +497,135 @@ h4 {
 }
 
 .latest,
+.workshop,
+.commitment,
 .about,
 .pillars,
 .releases,
 .store-callout {
   margin-bottom: 18px;
+}
+
+.home-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-product-card,
+.workshop-card {
+  overflow: hidden;
+  border: 1px solid rgba(242, 216, 170, 0.14);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.home-product-card {
+  display: grid;
+  grid-template-rows: 260px 1fr;
+}
+
+.home-product-card > img {
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  object-fit: contain;
+  background: rgba(10, 7, 5, 0.34);
+}
+
+.home-product-card__copy {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 20px;
+}
+
+.home-product-card__copy p,
+.workshop-card__copy p,
+.commitment__copy p {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  line-height: 1.7;
+}
+
+.home-product-card__copy > p:not(.home-product-card__status),
+.workshop-card__copy > p:not(.workshop-card__label) {
+  color: var(--muted);
+}
+
+.home-product-card__status,
+.workshop-card__label {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.home-product-card .button,
+.workshop-card .button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.section-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.workshop-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.58fr) minmax(0, 1.42fr);
+  max-width: 850px;
+}
+
+.workshop-card__media {
+  min-height: 330px;
+  padding: 22px;
+  background: rgba(10, 7, 5, 0.34);
+}
+
+.workshop-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.workshop-card__copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 14px;
+  padding: 26px;
+}
+
+.workshop-card__stage strong {
+  color: var(--text);
+}
+
+.commitment__inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.commitment h2 {
+  margin-top: 12px;
+}
+
+.commitment__copy {
+  display: grid;
+  gap: 15px;
+  margin-top: 22px;
+  color: var(--muted);
+}
+
+.commitment__emphasis {
+  padding: 10px 0;
+  color: var(--accent-strong);
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+  font-weight: 700;
 }
 
 .feature-card {
@@ -2014,6 +2146,8 @@ body.view-section .site-nav {
 
 body.view-section .hero,
 body.view-section .latest,
+body.view-section .workshop,
+body.view-section .commitment,
 body.view-section .about,
 body.view-section .pillars,
 body.view-section .releases,
@@ -2025,6 +2159,8 @@ body.view-section .store-callout {
 }
 
 body.view-section .note-card,
+body.view-section .home-product-card,
+body.view-section .workshop-card,
 body.view-section .pillar-card,
 body.view-section .feature-card,
 body.view-section .release-group,
@@ -2057,6 +2193,8 @@ body.view-section .site-footer {
   .product-hero,
   .store-callout,
   .feature-card,
+  .home-product-grid,
+  .workshop-card,
   .pillar-grid,
   .release-grid,
   .author-card-grid,
@@ -2208,6 +2346,8 @@ body.view-section .site-footer {
   .hero__bench,
   .store-section,
   .latest,
+  .workshop,
+  .commitment,
   .about,
   .pillars,
   .releases,

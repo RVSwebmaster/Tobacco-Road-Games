@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Cache-bust version: 20260614a. Bump this value when replacing CSS, JS, JSON, images, or media files that may be cached. -->
+  <!-- Cache-bust version: 20260717a. Bump this value when replacing CSS, JS, JSON, images, or media files that may be cached. -->
   <title>Tobacco Road Games</title>
   <meta
     name="description"
@@ -50,8 +50,8 @@
       }
     })();
   </script>
-  <link rel="icon" type="image/png" href="assets/logo.png?v=20260614a">
-  <link rel="stylesheet" href="styles.css?v=20260614a">
+  <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
+  <link rel="stylesheet" href="styles.css?v=20260717a">
 </head>
 <body>
   <div class="site-intro" aria-hidden="true">
@@ -65,7 +65,7 @@
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="#top" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="assets/logo.png?v=20260614a" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="assets/logo.png?v=20260717a" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
           <span class="brand__tag">A working GM's bench for strange tables and long campaigns</span>
@@ -75,7 +75,7 @@
       <nav class="site-nav" aria-label="Primary">
         <a href="#about">About</a>
         <a href="authors.html">Authors</a>
-        <a href="#latest">Status</a>
+        <a href="#workshop">Workshop</a>
         <a href="/store/">Live Store</a>
         <a href="#pillars">What We Build</a>
         <a href="ai-statement.html">AI Statement</a>
@@ -94,8 +94,8 @@
           </p>
 
           <div class="hero__actions">
-            <a class="button button--primary" href="#latest">See Workshop Status</a>
-            <a class="button button--secondary" href="#pillars">What We Build</a>
+            <a class="button button--primary" href="/store/">Browse the Store</a>
+            <a class="button button--secondary" href="#workshop">From the Workshop</a>
           </div>
         </div>
 
@@ -114,26 +114,78 @@
         </aside>
       </section>
 
-      <section class="latest" id="latest" aria-labelledby="latest-heading">
+      <section class="latest" id="available" aria-labelledby="available-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Workshop Status</p>
-          <h2 id="latest-heading">The store is changing</h2>
-          <p>Marketplace links and public product listings have been removed from this site while Tobacco Road Games builds its own direct digital storefront.</p>
+          <p class="section-heading__kicker">Available now</p>
+          <h2 id="available-heading">Books for the table</h2>
+          <p>Tabletop roleplaying material published by Tobacco Road Games and available through the direct store.</p>
         </div>
-        <div class="about__panel">
-          <p>
-            This site is now the front porch and workshop bench, not the external product rack. For the moment, it is
-            here to speak in its own voice, show the kind of work Tobacco Road Games builds, and make room for what
-            comes next.
-          </p>
-          <p>
-            A direct digital store is planned. When it is ready, announcements and access will begin here rather than
-            through a marketplace handoff.
-          </p>
-          <div class="hero__actions">
-            <a class="button button--primary" href="/store/">Open the Live Store</a>
-            <a class="button button--primary" href="#pillars">Walk the Three Roads</a>
-            <a class="button button--secondary" href="ai-statement.html">Read the AI Statement</a>
+        <div class="home-product-grid">
+          <article class="home-product-card">
+            <img src="/product-assets/agency/cover.webp" alt="Agency: Share the Wheel or Crash the Game cover">
+            <div class="home-product-card__copy">
+              <p class="home-product-card__status">Available direct</p>
+              <h3>Agency</h3>
+              <p>A practical, system-neutral guide to player choice, Game Master authority, meaningful consequences, and shared responsibility.</p>
+              <a class="button button--secondary" href="/store/products/agency/">View Agency</a>
+            </div>
+          </article>
+          <article class="home-product-card">
+            <img src="/product-assets/ringbound/cover.webp" alt="Ringbound cover">
+            <div class="home-product-card__copy">
+              <p class="home-product-card__status">Available direct</p>
+              <h3>Ringbound</h3>
+              <p>A complete 5e-compatible martial class built to control the battlefield, protect allies, and break opposing momentum.</p>
+              <a class="button button--secondary" href="/store/products/ringbound/">View Ringbound</a>
+            </div>
+          </article>
+          <article class="home-product-card">
+            <img src="/product-assets/janni/cover.webp" alt="Janni: A Mortal Kind of Immortality cover">
+            <div class="home-product-card__copy">
+              <p class="home-product-card__status">Available direct</p>
+              <h3>Janni</h3>
+              <p>A complete 5e-compatible ancestry with four elemental heritages and the burden of a life that may begin again.</p>
+              <a class="button button--secondary" href="/store/products/janni/">View Janni</a>
+            </div>
+          </article>
+        </div>
+        <div class="section-action"><a class="button button--primary" href="/store/">Browse All Products</a></div>
+      </section>
+
+      <section class="workshop" id="workshop" aria-labelledby="workshop-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Work in progress</p>
+          <h2 id="workshop-heading">From the Workshop</h2>
+          <p>What Tobacco Road Games is developing, where the work stands, and what is ready to examine.</p>
+        </div>
+        <article class="workshop-card">
+          <div class="workshop-card__media">
+            <img src="/assets/products/sirrocans/cover.webp" alt="Sirrocans cover">
+          </div>
+          <div class="workshop-card__copy">
+            <p class="workshop-card__label">Preview available</p>
+            <h3>Sirrocans</h3>
+            <p>A 10-page 5E-compatible character race supplement for giant-blooded desert nomads of the deep desert.</p>
+            <p class="workshop-card__stage"><strong>Current stage:</strong> Public preview</p>
+            <a class="button button--secondary" href="/store/products/sirrocans/">View Preview</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="commitment" id="commitment" aria-labelledby="commitment-heading">
+        <div class="commitment__inner">
+          <p class="section-heading__kicker">The creative commitment</p>
+          <h2 id="commitment-heading">Every Book Must Have a Soul</h2>
+          <div class="commitment__copy">
+            <p>Tobacco Road Games doesn’t publish material simply because it can be produced.</p>
+            <p>Every rule must express an idea. Every mechanic must belong to the subject. Every paragraph must earn its place.</p>
+            <p>We research before we borrow. We question easy answers. We revise what feels hollow, test what remains uncertain, and refuse to mistake volume for value.</p>
+            <p>Our work may draw upon history, folklore, theatre, religion, genre, and lived human experience. Those subjects deserve more than decoration. They deserve curiosity, care, and respect.</p>
+            <p>We use every tool available to make better games, but no tool replaces judgment, responsibility, or authorship. Nothing leaves Tobacco Road Games merely because it is finished.</p>
+            <p class="commitment__emphasis">It leaves when it has heart, mind, and teeth.</p>
+            <p>That is what we owe the work.</p>
+            <p>That is what we owe its subject.</p>
+            <p>That is what we owe the people who invite it to their tables.</p>
           </div>
         </div>
       </section>
@@ -183,30 +235,11 @@
         </div>
       </section>
 
-      <section class="store-callout" id="coming-soon" aria-labelledby="store-heading">
-        <div class="store-callout__copy">
-          <p class="section-heading__kicker">Coming Soon</p>
-          <h2 id="store-heading">The Tobacco Road Games store is taking shape.</h2>
-          <p>The direct storefront will feature digital roleplaying titles, previews, and new releases from Tobacco Road Games.</p>
-          <p>Sirrocans is currently featured as a preview while the store bookshelf is being prepared.</p>
-          <article class="creation-standard-placard">
-            <p class="creation-standard-title">Our Creation Standard</p>
-            <p class="creation-standard-copy">Tobacco Road Games is not anti AI or pro AI. We are pro honesty, pro rights, pro quality, and pro customer choice.</p>
-            <p class="creation-standard-copy">We do not reject tools. We reject deception, theft, spam, and lazy shovelware.</p>
-            <p class="creation-standard-motto">Tell the truth. Own your work. Respect the buyer. Make something worth buying.</p>
-          </article>
-          <div class="hero__actions">
-            <a class="button button--primary" href="/store/products/sirrocans/">Meet Sirrocans</a>
-            <a class="button button--secondary" href="/store/">Open the Store</a>
-          </div>
-        </div>
-
-      </section>
     </main>
 
     <footer class="site-footer">
       <a class="footer-mark" href="ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="assets/logo.png?v=20260614a" alt="">
+        <img src="assets/logo.png?v=20260717a" alt="">
       </a>
       <p>&copy; <span id="year-text">2026</span> Tobacco Road Games.</p>
       <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
