@@ -2,7 +2,7 @@ export const OFFICE_DEFAULT_LIMITS = Object.freeze({
   batchBytes: 1024 * 1024 * 1024,
   batchFiles: 50,
   fileBytes: 90 * 1024 * 1024,
-  uploadTtlSeconds: 600
+  reservationTtlSeconds: 600
 });
 
 export function officeLimits(env = {}) {
@@ -10,9 +10,9 @@ export function officeLimits(env = {}) {
     batchBytes: positiveInteger(env.OFFICE_MAX_BATCH_BYTES, OFFICE_DEFAULT_LIMITS.batchBytes),
     batchFiles: positiveInteger(env.OFFICE_MAX_BATCH_FILES, OFFICE_DEFAULT_LIMITS.batchFiles),
     fileBytes: positiveInteger(env.OFFICE_MAX_FILE_BYTES, OFFICE_DEFAULT_LIMITS.fileBytes),
-    uploadTtlSeconds: Math.min(3600, positiveInteger(
-      env.OFFICE_UPLOAD_URL_TTL_SECONDS,
-      OFFICE_DEFAULT_LIMITS.uploadTtlSeconds
+    reservationTtlSeconds: Math.min(3600, positiveInteger(
+      env.OFFICE_UPLOAD_RESERVATION_TTL_SECONDS,
+      OFFICE_DEFAULT_LIMITS.reservationTtlSeconds
     ))
   };
 }

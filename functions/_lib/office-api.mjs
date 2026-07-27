@@ -193,7 +193,7 @@ async function reserveUploadsWithBody(body, env, actor, requestId) {
     };
   });
   if (total > limits.batchBytes) throw officeError(413, "batch_size_limit", "The upload batch is too large.");
-  const expiresAt = new Date(Date.now() + limits.uploadTtlSeconds * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + limits.reservationTtlSeconds * 1000).toISOString();
   const reservation = await reserveUploadBatch(env.TRG_OFFICE, {
     files,
     folderId: optionalUuid(body.folderId, "folderId"),

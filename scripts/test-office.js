@@ -133,10 +133,53 @@ async function testAuthorizationAndApi(api, csrfModule) {
     jwks: {},
     jwtVerify: async () => ({ payload: { email: ACTOR, sub: "owner-subject" } })
   };
+  for (const missing of ["OFFICE_ACCESS_TEAM_DOMAIN", "OFFICE_ACCESS_AUD", "OFFICE_ACCESS_EMAIL"]) {
+    const incompleteEnv = { ...env };
+    delete incompleteEnv[missing];
+    const denied = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+      headers: { "cf-access-jwt-assertion": "must-not-be-trusted" }
+    }), incompleteEnv, { auth: authOptions });
+    await assertSafeDenial(denied, 503, "office_access_not_configured", env);
+  }
+  const invalidDomain = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+    headers: { "cf-access-jwt-assertion": "must-not-be-trusted" }
+  }), { ...env, OFFICE_ACCESS_TEAM_DOMAIN: "http://not-secure.example" }, { auth: authOptions });
+  await assertSafeDenial(invalidDomain, 503, "office_access_not_configured", env);
+
   let response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`), env, {
     auth: authOptions
   });
-  assert.equal(response.status, 403, "Access assertion is mandatory.");
+  await assertSafeDenial(response, 403, "office_access_missing", env);
+
+  response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+    headers: { "cf-access-jwt-assertion": "invalid-jwt-value" }
+  }), env, {
+    auth: { jwks: {}, jwtVerify: async () => { throw new Error("invalid test assertion"); } }
+  });
+  await assertSafeDenial(response, 403, "office_access_invalid", env);
+
+  response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+    headers: { "cf-access-jwt-assertion": "wrong-audience-jwt" }
+  }), { ...env, OFFICE_ACCESS_AUD: "wrong-audience" }, {
+    auth: {
+      jwks: {},
+      jwtVerify: async (_token, _jwks, verifyOptions) => {
+        assert.equal(verifyOptions.audience, "wrong-audience");
+        throw new Error("audience mismatch");
+      }
+    }
+  });
+  await assertSafeDenial(response, 403, "office_access_invalid", env);
+
+  response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+    headers: { "cf-access-jwt-assertion": "wrong-owner-jwt" }
+  }), env, {
+    auth: {
+      jwks: {},
+      jwtVerify: async () => ({ payload: { email: "intruder@example.com", sub: "intruder" } })
+    }
+  });
+  await assertSafeDenial(response, 403, "office_access_identity_rejected", env);
 
   const token = await csrfModule.createCsrf("owner-subject", env.OFFICE_CSRF_SECRET);
   const requestHeaders = {
@@ -154,6 +197,30 @@ async function testAuthorizationAndApi(api, csrfModule) {
   assert.equal(response.status, 201);
   const project = (await response.json()).project;
 
+  response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+    body: JSON.stringify({ name: "Missing CSRF" }),
+    headers: {
+      "cf-access-jwt-assertion": "test-jwt",
+      "content-type": "application/json",
+      origin: ORIGIN
+    },
+    method: "POST"
+  }), env, { auth: authOptions });
+  await assertSafeDenial(response, 403, "office_csrf_rejected", env);
+
+  response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
+    body: JSON.stringify({ name: "Invalid CSRF" }),
+    headers: {
+      "cf-access-jwt-assertion": "test-jwt",
+      "content-type": "application/json",
+      cookie: "trg_office_csrf=malformed.matching",
+      origin: ORIGIN,
+      "x-csrf-token": "malformed.matching"
+    },
+    method: "POST"
+  }), env, { auth: authOptions });
+  await assertSafeDenial(response, 403, "office_csrf_invalid", env);
+
   response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/folders`, {
     body: JSON.stringify({ name: "Sources", projectId: project.id }),
     headers: requestHeaders,
@@ -170,6 +237,20 @@ async function testAuthorizationAndApi(api, csrfModule) {
   const audits = await db.prepare("SELECT action, outcome FROM office_audit_records ORDER BY id").all();
   assert.ok(audits.results.some((item) => item.action === "project.create" && item.outcome === "succeeded"));
   assert.ok(audits.results.some((item) => item.outcome === "rejected"));
+}
+
+async function assertSafeDenial(response, expectedStatus, expectedCode, env) {
+  assert.equal(response.status, expectedStatus);
+  assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+  const text = await response.text();
+  const body = JSON.parse(text);
+  assert.equal(body.error.code, expectedCode);
+  assert.doesNotMatch(text, /must-not-be-trusted|invalid-jwt-value|wrong-audience-jwt|wrong-owner-jwt|malformed\.matching/);
+  assert.doesNotMatch(text, new RegExp(escapeRegex(env.OFFICE_CSRF_SECRET)));
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function assertNoDeleteAuthority() {
