@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>TRG Office Archive</title>
+  <link rel="stylesheet" href="/office/office.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">Tobacco Road Games</p>
+      <h1>Office Archive</h1>
+    </div>
+    <button id="trash-button" class="quiet">Trash</button>
+  </header>
+  <main>
+    <aside>
+      <div class="aside-heading">
+        <h2>Projects</h2>
+        <button id="new-project" title="Create project">+</button>
+      </div>
+      <nav id="projects" aria-label="Projects"></nav>
+    </aside>
+    <section class="workspace">
+      <div class="toolbar">
+        <div id="breadcrumbs" aria-label="Breadcrumbs"></div>
+        <div class="actions">
+          <button id="new-folder" disabled>New folder</button>
+          <label class="button primary" aria-disabled="true">
+            Upload files
+            <input id="file-input" type="file" multiple disabled>
+          </label>
+        </div>
+      </div>
+      <div id="upload-status" class="status" hidden></div>
+      <div id="notice" class="notice" hidden></div>
+      <div id="empty" class="empty">Choose or create a project.</div>
+      <table id="listing" hidden>
+        <thead><tr><th>Name</th><th>Size</th><th>Modified</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+  <dialog id="details-dialog">
+    <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+    <div id="details"></div>
+  </dialog>
+  <dialog id="trash-dialog">
+    <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+    <h2>Recover deleted items</h2>
+    <div id="trash"></div>
+  </dialog>
+  <script type="module" src="/office/office.js"></script>
+</body>
+</html>
+

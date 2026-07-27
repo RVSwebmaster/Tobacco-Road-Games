@@ -17,3 +17,13 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "TRG_PRODUCTS"
 bucket_name = "trg-products"
+
+[[d1_databases]]
+binding = "TRG_OFFICE"
+database_name = "trg-office-staging"
+database_id = "REPLACE_WITH_TRG_OFFICE_STAGING_DATABASE_ID"
+migrations_dir = "office-migrations"
+
+[[r2_buckets]]
+binding = "TRG_OFFICE_ARCHIVE"
+bucket_name = "trg-office-archive-staging"

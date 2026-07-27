@@ -1,0 +1,25 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "headers": [
+          "content-type",
+          "x-amz-checksum-sha256",
+          "x-amz-meta-trg-office-upload-id"
+        ],
+        "methods": [
+          "PUT"
+        ],
+        "origins": [
+          "https://tobacco-road-games-staging.pages.dev"
+        ]
+      },
+      "exposeHeaders": [
+        "etag",
+        "x-amz-checksum-sha256"
+      ],
+      "maxAgeSeconds": 600
+    }
+  ]
+}
+

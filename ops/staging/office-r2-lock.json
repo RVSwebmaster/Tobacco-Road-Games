@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "condition": {
+        "type": "Indefinite"
+      },
+      "enabled": true,
+      "id": "office-immutable-versions",
+      "prefix": "versions/"
+    }
+  ]
+}
+
