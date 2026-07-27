@@ -1,7 +1,7 @@
 export const OFFICE_DEFAULT_LIMITS = Object.freeze({
   batchBytes: 1024 * 1024 * 1024,
   batchFiles: 50,
-  fileBytes: 512 * 1024 * 1024,
+  fileBytes: 90 * 1024 * 1024,
   uploadTtlSeconds: 600
 });
 
@@ -99,4 +99,3 @@ function positiveInteger(value, fallback) {
   const number = Number(value);
   return Number.isSafeInteger(number) && number > 0 ? number : fallback;
 }
-

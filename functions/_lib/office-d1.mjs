@@ -150,6 +150,23 @@ export async function getUploadBatch(db, batchId, actor) {
   return { batch, items };
 }
 
+export async function getUploadItem(db, batchId, itemId, actor) {
+  const item = await db.prepare(`
+    SELECT i.*, b.project_id, b.created_by, b.expires_at, b.status AS batch_status
+    FROM office_upload_items i
+    JOIN office_upload_batches b ON b.id = i.batch_id
+    WHERE i.id = ? AND i.batch_id = ? AND b.created_by = ?
+  `).bind(itemId, batchId, actor).first();
+  if (!item) throw officeError(404, "upload_item_not_found", "The upload item was not found.");
+  if (item.batch_status !== "pending" || item.status !== "reserved") {
+    throw officeError(409, "upload_item_not_pending", "The upload item is no longer pending.");
+  }
+  if (new Date(item.expires_at).getTime() < Date.now()) {
+    throw officeError(410, "upload_expired", "The upload reservation has expired.");
+  }
+  return item;
+}
+
 export async function publishUploadItem(db, item, actor, storage, now = new Date().toISOString()) {
   const statements = [
     db.prepare(`
@@ -298,4 +315,3 @@ function tableFor(type) {
 function rows(result) {
   return Array.isArray(result?.results) ? result.results : [];
 }
-

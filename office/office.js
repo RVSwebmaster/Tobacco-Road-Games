@@ -148,7 +148,13 @@ async function upload(files, existingFile = null) {
       const item = reservation.items[index];
       status.textContent = `Uploading ${index + 1} of ${files.length}: ${files[index].name}`;
       const response = await fetch(item.uploadUrl, {
-        body: files[index], headers: item.uploadHeaders, method: "PUT"
+        body: files[index],
+        credentials: "same-origin",
+        headers: {
+          ...item.uploadHeaders,
+          "x-csrf-token": cookie("trg_office_csrf")
+        },
+        method: "PUT"
       });
       if (!response.ok) throw new Error(`R2 rejected ${files[index].name} (${response.status}).`);
     }

@@ -6,6 +6,7 @@ import {
   fileDetails,
   finishUploadBatch,
   getUploadBatch,
+  getUploadItem,
   getVersion,
   listProjects,
   listTrash,
@@ -17,8 +18,7 @@ import {
   failUploadItem
 } from "./office-d1.mjs";
 import { authorizeOfficeRequest } from "./office-mutation-auth.mjs";
-import { createOfficeUploadUrl, presignConfig } from "./office-presign.mjs";
-import { downloadOfficeVersion, verifyAndPromoteOfficeObject } from "./office-r2.mjs";
+import { createOfficeStorage } from "./office-storage.mjs";
 import {
   jsonResponse,
   normalizeContentType,
@@ -107,7 +107,17 @@ async function route(request, env, actor, requestId, options) {
     return jsonResponse(await browse(db, projectId, folderId));
   }
   if (method === "POST" && path.length === 1 && path[0] === "uploads") {
-    return reserveUploads(request, env, actor, requestId, options);
+    return reserveUploads(request, env, actor, requestId);
+  }
+  if (method === "PUT" && path.length === 4 && path[0] === "uploads" && path[2] === "items") {
+    return receiveUpload(
+      request,
+      env,
+      requireUuid(path[1], "uploadId"),
+      requireUuid(path[3], "uploadItemId"),
+      actor,
+      requestId
+    );
   }
   if (method === "POST" && path.length === 3 && path[0] === "uploads" && path[2] === "complete") {
     return completeUpload(env, requireUuid(path[1], "uploadId"), actor, requestId);
@@ -124,7 +134,7 @@ async function route(request, env, actor, requestId, options) {
   if (method === "POST" && path.length === 3 && path[0] === "files" && path[2] === "versions") {
     const body = await readJson(request);
     body.files = [{ ...(body.file || body), fileId: requireUuid(path[1], "fileId") }];
-    return reserveUploadsWithBody(body, env, actor, requestId, options);
+    return reserveUploadsWithBody(body, env, actor, requestId);
   }
   if (method === "GET" && path.length === 5 && path[0] === "files" && path[2] === "versions" && path[4] === "download") {
     const fileId = requireUuid(path[1], "fileId");
@@ -132,12 +142,15 @@ async function route(request, env, actor, requestId, options) {
     const version = await getVersion(db, fileId, versionId);
     if (!version || version.file_deleted_at) throw officeError(404, "version_not_found", "The version was not found.");
     await record(db, actor, "version.download", "version", versionId, version.project_id, requestId);
-    return downloadOfficeVersion(env.TRG_OFFICE_ARCHIVE, version, request);
+    return createOfficeStorage(env.TRG_OFFICE_ARCHIVE).fetchVersion(version, request);
   }
   if (method === "POST" && path.length === 3 && path[0] === "files" && path[2] === "restore") {
     const fileId = requireUuid(path[1], "fileId");
     const body = await readJson(request);
     const versionId = requireUuid(body.versionId, "versionId");
+    const version = await getVersion(db, fileId, versionId);
+    if (!version || version.file_deleted_at) throw officeError(404, "version_not_found", "The version was not found.");
+    await createOfficeStorage(env.TRG_OFFICE_ARCHIVE).restoreVersion(version);
     const result = await restoreVersion(db, fileId, versionId);
     await record(db, actor, "version.restore", "version", versionId, result.file.project_id, requestId, { fileId });
     return jsonResponse(result);
@@ -155,12 +168,11 @@ async function route(request, env, actor, requestId, options) {
   throw officeError(404, "route_not_found", "Office API route not found.");
 }
 
-async function reserveUploads(request, env, actor, requestId, options) {
-  return reserveUploadsWithBody(await readJson(request), env, actor, requestId, options);
+async function reserveUploads(request, env, actor, requestId) {
+  return reserveUploadsWithBody(await readJson(request), env, actor, requestId);
 }
 
-async function reserveUploadsWithBody(body, env, actor, requestId, options) {
-  presignConfig(env);
+async function reserveUploadsWithBody(body, env, actor, requestId) {
   const limits = officeLimits(env);
   if (!Array.isArray(body.files) || !body.files.length) {
     throw officeError(400, "files_required", "At least one file is required.");
@@ -188,15 +200,8 @@ async function reserveUploadsWithBody(body, env, actor, requestId, options) {
     projectId: requireUuid(body.projectId, "projectId")
   }, actor, { expiresAt });
   for (const item of reservation.items) {
-    item.uploadUrl = await createOfficeUploadUrl(item, env, {
-      expiresIn: limits.uploadTtlSeconds,
-      ...(options.presign || {})
-    });
-    item.uploadHeaders = {
-      "content-type": item.contentType,
-      "x-amz-checksum-sha256": hexToBase64(item.sha256),
-      "x-amz-meta-trg-office-upload-id": item.id
-    };
+    item.uploadUrl = `/office/api/uploads/${reservation.batchId}/items/${item.id}`;
+    item.uploadHeaders = { "content-type": item.contentType };
     delete item.pendingKey;
   }
   await record(env.TRG_OFFICE, actor, "upload.reserve", "upload_batch", reservation.batchId, body.projectId, requestId, {
@@ -204,6 +209,24 @@ async function reserveUploadsWithBody(body, env, actor, requestId, options) {
     totalBytes: total
   });
   return jsonResponse(reservation, 201);
+}
+
+async function receiveUpload(request, env, batchId, itemId, actor, requestId) {
+  const item = await getUploadItem(env.TRG_OFFICE, batchId, itemId, actor);
+  const contentType = normalizeContentType(request.headers.get("content-type"));
+  if (contentType !== item.expected_content_type) {
+    throw officeError(415, "upload_content_type_mismatch", "The upload content type does not match its reservation.");
+  }
+  const contentLength = request.headers.get("content-length");
+  if (contentLength !== null && Number(contentLength) !== Number(item.expected_size)) {
+    throw officeError(422, "upload_size_rejected", "The upload size does not match its reservation.");
+  }
+  const stored = await createOfficeStorage(env.TRG_OFFICE_ARCHIVE).reserveUpload(item, request);
+  await record(env.TRG_OFFICE, actor, "upload.receive", "upload_item", item.id, item.project_id, requestId, {
+    byteSize: stored.size,
+    sha256: stored.sha256
+  });
+  return jsonResponse({ received: true, uploadItemId: item.id });
 }
 
 async function completeUpload(env, batchId, actor, requestId) {
@@ -214,9 +237,10 @@ async function completeUpload(env, batchId, actor, requestId) {
     `).bind(batchId).run();
     throw officeError(410, "upload_expired", "The upload reservation has expired.");
   }
+  const storage = createOfficeStorage(env.TRG_OFFICE_ARCHIVE);
   for (const item of items) {
     if (item.status !== "reserved") continue;
-    const result = await verifyAndPromoteOfficeObject(env.TRG_OFFICE_ARCHIVE, item);
+    const result = await storage.storeVersion(item);
     if (!result.verified) {
       await failUploadItem(env.TRG_OFFICE, item.id, result.failureCode);
       await audit(env.TRG_OFFICE, {
@@ -263,10 +287,4 @@ function singularType(value) {
   if (value === "folders") return "folder";
   if (value === "files") return "file";
   throw officeError(400, "invalid_item_type", "Invalid trash item type.");
-}
-
-function hexToBase64(hex) {
-  let binary = "";
-  for (const pair of hex.match(/../g)) binary += String.fromCharCode(Number.parseInt(pair, 16));
-  return btoa(binary);
 }

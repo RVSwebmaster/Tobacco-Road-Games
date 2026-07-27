@@ -11,14 +11,15 @@ const ORIGIN = "https://tobacco-road-games-staging.pages.dev";
 
 async function main() {
   const d1 = await importModule("functions/_lib/office-d1.mjs");
-  const r2 = await importModule("functions/_lib/office-r2.mjs");
+  const storageModule = await importModule("functions/_lib/office-storage.mjs");
   const auth = await importModule("functions/_lib/office-mutation-auth.mjs");
   const api = await importModule("functions/_lib/office-api.mjs");
 
   await testSchemaAndRecovery(d1);
-  await testChecksumAndImmutability(r2);
+  await testChecksumAndImmutability(storageModule);
   await testAuthorizationAndApi(api, auth);
   assertNoDeleteAuthority();
+  assertStorageBoundary();
   assertBrowserHashing();
   console.log("TRG Office tests passed.");
 }
@@ -74,31 +75,47 @@ async function testSchemaAndRecovery(d1) {
   assert.equal((await db.prepare("SELECT count(*) AS count FROM office_project_events").first()).count, 1);
 }
 
-async function testChecksumAndImmutability(r2) {
+async function testChecksumAndImmutability(storageModule) {
   const bytes = new TextEncoder().encode("verified content");
   const hash = await sha256Hex(bytes);
   const bucket = createBucket(bytes, hash);
-  const result = await r2.verifyAndPromoteOfficeObject(bucket, {
+  const storage = storageModule.createOfficeStorage(bucket);
+  const item = {
+    id: crypto.randomUUID(),
     expected_content_type: "text/plain",
     expected_sha256_hex: hash,
     expected_size: bytes.length,
     final_r2_key: "versions/project/file/version",
     pending_r2_key: "pending/batch/item",
     version_id: crypto.randomUUID()
-  });
+  };
+  const received = await storage.reserveUpload(item, new Request("https://staging.example/office/api/upload", {
+    body: bytes,
+    duplex: "half",
+    method: "PUT"
+  }));
+  assert.equal(received.sha256, hash);
+  const result = await storage.storeVersion(item);
   assert.equal(result.verified, true);
-  assert.equal(bucket.puts.length, 1);
+  assert.equal(bucket.puts.length, 2);
   assert.equal(bucket.deletes, undefined);
 
-  const mismatch = await r2.verifyAndPromoteOfficeObject(createBucket(bytes, "0".repeat(64)), {
-    expected_content_type: "text/plain",
-    expected_sha256_hex: hash,
-    expected_size: bytes.length,
-    final_r2_key: "versions/project/file/bad",
-    pending_r2_key: "pending/batch/item",
-    version_id: crypto.randomUUID()
-  });
-  assert.equal(mismatch.failureCode, "checksum_mismatch");
+  await assert.rejects(
+    storage.storeVersion(item),
+    (error) => error.code === "immutable_key_exists",
+    "An immutable version must never be overwritten."
+  );
+
+  const mismatchBucket = createBucket(bytes, "0".repeat(64));
+  const mismatchStorage = storageModule.createOfficeStorage(mismatchBucket);
+  await assert.rejects(
+    mismatchStorage.reserveUpload(item, new Request("https://staging.example/office/api/upload", {
+      body: bytes,
+      duplex: "half",
+      method: "PUT"
+    })),
+    (error) => error.code === "upload_checksum_rejected"
+  );
 }
 
 async function testAuthorizationAndApi(api, csrfModule) {
@@ -109,10 +126,6 @@ async function testAuthorizationAndApi(api, csrfModule) {
     OFFICE_ACCESS_EMAIL: ACTOR,
     OFFICE_ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
     OFFICE_CSRF_SECRET: "office-csrf-secret-at-least-32-characters",
-    OFFICE_R2_ACCESS_KEY_ID: "access-key",
-    OFFICE_R2_ACCOUNT_ID: "account-id",
-    OFFICE_R2_BUCKET_NAME: "trg-office-archive-staging",
-    OFFICE_R2_SECRET_ACCESS_KEY: "secret-key",
     TRG_OFFICE: db,
     TRG_OFFICE_ARCHIVE: bucket
   };
@@ -162,7 +175,7 @@ async function testAuthorizationAndApi(api, csrfModule) {
 function assertNoDeleteAuthority() {
   for (const relative of [
     "functions/_lib/office-api.mjs",
-    "functions/_lib/office-r2.mjs",
+    "functions/_lib/office-storage.mjs",
     "functions/_lib/office-d1.mjs"
   ]) {
     const source = fs.readFileSync(path.join(ROOT, relative), "utf8");
@@ -171,10 +184,21 @@ function assertNoDeleteAuthority() {
   }
 }
 
+function assertStorageBoundary() {
+  const libraryDirectory = path.join(ROOT, "functions", "_lib");
+  for (const filename of fs.readdirSync(libraryDirectory).filter((name) => name.startsWith("office-") && name.endsWith(".mjs"))) {
+    if (filename === "office-storage.mjs") continue;
+    const source = fs.readFileSync(path.join(libraryDirectory, filename), "utf8");
+    assert.doesNotMatch(source, /TRG_OFFICE_ARCHIVE\.(?:get|head|put|delete|list)\s*\(/);
+    assert.doesNotMatch(source, /\br2Binding\.(?:get|head|put|delete|list)\s*\(/);
+  }
+}
+
 function assertBrowserHashing() {
   const source = fs.readFileSync(path.join(ROOT, "office", "office.js"), "utf8");
   assert.match(source, /crypto\.subtle\.digest\("SHA-256"/);
-  assert.match(source, /headers: item\.uploadHeaders/);
+  assert.match(source, /\.\.\.item\.uploadHeaders/);
+  assert.match(source, /"x-csrf-token": cookie\("trg_office_csrf"\)/);
   assert.match(source, /\/complete/);
 }
 
@@ -211,19 +235,35 @@ function prepared(statement, values = []) {
 }
 
 function createBucket(bytes, hash) {
+  const objects = new Map();
   return {
+    objects,
     puts: [],
     async get(key) {
-      if (!key.startsWith("pending/")) return null;
-      return { body: bytes, size: bytes.length };
+      const object = objects.get(key);
+      return object ? { ...object, body: object.bytes } : null;
     },
     async head(key) {
-      if (!key.startsWith("pending/")) return null;
-      return { checksums: { sha256: hexToBytes(hash).buffer }, size: bytes.length };
+      const object = objects.get(key);
+      return object ? { ...object } : null;
     },
     async put(key, body, options) {
+      if (objects.has(key) && options?.onlyIf?.etagDoesNotMatch === "*") return null;
+      const expected = Buffer.from(options.sha256).toString("hex");
+      if (expected !== hash) throw new Error("checksum mismatch");
+      const storedBytes = body instanceof ReadableStream
+        ? new Uint8Array(await new Response(body).arrayBuffer())
+        : new Uint8Array(body);
+      const object = {
+        bytes: storedBytes,
+        checksums: { sha256: hexToBytes(hash).buffer },
+        etag: "etag",
+        httpEtag: '"etag"',
+        size: storedBytes.length
+      };
+      objects.set(key, object);
       this.puts.push({ body, key, options });
-      return { etag: "etag", httpEtag: '"etag"' };
+      return object;
     }
   };
 }
