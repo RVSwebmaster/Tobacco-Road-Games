@@ -51,7 +51,7 @@ the bucket.
 
 Create a self-hosted Access application for:
 
-`tobacco-road-games-staging.pages.dev/office/*`
+`office-staging.tobaccoroadgames.com/office/*`
 
 Use an Allow policy containing only the owner's exact identity. Record the
 Application Audience tag. The Worker validates the Access assertion again and
