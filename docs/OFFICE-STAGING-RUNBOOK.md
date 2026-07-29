@@ -88,7 +88,9 @@ Before running `ops/staging/deploy.ps1`, verify:
 6. All Office variables and the CSRF secret exist in staging.
 7. `npm test` and the Pages Functions build pass.
 
-Production deployment is explicitly outside this phase.
+The isolated `tobacco-road-games-staging` Pages project is deployed as its
+Production environment because the project itself is staging. This does not
+deploy or modify the production Tobacco Road Games Pages project.
 
 ## Smoke test
 
