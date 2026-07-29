@@ -78,8 +78,8 @@ function Add-LaunchButton {
     $form.Controls.Add($button)
 }
 
-Add-LaunchButton -Label "Office Archive" -Url "https://office-staging.tobaccoroadgames.com/office/" -Top 160
-Add-LaunchButton -Label "Tobacco Road Games Site" -Url "https://tobaccoroadgames.com/" -Top 236
+Add-LaunchButton -Label "Office Repo" -Url "https://office-staging.tobaccoroadgames.com/office/" -Top 160
+Add-LaunchButton -Label "Intake" -Url "https://office-staging.tobaccoroadgames.com/office/intake" -Top 236
 
 $closeButton = New-Object System.Windows.Forms.Button
 $closeButton.Text = "Close"
