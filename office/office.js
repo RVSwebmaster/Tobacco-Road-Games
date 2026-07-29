@@ -26,6 +26,7 @@ $("#file-input").addEventListener("change", async (event) => {
 });
 
 $("#trash-button").addEventListener("click", showTrash);
+$("#trash-project").addEventListener("click", trashSelectedProject);
 
 async function loadProjects() {
   try {
@@ -38,8 +39,7 @@ async function loadProjects() {
       return button;
     }));
     if (state.projectId && !data.projects.some((item) => item.id === state.projectId)) {
-      state.projectId = null;
-      state.folderId = null;
+      clearProjectSelection();
     }
   } catch (error) { notice(error.message, true); }
 }
@@ -51,6 +51,34 @@ async function selectProject(id) {
   await loadFolder();
 }
 
+async function trashSelectedProject() {
+  const project = state.projects.find((item) => item.id === state.projectId);
+  if (!project) return;
+  if (!confirm(`Trash project "${project.name}"? This removes it from the active archive but keeps it recoverable from Trash.`)) return;
+  try {
+    await api(`/office/api/projects/${project.id}`, {
+      headers: { "x-csrf-token": cookie("trg_office_csrf") },
+      method: "DELETE"
+    });
+    clearProjectSelection();
+    await loadProjects();
+  } catch (error) { notice(error.message, true); }
+}
+
+function clearProjectSelection() {
+  state.projectId = null;
+  state.folderId = null;
+  $("#breadcrumbs").replaceChildren();
+  $("#trash-project").hidden = true;
+  $("#new-folder").disabled = true;
+  $("#file-input").disabled = true;
+  $("#file-input").closest("label").setAttribute("aria-disabled", "true");
+  $("#listing tbody").replaceChildren();
+  $("#listing").hidden = true;
+  $("#empty").textContent = "Choose or create a project.";
+  $("#empty").hidden = false;
+}
+
 async function loadFolder(folderId = state.folderId) {
   state.folderId = folderId;
   const query = new URLSearchParams({ projectId: state.projectId });
@@ -59,6 +87,7 @@ async function loadFolder(folderId = state.folderId) {
     const data = await api(`/office/api/browse?${query}`);
     renderBreadcrumbs(data.folder);
     renderListing(data);
+    $("#trash-project").hidden = false;
     $("#new-folder").disabled = false;
     $("#file-input").disabled = false;
     $("#file-input").closest("label").setAttribute("aria-disabled", "false");

@@ -23,6 +23,7 @@ async function main() {
   assertNoDeleteAuthority();
   assertStorageBoundary();
   assertBrowserHashing();
+  assertProjectTrashUi();
   console.log("TRG Office tests passed.");
 }
 
@@ -110,6 +111,13 @@ async function testSchemaAndRecovery(d1) {
     VALUES (?, ?, 'milestone', 'Archive created', 'Foundation event.', ?, ?, ?)
   `).bind(eventId, project.id, new Date().toISOString(), ACTOR, new Date().toISOString()).run();
   assert.equal((await db.prepare("SELECT count(*) AS count FROM office_project_events").first()).count, 1);
+
+  await d1.softDelete(db, "project", project.id, ACTOR);
+  assert.equal((await d1.listProjects(db)).length, 0);
+  assert.equal((await d1.listTrash(db)).projects[0].id, project.id);
+  await assert.rejects(d1.browse(db, project.id, folder.id), (error) => error.code === "project_not_found");
+  await d1.recoverTrash(db, "project", project.id);
+  assert.equal((await d1.listProjects(db))[0].id, project.id);
 }
 
 async function testChecksumAndImmutability(storageModule) {
@@ -265,6 +273,31 @@ async function testAuthorizationAndApi(api, csrfModule) {
   }), env, { auth: authOptions });
   assert.equal(response.status, 201);
 
+  response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects/${project.id}`, {
+    headers: requestHeaders,
+    method: "DELETE"
+  }), env, { auth: authOptions });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).deleted, true);
+
+  response = await api.handleOfficeApiRequest(
+    new Request(`${ORIGIN}/office/api/projects`, {
+      headers: { "cf-access-jwt-assertion": "test-jwt" }
+    }),
+    env,
+    { auth: authOptions }
+  );
+  assert.equal((await response.json()).projects.some((item) => item.id === project.id), false);
+
+  response = await api.handleOfficeApiRequest(
+    new Request(`${ORIGIN}/office/api/trash`, {
+      headers: { "cf-access-jwt-assertion": "test-jwt" }
+    }),
+    env,
+    { auth: authOptions }
+  );
+  assert.equal((await response.json()).projects.some((item) => item.id === project.id), true);
+
   response = await api.handleOfficeApiRequest(new Request(`${ORIGIN}/office/api/projects`, {
     body: JSON.stringify({ name: "Rejected" }),
     headers: { ...requestHeaders, origin: "https://evil.example" },
@@ -318,6 +351,18 @@ function assertBrowserHashing() {
   assert.match(source, /\.\.\.item\.uploadHeaders/);
   assert.match(source, /"x-csrf-token": cookie\("trg_office_csrf"\)/);
   assert.match(source, /\/complete/);
+}
+
+function assertProjectTrashUi() {
+  const html = fs.readFileSync(path.join(ROOT, "office", "index.html"), "utf8");
+  const source = fs.readFileSync(path.join(ROOT, "office", "office.js"), "utf8");
+  assert.match(html, /id="trash-project"[^>]*>Trash project<\/button>/);
+  assert.match(source, /#trash-project"\)\.addEventListener\("click", trashSelectedProject\)/);
+  assert.match(source, /confirm\(`Trash project "\$\{project\.name\}"\? This removes it from the active archive but keeps it recoverable from Trash\.`\)\) return/);
+  assert.match(source, /api\(`\/office\/api\/projects\/\$\{project\.id\}`,[\s\S]*?method: "DELETE"/);
+  assert.match(source, /clearProjectSelection\(\);\s*await loadProjects\(\)/);
+  assert.match(source, /state\.projectId = null;\s*state\.folderId = null;/);
+  assert.doesNotMatch(source, /versions[^;\n]*method:\s*"DELETE"/);
 }
 
 function createD1() {
