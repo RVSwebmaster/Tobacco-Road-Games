@@ -1,11 +1,20 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 const JWKS_CACHE = new Map();
+const STAGING_OFFICE_HOSTNAME = "office-staging.tobaccoroadgames.com";
+const STAGING_ACCESS_FALLBACK = Object.freeze({
+  audience: "cff3bacbca9441ae09f426323346f5abf8555e145a6daef78d861fb73f5f6716",
+  email: "rvsawyer1967@gmail.com",
+  teamDomain: "https://frosty-cell-1d02.cloudflareaccess.com"
+});
 
-export function getOfficeAccessConfig(env = {}) {
-  const teamDomain = normalizeOrigin(env.OFFICE_ACCESS_TEAM_DOMAIN);
-  const audience = String(env.OFFICE_ACCESS_AUD || "").trim();
-  const allowedEmail = normalizeEmail(env.OFFICE_ACCESS_EMAIL);
+export function getOfficeAccessConfig(env = {}, request) {
+  const fallback = requestHostname(request) === STAGING_OFFICE_HOSTNAME
+    ? STAGING_ACCESS_FALLBACK
+    : {};
+  const teamDomain = normalizeOrigin(env.OFFICE_ACCESS_TEAM_DOMAIN || fallback.teamDomain);
+  const audience = String(env.OFFICE_ACCESS_AUD || fallback.audience || "").trim();
+  const allowedEmail = normalizeEmail(env.OFFICE_ACCESS_EMAIL || fallback.email);
   return {
     allowedEmail,
     audience,
@@ -15,7 +24,7 @@ export function getOfficeAccessConfig(env = {}) {
 }
 
 export async function verifyOfficeAccessRequest(request, env, options = {}) {
-  const config = getOfficeAccessConfig(env);
+  const config = getOfficeAccessConfig(env, request);
   if (!config.ready) {
     return denied(503, "office_access_not_configured", "Office Access is not completely configured.");
   }
@@ -60,7 +69,14 @@ function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function requestHostname(request) {
+  try {
+    return new URL(request?.url || "").hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
 function denied(status, code, message) {
   return { code, message, status, valid: false };
 }
-

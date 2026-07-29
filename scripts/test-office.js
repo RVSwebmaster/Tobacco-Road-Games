@@ -14,14 +14,51 @@ async function main() {
   const storageModule = await importModule("functions/_lib/office-storage.mjs");
   const auth = await importModule("functions/_lib/office-mutation-auth.mjs");
   const api = await importModule("functions/_lib/office-api.mjs");
+  const access = await importModule("functions/_lib/office-access.mjs");
 
   await testSchemaAndRecovery(d1);
   await testChecksumAndImmutability(storageModule);
+  testAccessFallback(access);
   await testAuthorizationAndApi(api, auth);
   assertNoDeleteAuthority();
   assertStorageBoundary();
   assertBrowserHashing();
   console.log("TRG Office tests passed.");
+}
+
+function testAccessFallback(access) {
+  const stagingRequest = new Request("https://office-staging.tobaccoroadgames.com/office/");
+  const configured = access.getOfficeAccessConfig({
+    OFFICE_ACCESS_AUD: "env-audience",
+    OFFICE_ACCESS_EMAIL: "configured@example.com",
+    OFFICE_ACCESS_TEAM_DOMAIN: "https://configured.cloudflareaccess.com"
+  }, stagingRequest);
+  assert.deepEqual(configured, {
+    allowedEmail: "configured@example.com",
+    audience: "env-audience",
+    ready: true,
+    teamDomain: "https://configured.cloudflareaccess.com"
+  });
+
+  const fallback = access.getOfficeAccessConfig({}, stagingRequest);
+  assert.deepEqual(fallback, {
+    allowedEmail: "rvsawyer1967@gmail.com",
+    audience: "cff3bacbca9441ae09f426323346f5abf8555e145a6daef78d861fb73f5f6716",
+    ready: true,
+    teamDomain: "https://frosty-cell-1d02.cloudflareaccess.com"
+  });
+
+  const production = access.getOfficeAccessConfig(
+    {},
+    new Request("https://tobaccoroadgames.com/office/")
+  );
+  assert.equal(production.ready, false);
+
+  const source = fs.readFileSync(
+    path.join(ROOT, "functions", "_lib", "office-access.mjs"),
+    "utf8"
+  );
+  assert.doesNotMatch(source, /OFFICE_CSRF_SECRET/);
 }
 
 async function testSchemaAndRecovery(d1) {
