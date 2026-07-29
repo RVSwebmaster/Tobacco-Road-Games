@@ -14,6 +14,7 @@ try {
   try {
     npx wrangler pages deploy . `
       --project-name tobacco-road-games-staging `
+      --branch staging `
       --commit-dirty=true
     if ($LASTEXITCODE -ne 0) {
       throw "Staging deployment failed with exit code $LASTEXITCODE."

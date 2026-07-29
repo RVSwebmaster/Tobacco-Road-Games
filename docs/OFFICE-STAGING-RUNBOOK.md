@@ -88,9 +88,11 @@ Before running `ops/staging/deploy.ps1`, verify:
 6. All Office variables and the CSRF secret exist in staging.
 7. `npm test` and the Pages Functions build pass.
 
-The isolated `tobacco-road-games-staging` Pages project is deployed as its
-Production environment because the project itself is staging. This does not
-deploy or modify the production Tobacco Road Games Pages project.
+The direct-upload `tobacco-road-games-staging` Pages project uses `staging` as
+its Production branch. The deployment script passes `--branch staging`, so
+Cloudflare publishes the deployment to the project's Production environment
+and custom hostname. This does not deploy or modify the production Tobacco Road
+Games Pages project.
 
 ## Smoke test
 
