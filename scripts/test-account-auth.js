@@ -5,7 +5,10 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const MIGRATION = fs.readFileSync(path.join(ROOT, "migrations", "007_shared_accounts.sql"), "utf8");
+const MIGRATION = [
+  "007_shared_accounts.sql",
+  "008_token_claim_markers.sql"
+].map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n");
 const ORIGIN = "https://tobaccoroadgames.com";
 const TEST_OPTIONS = Object.freeze({
   disableRateLimit: true,
@@ -19,6 +22,8 @@ async function main() {
   await testRegistrationLoginSessionLogout(auth);
   await testEmailVerification(auth);
   await testPasswordReset(auth);
+  await testTokenReplayRaces(auth);
+  await testTokenClaimRollback(auth);
   await testGoogleLoginValidationAndLinking(auth);
   await testCsrfRejection(auth);
   await testTokenStorageAndRateLimits(auth);
@@ -182,6 +187,129 @@ async function testPasswordReset(auth) {
   assert.equal(response.status, 200, "Unknown reset email should not disclose existence.");
 }
 
+async function testTokenReplayRaces(auth) {
+  const verifyEnv = createEnv();
+  await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: "race-verify@example.com",
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  }), verifyEnv, TEST_OPTIONS);
+  const verifyToken = tokenFromLastEmail(verifyEnv, "verify");
+  const verifyResponses = await Promise.all([
+    auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: verifyToken }), verifyEnv, TEST_OPTIONS),
+    auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: verifyToken }), verifyEnv, TEST_OPTIONS)
+  ]);
+  assert.equal(verifyResponses.filter((response) => response.status === 200).length, 1, "Only one overlapping email verification should succeed.");
+  assert.equal(verifyResponses.filter((response) => response.status === 410).length, 1, "The race-losing email verification should receive the safe invalid response.");
+  const verifiedUser = await verifyEnv.TRG_ORDERS.prepare("SELECT email_verified FROM users WHERE email_normalized = ?").bind("race-verify@example.com").first();
+  assert.equal(verifiedUser.email_verified, 1, "The user should become verified once.");
+  const verificationTokenRow = await verifyEnv.TRG_ORDERS.prepare("SELECT COUNT(*) AS count FROM email_verification_tokens WHERE used_at IS NOT NULL").first();
+  assert.equal(Number(verificationTokenRow.count), 1, "Exactly one verification token row should be consumed.");
+
+  const resetEnv = createEnv();
+  await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: "race-reset@example.com",
+    password: "OriginalPassphrase!23",
+    passwordConfirmation: "OriginalPassphrase!23"
+  }), resetEnv, TEST_OPTIONS);
+  const loginCookies = getCookies(await auth.loginAccount(jsonRequest("/api/auth/login", {
+    email: "race-reset@example.com",
+    password: "OriginalPassphrase!23"
+  }), resetEnv, TEST_OPTIONS));
+  const sessionsBeforeReset = await countRows(resetEnv.TRG_ORDERS, "sessions");
+  await auth.requestPasswordReset(jsonRequest("/api/auth/request-password-reset", {
+    email: "race-reset@example.com"
+  }), resetEnv, TEST_OPTIONS);
+  const resetToken = tokenFromLastEmail(resetEnv, "reset");
+  const resetAttempts = [
+    { password: "WinnerPassphrase!24", response: null },
+    { password: "LoserPassphrase!25", response: null }
+  ];
+  await Promise.all(resetAttempts.map(async (attempt) => {
+    attempt.response = await auth.resetPassword(jsonRequest("/api/auth/reset-password", {
+      password: attempt.password,
+      passwordConfirmation: attempt.password,
+      token: resetToken
+    }), resetEnv, TEST_OPTIONS);
+  }));
+  const successfulAttempts = resetAttempts.filter((attempt) => attempt.response.status === 200);
+  const losingAttempts = resetAttempts.filter((attempt) => attempt.response.status === 410);
+  assert.equal(successfulAttempts.length, 1, "Only one overlapping password reset should succeed.");
+  assert.equal(losingAttempts.length, 1, "The race-losing password reset should receive the safe invalid response.");
+  const finalCredential = await resetEnv.TRG_ORDERS.prepare(`
+    SELECT c.password_hash
+    FROM password_credentials c JOIN users u ON u.id = c.user_id
+    WHERE u.email_normalized = ?
+  `).bind("race-reset@example.com").first();
+  assert.equal(await auth.verifyPassword(successfulAttempts[0].password, finalCredential.password_hash), true, "The final password should match only the successful reset request.");
+  assert.equal(await auth.verifyPassword(losingAttempts[0].password, finalCredential.password_hash), false, "The losing reset request must not change credentials.");
+  assert.equal(await countRows(resetEnv.TRG_ORDERS, "sessions"), sessionsBeforeReset, "Password reset should revoke existing sessions without creating new ones.");
+  const activeSessions = await resetEnv.TRG_ORDERS.prepare("SELECT COUNT(*) AS count FROM sessions WHERE revoked_at IS NULL").first();
+  assert.equal(Number(activeSessions.count), 0, "Existing sessions should be revoked only after the successful reset.");
+  const oldSessionLookup = await auth.handleAccountMeRequest(new Request(`${ORIGIN}/api/account/me`, {
+    headers: { cookie: cookieHeaderFrom(loginCookies) }
+  }), resetEnv);
+  assert.equal((await oldSessionLookup.json()).authenticated, false, "Existing session cookies should stop working after the successful reset.");
+}
+
+async function testTokenClaimRollback(auth) {
+  const verifyEnv = createEnv();
+  await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: "rollback-verify@example.com",
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  }), verifyEnv, TEST_OPTIONS);
+  const verifyToken = tokenFromLastEmail(verifyEnv, "verify");
+  verifyEnv.TRG_ORDERS.failBatchStatement = 2;
+  await assert.rejects(
+    auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: verifyToken }), verifyEnv, TEST_OPTIONS),
+    /Simulated dependent statement failure/
+  );
+  verifyEnv.TRG_ORDERS.failBatchStatement = 0;
+  let user = await verifyEnv.TRG_ORDERS.prepare("SELECT email_verified FROM users WHERE email_normalized = ?").bind("rollback-verify@example.com").first();
+  assert.equal(user.email_verified, 0, "Dependent verification failure must not leave the user verified.");
+  let tokenRow = await verifyEnv.TRG_ORDERS.prepare("SELECT used_at, claim_marker FROM email_verification_tokens").first();
+  assert.equal(tokenRow.used_at, null, "Dependent verification failure must roll back token consumption.");
+  assert.equal(tokenRow.claim_marker, null, "Dependent verification failure must roll back the claim marker.");
+
+  const resetEnv = createEnv();
+  await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: "rollback-reset@example.com",
+    password: "OriginalPassphrase!23",
+    passwordConfirmation: "OriginalPassphrase!23"
+  }), resetEnv, TEST_OPTIONS);
+  await auth.loginAccount(jsonRequest("/api/auth/login", {
+    email: "rollback-reset@example.com",
+    password: "OriginalPassphrase!23"
+  }), resetEnv, TEST_OPTIONS);
+  await auth.requestPasswordReset(jsonRequest("/api/auth/request-password-reset", {
+    email: "rollback-reset@example.com"
+  }), resetEnv, TEST_OPTIONS);
+  const resetToken = tokenFromLastEmail(resetEnv, "reset");
+  resetEnv.TRG_ORDERS.failBatchStatement = 2;
+  await assert.rejects(
+    auth.resetPassword(jsonRequest("/api/auth/reset-password", {
+      password: "RollbackPassphrase!24",
+      passwordConfirmation: "RollbackPassphrase!24",
+      token: resetToken
+    }), resetEnv, TEST_OPTIONS),
+    /Simulated dependent statement failure/
+  );
+  resetEnv.TRG_ORDERS.failBatchStatement = 0;
+  const rollbackCredential = await resetEnv.TRG_ORDERS.prepare(`
+    SELECT c.password_hash
+    FROM password_credentials c JOIN users u ON u.id = c.user_id
+    WHERE u.email_normalized = ?
+  `).bind("rollback-reset@example.com").first();
+  assert.equal(await auth.verifyPassword("OriginalPassphrase!23", rollbackCredential.password_hash), true, "Dependent reset failure must keep the original password.");
+  assert.equal(await auth.verifyPassword("RollbackPassphrase!24", rollbackCredential.password_hash), false, "Dependent reset failure must not store the proposed password.");
+  tokenRow = await resetEnv.TRG_ORDERS.prepare("SELECT used_at, claim_marker FROM password_reset_tokens").first();
+  assert.equal(tokenRow.used_at, null, "Dependent reset failure must roll back token consumption.");
+  assert.equal(tokenRow.claim_marker, null, "Dependent reset failure must roll back the claim marker.");
+  const activeSessions = await resetEnv.TRG_ORDERS.prepare("SELECT COUNT(*) AS count FROM sessions WHERE revoked_at IS NULL").first();
+  assert.equal(Number(activeSessions.count), 2, "Dependent reset failure must not revoke existing sessions.");
+}
+
 async function testGoogleLoginValidationAndLinking(auth) {
   const env = createEnv();
   const googleRequest = (credential = "valid") => jsonRequest("/api/auth/google", {
@@ -246,6 +374,49 @@ async function testGoogleLoginValidationAndLinking(auth) {
   assert.equal(await countRows(linkedEnv.TRG_ORDERS, "users"), 1, "Identity linking must not duplicate a verified TRG account.");
   const identity = await linkedEnv.TRG_ORDERS.prepare("SELECT * FROM user_identities").first();
   assert.equal(identity.provider_subject, "google-linked-sub");
+
+  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "already-linked",
+    g_csrf_token: "gis-csrf"
+  }, { cookie: "g_csrf_token=gis-csrf" }), linkedEnv, {
+    ...TEST_OPTIONS,
+    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "link@example.com", email_verified: true, sub: "google-linked-sub" } }) }
+  });
+  assert.equal(response.status, 200, "An already-linked Google identity should sign in normally.");
+  assert.equal(await countRows(linkedEnv.TRG_ORDERS, "users"), 1, "Already-linked Google sign-in must not create a duplicate user.");
+  assert.equal(await countRows(linkedEnv.TRG_ORDERS, "user_identities"), 1, "Already-linked Google sign-in must not create a duplicate identity.");
+
+  const captureEnv = createEnv();
+  await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: "capture@example.com",
+    password: "AttackerPassphrase!23",
+    passwordConfirmation: "AttackerPassphrase!23"
+  }), captureEnv, TEST_OPTIONS);
+  const sessionCountBeforeBlockedGoogle = await countRows(captureEnv.TRG_ORDERS, "sessions");
+  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "capture",
+    g_csrf_token: "gis-csrf"
+  }, { cookie: "g_csrf_token=gis-csrf" }), captureEnv, {
+    ...TEST_OPTIONS,
+    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "capture@example.com", email_verified: true, sub: "google-capture-sub" } }) }
+  });
+  assert.equal(response.status, 409, "A verified Google email must not link to an unverified native account.");
+  const capturePayload = await response.json();
+  assert.equal(capturePayload.error.code, "google_signin_unavailable");
+  assert.doesNotMatch(capturePayload.error.message, /unverified|exists|password|native|capture@example\.com/i, "Google failure should not expose unnecessary account details.");
+  assert.equal(await countRows(captureEnv.TRG_ORDERS, "users"), 1, "Blocked Google sign-in must not create a duplicate user.");
+  assert.equal(await countRows(captureEnv.TRG_ORDERS, "user_identities"), 0, "Blocked Google sign-in must not attach a Google identity.");
+  assert.equal(await countRows(captureEnv.TRG_ORDERS, "sessions"), sessionCountBeforeBlockedGoogle, "Blocked Google sign-in must not create an authenticated session.");
+  assert.equal(getCookies(response).filter((cookie) => cookie.startsWith("__Host-trg_session=")).length, 0, "Blocked Google sign-in must not set a session cookie.");
+  const credential = await captureEnv.TRG_ORDERS.prepare("SELECT password_hash FROM password_credentials").first();
+  assert.equal(await auth.verifyPassword("AttackerPassphrase!23", credential.password_hash), true, "Blocked Google sign-in must not alter the native credential.");
+
+  response = await auth.loginAccount(jsonRequest("/api/auth/login", {
+    email: "capture@example.com",
+    password: "AttackerPassphrase!23"
+  }), captureEnv, TEST_OPTIONS);
+  assert.equal(response.status, 200, "The original unverified native credential remains only a native sign-in, not a Google-captured account.");
+  assert.equal(await countRows(captureEnv.TRG_ORDERS, "user_identities"), 0, "Native sign-in after blocked Google linking must still have no Google identity attached.");
 }
 
 async function testCsrfRejection(auth) {
@@ -307,14 +478,14 @@ async function testTokenStorageAndRateLimits(auth) {
   assert.equal(response.status, 429, "Repeated registration attempts should be throttled.");
 }
 
-function createEnv() {
+function createEnv(options = {}) {
   const raw = new DatabaseSync(":memory:");
   raw.exec(MIGRATION);
   return {
     GOOGLE_CLIENT_ID: "google-client-id",
     RESEND_API_KEY: "re_test",
     RESEND_REPLY_TO: "reply@example.com",
-    TRG_ORDERS: d1(raw),
+    TRG_ORDERS: d1(raw, options),
     emailProvider: {
       messages: [],
       async send(message, options) {
@@ -325,13 +496,19 @@ function createEnv() {
   };
 }
 
-function d1(raw) {
-  return {
+function d1(raw, options = {}) {
+  const api = {
+    failBatchStatement: options.failBatchStatement || 0,
     async batch(statements) {
       raw.exec("BEGIN IMMEDIATE");
       try {
         const results = [];
-        for (const statement of statements) results.push(await statement.run());
+        for (let index = 0; index < statements.length; index += 1) {
+          if (api.failBatchStatement === index + 1) {
+            throw new Error("Simulated dependent statement failure");
+          }
+          results.push(await statements[index].run());
+        }
         raw.exec("COMMIT");
         return results;
       } catch (error) {
@@ -343,6 +520,7 @@ function d1(raw) {
       return prepared(raw.prepare(sql));
     }
   };
+  return api;
 }
 
 function prepared(statement, values = []) {
@@ -391,6 +569,11 @@ function tokenFromLastEmail(env, kind) {
 async function countRows(db, table) {
   const row = await db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).first();
   return Number(row.count || 0);
+}
+
+async function canLogin(auth, env, email, password) {
+  const response = await auth.loginAccount(jsonRequest("/api/auth/login", { email, password }), env, TEST_OPTIONS);
+  return response.status === 200;
 }
 
 function assertNoAuthBoundaryChanges() {

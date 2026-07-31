@@ -186,7 +186,7 @@ export async function loginWithGoogle(request, env, options = {}) {
       `).bind(userId, verified.email, now, now, now).run();
       user = await getUserById(db, userId);
     } else {
-      user = existing;
+      return json({ error: { code: "google_signin_unavailable", message: "Google sign-in could not be completed. Use another sign-in method or contact support." } }, 409);
     }
 
     await db.prepare(`
@@ -223,19 +223,27 @@ export async function verifyEmail(request, env, options = {}) {
   if (!(await allowRateLimit(db, request, "verification", "verify", options))) {
     return json({ error: { code: "rate_limited", message: "Too many verification attempts. Please wait and try again." } }, 429);
   }
-  const row = await db.prepare(`
-    SELECT t.id, t.user_id, t.expires_at, t.used_at
-    FROM email_verification_tokens t
-    WHERE t.token_hash = ?
-  `).bind(await hashToken(token)).first();
-  if (!row || row.used_at || Date.parse(row.expires_at) <= nowMs(options)) {
+  const tokenHash = await hashToken(token);
+  const claimMarker = randomToken();
+  const now = nowIso(options);
+  const results = await db.batch([
+    db.prepare(`
+      UPDATE email_verification_tokens
+      SET used_at = ?, claim_marker = ?
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+    `).bind(now, claimMarker, tokenHash, now),
+    db.prepare(`
+      UPDATE users
+      SET email_verified = 1, email_verified_at = ?, updated_at = ?
+      WHERE id = (
+        SELECT user_id FROM email_verification_tokens
+        WHERE token_hash = ? AND claim_marker = ?
+      )
+    `).bind(now, now, tokenHash, claimMarker)
+  ]);
+  if (affectedRows(results[0]) !== 1 || affectedRows(results[1]) !== 1) {
     return json({ error: { code: "verification_invalid", message: "This verification link is invalid or expired." } }, 410);
   }
-  const now = nowIso(options);
-  await db.batch([
-    db.prepare("UPDATE email_verification_tokens SET used_at = ? WHERE id = ? AND used_at IS NULL").bind(now, row.id),
-    db.prepare("UPDATE users SET email_verified = 1, email_verified_at = ?, updated_at = ? WHERE id = ?").bind(now, now, row.user_id)
-  ]);
   return json({ ok: true, message: "Email verified." });
 }
 
@@ -282,25 +290,35 @@ export async function resetPassword(request, env, options = {}) {
   if (password !== passwordConfirmation || passwordError) {
     return json({ error: { code: "invalid_password", message: passwordError || "Password confirmation must match." } }, 400);
   }
-  const row = await db.prepare(`
-    SELECT id, user_id, expires_at, used_at
-    FROM password_reset_tokens
-    WHERE token_hash = ?
-  `).bind(await hashToken(token)).first();
-  if (!row || row.used_at || Date.parse(row.expires_at) <= nowMs(options)) {
-    return json({ error: { code: "reset_invalid", message: "This reset link is invalid or expired." } }, 410);
-  }
+  const tokenHash = await hashToken(token);
+  const claimMarker = randomToken();
   const now = nowIso(options);
   const passwordHash = await hashPassword(password, options.passwordHashOptions);
-  await db.batch([
+  const results = await db.batch([
+    db.prepare(`
+      UPDATE password_reset_tokens
+      SET used_at = ?, claim_marker = ?
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+    `).bind(now, claimMarker, tokenHash, now),
     db.prepare(`
       INSERT INTO password_credentials (user_id, password_hash, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
+      SELECT user_id, ?, ?, ?
+      FROM password_reset_tokens
+      WHERE token_hash = ? AND claim_marker = ?
       ON CONFLICT(user_id) DO UPDATE SET password_hash = excluded.password_hash, updated_at = excluded.updated_at
-    `).bind(row.user_id, passwordHash, now, now),
-    db.prepare("UPDATE password_reset_tokens SET used_at = ? WHERE id = ? AND used_at IS NULL").bind(now, row.id),
-    db.prepare("UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL").bind(now, row.user_id)
+    `).bind(passwordHash, now, now, tokenHash, claimMarker),
+    db.prepare(`
+      UPDATE sessions
+      SET revoked_at = ?
+      WHERE user_id = (
+        SELECT user_id FROM password_reset_tokens
+        WHERE token_hash = ? AND claim_marker = ?
+      ) AND revoked_at IS NULL
+    `).bind(now, tokenHash, claimMarker)
   ]);
+  if (affectedRows(results[0]) !== 1 || affectedRows(results[1]) !== 1) {
+    return json({ error: { code: "reset_invalid", message: "This reset link is invalid or expired." } }, 410);
+  }
   return json({ ok: true, message: "Password reset complete. Sign in with the new password." });
 }
 
@@ -632,6 +650,13 @@ function json(payload, status = 200, extraHeaders = {}) {
     }
   }
   return new Response(JSON.stringify(payload), { headers, status });
+}
+
+function affectedRows(result) {
+  const metaChanges = Number(result?.meta?.changes);
+  if (Number.isFinite(metaChanges)) return metaChanges;
+  const changes = Number(result?.changes);
+  return Number.isFinite(changes) ? changes : 0;
 }
 
 function constantTimeEqual(left, right) {
