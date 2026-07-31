@@ -9,7 +9,7 @@ const ORIGIN = "https://tobaccoroadgames.com";
 const NOW = Date.parse("2026-07-31T15:00:00.000Z");
 const TOPIC_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_TOPIC_ID = "22222222-2222-4222-8222-222222222222";
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql"]
   .map((name) => fs.readFileSync(path.join(ROOT, "migrations", name), "utf8")).join("\n");
 
 async function main() {
@@ -118,7 +118,7 @@ function browserAndSchemaAssertions() {
   const raw = new DatabaseSync(":memory:"); raw.exec(MIGRATION);
   for (const table of ["forum_topics", "forum_posts"]) for (const column of raw.prepare(`PRAGMA table_info(${table})`).all().map((row) => row.name)) assert.doesNotMatch(column, /avatar|handle|display|email|google|provider|role|session/i);
   assert.equal(fs.existsSync(path.join(ROOT, "functions", "api", "forum", "topic", "[id]", "replies.js")), true);
-  assert.equal(fs.readdirSync(path.join(ROOT, "migrations")).some((name) => name.startsWith("013_")), false, "Replies must reuse migration 012 schema.");
+  assert.equal(raw.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='forum_replies'").get(), undefined, "Replies must continue using forum_posts.");
 }
 
 async function createFixture(auth) {

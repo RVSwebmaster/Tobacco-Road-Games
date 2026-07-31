@@ -2317,6 +2317,17 @@ h4 {
 .forum-reply-create textarea { width: 100%; }
 .forum-reply-create form > p { color: var(--muted); }
 .forum-reply-success { padding: 10px 12px; border: 1px solid rgba(137, 194, 124, 0.35); border-radius: 10px; background: rgba(137, 194, 124, 0.1); }
+.forum-report { margin-top: 12px; color: var(--muted); }
+.forum-report summary { cursor: pointer; font-weight: 700; }
+.forum-report-form, .forum-moderation-action { display: grid; gap: 10px; margin-top: 10px; }
+.forum-report-form label, .forum-moderation-action label { display: grid; gap: 6px; }
+.forum-topic-pinned { color: var(--accent); font-size: 0.72em; text-transform: uppercase; }
+.forum-moderation, .forum-moderation-list { display: grid; gap: 18px; }
+.forum-moderation-card { display: grid; gap: 10px; padding: 20px; border: 1px solid rgba(242,216,170,.16); border-radius: var(--radius-lg); background: rgba(255,255,255,.04); }
+.forum-moderation-card h2, .forum-moderation-card p { margin: 0; }
+.forum-moderation-card__excerpt { padding: 12px; white-space: pre-wrap; background: rgba(12,8,6,.3); }
+.forum-moderation-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.forum-post--hidden { border-color: rgba(196,142,75,.55); }
 
 @media (max-width: 640px) {
   .forum-category-card {

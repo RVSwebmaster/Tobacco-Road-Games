@@ -1,5 +1,6 @@
 import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf } from "./account-auth.mjs";
 import { avatarPublicFields } from "./forum-avatars.mjs";
+import { getModeratorSession, REPORT_REASONS } from "./forum-moderation.mjs";
 
 const JSON_LIMIT = 24 * 1024;
 
@@ -57,7 +58,7 @@ export async function handleForumReplyCreation(request, env, requestedId, option
   const body = typeof parsed.body.body === "string" ? parsed.body.body : "";
   if (!body.trim() || body.length > 10000) return jsonError("body_invalid", "Replies must contain 1 to 10,000 non-whitespace characters.", 400);
   const db = requireDb(env);
-  const topic = await db.prepare(`SELECT t.id, t.slug FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id AND c.status = 'active' WHERE t.id = ? AND t.status = 'active'`).bind(id).first();
+  const topic = await db.prepare(`SELECT t.id, t.slug FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id AND c.status = 'active' WHERE t.id = ? AND t.status = 'active' AND t.moderation_state = 'active'`).bind(id).first();
   if (!topic) return publicNotFound("topic_not_found", "That forum topic is not available.");
   if (typeof db.batch !== "function") throw new Error("Atomic forum reply writes are unavailable.");
   const postId = crypto.randomUUID();
@@ -71,39 +72,43 @@ export async function handleForumReplyCreation(request, env, requestedId, option
 
 export async function renderForumTopic(request, env, requestedId, requestedSlug, options = {}) {
   if (request.method !== "GET" && request.method !== "HEAD") return topicNotFound();
-  const topic = await loadPublicTopic(env, requestedId);
+  const moderator = await getModeratorSession(request, env, options);
+  const topic = await loadPublicTopic(env, requestedId, Boolean(moderator));
   if (!topic) return topicNotFound();
   if (requestedSlug !== topic.slug) return new Response(null, { status: 302, headers: { location: `/forum/topic/${encodeURIComponent(topic.id)}/${encodeURIComponent(topic.slug)}` } });
   const eligible = await getEligibleTopicCreator(request, env, options);
-  const posts = topic.posts.map((post, index) => renderPost(post, index === 0)).join("");
+  const posts = topic.posts.map((post, index) => renderPost(post, index === 0, Boolean(eligible), Boolean(moderator))).join("");
   const success = new URL(request.url).searchParams.get("reply") === "posted" ? `<p class="forum-reply-success" role="status">Your reply was posted.</p>` : "";
-  const replyControls = eligible ? `<section class="forum-reply-create" aria-labelledby="reply-heading"><h2 id="reply-heading">Add a Reply</h2>${success}<form id="forum-reply-form" data-topic-id="${topic.id}" data-topic-url="/forum/topic/${topic.id}/${escapeHtml(topic.slug)}"><label for="forum-reply-body">Reply</label><textarea id="forum-reply-body" name="body" rows="8" maxlength="10000" required></textarea><p>Plain text only. Paragraphs and line breaks will be preserved.</p><button class="button" type="submit">Post Reply</button><p id="forum-reply-status" role="status" aria-live="polite"></p></form></section><script src="/assets/js/forum-topic.js?v=20260731a" defer></script>` : `<div class="forum-notice"><h2>Want to reply?</h2><p><a href="/account.html">Sign in and complete your forum profile</a> to join this discussion.</p></div>`;
+  const replyControls = topic.moderation_state === "locked" ? `<div class="forum-notice" role="status"><h2>Discussion locked</h2><p>This topic remains available to read, but new replies are not accepted.</p></div>` : eligible ? `<section class="forum-reply-create" aria-labelledby="reply-heading"><h2 id="reply-heading">Add a Reply</h2>${success}<form id="forum-reply-form" data-topic-id="${topic.id}" data-topic-url="/forum/topic/${topic.id}/${escapeHtml(topic.slug)}"><label for="forum-reply-body">Reply</label><textarea id="forum-reply-body" name="body" rows="8" maxlength="10000" required></textarea><p>Plain text only. Paragraphs and line breaks will be preserved.</p><button class="button" type="submit">Post Reply</button><p id="forum-reply-status" role="status" aria-live="polite"></p></form></section><script src="/assets/js/forum-topic.js?v=20260731a" defer></script>` : `<div class="forum-notice"><h2>Want to reply?</h2><p><a href="/account.html">Sign in and complete your forum profile</a> to join this discussion.</p></div>`;
+  const topicReport = eligible ? renderReportForm("topic", topic.id) : "";
   return htmlResponse(pageShell({
     title: topic.title,
     body: `<section class="store-section forum-topic" aria-labelledby="topic-heading">
       <p class="section-heading__kicker"><a href="/forum/category/${encodeURIComponent(topic.category_slug)}">${escapeHtml(topic.category_name)}</a></p>
       <h1 id="topic-heading">${escapeHtml(topic.title)}</h1>
+      ${topicReport}
       <div class="forum-discussion" aria-label="Complete discussion">${posts}</div>
       ${replyControls}
-    </section>`
+    </section>${eligible ? `<script src="/assets/js/forum-report.js?v=20260731a" defer></script>` : ""}`
   }));
 }
 
 export async function listCategoryTopics(env, categoryId) {
   const result = await requireDb(env).prepare(`
-    SELECT t.id, t.title, t.slug, t.created_at, t.last_activity_at,
+    SELECT t.id, t.title, t.slug, t.created_at, t.last_activity_at, t.is_pinned,
            p.handle, p.display_name, p.avatar_object_key, p.avatar_preset_id, p.avatar_version,
            COUNT(post_users.id) AS post_count
     FROM forum_topics t
     JOIN forum_profiles p ON p.user_id = t.creator_profile_id AND p.status = 'active'
     JOIN users u ON u.id = p.user_id AND u.status = 'active'
-    LEFT JOIN forum_posts posts ON posts.topic_id = t.id AND posts.status = 'active'
+    LEFT JOIN forum_posts posts ON posts.topic_id = t.id AND posts.status = 'active' AND posts.moderation_state = 'active'
     LEFT JOIN forum_profiles post_profiles ON post_profiles.user_id = posts.author_profile_id AND post_profiles.status = 'active'
     LEFT JOIN users post_users ON post_users.id = post_profiles.user_id AND post_users.status = 'active'
-    WHERE t.category_id = ? AND t.status = 'active'
-    GROUP BY t.id, t.title, t.slug, t.created_at, t.last_activity_at,
+    WHERE t.category_id = ? AND t.status = 'active' AND t.moderation_state != 'hidden'
+      AND (SELECT op.moderation_state FROM forum_posts op WHERE op.topic_id=t.id AND op.status='active' ORDER BY op.created_at,op.id LIMIT 1)='active'
+    GROUP BY t.id, t.title, t.slug, t.created_at, t.last_activity_at, t.is_pinned,
              p.handle, p.display_name, p.avatar_object_key, p.avatar_preset_id, p.avatar_version
-    ORDER BY t.last_activity_at DESC, t.created_at DESC, t.id DESC
+    ORDER BY t.is_pinned DESC, t.last_activity_at DESC, t.created_at DESC, t.id DESC
   `).bind(categoryId).all();
   return (result.results || []).map((row) => ({
     creator: { avatarUrl: avatarPublicFields(row).avatarUrl, displayName: row.display_name || null, handle: row.handle },
@@ -111,6 +116,7 @@ export async function listCategoryTopics(env, categoryId) {
     id: row.id,
     lastActivityAt: row.last_activity_at,
     postCount: Number(row.post_count || 0),
+    pinned: Number(row.is_pinned || 0) === 1,
     slug: row.slug,
     title: row.title,
     url: `/forum/topic/${row.id}/${row.slug}`
@@ -137,25 +143,25 @@ async function authorizeCreation(request, env, options) {
   return { ok: true, profile, session };
 }
 
-async function loadPublicTopic(env, requestedId) {
+async function loadPublicTopic(env, requestedId, includeHidden = false) {
   const id = normalizeId(requestedId);
   if (!id) return null;
   const db = requireDb(env);
   const topic = await db.prepare(`
-    SELECT t.id, t.title, t.slug, t.created_at, t.last_activity_at, c.slug AS category_slug, c.display_name AS category_name
+    SELECT t.id, t.title, t.slug, t.created_at, t.last_activity_at, t.moderation_state, t.is_pinned, c.slug AS category_slug, c.display_name AS category_name
     FROM forum_topics t
     JOIN forum_categories c ON c.id = t.category_id AND c.status = 'active'
-    WHERE t.id = ? AND t.status = 'active'
+    WHERE t.id = ? AND t.status = 'active' ${includeHidden ? "" : "AND t.moderation_state != 'hidden' AND (SELECT op.moderation_state FROM forum_posts op WHERE op.topic_id=t.id AND op.status='active' ORDER BY op.created_at,op.id LIMIT 1)='active'"}
   `).bind(id).first();
   if (!topic) return null;
   const result = await db.prepare(`
-    SELECT post.id, post.body, post.created_at,
+    SELECT post.id, post.body, post.created_at, post.moderation_state,
            p.handle, p.display_name, p.created_at AS profile_created_at,
            p.avatar_object_key, p.avatar_preset_id, p.avatar_version
     FROM forum_posts post
     JOIN forum_profiles p ON p.user_id = post.author_profile_id AND p.status = 'active'
     JOIN users u ON u.id = p.user_id AND u.status = 'active'
-    WHERE post.topic_id = ? AND post.status = 'active'
+    WHERE post.topic_id = ? AND post.status = 'active' ${includeHidden ? "" : "AND post.moderation_state = 'active'"}
     ORDER BY post.created_at ASC, post.id ASC
   `).bind(id).all();
   const posts = result.results || [];
@@ -182,11 +188,19 @@ function publicPost(row) {
   return { author: { avatarUrl: avatarPublicFields(row).avatarUrl, displayName: row.display_name || null, handle: row.handle, joinedAt: row.profile_created_at }, body: row.body, createdAt: row.created_at, id: row.id };
 }
 
-function renderPost(post, opening) {
+function renderPost(post, opening, eligible, moderator) {
   const avatar = avatarPublicFields(post).avatarUrl || "/assets/logo.png?v=forum-avatar-default";
   const displayName = post.display_name ? `<p class="forum-post__display-name">${escapeHtml(post.display_name)}</p>` : "";
   const label = opening ? "Opening post author" : "Reply author";
-  return `<article id="post-${post.id}" class="forum-post${opening ? " forum-post--opening" : " forum-post--reply"}"><aside class="forum-post__author" aria-label="${label}"><a href="/forum/member/${encodeURIComponent(post.handle)}"><img class="forum-avatar forum-avatar--large" src="${escapeHtml(avatar)}" alt="${escapeHtml(post.handle)} forum avatar"></a><p><a href="/forum/member/${encodeURIComponent(post.handle)}">@${escapeHtml(post.handle)}</a></p>${displayName}<p class="forum-post__meta">Joined ${formatDate(post.profile_created_at)}</p></aside><div class="forum-post__content"><p class="forum-post__meta">Posted ${formatDate(post.created_at)}</p><div class="forum-post__body">${renderPlainText(post.body)}</div></div></article>`;
+  const hidden = post.moderation_state === "hidden";
+  const body = hidden && !moderator ? `<p>This post has been removed by forum moderation.</p>` : renderPlainText(post.body);
+  const report = eligible ? renderReportForm("post", post.id) : "";
+  return `<article id="post-${post.id}" class="forum-post${opening ? " forum-post--opening" : " forum-post--reply"}${hidden ? " forum-post--hidden" : ""}"><aside class="forum-post__author" aria-label="${label}"><a href="/forum/member/${encodeURIComponent(post.handle)}"><img class="forum-avatar forum-avatar--large" src="${escapeHtml(avatar)}" alt="${escapeHtml(post.handle)} forum avatar"></a><p><a href="/forum/member/${encodeURIComponent(post.handle)}">@${escapeHtml(post.handle)}</a></p>${displayName}<p class="forum-post__meta">Joined ${formatDate(post.profile_created_at)}</p></aside><div class="forum-post__content"><p class="forum-post__meta">Posted ${formatDate(post.created_at)}${hidden && moderator ? " · Hidden from public view" : ""}</p><div class="forum-post__body">${body}</div>${report}</div></article>`;
+}
+
+function renderReportForm(type, id) {
+  const options = REPORT_REASONS.map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
+  return `<details class="forum-report"><summary>Report</summary><form class="forum-report-form" action="/api/forum/${type}/${id}/report"><label>Reason<select name="reason" required><option value="">Choose a reason</option>${options}</select></label><label>Optional explanation<textarea name="explanation" maxlength="1000"></textarea></label><button class="button button--secondary" type="submit">Send Report</button><p role="status" aria-live="polite"></p></form></details>`;
 }
 
 function validateTopicInput(body) {

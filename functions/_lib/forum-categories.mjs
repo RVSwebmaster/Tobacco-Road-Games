@@ -72,8 +72,8 @@ export async function renderForumCategory(request, env, requestedSlug, options =
 export async function listActiveCategories(env) {
   const result = await requireDb(env).prepare(`
     SELECT c.slug, c.display_name, c.description, c.display_order,
-      (SELECT COUNT(*) FROM forum_topics t WHERE t.category_id = c.id AND t.status = 'active') AS topic_count,
-      (SELECT COUNT(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id JOIN forum_profiles fp ON fp.user_id = p.author_profile_id AND fp.status = 'active' JOIN users pu ON pu.id = fp.user_id AND pu.status = 'active' WHERE t.category_id = c.id AND t.status = 'active' AND p.status = 'active') AS post_count
+      (SELECT COUNT(*) FROM forum_topics t WHERE t.category_id = c.id AND t.status = 'active' AND t.moderation_state != 'hidden' AND (SELECT op.moderation_state FROM forum_posts op WHERE op.topic_id=t.id AND op.status='active' ORDER BY op.created_at,op.id LIMIT 1)='active') AS topic_count,
+      (SELECT COUNT(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id JOIN forum_profiles fp ON fp.user_id = p.author_profile_id AND fp.status = 'active' JOIN users pu ON pu.id = fp.user_id AND pu.status = 'active' WHERE t.category_id = c.id AND t.status = 'active' AND t.moderation_state != 'hidden' AND p.status = 'active' AND p.moderation_state='active' AND (SELECT op.moderation_state FROM forum_posts op WHERE op.topic_id=t.id AND op.status='active' ORDER BY op.created_at,op.id LIMIT 1)='active') AS post_count
     FROM forum_categories c
     WHERE c.status = 'active'
     ORDER BY display_order ASC, slug ASC
@@ -98,7 +98,7 @@ function publicCategory(row) {
 
 function renderTopicCard(topic) {
   const avatar = topic.creator.avatarUrl || "/assets/logo.png?v=forum-avatar-default";
-  return `<article class="forum-topic-card"><div class="forum-topic-card__main"><h2><a href="${escapeHtml(topic.url)}">${escapeHtml(topic.title)}</a></h2><div class="forum-topic-card__creator"><img class="forum-avatar forum-avatar--small" src="${escapeHtml(avatar)}" alt=""><span>Started by <a href="/forum/member/${encodeURIComponent(topic.creator.handle)}">@${escapeHtml(topic.creator.handle)}</a> on ${formatDate(topic.createdAt)}</span></div></div><dl class="forum-topic-card__facts"><div><dt>Posts</dt><dd>${topic.postCount}</dd></div><div><dt>Last activity</dt><dd>${formatDate(topic.lastActivityAt)}</dd></div></dl></article>`;
+  return `<article class="forum-topic-card"><div class="forum-topic-card__main"><h2><a href="${escapeHtml(topic.url)}">${topic.pinned ? '<span class="forum-topic-pinned">Pinned</span> ' : ""}${escapeHtml(topic.title)}</a></h2><div class="forum-topic-card__creator"><img class="forum-avatar forum-avatar--small" src="${escapeHtml(avatar)}" alt=""><span>Started by <a href="/forum/member/${encodeURIComponent(topic.creator.handle)}">@${escapeHtml(topic.creator.handle)}</a> on ${formatDate(topic.createdAt)}</span></div></div><dl class="forum-topic-card__facts"><div><dt>Posts</dt><dd>${topic.postCount}</dd></div><div><dt>Last activity</dt><dd>${formatDate(topic.lastActivityAt)}</dd></div></dl></article>`;
 }
 
 function formatDate(value) { return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value)); }

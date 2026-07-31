@@ -7,7 +7,7 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const ORIGIN = "https://tobaccoroadgames.com";
 const NOW = Date.parse("2026-07-31T12:00:00.000Z");
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql"]
   .map((name) => fs.readFileSync(path.join(ROOT, "migrations", name), "utf8")).join("\n");
 
 async function main() {
@@ -118,8 +118,8 @@ function schemaAndRoutes() {
     const columns = raw.prepare(`PRAGMA table_info(${table})`).all().map((row) => row.name);
     for (const forbidden of ["avatar", "handle", "display_name", "email", "google", "provider"]) assert.equal(columns.some((name) => name.includes(forbidden)), false);
   }
-  assert.deepEqual(raw.prepare("PRAGMA table_info(forum_topics)").all().map((row) => row.name), ["id", "category_id", "creator_profile_id", "title", "slug", "status", "created_at", "updated_at", "last_activity_at"]);
-  assert.deepEqual(raw.prepare("PRAGMA table_info(forum_posts)").all().map((row) => row.name), ["id", "topic_id", "author_profile_id", "body", "status", "created_at", "updated_at"]);
+  assert.deepEqual(raw.prepare("PRAGMA table_info(forum_topics)").all().map((row) => row.name), ["id", "category_id", "creator_profile_id", "title", "slug", "status", "created_at", "updated_at", "last_activity_at", "moderation_state", "is_pinned"]);
+  assert.deepEqual(raw.prepare("PRAGMA table_info(forum_posts)").all().map((row) => row.name), ["id", "topic_id", "author_profile_id", "body", "status", "created_at", "updated_at", "moderation_state"]);
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/forum/topic/*"));
   for (const file of ["functions/api/forum/topics.js", "functions/api/forum/category/[slug]/topics.js", "functions/api/forum/topic/[id].js", "functions/forum/topic/[[path]].js", "assets/js/forum-category.js"]) assert.ok(fs.existsSync(path.join(ROOT, file)), `${file} should exist.`);
