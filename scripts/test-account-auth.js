@@ -19,6 +19,7 @@ const TEST_OPTIONS = Object.freeze({
 async function main() {
   const auth = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "account-auth.mjs")).href);
   await testPasswordHashing(auth);
+  await testInputLimits(auth);
   await testRegistrationLoginSessionLogout(auth);
   await testEmailVerification(auth);
   await testPasswordReset(auth);
@@ -38,6 +39,134 @@ async function testPasswordHashing(auth) {
   assert.equal(await auth.verifyPassword("ValidPassphrase!23", hash), true);
   assert.equal(await auth.verifyPassword("wrong", hash), false);
   assert.doesNotMatch(hash, /ValidPassphrase/, "Password hashes must not contain plaintext.");
+}
+
+async function testInputLimits(auth) {
+  let response = await auth.registerAccount(rawJsonRequest("/api/auth/register", `{"padding":"${"x".repeat(17 * 1024)}"}`), {}, TEST_OPTIONS);
+  assert.equal(response.status, 413, "Oversized JSON bodies should be rejected.");
+  assert.equal((await response.json()).error.code, "request_too_large");
+
+  response = await auth.registerAccount(rawJsonRequest("/api/auth/register", `{"padding":"${"x".repeat(17 * 1024)}"}`, { "content-length": "1" }), {}, TEST_OPTIONS);
+  assert.equal(response.status, 413, "A false small Content-Length header must not bypass the actual body-size limit.");
+
+  response = await auth.registerAccount(rawJsonRequest("/api/auth/register", `{"padding":"${"x".repeat(17 * 1024)}"}`, { "content-length": "" }), {}, TEST_OPTIONS);
+  assert.equal(response.status, 413, "A missing Content-Length header must not bypass the actual body-size limit.");
+
+  response = await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: "oversized-password@example.com",
+    password: `${"A".repeat(255)}1!`,
+    passwordConfirmation: `${"A".repeat(255)}1!`
+  }), {}, TEST_OPTIONS);
+  assert.equal(response.status, 400, "Oversized registration passwords should be rejected before database or scrypt work.");
+
+  response = await auth.loginAccount(jsonRequest("/api/auth/login", {
+    email: "oversized-login-password@example.com",
+    password: `${"A".repeat(255)}1!`
+  }), {}, TEST_OPTIONS);
+  assert.equal(response.status, 400, "Oversized login passwords should be rejected before database or scrypt verification.");
+
+  response = await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: `${"a".repeat(250)}@example.com`,
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  }), {}, TEST_OPTIONS);
+  assert.equal(response.status, 400, "Oversized email fields should be rejected before normalization or database lookup.");
+
+  const googleEnv = createEnv();
+  let jwtVerifyCalled = false;
+  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "x".repeat(8193),
+    g_csrf_token: "gis-csrf"
+  }, { cookie: "g_csrf_token=gis-csrf" }), googleEnv, {
+    ...TEST_OPTIONS,
+    google: {
+      clientId: "google-client-id",
+      jwtVerify: async () => {
+        jwtVerifyCalled = true;
+        throw new Error("JWT verifier should not run for oversized credentials.");
+      }
+    }
+  });
+  assert.equal(response.status, 400, "Oversized Google credentials should be rejected.");
+  assert.equal(jwtVerifyCalled, false, "Oversized Google credentials must be rejected before JWT verification.");
+  assert.equal(googleEnv.TRG_ORDERS.prepareCount, 0, "Oversized Google credentials must be rejected before database work.");
+
+  const tokenEnv = createEnv();
+  response = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", {
+    token: "x".repeat(129)
+  }), tokenEnv, TEST_OPTIONS);
+  assert.equal(response.status, 400, "Oversized verification tokens should be rejected.");
+  assert.equal(tokenEnv.TRG_ORDERS.prepareCount, 0, "Oversized verification tokens must be rejected before database lookup.");
+
+  response = await auth.resetPassword(jsonRequest("/api/auth/reset-password", {
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23",
+    token: "x".repeat(129)
+  }), tokenEnv, TEST_OPTIONS);
+  assert.equal(response.status, 400, "Oversized reset tokens should be rejected.");
+  assert.equal(tokenEnv.TRG_ORDERS.prepareCount, 0, "Oversized reset tokens must be rejected before database lookup.");
+
+  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "valid",
+    g_csrf_token: "x".repeat(129)
+  }, { cookie: `g_csrf_token=${"x".repeat(129)}` }), createEnv(), {
+    ...TEST_OPTIONS,
+    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf-limit@example.com", email_verified: true, sub: "csrf-limit" } }) }
+  });
+  assert.equal(response.status, 400, "Oversized CSRF tokens should be rejected.");
+
+  const resendEnv = createEnv();
+  response = await auth.resendVerification(new Request(`${ORIGIN}/api/auth/resend-verification`, {
+    body: "{}",
+    headers: {
+      "content-type": "application/json",
+      cookie: `trg_account_csrf=${"x".repeat(129)}`,
+      origin: ORIGIN,
+      "x-csrf-token": "x".repeat(129)
+    },
+    method: "POST"
+  }), resendEnv, TEST_OPTIONS);
+  assert.equal(response.status, 400, "Oversized account CSRF tokens should be rejected on resend requests.");
+  assert.equal(resendEnv.TRG_ORDERS.prepareCount, 0, "Oversized resend CSRF tokens must be rejected before database lookup.");
+
+  const sessionEnv = createEnv();
+  const sessionLookup = await auth.handleAccountMeRequest(new Request(`${ORIGIN}/api/account/me`, {
+    headers: { cookie: `__Host-trg_session=${"x".repeat(129)}` }
+  }), sessionEnv);
+  assert.equal((await sessionLookup.json()).authenticated, false, "Oversized session cookies should not authenticate.");
+  assert.equal(sessionEnv.TRG_ORDERS.prepareCount, 0, "Oversized session cookies should be rejected before database lookup.");
+
+  const maxEnv = createEnv();
+  const maxEmail = `${"a".repeat(249)}@e.co`;
+  const maxPassword = `A1!${"a".repeat(253)}`;
+  response = await auth.registerAccount(jsonRequest("/api/auth/register", {
+    email: maxEmail,
+    password: maxPassword,
+    passwordConfirmation: maxPassword
+  }), maxEnv, TEST_OPTIONS);
+  assert.equal(response.status, 201, "Valid maximum-length email and password should reach the successful registration path.");
+
+  response = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", {
+    token: "x".repeat(128)
+  }), createEnv(), TEST_OPTIONS);
+  assert.equal(response.status, 410, "Maximum-length verification tokens should reach the normal invalid-token path.");
+
+  let maxCredentialJwtCalled = false;
+  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "x".repeat(8192),
+    g_csrf_token: "c".repeat(128)
+  }, { cookie: `g_csrf_token=${"c".repeat(128)}` }), createEnv(), {
+    ...TEST_OPTIONS,
+    google: {
+      clientId: "google-client-id",
+      jwtVerify: async () => {
+        maxCredentialJwtCalled = true;
+        throw new Error("signature verification failed");
+      }
+    }
+  });
+  assert.equal(response.status, 401, "Maximum-length Google credentials should reach the normal verification path.");
+  assert.equal(maxCredentialJwtCalled, true, "Maximum-length Google credentials should not be rejected by size checks.");
 }
 
 async function testRegistrationLoginSessionLogout(auth) {
@@ -499,6 +628,7 @@ function createEnv(options = {}) {
 function d1(raw, options = {}) {
   const api = {
     failBatchStatement: options.failBatchStatement || 0,
+    prepareCount: 0,
     async batch(statements) {
       raw.exec("BEGIN IMMEDIATE");
       try {
@@ -517,6 +647,7 @@ function d1(raw, options = {}) {
       }
     },
     prepare(sql) {
+      api.prepareCount += 1;
       return prepared(raw.prepare(sql));
     }
   };
@@ -543,6 +674,22 @@ function jsonRequest(pathname, body, headers = {}) {
       origin: ORIGIN,
       ...headers
     },
+    method: "POST"
+  });
+}
+
+function rawJsonRequest(pathname, body, headers = {}) {
+  const normalizedHeaders = {
+    "content-type": "application/json",
+    origin: ORIGIN,
+    ...headers
+  };
+  for (const [name, value] of Object.entries({ ...normalizedHeaders })) {
+    if (value === "") delete normalizedHeaders[name];
+  }
+  return new Request(`${ORIGIN}${pathname}`, {
+    body,
+    headers: normalizedHeaders,
     method: "POST"
   });
 }

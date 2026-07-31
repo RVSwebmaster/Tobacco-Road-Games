@@ -15,6 +15,14 @@ const RATE_LIMITS = Object.freeze({
   register: 6,
   verification: 8
 });
+const INPUT_LIMITS = Object.freeze({
+  csrfToken: 128,
+  email: 254,
+  googleCredential: 8192,
+  jsonBodyBytes: 16 * 1024,
+  password: 256,
+  token: 128
+});
 const GOOGLE_ISSUERS = new Set(["https://accounts.google.com", "accounts.google.com"]);
 const GOOGLE_JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 
@@ -74,11 +82,16 @@ export async function handleAccountMeRequest(request, env) {
 }
 
 export async function registerAccount(request, env, options = {}) {
-  const db = requireDb(env);
-  const body = await readJson(request);
-  const email = normalizeEmail(body.email);
-  const password = String(body.password || "");
-  const passwordConfirmation = String(body.passwordConfirmation || body.confirmPassword || "");
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  const emailField = readBoundedField(body, "email", INPUT_LIMITS.email);
+  const passwordField = readBoundedField(body, "password", INPUT_LIMITS.password);
+  const passwordConfirmationField = readBoundedField(body, body.passwordConfirmation !== undefined ? "passwordConfirmation" : "confirmPassword", INPUT_LIMITS.password);
+  if (!emailField.ok || !passwordField.ok || !passwordConfirmationField.ok) return inputRejected();
+  const email = normalizeEmail(emailField.value);
+  const password = passwordField.value;
+  const passwordConfirmation = passwordConfirmationField.value;
   const passwordError = validatePassword(password);
   const now = nowIso(options);
 
@@ -88,6 +101,7 @@ export async function registerAccount(request, env, options = {}) {
   if (password !== passwordConfirmation || passwordError) {
     return json({ error: { code: "invalid_password", message: passwordError || "Password confirmation must match." } }, 400);
   }
+  const db = requireDb(env);
   if (!(await allowRateLimit(db, request, "register", email, options))) {
     return json({ error: { code: "rate_limited", message: "Too many account attempts. Please wait and try again." } }, 429);
   }
@@ -123,10 +137,15 @@ export async function registerAccount(request, env, options = {}) {
 }
 
 export async function loginAccount(request, env, options = {}) {
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  const emailField = readBoundedField(body, "email", INPUT_LIMITS.email);
+  const passwordField = readBoundedField(body, "password", INPUT_LIMITS.password);
+  if (!emailField.ok || !passwordField.ok) return inputRejected();
+  const email = normalizeEmail(emailField.value);
+  const password = passwordField.value;
   const db = requireDb(env);
-  const body = await readJson(request);
-  const email = normalizeEmail(body.email);
-  const password = String(body.password || "");
   if (!(await allowRateLimit(db, request, "login", email || "unknown", options))) {
     return json({ error: { code: "rate_limited", message: "Too many sign-in attempts. Please wait and try again." } }, 429);
   }
@@ -147,18 +166,25 @@ export async function loginAccount(request, env, options = {}) {
 }
 
 export async function loginWithGoogle(request, env, options = {}) {
-  const db = requireDb(env);
-  const body = await readJson(request);
-  const csrfToken = String(body.g_csrf_token || request.headers.get("x-gis-csrf-token") || "");
-  const csrfCookie = readCookie(request, "g_csrf_token");
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  const credentialField = readBoundedField(body, "credential", INPUT_LIMITS.googleCredential);
+  const bodyCsrfField = readBoundedField(body, "g_csrf_token", INPUT_LIMITS.csrfToken);
+  const headerCsrfField = readBoundedString(request.headers.get("x-gis-csrf-token") || "", INPUT_LIMITS.csrfToken);
+  const cookieCsrfField = readBoundedString(readCookie(request, "g_csrf_token"), INPUT_LIMITS.csrfToken);
+  if (!credentialField.ok || !bodyCsrfField.ok || !headerCsrfField.ok || !cookieCsrfField.ok) return inputRejected();
+  const csrfToken = bodyCsrfField.value || headerCsrfField.value;
+  const csrfCookie = cookieCsrfField.value;
   if (!csrfToken || !csrfCookie || csrfToken !== csrfCookie) {
     return json({ error: { code: "google_csrf_rejected", message: "Google sign-in could not be verified." } }, 403);
   }
+  const db = requireDb(env);
   if (!(await allowRateLimit(db, request, "google", "gis", options))) {
     return json({ error: { code: "rate_limited", message: "Too many Google sign-in attempts. Please wait and try again." } }, 429);
   }
 
-  const verified = await verifyGoogleCredential(String(body.credential || ""), env, options.google);
+  const verified = await verifyGoogleCredential(credentialField.value, env, options.google);
   if (!verified.valid) {
     return json({ error: { code: verified.code, message: "Google sign-in could not be verified." } }, 401);
   }
@@ -202,9 +228,9 @@ export async function loginWithGoogle(request, env, options = {}) {
 }
 
 export async function logoutAccount(request, env) {
-  const db = requireDb(env);
   const token = readCookie(request, ACCOUNT_SESSION_COOKIE);
-  if (token) {
+  if (token && token.length <= INPUT_LIMITS.token) {
+    const db = requireDb(env);
     await db.prepare("UPDATE sessions SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL")
       .bind(new Date().toISOString(), await hashToken(token)).run();
   }
@@ -217,9 +243,13 @@ export async function logoutAccount(request, env) {
 }
 
 export async function verifyEmail(request, env, options = {}) {
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  const tokenField = readBoundedField(body, "token", INPUT_LIMITS.token);
+  if (!tokenField.ok) return inputRejected();
+  const token = tokenField.value;
   const db = requireDb(env);
-  const body = await readJson(request);
-  const token = String(body.token || "");
   if (!(await allowRateLimit(db, request, "verification", "verify", options))) {
     return json({ error: { code: "rate_limited", message: "Too many verification attempts. Please wait and try again." } }, 429);
   }
@@ -248,7 +278,9 @@ export async function verifyEmail(request, env, options = {}) {
 }
 
 export async function resendVerification(request, env, options = {}) {
-  const db = requireDb(env);
+  const submittedCsrf = readBoundedString(request.headers.get("x-csrf-token") || "", INPUT_LIMITS.csrfToken);
+  const cookieCsrf = readBoundedString(readCookie(request, ACCOUNT_CSRF_COOKIE), INPUT_LIMITS.csrfToken);
+  if (!submittedCsrf.ok || !cookieCsrf.ok) return inputRejected();
   const session = await getSessionFromRequest(request, env, options);
   if (!session.valid) {
     return json({ error: { code: "not_authenticated", message: "Sign in before requesting verification." } }, 401);
@@ -260,15 +292,20 @@ export async function resendVerification(request, env, options = {}) {
   if (session.user.email_verified === 1) {
     return json({ ok: true, message: "This email is already verified." });
   }
+  const db = requireDb(env);
   const verification = await createEmailVerificationToken(db, session.user.id, options);
   await sendVerificationEmail(request, env, session.user, verification.token, options);
   return json({ ok: true, message: "Check your email for a new verification link." });
 }
 
 export async function requestPasswordReset(request, env, options = {}) {
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  const emailField = readBoundedField(body, "email", INPUT_LIMITS.email);
+  if (!emailField.ok) return inputRejected();
+  const email = normalizeEmail(emailField.value);
   const db = requireDb(env);
-  const body = await readJson(request);
-  const email = normalizeEmail(body.email);
   if (!(await allowRateLimit(db, request, "password_reset", email || "unknown", options))) {
     return json({ ok: true, message: "If that account exists, reset instructions will be sent." });
   }
@@ -281,15 +318,21 @@ export async function requestPasswordReset(request, env, options = {}) {
 }
 
 export async function resetPassword(request, env, options = {}) {
-  const db = requireDb(env);
-  const body = await readJson(request);
-  const token = String(body.token || "");
-  const password = String(body.password || "");
-  const passwordConfirmation = String(body.passwordConfirmation || body.confirmPassword || "");
+  const parsed = await readJson(request);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
+  const tokenField = readBoundedField(body, "token", INPUT_LIMITS.token);
+  const passwordField = readBoundedField(body, "password", INPUT_LIMITS.password);
+  const passwordConfirmationField = readBoundedField(body, body.passwordConfirmation !== undefined ? "passwordConfirmation" : "confirmPassword", INPUT_LIMITS.password);
+  if (!tokenField.ok || !passwordField.ok || !passwordConfirmationField.ok) return inputRejected();
+  const token = tokenField.value;
+  const password = passwordField.value;
+  const passwordConfirmation = passwordConfirmationField.value;
   const passwordError = validatePassword(password);
   if (password !== passwordConfirmation || passwordError) {
     return json({ error: { code: "invalid_password", message: passwordError || "Password confirmation must match." } }, 400);
   }
+  const db = requireDb(env);
   const tokenHash = await hashToken(token);
   const claimMarker = randomToken();
   const now = nowIso(options);
@@ -401,9 +444,10 @@ export function validatePassword(password) {
 }
 
 export async function getSessionFromRequest(request, env, options = {}) {
-  const db = requireDb(env);
   const rawSessionToken = readCookie(request, ACCOUNT_SESSION_COOKIE);
   if (!rawSessionToken) return { valid: false, reason: "missing" };
+  if (rawSessionToken.length > INPUT_LIMITS.token) return { valid: false, reason: "invalid" };
+  const db = requireDb(env);
   const tokenHash = await hashToken(rawSessionToken);
   const row = await db.prepare(`
     SELECT s.*, u.id AS user_id, u.email_normalized, u.email_verified, u.email_verified_at, u.status, u.role, u.created_at AS user_created_at, u.updated_at AS user_updated_at
@@ -435,6 +479,7 @@ export async function getSessionFromRequest(request, env, options = {}) {
 
 async function validateSessionCsrf(request, session) {
   const submitted = String(request.headers.get("x-csrf-token") || "");
+  if (submitted.length > INPUT_LIMITS.csrfToken || session.csrfToken.length > INPUT_LIMITS.csrfToken) return { valid: false };
   if (!submitted || !session.csrfToken || submitted !== session.csrfToken) return { valid: false };
   const hash = await hashToken(submitted);
   return { valid: hash === session.session.csrf_token_hash };
@@ -562,7 +607,81 @@ function validateSameOriginRequest(request) {
 }
 
 async function readJson(request) {
-  try { return await request.json(); } catch { return {}; }
+  const contentLength = request.headers.get("content-length");
+  if (contentLength) {
+    const declaredLength = Number(contentLength);
+    if (!Number.isFinite(declaredLength) || declaredLength < 0 || declaredLength > INPUT_LIMITS.jsonBodyBytes) {
+      return { ok: false, response: bodyTooLarge() };
+    }
+  }
+
+  let text;
+  try {
+    text = await readLimitedText(request, INPUT_LIMITS.jsonBodyBytes);
+  } catch (error) {
+    if (error?.code === "body_too_large") return { ok: false, response: bodyTooLarge() };
+    return { ok: false, response: inputRejected() };
+  }
+
+  if (!text.trim()) return { ok: true, body: {} };
+  try {
+    return { ok: true, body: JSON.parse(text) };
+  } catch {
+    return { ok: true, body: {} };
+  }
+}
+
+async function readLimitedText(request, maxBytes) {
+  if (!request.body?.getReader) {
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > maxBytes) {
+      const error = new Error("Request body is too large.");
+      error.code = "body_too_large";
+      throw error;
+    }
+    return text;
+  }
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let byteLength = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    byteLength += value.byteLength;
+    if (byteLength > maxBytes) {
+      const error = new Error("Request body is too large.");
+      error.code = "body_too_large";
+      throw error;
+    }
+    chunks.push(value);
+  }
+  const combined = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(combined);
+}
+
+function readBoundedField(body, field, maxLength) {
+  return readBoundedString(body?.[field] ?? "", maxLength);
+}
+
+function readBoundedString(value, maxLength) {
+  if (value === undefined || value === null) return { ok: true, value: "" };
+  if (typeof value !== "string") value = String(value);
+  if (value.length > maxLength) return { ok: false, value: "" };
+  return { ok: true, value };
+}
+
+function bodyTooLarge() {
+  return json({ error: { code: "request_too_large", message: "The account request is too large." } }, 413);
+}
+
+function inputRejected() {
+  return json({ error: { code: "invalid_input", message: "The account request contains a value that is too long or invalid." } }, 400);
 }
 
 function normalizeEmail(value) {
