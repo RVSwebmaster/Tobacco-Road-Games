@@ -875,6 +875,7 @@ function renderStoreNav(currentNav) {
   const items = [
     { key: "home", href: "/", label: "Home" },
     { key: "authors", href: "/authors.html", label: "Authors" },
+    { key: "forum", href: "/forum", label: "Forum" },
     { key: "store", href: "/store/", label: "Store" },
     { key: "catalog", href: "/store/catalog/", label: "Catalog" },
     { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' },
@@ -1475,6 +1476,7 @@ function renderPublicNav(currentNav) {
   const items = [
     { key: "home", href: "/", label: "Home" },
     { key: "authors", href: "/authors.html", label: "Authors" },
+    { key: "forum", href: "/forum", label: "Forum" },
     { key: "store", href: "/store/", label: "Store" },
     { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
   ];

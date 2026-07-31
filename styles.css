@@ -2091,6 +2091,122 @@ h4 {
   white-space: normal;
 }
 
+.forum-home,
+.forum-category-placeholder {
+  display: grid;
+  gap: 22px;
+}
+
+.forum-identity {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(242, 216, 170, 0.15);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+}
+
+.forum-category-list {
+  display: grid;
+  gap: 14px;
+}
+
+.forum-category-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid rgba(242, 216, 170, 0.15);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.forum-category-card__body {
+  display: grid;
+  gap: 7px;
+}
+
+.forum-category-card h2,
+.forum-category-card p,
+.forum-category-card dl,
+.forum-category-card dd,
+.forum-category-card dt {
+  margin: 0;
+}
+
+.forum-category-card h2 a {
+  display: inline-block;
+  padding-block: 4px;
+  color: var(--accent-strong);
+  text-underline-offset: 4px;
+}
+
+.forum-category-card h2 a:focus-visible {
+  border-radius: 5px;
+  outline: 3px solid rgba(232, 194, 126, 0.32);
+  outline-offset: 3px;
+}
+
+.forum-category-card__counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(72px, auto));
+  gap: 10px;
+  text-align: center;
+}
+
+.forum-category-card__counts div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(12, 8, 6, 0.3);
+}
+
+.forum-category-card__counts dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.forum-category-card__counts dd {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.forum-category-placeholder__description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.65;
+}
+
+.forum-notice {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid rgba(242, 216, 170, 0.16);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.forum-notice h2,
+.forum-notice p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .forum-category-card {
+    grid-template-columns: 1fr;
+  }
+
+  .forum-category-card__counts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .google-signin-control {
   min-height: 44px;
 }
