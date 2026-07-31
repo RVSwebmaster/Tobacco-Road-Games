@@ -6,7 +6,7 @@ const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
 const ORIGIN = "https://tobaccoroadgames.com";
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql"]
   .map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n");
 const EXPECTED = ["The Common Room", "At the Workbench", "Tobacco Road Games", "The Playtest Table", "Campaign Journals", "Off the Road"];
 
@@ -50,7 +50,7 @@ async function testInactiveAndCategoryPages(categories) {
   let html = await response.text();
   assert.equal(response.status, 200);
   assert.match(html, /The Common Room/);
-  assert.match(html, /Discussions are not enabled yet/);
+  assert.match(html, /No topics yet/);
   assert.match(html, /Back to Forum Home/);
   response = await categories.renderForumCategory(new Request(`${ORIGIN}/forum/category/missing`), env, "missing");
   assert.equal(response.status, 404);

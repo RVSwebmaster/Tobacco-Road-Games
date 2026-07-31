@@ -1,4 +1,5 @@
 import { getSessionFromRequest } from "./account-auth.mjs";
+import { getEligibleTopicCreator, listCategoryTopics } from "./forum-topics.mjs";
 
 export async function handleForumCategoriesApi(request, env) {
   if (request.method !== "GET") return json({ error: { code: "method_not_allowed", message: "Use GET for forum categories." } }, 405);
@@ -18,8 +19,8 @@ export async function renderForumHome(request, env, options = {}) {
         <p>${escapeHtml(category.description)}</p>
       </div>
       <dl class="forum-category-card__counts" aria-label="Current discussion counts">
-        <div><dt>Topics</dt><dd>0</dd></div>
-        <div><dt>Posts</dt><dd>0</dd></div>
+        <div><dt>Topics</dt><dd>${Number(category.topic_count || 0)}</dd></div>
+        <div><dt>Posts</dt><dd>${Number(category.post_count || 0)}</dd></div>
       </dl>
     </article>`).join("");
   return htmlResponse(pageShell({
@@ -33,24 +34,36 @@ export async function renderForumHome(request, env, options = {}) {
   }));
 }
 
-export async function renderForumCategory(request, env, requestedSlug) {
+export async function renderForumCategory(request, env, requestedSlug, options = {}) {
   if (request.method !== "GET" && request.method !== "HEAD") return htmlNotFound();
   const slug = normalizeSlug(requestedSlug);
   if (!slug) return htmlNotFound();
   const category = await requireDb(env).prepare(`
-    SELECT slug, display_name, description
+    SELECT id, slug, display_name, description
     FROM forum_categories
     WHERE slug = ? AND status = 'active'
   `).bind(slug).first();
   if (!category) return htmlNotFound();
+  const [topics, creator] = await Promise.all([listCategoryTopics(env, category.id), getEligibleTopicCreator(request, env, options)]);
+  const topicMarkup = topics.length ? topics.map(renderTopicCard).join("") : `<div class="forum-notice" role="status"><h2>No topics yet</h2><p>Be the first member to start a discussion in this category.</p></div>`;
+  const creationMarkup = creator ? `<section class="forum-topic-create" aria-labelledby="start-topic-heading">
+      <h2 id="start-topic-heading">Start a Topic</h2>
+      <form id="forum-topic-form" data-category-slug="${escapeHtml(category.slug)}">
+        <label for="forum-topic-title">Topic title</label><input id="forum-topic-title" name="title" type="text" minlength="5" maxlength="120" required>
+        <label for="forum-topic-body">Opening post</label><textarea id="forum-topic-body" name="body" rows="10" maxlength="10000" required></textarea>
+        <p class="forum-topic-create__help">Plain text only. Paragraphs and line breaks will be preserved.</p>
+        <button class="button" type="submit">Create Topic</button><p id="forum-topic-status" class="forum-topic-create__status" role="status" aria-live="polite"></p>
+      </form>
+    </section><script src="/assets/js/forum-category.js?v=20260731a" defer></script>` : `<p class="forum-topic-sign-in"><a href="/account.html">Sign in and complete your forum profile</a> to start a topic.</p>`;
   return htmlResponse(pageShell({
     title: category.display_name,
     current: "forum",
-    body: `<section class="store-section forum-category-placeholder" aria-labelledby="category-heading">
+    body: `<section class="store-section forum-category" aria-labelledby="category-heading">
       <p class="section-heading__kicker">Forum category</p>
       <h1 id="category-heading">${escapeHtml(category.display_name)}</h1>
       <p class="forum-category-placeholder__description">${escapeHtml(category.description)}</p>
-      <div class="forum-notice" role="status"><h2>Discussions are not enabled yet</h2><p>This category is ready, but topics and posts will arrive in a later forum phase.</p></div>
+      <div class="forum-topic-list" aria-label="Topics in ${escapeHtml(category.display_name)}">${topicMarkup}</div>
+      ${creationMarkup}
       <p><a class="button button--secondary" href="/forum">Back to Forum Home</a></p>
     </section>`
   }));
@@ -58,9 +71,11 @@ export async function renderForumCategory(request, env, requestedSlug) {
 
 export async function listActiveCategories(env) {
   const result = await requireDb(env).prepare(`
-    SELECT slug, display_name, description, display_order
-    FROM forum_categories
-    WHERE status = 'active'
+    SELECT c.slug, c.display_name, c.description, c.display_order,
+      (SELECT COUNT(*) FROM forum_topics t WHERE t.category_id = c.id AND t.status = 'active') AS topic_count,
+      (SELECT COUNT(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE t.category_id = c.id AND t.status = 'active' AND p.status = 'active') AS post_count
+    FROM forum_categories c
+    WHERE c.status = 'active'
     ORDER BY display_order ASC, slug ASC
   `).all();
   return result.results || [];
@@ -78,8 +93,15 @@ async function forumIdentity(request, env, options) {
 }
 
 function publicCategory(row) {
-  return { description: row.description, name: row.display_name, postCount: 0, slug: row.slug, topicCount: 0 };
+  return { description: row.description, name: row.display_name, postCount: Number(row.post_count || 0), slug: row.slug, topicCount: Number(row.topic_count || 0) };
 }
+
+function renderTopicCard(topic) {
+  const avatar = topic.creator.avatarUrl || "/assets/logo.png?v=forum-avatar-default";
+  return `<article class="forum-topic-card"><div class="forum-topic-card__main"><h2><a href="${escapeHtml(topic.url)}">${escapeHtml(topic.title)}</a></h2><div class="forum-topic-card__creator"><img class="forum-avatar forum-avatar--small" src="${escapeHtml(avatar)}" alt=""><span>Started by <a href="/forum/member/${encodeURIComponent(topic.creator.handle)}">@${escapeHtml(topic.creator.handle)}</a> on ${formatDate(topic.createdAt)}</span></div></div><dl class="forum-topic-card__facts"><div><dt>Posts</dt><dd>${topic.postCount}</dd></div><div><dt>Last activity</dt><dd>${formatDate(topic.lastActivityAt)}</dd></div></dl></article>`;
+}
+
+function formatDate(value) { return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value)); }
 
 function pageShell({ title, body, current }) {
   const nav = [
