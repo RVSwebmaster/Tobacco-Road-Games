@@ -166,6 +166,7 @@ function assertFilesAndRoutes() {
   assert.ok(routes.include.includes("/forum/member/*"));
   const profileRoute = fs.readFileSync(path.join(ROOT, "functions", "api", "forum", "profile", "[[handle]].js"), "utf8");
   assert.match(profileRoute, /handleForumProfileCollection/, "The optional-handle route must serve collection mutations at /api/forum/profile.");
+  assert.match(profileRoute, /Array\.isArray\(params\.handle\)/, "The profile API route must normalize Pages catch-all parameters.");
   const memberRoute = fs.readFileSync(path.join(ROOT, "functions", "forum", "member", "[[handle]].js"), "utf8");
   assert.match(memberRoute, /Array\.isArray\(params\.handle\)/, "The public member route must normalize Pages catch-all parameters.");
 }
