@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { scryptAsync } from "@noble/hashes/scrypt";
-import { createEmailProvider, isEmailDeliveryConfigured } from "./email-provider.mjs";
+import { EmailProviderError, createEmailProvider, isEmailDeliveryConfigured } from "./email-provider.mjs";
 
 export const ACCOUNT_SESSION_COOKIE = "__Host-trg_session";
 export const ACCOUNT_CSRF_COOKIE = "trg_account_csrf";
@@ -542,7 +542,9 @@ async function sendPasswordResetEmail(request, env, user, token, options = {}) {
 async function sendAccountEmail(env, message, idempotencyKey, options = {}) {
   if (options.emailProvider) return options.emailProvider.send(message, { idempotencyKey });
   if (env.emailProvider) return env.emailProvider.send(message, { idempotencyKey });
-  if (!isEmailDeliveryConfigured(env)) return { id: null, status: "not_configured" };
+  if (!isEmailDeliveryConfigured(env)) {
+    throw new EmailProviderError("account_email_not_configured");
+  }
   return createEmailProvider(env).send(message, { idempotencyKey });
 }
 

@@ -20,6 +20,7 @@ async function main() {
   const auth = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "account-auth.mjs")).href);
   await testPasswordHashing(auth);
   await testInputLimits(auth);
+  await testResendConfigurationContract(auth);
   await testRegistrationLoginSessionLogout(auth);
   await testEmailVerification(auth);
   await testPasswordReset(auth);
@@ -167,6 +168,53 @@ async function testInputLimits(auth) {
   });
   assert.equal(response.status, 401, "Maximum-length Google credentials should reach the normal verification path.");
   assert.equal(maxCredentialJwtCalled, true, "Maximum-length Google credentials should not be rejected by size checks.");
+}
+
+async function testResendConfigurationContract(auth) {
+  await assert.rejects(
+    auth.registerAccount(jsonRequest("/api/auth/register", {
+      email: "missing-resend@example.com",
+      password: "ValidPassphrase!23",
+      passwordConfirmation: "ValidPassphrase!23"
+    }), createEnv({ omitEmailProvider: true, resendApiKey: "", resendReplyTo: "reply@example.com" }), TEST_OPTIONS),
+    (error) => error?.code === "account_email_not_configured",
+    "Missing RESEND_API_KEY should fail closed with a clear email-provider configuration error."
+  );
+
+  await assert.rejects(
+    auth.registerAccount(jsonRequest("/api/auth/register", {
+      email: "missing-reply@example.com",
+      password: "ValidPassphrase!23",
+      passwordConfirmation: "ValidPassphrase!23"
+    }), createEnv({ omitEmailProvider: true, resendApiKey: "re_test", resendReplyTo: "" }), TEST_OPTIONS),
+    (error) => error?.code === "account_email_not_configured",
+    "Missing RESEND_REPLY_TO should fail closed with a clear email-provider configuration error."
+  );
+
+  const env = createEnv({ omitEmailProvider: true, resendApiKey: "re_test", resendReplyTo: "reply@example.com" });
+  let sentPayload = null;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, options = {}) => {
+    sentPayload = JSON.parse(String(options.body || "{}"));
+    return Response.json({ id: "email_account_contract" });
+  };
+  try {
+    const response = await auth.registerAccount(jsonRequest("/api/auth/register", {
+      email: "configured-resend@example.com",
+      password: "ValidPassphrase!23",
+      passwordConfirmation: "ValidPassphrase!23"
+    }), env, TEST_OPTIONS);
+    assert.equal(response.status, 201, "Configured Resend values should allow account email delivery.");
+    assert.equal(sentPayload.from, "Tobacco Road Games <orders@tobaccoroadgames.com>", "Account email should use the shared store From address.");
+    assert.equal(sentPayload.reply_to, "reply@example.com", "Account email should use RESEND_REPLY_TO as the Reply-To mailbox.");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  const docs = fs.readFileSync(path.join(ROOT, "docs", "ACCOUNT-AUTH-FOUNDATION.md"), "utf8");
+  assert.match(docs, /RESEND_API_KEY/, "Account documentation should name RESEND_API_KEY.");
+  assert.match(docs, /RESEND_REPLY_TO/, "Account documentation should name RESEND_REPLY_TO.");
+  assert.match(docs, /RESEND_FROM_EMAIL` is not used/, "Account documentation should clarify that RESEND_FROM_EMAIL is not part of this contract.");
 }
 
 async function testRegistrationLoginSessionLogout(auth) {
@@ -610,19 +658,22 @@ async function testTokenStorageAndRateLimits(auth) {
 function createEnv(options = {}) {
   const raw = new DatabaseSync(":memory:");
   raw.exec(MIGRATION);
-  return {
+  const env = {
     GOOGLE_CLIENT_ID: "google-client-id",
-    RESEND_API_KEY: "re_test",
-    RESEND_REPLY_TO: "reply@example.com",
+    RESEND_API_KEY: options.resendApiKey ?? "re_test",
+    RESEND_REPLY_TO: options.resendReplyTo ?? "reply@example.com",
     TRG_ORDERS: d1(raw, options),
-    emailProvider: {
+  };
+  if (!options.omitEmailProvider) {
+    env.emailProvider = {
       messages: [],
       async send(message, options) {
         this.messages.push({ message, options });
         return { id: `email-${this.messages.length}`, status: "accepted" };
       }
-    }
-  };
+    };
+  }
+  return env;
 }
 
 function d1(raw, options = {}) {

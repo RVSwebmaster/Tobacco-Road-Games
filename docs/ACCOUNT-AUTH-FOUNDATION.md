@@ -37,12 +37,14 @@ Required for Google sign-in:
 
 - `GOOGLE_CLIENT_ID`
 
-Required for production email delivery through the existing Resend provider:
+Required for account email delivery through the existing shared Resend provider:
 
 - `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
+- `RESEND_REPLY_TO`
 
-Email verification and password reset requests still complete safely if Resend is not configured, but delivery is reported internally as not configured.
+The outgoing From address is not configured by this account system. It comes from the existing shared store email provider as `Tobacco Road Games <orders@tobaccoroadgames.com>`. `RESEND_REPLY_TO` is the confirmed support mailbox used for replies and is already the standard store email variable. `RESEND_FROM_EMAIL` is not used by the shared account system.
+
+Email verification and password reset requests fail closed with a server-side email-provider configuration error until both `RESEND_API_KEY` and `RESEND_REPLY_TO` are present and valid.
 
 ## Google Identity Services configuration
 
@@ -95,5 +97,12 @@ Password reset links are random, single-use, time-limited tokens stored only as 
 For local Pages development, bind the same D1 database shape and set the local Google origin in the OAuth client. Use test Resend values only if testing live delivery is intended.
 
 For staging, add the staging Pages origin to the same Google OAuth client or use a separate staging client ID. Keep the staging `GOOGLE_CLIENT_ID` aligned with that origin.
+
+Staging account email requires the same Resend variables used by store delivery:
+
+- `RESEND_API_KEY`: encrypted Resend API key, installed as a Pages secret.
+- `RESEND_REPLY_TO`: confirmed support mailbox for replies, installed as a Pages secret.
+
+The staging helper `ops/staging/configure-resend.ps1` installs those names without printing their values. It also installs Resend webhook and order-access secrets used by store delivery.
 
 The account page is `account.html`. Google sign-in is presented as one option beside native sign-in and registration; it is not required.
