@@ -6,6 +6,9 @@
   const resetPanel = document.querySelector("#reset-panel");
   const resetForm = document.querySelector("#reset-form");
   let csrfToken = "";
+  let googleInitialized = false;
+  let googleInitializeAttempts = 0;
+  const maxGoogleInitializeAttempts = 20;
 
   const setStatus = (message, error = false) => {
     status.textContent = message;
@@ -162,29 +165,55 @@
   };
 
   function initializeGoogle() {
+    if (googleInitialized) return true;
     const clientId = document.documentElement.dataset.googleClientId || window.TRG_GOOGLE_CLIENT_ID || "";
     const unavailable = document.querySelector("#google-unavailable");
-    if (!clientId || !window.google?.accounts?.id) {
+    const control = document.querySelector("#google-signin-control");
+    if (!clientId) {
       if (unavailable) unavailable.hidden = false;
-      return;
+      return false;
     }
+    if (!window.google?.accounts?.id) {
+      googleInitializeAttempts += 1;
+      if (googleInitializeAttempts >= maxGoogleInitializeAttempts && unavailable) {
+        unavailable.hidden = false;
+      }
+      return false;
+    }
+    if (unavailable) unavailable.hidden = true;
+    if (control) control.innerHTML = "";
     window.google.accounts.id.initialize({
       callback: window.handleTrgGoogleCredential,
       client_id: clientId
     });
-    window.google.accounts.id.renderButton(document.querySelector("#google-signin-control"), {
+    window.google.accounts.id.renderButton(control, {
       size: "large",
       text: "continue_with",
       theme: "outline",
       type: "standard"
     });
+    googleInitialized = true;
+    return true;
   }
 
-  window.addEventListener("load", () => window.setTimeout(initializeGoogle, 100));
+  function scheduleGoogleInitialization() {
+    if (initializeGoogle()) return;
+    if (googleInitializeAttempts < maxGoogleInitializeAttempts && (document.documentElement.dataset.googleClientId || window.TRG_GOOGLE_CLIENT_ID || "")) {
+      window.setTimeout(scheduleGoogleInitialization, 250);
+    }
+  }
+
+  window.addEventListener("load", () => window.setTimeout(scheduleGoogleInitialization, 100));
   refreshAccount().then(() => {
-    initializeGoogle();
+    scheduleGoogleInitialization();
     return handleUrlTokens();
   }).catch(() => {
     setStatus("Account service is not available yet.", true);
   });
+  if (window.__TRG_ACCOUNT_TEST__) {
+    Object.assign(window.__TRG_ACCOUNT_TEST__, {
+      initializeGoogle,
+      scheduleGoogleInitialization
+    });
+  }
 })();
