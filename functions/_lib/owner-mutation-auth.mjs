@@ -37,7 +37,7 @@ export async function verifyAuthenticatedOwnerMutationRequest(request, env, opti
     };
   }
 
-  const sessionState = await verifySessionToken(sessionToken, secrets.sessionSecret);
+  const sessionState = await verifySessionToken(sessionToken, secrets.sessionSecret, options.nowMs);
   if (!sessionState.valid) {
     return {
       valid: false,
@@ -106,7 +106,7 @@ async function verifyOwnerCsrf(request, subject, csrfSecret, options) {
     };
   }
 
-  const csrfState = await verifyCsrfToken(csrfToken, subject, csrfSecret);
+  const csrfState = await verifyCsrfToken(csrfToken, subject, csrfSecret, options.nowMs);
   if (!csrfState.valid) {
     return {
       valid: false,

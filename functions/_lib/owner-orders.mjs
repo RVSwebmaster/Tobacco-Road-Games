@@ -24,7 +24,7 @@ export async function handleOwnerOrdersRequest(request, env = {}, options = {}) 
 }
 
 async function handleLookup(request, env, options) {
-  const auth = await resolveOwnerReadIdentity(request, env);
+  const auth = await resolveOwnerReadIdentity(request, env, options);
   if (!auth.valid) {
     return jsonResponse({ error: auth.userMessage }, auth.status);
   }
@@ -50,6 +50,7 @@ async function handleMutation(request, env, options) {
     csrfExpiredMessage: "The order recovery security token expired. Reload the page and try again.",
     csrfMismatchMessage: "The order recovery security token did not match. Reload the page and try again.",
     missingCsrfSecretMessage: "Owner order recovery is missing OWNER_CSRF_SECRET in Cloudflare.",
+    nowMs: options.nowMs,
     sameOriginMessage: "Order recovery actions must come from the Tobacco Road Games owner site."
   });
   if (!auth.valid) {
@@ -206,7 +207,7 @@ export async function recordOwnerAudit(database, input, options = {}) {
   ).run();
 }
 
-async function resolveOwnerReadIdentity(request, env) {
+async function resolveOwnerReadIdentity(request, env, options = {}) {
   const accessConfig = getOwnerAccessConfig(env);
   if (accessConfig.enabled) {
     const state = await verifyOwnerAccessRequest(request, env);
@@ -216,7 +217,7 @@ async function resolveOwnerReadIdentity(request, env) {
   }
   const secrets = getOwnerSecrets(env);
   const token = readCookie(request, SESSION_COOKIE_NAME);
-  const state = token && secrets.sessionSecret ? await verifySessionToken(token, secrets.sessionSecret) : { valid: false };
+  const state = token && secrets.sessionSecret ? await verifySessionToken(token, secrets.sessionSecret, options.nowMs) : { valid: false };
   return state.valid
     ? { valid: true, username: state.username }
     : { valid: false, status: 401, userMessage: "Owner authentication is required." };

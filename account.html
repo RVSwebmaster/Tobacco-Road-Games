@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account | Tobacco Road Games</title>
+  <meta name="description" content="Create or sign in to a Tobacco Road Games account.">
+  <link rel="canonical" href="https://tobaccoroadgames.com/account.html">
+  <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
+  <link rel="stylesheet" href="styles.css?v=20260717a">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="view-section">
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="assets/logo.png?v=20260717a" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
+          <span class="brand__tag">A working GM's bench for strange tables and long campaigns</span>
+        </div>
+      </a>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="/">Home</a>
+        <a href="/store/">Live Store</a>
+        <a href="/authors.html">Authors</a>
+        <a href="/account.html" aria-current="page">Account</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="account-page store-section" aria-labelledby="account-heading">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Shared account foundation</p>
+          <h1 id="account-heading">Your Tobacco Road Games Account</h1>
+          <p>Sign in with Google or use a TRG email/password account. Public forum identity will be chosen separately later.</p>
+        </div>
+
+        <p id="account-status" class="discussion-status" role="status" aria-live="polite">Checking account status...</p>
+
+        <div class="account-grid">
+          <section class="account-card" aria-labelledby="google-heading">
+            <h2 id="google-heading">Continue with Google</h2>
+            <p>Use Google Identity Services for sign-in. Google is optional; it is not required to use a TRG account.</p>
+            <div id="google-signin-control" class="google-signin-control"></div>
+            <button type="button" class="button button--secondary" id="google-unavailable" hidden>Google sign-in unavailable</button>
+          </section>
+
+          <section class="account-card" aria-labelledby="signin-heading">
+            <h2 id="signin-heading">Sign in with a TRG account</h2>
+            <form id="signin-form" class="account-form">
+              <label>Email <input name="email" type="email" autocomplete="email" required></label>
+              <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+              <button type="submit" class="button button--primary">Sign In</button>
+            </form>
+            <form id="forgot-form" class="account-form account-form--compact">
+              <label>Forgot password email <input name="email" type="email" autocomplete="email"></label>
+              <button type="submit" class="button button--secondary">Forgot Password</button>
+            </form>
+          </section>
+
+          <section class="account-card" aria-labelledby="create-heading">
+            <h2 id="create-heading">Create a TRG account</h2>
+            <form id="register-form" class="account-form">
+              <label>Email <input name="email" type="email" autocomplete="email" required></label>
+              <label>Password <input name="password" type="password" autocomplete="new-password" required></label>
+              <label>Confirm password <input name="passwordConfirmation" type="password" autocomplete="new-password" required></label>
+              <p class="account-help">Use at least 12 characters with uppercase, lowercase, number, and symbol.</p>
+              <button type="submit" class="button button--primary">Create Account</button>
+            </form>
+          </section>
+
+          <section class="account-card account-card--session" aria-labelledby="session-heading">
+            <h2 id="session-heading">Current account</h2>
+            <div id="account-summary" class="account-summary">No account is signed in.</div>
+            <button type="button" class="button button--secondary" id="resend-verification-button" hidden>Resend verification email</button>
+            <button type="button" class="button button--secondary" id="signout-button" hidden>Sign Out</button>
+          </section>
+        </div>
+
+        <section class="account-card account-card--reset" id="reset-panel" hidden aria-labelledby="reset-heading">
+          <h2 id="reset-heading">Set a new password</h2>
+          <form id="reset-form" class="account-form">
+            <input type="hidden" name="token">
+            <label>New password <input name="password" type="password" autocomplete="new-password" required></label>
+            <label>Confirm new password <input name="passwordConfirmation" type="password" autocomplete="new-password" required></label>
+            <button type="submit" class="button button--primary">Reset Password</button>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="/assets/js/account.js?v=20260730a"></script>
+</body>
+</html>

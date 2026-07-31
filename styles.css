@@ -1992,8 +1992,90 @@ h4 {
   color: #ffaaa0;
 }
 
+.account-page {
+  display: grid;
+  gap: 20px;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.account-card {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid rgba(242, 216, 170, 0.14);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.account-card h2 {
+  font-size: 1.6rem;
+}
+
+.account-card p,
+.account-help,
+.account-summary {
+  margin: 0;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  line-height: 1.65;
+}
+
+.account-form {
+  display: grid;
+  gap: 13px;
+}
+
+.account-form--compact {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(242, 216, 170, 0.12);
+}
+
+.account-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-weight: 700;
+}
+
+.account-form input {
+  min-height: 48px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(242, 216, 170, 0.22);
+  border-radius: 14px;
+  background: rgba(12, 8, 6, 0.56);
+  color: var(--text);
+  font: inherit;
+}
+
+.account-form input:focus-visible,
+.account-card button:focus-visible {
+  border-color: rgba(242, 216, 170, 0.48);
+  outline: 3px solid rgba(232, 194, 126, 0.22);
+  outline-offset: 2px;
+}
+
+.google-signin-control {
+  min-height: 44px;
+}
+
+.account-card--session,
+.account-card--reset {
+  align-content: start;
+}
+
 @media (max-width: 640px) {
   .discussion-form__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .account-grid {
     grid-template-columns: 1fr;
   }
 }
