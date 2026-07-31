@@ -15,7 +15,7 @@ export class EmailProviderError extends Error {
 export function createEmailProvider(env = {}, options = {}) {
   return new ResendEmailProvider({
     apiKey: env.RESEND_API_KEY,
-    fetchImpl: options.fetchImpl || fetch,
+    fetchImpl: options.fetchImpl || ((...args) => fetch(...args)),
     replyTo: env.RESEND_REPLY_TO
   });
 }
@@ -28,7 +28,7 @@ export function isEmailDeliveryConfigured(env = {}) {
 export class ResendEmailProvider {
   constructor(options = {}) {
     this.apiKey = String(options.apiKey || "").trim();
-    this.fetchImpl = options.fetchImpl || fetch;
+    this.fetchImpl = options.fetchImpl || ((...args) => fetch(...args));
     this.replyTo = String(options.replyTo || "").trim().toLowerCase();
   }
 
