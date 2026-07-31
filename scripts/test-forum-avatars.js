@@ -17,6 +17,7 @@ async function main() {
   const avatars = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "forum-avatars.mjs")).href);
   const auth = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "account-auth.mjs")).href);
   const profiles = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "forum-profiles.mjs")).href);
+  await testDatabaseAvatarStateConstraint(auth);
   await testAcceptedUploads(avatars, auth);
   await testAuthenticationAndValidation(avatars, auth);
   await testPublicDeliveryAndPrivacy(avatars, auth, profiles);
@@ -24,6 +25,30 @@ async function main() {
   await testReplacementFailureCleanupAndDeletion(avatars, auth);
   assertImplementationBoundaries();
   console.log("Forum avatar tests passed.");
+}
+
+async function testDatabaseAvatarStateConstraint(auth) {
+  const fixture = await createFixture(auth);
+  const setState = (presetId, objectKey, mediaType) => fixture.raw.prepare(`
+    UPDATE forum_profiles
+    SET avatar_preset_id = ?, avatar_object_key = ?, avatar_media_type = ?
+    WHERE user_id = 'avatar-user'
+  `).run(presetId, objectKey, mediaType);
+
+  assert.doesNotThrow(() => setState(null, null, null), "The default avatar state must be accepted.");
+  assert.doesNotThrow(() => setState("brass-d20", null, null), "A preset-only avatar state must be accepted.");
+  assert.doesNotThrow(() => setState(null, "forum-avatars/complete.webp", "image/webp"), "A complete custom-avatar state must be accepted.");
+
+  const rejected = [
+    ["brass-d20", "forum-avatars/key-only.png", null, "preset ID plus custom object key"],
+    ["brass-d20", null, "image/png", "preset ID plus custom media type"],
+    [null, "forum-avatars/key-only.png", null, "object key without media type"],
+    [null, null, "image/png", "media type without object key"],
+    ["brass-d20", "forum-avatars/complete.png", "image/png", "preset and complete custom metadata"]
+  ];
+  for (const [presetId, objectKey, mediaType, label] of rejected) {
+    assert.throws(() => setState(presetId, objectKey, mediaType), /CHECK constraint failed/, `D1 must reject ${label}.`);
+  }
 }
 
 async function testPresetSelectionAndRetroactiveResolution(avatars, auth) {
