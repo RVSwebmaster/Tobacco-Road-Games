@@ -2,14 +2,15 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const {DatabaseSync}=require("node:sqlite"); const {pathToFileURL}=require("node:url");
 const ROOT=path.resolve(__dirname,".."),ORIGIN="https://tobaccoroadgames.com",NOW=Date.parse("2026-07-31T18:00:00.000Z");
 const TOPIC="33333333-3333-4333-8333-333333333333",OTHER="44444444-4444-4444-8444-444444444444",POST="55555555-5555-4555-8555-555555555555",REPLY="66666666-6666-4666-8666-666666666666";
-const MIGRATION=["007_shared_accounts.sql","008_token_claim_markers.sql","009_forum_profiles.sql","010_forum_categories.sql","011_forum_profile_avatars.sql","012_forum_topics.sql","013_forum_moderation.sql"].map(n=>fs.readFileSync(path.join(ROOT,"migrations",n),"utf8")).join("\n");
+const MIGRATION=["007_shared_accounts.sql","008_token_claim_markers.sql","009_forum_profiles.sql","010_forum_categories.sql","011_forum_profile_avatars.sql","012_forum_topics.sql","013_forum_moderation.sql","014_forum_rate_limits.sql"].map(n=>fs.readFileSync(path.join(ROOT,"migrations",n),"utf8")).join("\n");
 
 async function main(){
  const moderation=await imp("forum-moderation.mjs"),topics=await imp("forum-topics.mjs"),categories=await imp("forum-categories.mjs"),auth=await imp("account-auth.mjs");
  await reporting(moderation,topics,auth); await authorization(moderation,auth); await actions(moderation,topics,categories,auth); staticChecks(); console.log("Forum moderation tests passed.");
 }
 async function reporting(m,t,auth){
- let f=await fixture(auth); let r=await m.handleForumReport(reportReq(f,"topic",TOPIC,"spam","<b>plain</b>"),f.env,"topic",TOPIC,{now:NOW}); assert.equal(r.status,201); const topicReport=(await r.json()).report.id;
+ let f=await fixture(auth); f.env.FORUM_RATE_LIMIT_SECRET="forum-rate-limit-test-secret-32-characters-minimum";
+ let r=await m.handleForumReport(reportReq(f,"topic",TOPIC,"spam","<b>plain</b>"),f.env,"topic",TOPIC,{now:NOW}); assert.equal(r.status,201); const topicReport=(await r.json()).report.id;
  r=await m.handleForumReport(reportReq(f,"post",REPLY,"harassment","Details"),f.env,"post",REPLY,{now:NOW+1}); assert.equal(r.status,201); const postReport=(await r.json()).report.id;
  assert.equal(f.raw.prepare("SELECT COUNT(*) n FROM forum_reports").get().n,2); assert.equal(f.raw.prepare("SELECT moderation_state FROM forum_topics WHERE id=?").get(TOPIC).moderation_state,"active","Reports must not hide content.");
  r=await m.handleForumReport(reportReq(f,"topic",TOPIC,"spam","again"),f.env,"topic",TOPIC,{now:NOW}); assert.equal(r.status,409);
@@ -32,7 +33,7 @@ async function authorization(m,auth){
  f.raw.prepare("UPDATE users SET role='admin' WHERE id='owner'").run(); assert.equal(Boolean(await m.getModeratorSession(pageReq(f,"owner"),f.env,{now:NOW})),true); f.raw.prepare("UPDATE users SET role='owner' WHERE id='owner'").run(); assert.equal(Boolean(await m.getModeratorSession(pageReq(f,"owner"),f.env,{now:NOW})),true);
 }
 async function actions(m,t,c,auth){
- const f=await fixture(auth),act=async(action,id,reason="Internal reason")=>m.handleModerationAction(modReq(f,action,id,reason),f.env,{now:NOW+100});
+ const f=await fixture(auth); f.env.FORUM_RATE_LIMIT_SECRET="forum-rate-limit-test-secret-32-characters-minimum"; const act=async(action,id,reason="Internal reason")=>m.handleModerationAction(modReq(f,action,id,reason),f.env,{now:NOW+100});
  let r=await act("hide_post",REPLY); assert.equal(r.status,200); let api=await (await t.handleTopicApi(new Request(`${ORIGIN}/api/forum/topic/${TOPIC}`),f.env,TOPIC)).json(); assert.equal(api.topic.posts.some(p=>p.id===REPLY),false);
  let hiddenPostReview=await t.renderForumTopic(pageReq(f,"owner",`${ORIGIN}/forum/topic/${TOPIC}/moderated-topic`),f.env,TOPIC,"moderated-topic",{now:NOW}); assert.match(await hiddenPostReview.text(),/Second post text/); let category=(await (await c.handleForumCategoriesApi(new Request(`${ORIGIN}/api/forum/categories`),f.env)).json()).categories.find(x=>x.slug==="the-common-room"); assert.equal(category.postCount,2);
  let modPage=await (await m.renderModerationPage(pageReq(f,"owner"),f.env,{now:NOW})).text(); assert.match(modPage,/There are no open forum reports/);

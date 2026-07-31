@@ -7,7 +7,7 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const ORIGIN = "https://tobaccoroadgames.com";
 const NOW = Date.parse("2026-07-31T12:00:00.000Z");
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql", "014_forum_rate_limits.sql"]
   .map((name) => fs.readFileSync(path.join(ROOT, "migrations", name), "utf8")).join("\n");
 
 async function main() {
@@ -30,7 +30,7 @@ async function creationAndRendering(topics, categories, auth) {
   assert.equal(fixture.raw.prepare("SELECT COUNT(*) AS count FROM forum_topics").get().count, 1);
   assert.equal(fixture.raw.prepare("SELECT COUNT(*) AS count FROM forum_posts").get().count, 1);
 
-  response = await topics.handleForumTopicsCollection(topicRequest(fixture, { ...validBody(), title: "A <Great> Campaign", body: "Duplicate titles are valid." }), fixture.env, { now: NOW + 1000 });
+  response = await topics.handleForumTopicsCollection(topicRequest(fixture, { ...validBody(), title: "A <Great> Campaign", body: "Duplicate titles are valid." }), fixture.env, { now: NOW + 31000 });
   assert.equal(response.status, 201, "Duplicate titles must be allowed.");
   const second = (await response.json()).topic;
   const categoryId = fixture.raw.prepare("SELECT id FROM forum_categories WHERE slug = 'the-common-room'").get().id;
@@ -101,8 +101,10 @@ async function authorizationAndValidation(topics, auth) {
     { ...validBody(), title: "four" }, { ...validBody(), title: "x".repeat(121) },
     { ...validBody(), body: "" }, { ...validBody(), body: "x".repeat(10001) }
   ]) assert.equal((await topics.handleForumTopicsCollection(topicRequest(fixture, body), fixture.env, { now: NOW })).status, 400);
-  for (const body of [{ ...validBody(), title: "x".repeat(5) }, { ...validBody(), title: "x".repeat(120), body: "x".repeat(10000) }])
+  for (const body of [{ ...validBody(), title: "x".repeat(5) }, { ...validBody(), title: "x".repeat(120), body: "x".repeat(10000) }]) {
+    fixture = await createFixture(auth);
     assert.equal((await topics.handleForumTopicsCollection(topicRequest(fixture, body), fixture.env, { now: NOW })).status, 201);
+  }
 }
 
 async function atomicRollback(topics, auth) {
@@ -133,7 +135,7 @@ async function createFixture(auth) {
   const token = "topic-session-token", csrf = "topic-csrf-token";
   raw.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES ('topic-session','topic-user',?,?,?,?,?)")
     .run(await auth.hashToken(token), await auth.hashToken(csrf), now, "2026-08-02T12:00:00.000Z", now);
-  return { raw, env: { TRG_ORDERS: d1(raw) }, csrf, authHeaders: { cookie: `__Host-trg_session=${token}; trg_account_csrf=${csrf}`, origin: ORIGIN, "x-csrf-token": csrf } };
+  return { raw, env: { FORUM_RATE_LIMIT_SECRET: "forum-rate-limit-test-secret-32-characters-minimum", TRG_ORDERS: d1(raw) }, csrf, authHeaders: { cookie: `__Host-trg_session=${token}; trg_account_csrf=${csrf}`, origin: ORIGIN, "x-csrf-token": csrf } };
 }
 
 function d1(raw) {

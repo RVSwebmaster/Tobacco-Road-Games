@@ -1,4 +1,5 @@
 import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf } from "./account-auth.mjs";
+import { checkForumActionLimit } from "./forum-rate-limits.mjs";
 
 export const MODERATOR_ROLES = Object.freeze(["owner", "admin"]);
 export const REPORT_REASONS = Object.freeze([
@@ -30,13 +31,16 @@ export async function handleForumReport(request, env, targetType, requestedId, o
     ? await db.prepare("SELECT t.id FROM forum_topics t JOIN forum_categories c ON c.id=t.category_id AND c.status='active' WHERE t.id=? AND t.status='active' AND t.moderation_state!='hidden' AND (SELECT op.moderation_state FROM forum_posts op WHERE op.topic_id=t.id AND op.status='active' ORDER BY op.created_at,op.id LIMIT 1)='active'").bind(id).first()
     : await db.prepare("SELECT p.id FROM forum_posts p JOIN forum_topics t ON t.id=p.topic_id AND t.status='active' JOIN forum_categories c ON c.id=t.category_id AND c.status='active' WHERE p.id=? AND p.status='active' AND p.moderation_state='active' AND t.moderation_state!='hidden' AND (SELECT op.moderation_state FROM forum_posts op WHERE op.topic_id=t.id AND op.status='active' ORDER BY op.created_at,op.id LIMIT 1)='active'").bind(id).first();
   if (!target) return jsonError("content_not_found", "That forum content is not available.", 404);
+  const rate = await checkForumActionLimit(request, env, db, auth.session.user, "report", `${targetType}:${id}`, null, options);
+  if (!rate.ok) return rate.response;
   const targetColumn = targetType === "topic" ? "reported_topic_id" : "reported_post_id";
   const duplicate = await db.prepare(`SELECT id FROM forum_reports WHERE reporting_profile_id=? AND ${targetColumn}=? AND reason_category=? AND status='open'`).bind(auth.profile.user_id, id, reason).first();
   if (duplicate) return jsonError("report_exists", "You already have an open report for this reason.", 409);
   const reportId = crypto.randomUUID(), now = nowIso(options);
   try {
-    await db.prepare(`INSERT INTO forum_reports (id,reporting_profile_id,${targetColumn},reason_category,explanation,status,created_at) VALUES (?,?,?,?,?,'open',?)`)
-      .bind(reportId, auth.profile.user_id, id, reason, explanation || null, now).run();
+    if (typeof db.batch !== "function") throw new Error("Atomic forum report writes are unavailable.");
+    await db.batch([db.prepare(`INSERT INTO forum_reports (id,reporting_profile_id,${targetColumn},reason_category,explanation,status,created_at) VALUES (?,?,?,?,?,'open',?)`)
+      .bind(reportId, auth.profile.user_id, id, reason, explanation || null, now), rate.statement]);
   } catch (error) {
     if (/unique/i.test(String(error?.message || error))) return jsonError("report_exists", "You already have an open report for this reason.", 409);
     throw error;

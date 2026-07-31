@@ -1,6 +1,7 @@
 import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf } from "./account-auth.mjs";
 import { avatarPublicFields } from "./forum-avatars.mjs";
 import { getModeratorSession, REPORT_REASONS } from "./forum-moderation.mjs";
+import { checkForumActionLimit } from "./forum-rate-limits.mjs";
 
 const JSON_LIMIT = 24 * 1024;
 
@@ -15,6 +16,8 @@ export async function handleForumTopicsCollection(request, env, options = {}) {
   const db = requireDb(env);
   const category = await db.prepare("SELECT id, slug FROM forum_categories WHERE slug = ? AND status = 'active'").bind(fields.categorySlug).first();
   if (!category) return jsonError("category_not_found", "That forum category is not available.", 404);
+  const rate = await checkForumActionLimit(request, env, db, auth.session.user, "topic", category.id, `${fields.title}\n${fields.body}`, options);
+  if (!rate.ok) return rate.response;
   const topicId = crypto.randomUUID();
   const postId = crypto.randomUUID();
   const now = nowIso(options);
@@ -28,7 +31,7 @@ export async function handleForumTopicsCollection(request, env, options = {}) {
     VALUES (?, ?, ?, ?, 'active', ?, ?)
   `).bind(postId, topicId, auth.profile.user_id, fields.body, now, now);
   if (typeof db.batch !== "function") throw new Error("Atomic forum topic writes are unavailable.");
-  await db.batch([topicStatement, postStatement]);
+  await db.batch([topicStatement, postStatement, rate.statement]);
   return json({ topic: { categorySlug: category.slug, createdAt: now, id: topicId, postCount: 1, slug, title: fields.title, url: `/forum/topic/${topicId}/${slug}` } }, 201);
 }
 
@@ -60,12 +63,15 @@ export async function handleForumReplyCreation(request, env, requestedId, option
   const db = requireDb(env);
   const topic = await db.prepare(`SELECT t.id, t.slug FROM forum_topics t JOIN forum_categories c ON c.id = t.category_id AND c.status = 'active' WHERE t.id = ? AND t.status = 'active' AND t.moderation_state = 'active'`).bind(id).first();
   if (!topic) return publicNotFound("topic_not_found", "That forum topic is not available.");
+  const rate = await checkForumActionLimit(request, env, db, auth.session.user, "reply", id, body, options);
+  if (!rate.ok) return rate.response;
   if (typeof db.batch !== "function") throw new Error("Atomic forum reply writes are unavailable.");
   const postId = crypto.randomUUID();
   const now = nowIso(options);
   await db.batch([
     db.prepare(`INSERT INTO forum_posts (id, topic_id, author_profile_id, body, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?)`).bind(postId, id, auth.profile.user_id, body, now, now),
-    db.prepare("UPDATE forum_topics SET updated_at = ?, last_activity_at = ? WHERE id = ? AND status = 'active'").bind(now, now, id)
+    db.prepare("UPDATE forum_topics SET updated_at = ?, last_activity_at = ? WHERE id = ? AND status = 'active'").bind(now, now, id),
+    rate.statement
   ]);
   return json({ reply: { body, createdAt: now, id: postId, topicId: id }, topic: { id, slug: topic.slug, url: `/forum/topic/${id}/${topic.slug}` } }, 201);
 }

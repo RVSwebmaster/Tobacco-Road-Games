@@ -6,7 +6,7 @@ const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
 const ORIGIN = "https://tobaccoroadgames.com";
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql", "014_forum_rate_limits.sql"]
   .map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n");
 const EXPECTED = ["The Common Room", "At the Workbench", "Tobacco Road Games", "The Playtest Table", "Campaign Journals", "Off the Road"];
 

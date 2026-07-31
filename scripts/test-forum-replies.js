@@ -9,7 +9,7 @@ const ORIGIN = "https://tobaccoroadgames.com";
 const NOW = Date.parse("2026-07-31T15:00:00.000Z");
 const TOPIC_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_TOPIC_ID = "22222222-2222-4222-8222-222222222222";
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "010_forum_categories.sql", "011_forum_profile_avatars.sql", "012_forum_topics.sql", "013_forum_moderation.sql", "014_forum_rate_limits.sql"]
   .map((name) => fs.readFileSync(path.join(ROOT, "migrations", name), "utf8")).join("\n");
 
 async function main() {
@@ -30,7 +30,7 @@ async function replyFlow(topics, categories, auth) {
   const reply = (await response.json()).reply;
   assert.equal(fixture.raw.prepare("SELECT last_activity_at FROM forum_topics WHERE id = ?").get(TOPIC_ID).last_activity_at, new Date(NOW + 2000).toISOString());
 
-  response = await topics.handleForumReplyCreation(replyRequest(fixture, "Second reply."), fixture.env, TOPIC_ID, { now: NOW + 3000 });
+  response = await topics.handleForumReplyCreation(replyRequest(fixture, "Second reply."), fixture.env, TOPIC_ID, { now: NOW + 13000 });
   assert.equal(response.status, 201);
   const secondReply = (await response.json()).reply;
   response = await topics.handleTopicApi(new Request(`${ORIGIN}/api/forum/topic/${TOPIC_ID}`), fixture.env, TOPIC_ID);
@@ -135,7 +135,7 @@ async function createFixture(auth) {
   raw.prepare("INSERT INTO forum_posts (id,topic_id,author_profile_id,body,status,created_at,updated_at) VALUES ('other-opening',?,?,'Other opening.','active',?,?)").run(OTHER_TOPIC_ID, "topic-owner", now, now);
   const token = "reply-session", csrf = "reply-csrf";
   raw.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES ('reply-session-id','reply-user',?,?,?,?,?)").run(await auth.hashToken(token), await auth.hashToken(csrf), now, "2026-08-02T12:00:00.000Z", now);
-  return { raw, env: { TRG_ORDERS: d1(raw) }, authHeaders: { cookie: `__Host-trg_session=${token}; trg_account_csrf=${csrf}`, origin: ORIGIN, "x-csrf-token": csrf } };
+  return { raw, env: { FORUM_RATE_LIMIT_SECRET: "forum-rate-limit-test-secret-32-characters-minimum", TRG_ORDERS: d1(raw) }, authHeaders: { cookie: `__Host-trg_session=${token}; trg_account_csrf=${csrf}`, origin: ORIGIN, "x-csrf-token": csrf } };
 }
 
 function d1(raw) {
