@@ -150,12 +150,9 @@
   }
 
   window.handleTrgGoogleCredential = async (credentialResponse) => {
-    const cookie = document.cookie.split("; ").find((part) => part.startsWith("g_csrf_token="));
-    const gCsrf = cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
     try {
       await api("/api/auth/google", {
-        credential: credentialResponse.credential,
-        g_csrf_token: gCsrf
+        credential: credentialResponse.credential
       });
       await refreshAccount();
       setStatus("Signed in with Google.");

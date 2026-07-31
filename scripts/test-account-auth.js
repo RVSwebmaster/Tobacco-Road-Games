@@ -77,8 +77,8 @@ async function testInputLimits(auth) {
   let jwtVerifyCalled = false;
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "x".repeat(8193),
-    g_csrf_token: "gis-csrf"
-  }, { cookie: "g_csrf_token=gis-csrf" }), googleEnv, {
+    csrfToken: "trg-csrf"
+  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), googleEnv, {
     ...TEST_OPTIONS,
     google: {
       clientId: "google-client-id",
@@ -109,12 +109,12 @@ async function testInputLimits(auth) {
 
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "valid",
-    g_csrf_token: "x".repeat(129)
-  }, { cookie: `g_csrf_token=${"x".repeat(129)}` }), createEnv(), {
+    csrfToken: "x".repeat(129)
+  }, { cookie: `trg_account_csrf=${"x".repeat(129)}`, "x-csrf-token": "x".repeat(129) }), createEnv(), {
     ...TEST_OPTIONS,
     google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf-limit@example.com", email_verified: true, sub: "csrf-limit" } }) }
   });
-  assert.equal(response.status, 400, "Oversized CSRF tokens should be rejected.");
+  assert.equal(response.status, 400, "Oversized Google account CSRF tokens should be rejected.");
 
   const resendEnv = createEnv();
   response = await auth.resendVerification(new Request(`${ORIGIN}/api/auth/resend-verification`, {
@@ -155,8 +155,8 @@ async function testInputLimits(auth) {
   let maxCredentialJwtCalled = false;
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "x".repeat(8192),
-    g_csrf_token: "c".repeat(128)
-  }, { cookie: `g_csrf_token=${"c".repeat(128)}` }), createEnv(), {
+    csrfToken: "c".repeat(128)
+  }, { cookie: `trg_account_csrf=${"c".repeat(128)}`, "x-csrf-token": "c".repeat(128) }), createEnv(), {
     ...TEST_OPTIONS,
     google: {
       clientId: "google-client-id",
@@ -219,13 +219,19 @@ async function testResendConfigurationContract(auth) {
 
 async function testRegistrationLoginSessionLogout(auth) {
   const env = createEnv();
-  let response = await auth.registerAccount(jsonRequest("/api/auth/register", {
+  let response = await auth.handleAccountMeRequest(new Request(`${ORIGIN}/api/account/me`), env);
+  let payload = await response.json();
+  assert.equal(payload.authenticated, false, "Anonymous account lookup should remain unauthenticated.");
+  assert.match(payload.csrfToken, /^[A-Za-z0-9_-]+$/, "Anonymous account lookup should issue a TRG CSRF token.");
+  assert.ok(getCookies(response).some((cookie) => cookie.startsWith("trg_account_csrf=")), "Anonymous account lookup should set the TRG CSRF cookie.");
+
+  response = await auth.registerAccount(jsonRequest("/api/auth/register", {
     email: " Player@Example.COM ",
     password: "ValidPassphrase!23",
     passwordConfirmation: "ValidPassphrase!23"
   }), env, TEST_OPTIONS);
   assert.equal(response.status, 201, "Successful registration should create an account.");
-  let payload = await response.json();
+  payload = await response.json();
   assert.equal(payload.user.email, "player@example.com");
   assert.equal(payload.user.emailVerified, false);
   assert.equal(env.emailProvider.messages.length, 1, "Registration should send verification email.");
@@ -490,9 +496,8 @@ async function testTokenClaimRollback(auth) {
 async function testGoogleLoginValidationAndLinking(auth) {
   const env = createEnv();
   const googleRequest = (credential = "valid") => jsonRequest("/api/auth/google", {
-    credential,
-    g_csrf_token: "gis-csrf"
-  }, { cookie: "g_csrf_token=gis-csrf" });
+    credential
+  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" });
 
   let response = await auth.loginWithGoogle(googleRequest(), env, {
     ...TEST_OPTIONS,
@@ -542,8 +547,8 @@ async function testGoogleLoginValidationAndLinking(auth) {
   await auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: tokenFromLastEmail(linkedEnv, "verify") }), linkedEnv, TEST_OPTIONS);
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "link",
-    g_csrf_token: "gis-csrf"
-  }, { cookie: "g_csrf_token=gis-csrf" }), linkedEnv, {
+    csrfToken: "trg-csrf"
+  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), linkedEnv, {
     ...TEST_OPTIONS,
     google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "link@example.com", email_verified: true, sub: "google-linked-sub" } }) }
   });
@@ -554,8 +559,8 @@ async function testGoogleLoginValidationAndLinking(auth) {
 
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "already-linked",
-    g_csrf_token: "gis-csrf"
-  }, { cookie: "g_csrf_token=gis-csrf" }), linkedEnv, {
+    csrfToken: "trg-csrf"
+  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), linkedEnv, {
     ...TEST_OPTIONS,
     google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "link@example.com", email_verified: true, sub: "google-linked-sub" } }) }
   });
@@ -572,8 +577,8 @@ async function testGoogleLoginValidationAndLinking(auth) {
   const sessionCountBeforeBlockedGoogle = await countRows(captureEnv.TRG_ORDERS, "sessions");
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "capture",
-    g_csrf_token: "gis-csrf"
-  }, { cookie: "g_csrf_token=gis-csrf" }), captureEnv, {
+    csrfToken: "trg-csrf"
+  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), captureEnv, {
     ...TEST_OPTIONS,
     google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "capture@example.com", email_verified: true, sub: "google-capture-sub" } }) }
   });
@@ -611,12 +616,43 @@ async function testCsrfRejection(auth) {
 
   response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
     credential: "valid",
-    g_csrf_token: "one"
-  }, { cookie: "g_csrf_token=two" }), env, {
+    csrfToken: "one"
+  }, { cookie: "trg_account_csrf=two", "x-csrf-token": "one" }), env, {
     ...TEST_OPTIONS,
     google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf@example.com", email_verified: true, sub: "sub" } }) }
   });
-  assert.equal(response.status, 403, "Google GIS CSRF mismatch should be rejected.");
+  assert.equal(response.status, 403, "Google account CSRF mismatch should be rejected.");
+
+  let jwtVerifyCalled = false;
+  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "valid"
+  }), env, {
+    ...TEST_OPTIONS,
+    google: {
+      clientId: "google-client-id",
+      jwtVerify: async () => {
+        jwtVerifyCalled = true;
+        return { payload: { email: "csrf@example.com", email_verified: true, sub: "sub" } };
+      }
+    }
+  });
+  assert.equal(response.status, 403, "Missing Google account CSRF should be rejected.");
+  assert.equal(jwtVerifyCalled, false, "Missing Google account CSRF should be rejected before credential verification.");
+
+  response = await auth.handleAccountAuthRequest(new Request(`${ORIGIN}/api/auth/google`, {
+    body: JSON.stringify({ credential: "valid" }),
+    headers: {
+      "content-type": "application/json",
+      cookie: "trg_account_csrf=trg-csrf",
+      origin: "https://evil.example",
+      "x-csrf-token": "trg-csrf"
+    },
+    method: "POST"
+  }), env, {
+    ...TEST_OPTIONS,
+    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf@example.com", email_verified: true, sub: "sub" } }) }
+  });
+  assert.equal(response.status, 403, "Forged cross-origin Google login should be rejected.");
 }
 
 async function testTokenStorageAndRateLimits(auth) {
@@ -809,3 +845,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+

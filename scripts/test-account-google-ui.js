@@ -41,6 +41,7 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
   ]);
   const timeouts = [];
   const loadListeners = [];
+  const requests = [];
   const calls = { initialize: [], renderButton: [] };
   const context = {
     FormData,
@@ -58,14 +59,23 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
         return elements.get(selector.slice(1)) || null;
       }
     },
-    fetch: async (url) => {
+    fetch: async (url, options = {}) => {
+      requests.push({ options, url });
+      if (url === "/api/auth/google") {
+        return {
+          json: async () => ({ ok: true, user: { email: "google@example.com", emailVerified: true } }),
+          ok: true
+        };
+      }
       assert.equal(url, "/api/account/me");
       return {
         json: async () => ({
           authenticated: false,
+          csrfToken: "trg-csrf",
           googleClientId,
           user: null
-        })
+        }),
+        ok: true
       };
     },
     history: { replaceState() {} },
@@ -97,7 +107,7 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
 
   vm.runInNewContext(accountScript, context, { filename: "account.js" });
 
-  return { calls, context, elements, loadListeners, timeouts };
+  return { calls, context, elements, loadListeners, requests, timeouts };
 }
 
 async function flushMicrotasks() {
@@ -169,12 +179,26 @@ async function testNoDuplicateWidgetInitialization() {
   assert.equal(harness.calls.renderButton.length, 1);
 }
 
+async function testGoogleCallbackUsesTrgCsrfHeaderOnly() {
+  const harness = createHarness({ google: makeGoogle });
+  await flushMicrotasks();
+  await harness.context.window.handleTrgGoogleCredential({ credential: "google-jwt" });
+  await flushMicrotasks();
+  const request = harness.requests.find((item) => item.url === "/api/auth/google");
+  assert.ok(request, "Google callback should POST to the account auth endpoint.");
+  assert.equal(request.options.credentials, "same-origin");
+  assert.equal(request.options.method, "POST");
+  assert.equal(request.options.headers["x-csrf-token"], "trg-csrf");
+  assert.deepEqual(JSON.parse(request.options.body), { credential: "google-jwt" });
+}
+
 (async () => {
   await testConfiguredClientAndGisAvailable();
   await testGisLoadsAfterPageScript();
   await testMissingClientIdShowsUnavailable();
   await testGisScriptFailureShowsUnavailableAfterRetries();
   await testNoDuplicateWidgetInitialization();
+  await testGoogleCallbackUsesTrgCsrfHeaderOnly();
   console.log("Account Google UI tests passed.");
 })().catch((error) => {
   console.error(error);

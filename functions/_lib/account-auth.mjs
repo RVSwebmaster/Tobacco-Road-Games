@@ -65,10 +65,14 @@ export async function handleAccountMeRequest(request, env) {
   }
   const session = await getSessionFromRequest(request, env);
   if (!session.valid) {
+    const csrfToken = boundedCsrfCookie(readCookie(request, ACCOUNT_CSRF_COOKIE)) || randomToken();
     return json({
       authenticated: false,
+      csrfToken,
       googleClientId: publicGoogleClientId(env),
       user: null
+    }, 200, {
+      "set-cookie": buildAccountCsrfCookie(csrfToken)
     });
   }
   return json({
@@ -170,14 +174,14 @@ export async function loginWithGoogle(request, env, options = {}) {
   if (!parsed.ok) return parsed.response;
   const body = parsed.body;
   const credentialField = readBoundedField(body, "credential", INPUT_LIMITS.googleCredential);
-  const bodyCsrfField = readBoundedField(body, "g_csrf_token", INPUT_LIMITS.csrfToken);
-  const headerCsrfField = readBoundedString(request.headers.get("x-gis-csrf-token") || "", INPUT_LIMITS.csrfToken);
-  const cookieCsrfField = readBoundedString(readCookie(request, "g_csrf_token"), INPUT_LIMITS.csrfToken);
+  const bodyCsrfField = readBoundedField(body, "csrfToken", INPUT_LIMITS.csrfToken);
+  const headerCsrfField = readBoundedString(request.headers.get("x-csrf-token") || "", INPUT_LIMITS.csrfToken);
+  const cookieCsrfField = readBoundedString(readCookie(request, ACCOUNT_CSRF_COOKIE), INPUT_LIMITS.csrfToken);
   if (!credentialField.ok || !bodyCsrfField.ok || !headerCsrfField.ok || !cookieCsrfField.ok) return inputRejected();
   const csrfToken = bodyCsrfField.value || headerCsrfField.value;
   const csrfCookie = cookieCsrfField.value;
   if (!csrfToken || !csrfCookie || csrfToken !== csrfCookie) {
-    return json({ error: { code: "google_csrf_rejected", message: "Google sign-in could not be verified." } }, 403);
+    return json({ error: { code: "csrf_rejected", message: "This account request could not be verified." } }, 403);
   }
   const db = requireDb(env);
   if (!(await allowRateLimit(db, request, "google", "gis", options))) {
@@ -728,11 +732,20 @@ function buildSessionCookieHeaders(sessionToken, csrfToken) {
       maxAge: SESSION_TTL_SECONDS,
       sameSite: "Lax"
     }),
-    buildCookie(ACCOUNT_CSRF_COOKIE, csrfToken, {
-      maxAge: SESSION_TTL_SECONDS,
-      sameSite: "Lax"
-    })
+    buildAccountCsrfCookie(csrfToken)
   ];
+}
+
+function buildAccountCsrfCookie(csrfToken) {
+  return buildCookie(ACCOUNT_CSRF_COOKIE, csrfToken, {
+    maxAge: SESSION_TTL_SECONDS,
+    sameSite: "Lax"
+  });
+}
+
+function boundedCsrfCookie(value) {
+  const field = readBoundedString(value, INPUT_LIMITS.csrfToken);
+  return field.ok ? field.value : "";
 }
 
 function buildCookie(name, value, options = {}) {
