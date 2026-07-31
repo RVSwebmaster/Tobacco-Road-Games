@@ -481,7 +481,7 @@ export async function getSessionFromRequest(request, env, options = {}) {
   };
 }
 
-async function validateSessionCsrf(request, session) {
+export async function validateSessionCsrf(request, session) {
   const submitted = String(request.headers.get("x-csrf-token") || "");
   if (submitted.length > INPUT_LIMITS.csrfToken || session.csrfToken.length > INPUT_LIMITS.csrfToken) return { valid: false };
   if (!submitted || !session.csrfToken || submitted !== session.csrfToken) return { valid: false };
@@ -599,7 +599,7 @@ function requireDb(env) {
   return env.TRG_ORDERS;
 }
 
-function validateSameOriginRequest(request) {
+export function validateSameOriginRequest(request) {
   const expected = new URL(request.url).origin;
   const origin = request.headers.get("origin");
   if (origin) return origin === expected;

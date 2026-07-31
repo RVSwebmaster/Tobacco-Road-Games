@@ -61,7 +61,7 @@ Local development origins may include:
 
 The browser sends the Google credential to `/api/auth/google`. The server verifies the credential signature, issuer, audience, expiration, Google subject, and `email_verified` claim. The Google identity uses the `sub` claim, not the email address, as the provider identity.
 
-Google sign-in also checks the Google Identity Services CSRF token from the `g_csrf_token` cookie and request body.
+Google popup sign-in uses the existing TRG same-origin protection: the `trg_account_csrf` cookie, matching `x-csrf-token` header, and `Origin`/`Referer` validation.
 
 ## Session behavior
 

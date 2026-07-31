@@ -829,7 +829,7 @@ function assertAccountPageAndRoutes() {
   assert.match(accountPage, /Sign in with a TRG account/, "Account page should offer native sign-in.");
   assert.match(accountPage, /Forgot password/, "Account page should offer password reset.");
   assert.match(accountPage, /Sign Out/i, "Account page should offer sign-out.");
-  assert.doesNotMatch(accountPage, /profile photo|avatar|display name/i, "Account page must not expose Google profile photo or name.");
+  assert.doesNotMatch(accountPage, /profile photo|avatar/i, "Account page must not expose Google profile photos or avatars.");
 
   const accountScript = fs.readFileSync(path.join(ROOT, "assets", "js", "account.js"), "utf8");
   assert.match(accountScript, /\/api\/auth\/google/, "Account script should submit Google credentials to the account API.");

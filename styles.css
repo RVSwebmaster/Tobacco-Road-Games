@@ -2044,7 +2044,8 @@ h4 {
   font-weight: 700;
 }
 
-.account-form input {
+.account-form input,
+.account-form textarea {
   min-height: 48px;
   padding: 0.75rem 0.9rem;
   border: 1px solid rgba(242, 216, 170, 0.22);
@@ -2054,11 +2055,40 @@ h4 {
   font: inherit;
 }
 
+.account-form textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
 .account-form input:focus-visible,
+.account-form textarea:focus-visible,
 .account-card button:focus-visible {
   border-color: rgba(242, 216, 170, 0.48);
   outline: 3px solid rgba(232, 194, 126, 0.22);
   outline-offset: 2px;
+}
+
+.account-card--forum {
+  width: min(100%, 760px);
+}
+
+.account-optional {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.forum-member {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.forum-member__name,
+.forum-member__bio,
+.forum-member__joined {
+  margin: 0;
+  white-space: normal;
 }
 
 .google-signin-control {

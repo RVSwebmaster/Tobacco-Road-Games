@@ -5,6 +5,14 @@
   const resend = document.querySelector("#resend-verification-button");
   const resetPanel = document.querySelector("#reset-panel");
   const resetForm = document.querySelector("#reset-form");
+  const forumPanel = document.querySelector("#forum-profile-panel");
+  const forumForm = document.querySelector("#forum-profile-form");
+  const forumHeading = document.querySelector("#forum-profile-heading");
+  const forumHandle = document.querySelector("#forum-handle");
+  const forumHandleStatus = document.querySelector("#forum-handle-status");
+  const forumProfileStatus = document.querySelector("#forum-profile-status");
+  const forumVerification = document.querySelector("#forum-profile-verification");
+  const forumSubmit = document.querySelector("#forum-profile-submit");
   let csrfToken = "";
   let googleInitialized = false;
   let googleInitializeAttempts = 0;
@@ -42,6 +50,7 @@
       summary.textContent = "No account is signed in.";
       signout.hidden = true;
       resend.hidden = true;
+      if (forumPanel) forumPanel.hidden = true;
       setStatus("Choose Google, sign in, or create a TRG account.");
       return;
     }
@@ -53,8 +62,76 @@
     summary.append(email, verified);
     signout.hidden = false;
     resend.hidden = payload.user.emailVerified;
+    if (forumPanel) {
+      forumPanel.hidden = false;
+      refreshForumProfile(payload.user.emailVerified).catch((error) => {
+        forumProfileStatus.textContent = error.message;
+        forumProfileStatus.classList.add("discussion-status--error");
+      });
+    }
     setStatus("Account loaded.");
   }
+
+  async function refreshForumProfile(emailVerified) {
+    const response = await fetch("/api/forum/profile/me", { credentials: "same-origin" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error?.message || "Your forum profile could not be loaded.");
+    const profile = payload.profile;
+    forumVerification.hidden = emailVerified || Boolean(profile);
+    if (profile) {
+      forumHeading.textContent = "Your Forum Profile";
+      forumHandle.value = profile.handle;
+      forumHandle.readOnly = true;
+      forumHandle.required = false;
+      forumHandleStatus.textContent = `Public profile: /forum/member/${profile.handle}`;
+      forumForm.elements.displayName.value = profile.displayName || "";
+      forumForm.elements.biography.value = profile.biography || "";
+      forumSubmit.textContent = "Save Profile";
+      forumSubmit.disabled = false;
+      forumForm.dataset.mode = "edit";
+    } else {
+      forumHeading.textContent = "Create Forum Profile";
+      forumHandle.value = "";
+      forumHandle.readOnly = false;
+      forumHandle.required = true;
+      forumHandleStatus.textContent = "";
+      forumForm.elements.displayName.value = "";
+      forumForm.elements.biography.value = "";
+      forumSubmit.textContent = "Create Forum Profile";
+      forumSubmit.disabled = !emailVerified;
+      forumForm.dataset.mode = "create";
+    }
+  }
+
+  let availabilityRequest = 0;
+  forumHandle?.addEventListener("input", async () => {
+    if (forumHandle.readOnly) return;
+    const requestId = ++availabilityRequest;
+    const handle = forumHandle.value;
+    if (!handle) { forumHandleStatus.textContent = ""; return; }
+    const response = await fetch(`/api/forum/handle-availability?handle=${encodeURIComponent(handle)}`, { credentials: "same-origin" });
+    const payload = await response.json().catch(() => ({}));
+    if (requestId !== availabilityRequest) return;
+    forumHandleStatus.textContent = payload.available ? "That handle is available. Final availability is checked when you create the profile." : (payload?.error?.message || "That handle is not available.");
+    forumHandleStatus.classList.toggle("discussion-status--error", !payload.available);
+  });
+
+  forumForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const editing = event.currentTarget.dataset.mode === "edit";
+    if (editing) delete data.handle;
+    try {
+      const payload = await api("/api/forum/profile", data, { method: editing ? "PATCH" : "POST" });
+      forumProfileStatus.textContent = editing ? "Forum profile saved." : "Forum profile created.";
+      forumProfileStatus.classList.remove("discussion-status--error");
+      await refreshForumProfile(true);
+      if (payload.profile) forumHandleStatus.textContent = `Public profile: /forum/member/${payload.profile.handle}`;
+    } catch (error) {
+      forumProfileStatus.textContent = error.message;
+      forumProfileStatus.classList.add("discussion-status--error");
+    }
+  });
 
   document.querySelector("#signin-form")?.addEventListener("submit", async (event) => {
     event.preventDefault();

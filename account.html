@@ -7,7 +7,7 @@
   <meta name="description" content="Create or sign in to a Tobacco Road Games account.">
   <link rel="canonical" href="https://tobaccoroadgames.com/account.html">
   <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
-  <link rel="stylesheet" href="styles.css?v=20260717a">
+  <link rel="stylesheet" href="styles.css?v=20260731a">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="view-section">
@@ -33,7 +33,7 @@
         <div class="section-heading">
           <p class="section-heading__kicker">Shared account foundation</p>
           <h1 id="account-heading">Your Tobacco Road Games Account</h1>
-          <p>Sign in with Google or use a TRG email/password account. Public forum identity will be chosen separately later.</p>
+          <p>Sign in with Google or use a TRG email/password account. Your public forum identity stays separate from your private account.</p>
         </div>
 
         <p id="account-status" class="discussion-status" role="status" aria-live="polite">Checking account status...</p>
@@ -87,9 +87,33 @@
             <button type="submit" class="button button--primary">Reset Password</button>
           </form>
         </section>
+
+        <section class="account-card account-card--forum" id="forum-profile-panel" hidden aria-labelledby="forum-profile-heading">
+          <div>
+            <p class="section-heading__kicker">Public forum identity</p>
+            <h2 id="forum-profile-heading">Create Forum Profile</h2>
+          </div>
+          <p id="forum-profile-privacy">Your account email, Google identity, sign-in method, and other private account details will never appear on your public profile.</p>
+          <p id="forum-profile-verification" class="discussion-status" hidden>Verify your account email before creating a forum profile.</p>
+          <form id="forum-profile-form" class="account-form">
+            <label id="forum-handle-label">Public handle
+              <input name="handle" id="forum-handle" minlength="3" maxlength="24" pattern="[A-Za-z0-9](?:[A-Za-z0-9]|[_-](?=[A-Za-z0-9])){1,22}[A-Za-z0-9]" autocomplete="off" aria-describedby="forum-handle-help forum-handle-status" required>
+            </label>
+            <p class="account-help" id="forum-handle-help">3–24 letters, numbers, underscores, or hyphens. Begin and end with a letter or number. Your handle cannot be changed yet.</p>
+            <p class="discussion-status" id="forum-handle-status" role="status" aria-live="polite"></p>
+            <label>Display name <span class="account-optional">(optional)</span>
+              <input name="displayName" maxlength="60" autocomplete="off">
+            </label>
+            <label>Biography <span class="account-optional">(optional)</span>
+              <textarea name="biography" maxlength="500" rows="6"></textarea>
+            </label>
+            <button type="submit" class="button button--primary" id="forum-profile-submit">Create Forum Profile</button>
+            <p class="discussion-status" id="forum-profile-status" role="status" aria-live="polite"></p>
+          </form>
+        </section>
       </section>
     </main>
   </div>
-  <script src="/assets/js/account.js?v=20260730a"></script>
+  <script src="/assets/js/account.js?v=20260731a"></script>
 </body>
 </html>
