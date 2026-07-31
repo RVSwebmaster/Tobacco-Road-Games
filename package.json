@@ -4,7 +4,7 @@
   "description": "Tobacco Road Games storefront and Pages Functions",
   "main": "releases.js",
   "scripts": {
-    "test": "node scripts/test-owner-intake.js && node scripts/test-owner-intake-ui.js && node scripts/test-owner-pricing-editor.js && node scripts/test-storefront-cart.js && node scripts/test-cart-quote.js && node scripts/test-orders-d1.js && node scripts/test-cart-checkout.js && node scripts/test-checkout-idempotency.js && node scripts/test-stripe-webhook.js && node scripts/test-secure-download.js && node scripts/test-customer-delivery.js && node scripts/test-staging-stripe-resend.js && node scripts/test-office.js && node scripts/test-email-provider.js && node scripts/test-account-google-ui.js && node scripts/test-account-auth.js && node scripts/test-forum-profiles.js && node scripts/test-forum-categories.js",
+    "test": "node scripts/test-owner-intake.js && node scripts/test-owner-intake-ui.js && node scripts/test-owner-pricing-editor.js && node scripts/test-storefront-cart.js && node scripts/test-cart-quote.js && node scripts/test-orders-d1.js && node scripts/test-cart-checkout.js && node scripts/test-checkout-idempotency.js && node scripts/test-stripe-webhook.js && node scripts/test-secure-download.js && node scripts/test-customer-delivery.js && node scripts/test-staging-stripe-resend.js && node scripts/test-office.js && node scripts/test-email-provider.js && node scripts/test-account-google-ui.js && node scripts/test-account-auth.js && node scripts/test-forum-profiles.js && node scripts/test-forum-categories.js && node scripts/test-forum-avatars.js",
     "test:office": "node scripts/test-office.js"
   },
   "repository": {

@@ -2091,6 +2091,88 @@ h4 {
   white-space: normal;
 }
 
+.forum-avatar {
+  display: block;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
+  border: 1px solid rgba(242, 216, 170, 0.2);
+  border-radius: 18%;
+  background: rgba(255, 255, 255, 0.05);
+  object-fit: cover;
+}
+
+.forum-avatar--small {
+  width: 44px;
+  height: 44px;
+}
+
+.forum-avatar--large {
+  width: 128px;
+  height: 128px;
+}
+
+.forum-member__identity,
+.forum-avatar-editor__identity,
+.forum-avatar-editor__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.forum-member__identity h1,
+.forum-avatar-editor h3,
+.forum-avatar-editor p {
+  margin: 0;
+}
+
+.forum-avatar-editor {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(242, 216, 170, 0.15);
+  border-radius: var(--radius-lg);
+  background: rgba(12, 8, 6, 0.24);
+}
+
+.forum-avatar-editor[hidden] {
+  display: none;
+}
+
+.forum-avatar-presets {
+  margin: 8px 0;
+  padding: 16px;
+  border: 1px solid rgba(242, 216, 170, 0.2);
+  border-radius: var(--radius-lg);
+}
+
+.forum-avatar-presets__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 10px;
+}
+
+.forum-avatar-presets__grid label {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  padding: 9px;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.forum-avatar-presets__grid label:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(196, 142, 75, 0.12);
+}
+
+.forum-avatar-presets__grid label:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.forum-avatar-presets__grid input { position: absolute; opacity: 0; }
+.forum-avatar-presets__grid img { width: 100%; aspect-ratio: 1; border-radius: 12px; object-fit: cover; }
+.forum-avatar-presets__grid span { font-size: 0.82rem; line-height: 1.25; }
+
 .forum-home,
 .forum-category-placeholder {
   display: grid;
@@ -2098,12 +2180,19 @@ h4 {
 }
 
 .forum-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
   padding: 14px 16px;
   border: 1px solid rgba(242, 216, 170, 0.15);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--muted);
+}
+
+.forum-identity p {
+  margin: 0;
 }
 
 .forum-category-list {

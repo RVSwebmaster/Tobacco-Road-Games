@@ -9,7 +9,7 @@ export async function renderForumHome(request, env, options = {}) {
   if (request.method !== "GET" && request.method !== "HEAD") return htmlNotFound();
   const [categories, identity] = await Promise.all([listActiveCategories(env), forumIdentity(request, env, options)]);
   const identityMarkup = identity
-    ? `<p class="forum-identity">Signed in as <a href="/forum/member/${encodeURIComponent(identity.handle)}">@${escapeHtml(identity.handle)}</a> · <a href="/account.html">Account &amp; Profile</a></p>`
+    ? `<div class="forum-identity"><img class="forum-avatar forum-avatar--small" src="/forum/avatar/${encodeURIComponent(identity.handle)}?v=${identity.avatarVersion}" alt=""><p>Signed in as <a href="/forum/member/${encodeURIComponent(identity.handle)}">@${escapeHtml(identity.handle)}</a> · <a href="/account.html">Account &amp; Profile</a></p></div>`
     : `<p class="forum-identity"><a href="/account.html">Account &amp; Profile</a></p>`;
   const categoryMarkup = categories.map((category) => `
     <article class="forum-category-card">
@@ -70,11 +70,11 @@ async function forumIdentity(request, env, options) {
   const session = await getSessionFromRequest(request, env, options);
   if (!session.valid) return null;
   const profile = await requireDb(env).prepare(`
-    SELECT p.handle
+    SELECT p.handle, p.avatar_version
     FROM forum_profiles p JOIN users u ON u.id = p.user_id
     WHERE p.user_id = ? AND p.status = 'active' AND u.status = 'active'
   `).bind(session.user.id).first();
-  return profile ? { handle: profile.handle } : null;
+  return profile ? { avatarVersion: Number(profile.avatar_version || 0), handle: profile.handle } : null;
 }
 
 function publicCategory(row) {

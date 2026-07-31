@@ -97,6 +97,45 @@
           <p id="forum-profile-privacy">Your account email, Google identity, sign-in method, and other private account details will never appear on your public profile.</p>
           <p id="forum-profile-verification" class="discussion-status" hidden>Verify your account email before creating a forum profile.</p>
           <form id="forum-profile-form" class="account-form">
+            <section class="forum-avatar-editor" id="forum-avatar-editor" hidden aria-labelledby="forum-avatar-heading">
+              <div class="forum-avatar-editor__identity">
+                <img class="forum-avatar forum-avatar--large" id="forum-avatar-preview" src="/assets/logo.png?v=forum-avatar-default" alt="Current forum avatar">
+                <div><h3 id="forum-avatar-heading">Forum avatar</h3><p id="forum-avatar-handle"></p></div>
+              </div>
+              <fieldset class="forum-avatar-presets" id="forum-avatar-presets">
+                <legend>Choose a Tobacco Road Games avatar</legend>
+                <p class="account-help">Select any built-in avatar and use it immediately. You can switch choices at any time.</p>
+                <div class="forum-avatar-presets__grid">
+                  <label><input type="radio" name="avatarPreset" value="brass-d20"><img src="/assets/forum-avatars/brass-d20.svg" alt=""><span>Brass twenty-sided die</span></label>
+                  <label><input type="radio" name="avatarPreset" value="blue-dragon"><img src="/assets/forum-avatars/blue-dragon.svg" alt=""><span>Blue dragon head</span></label>
+                  <label><input type="radio" name="avatarPreset" value="campfire"><img src="/assets/forum-avatars/campfire.svg" alt=""><span>Campfire beneath the stars</span></label>
+                  <label><input type="radio" name="avatarPreset" value="castle-tower"><img src="/assets/forum-avatars/castle-tower.svg" alt=""><span>Stone castle tower</span></label>
+                  <label><input type="radio" name="avatarPreset" value="crystal-orb"><img src="/assets/forum-avatars/crystal-orb.svg" alt=""><span>Purple crystal orb</span></label>
+                  <label><input type="radio" name="avatarPreset" value="green-potion"><img src="/assets/forum-avatars/green-potion.svg" alt=""><span>Green potion bottle</span></label>
+                  <label><input type="radio" name="avatarPreset" value="knight-helm"><img src="/assets/forum-avatars/knight-helm.svg" alt=""><span>Silver knight helmet</span></label>
+                  <label><input type="radio" name="avatarPreset" value="map-compass"><img src="/assets/forum-avatars/map-compass.svg" alt=""><span>Compass on an adventure map</span></label>
+                  <label><input type="radio" name="avatarPreset" value="mimic-chest"><img src="/assets/forum-avatars/mimic-chest.svg" alt=""><span>Friendly mimic treasure chest</span></label>
+                  <label><input type="radio" name="avatarPreset" value="moon-owl"><img src="/assets/forum-avatars/moon-owl.svg" alt=""><span>Owl beneath a crescent moon</span></label>
+                  <label><input type="radio" name="avatarPreset" value="red-wizard"><img src="/assets/forum-avatars/red-wizard.svg" alt=""><span>Red-robed wizard</span></label>
+                  <label><input type="radio" name="avatarPreset" value="rune-stone"><img src="/assets/forum-avatars/rune-stone.svg" alt=""><span>Glowing blue rune stone</span></label>
+                  <label><input type="radio" name="avatarPreset" value="shield-rose"><img src="/assets/forum-avatars/shield-rose.svg" alt=""><span>Rose-emblazoned shield</span></label>
+                  <label><input type="radio" name="avatarPreset" value="tavern-mug"><img src="/assets/forum-avatars/tavern-mug.svg" alt=""><span>Foaming tavern mug</span></label>
+                  <label><input type="radio" name="avatarPreset" value="tiny-griffin"><img src="/assets/forum-avatars/tiny-griffin.svg" alt=""><span>Small golden griffin</span></label>
+                  <label><input type="radio" name="avatarPreset" value="woodland-ranger"><img src="/assets/forum-avatars/woodland-ranger.svg" alt=""><span>Green-hooded woodland ranger</span></label>
+                </div>
+              </fieldset>
+              <p><strong>No mature-themed avatars are permitted anywhere on the Tobacco Road Games Forum or website.</strong></p>
+              <p>Avatars must be suitable for a general tabletop gaming audience. Tobacco Road Games may remove avatars that are sexually explicit, pornographic, graphically violent, hateful, or otherwise inappropriate for the community.</p>
+              <p class="account-help">Square images work best. Your browser center-crops, resizes to 256 × 256 pixels, and re-encodes the image before upload. PNG, JPEG, and WebP only; maximum upload size 1 MiB.</p>
+              <label>Choose custom avatar
+                <input id="forum-avatar-file" type="file" accept="image/png,image/jpeg,image/webp">
+              </label>
+              <div class="forum-avatar-editor__actions">
+                <button type="button" class="button button--primary" id="forum-avatar-upload" disabled>Upload Avatar</button>
+                <button type="button" class="button button--secondary" id="forum-avatar-delete" hidden>Use Default Avatar</button>
+              </div>
+              <p class="discussion-status" id="forum-avatar-status" role="status" aria-live="polite"></p>
+            </section>
             <label id="forum-handle-label">Public handle
               <input name="handle" id="forum-handle" minlength="3" maxlength="24" pattern="[A-Za-z0-9](?:[A-Za-z0-9]|[_-](?=[A-Za-z0-9])){1,22}[A-Za-z0-9]" autocomplete="off" aria-describedby="forum-handle-help forum-handle-status" required>
             </label>
@@ -115,6 +154,6 @@
       </section>
     </main>
   </div>
-  <script src="/assets/js/account.js?v=20260731a"></script>
+  <script src="/assets/js/account.js?v=20260731b"></script>
 </body>
 </html>

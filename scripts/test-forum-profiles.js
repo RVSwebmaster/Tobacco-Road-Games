@@ -7,7 +7,7 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const ORIGIN = "https://tobaccoroadgames.com";
 const NOW = Date.parse("2026-07-31T12:00:00.000Z");
-const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql"]
+const MIGRATION = ["007_shared_accounts.sql", "008_token_claim_markers.sql", "009_forum_profiles.sql", "011_forum_profile_avatars.sql"]
   .map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n");
 
 async function main() {
@@ -93,7 +93,7 @@ async function testPublicPrivacyStatusAndEscaping(profiles, auth) {
   assert.equal(response.status, 201);
   response = await profiles.getPublicProfile(fixture.env, "publicmember");
   const payload = await response.json();
-  assert.deepEqual(Object.keys(payload.profile).sort(), ["biography", "displayName", "handle", "joinedAt"]);
+  assert.deepEqual(Object.keys(payload.profile).sort(), ["avatarUrl", "avatarVersion", "biography", "displayName", "handle", "joinedAt"]);
   assert.equal(JSON.stringify(payload).includes("private-email"), false, "Public lookup must not expose account identity.");
 
   response = await profiles.renderPublicProfilePage(new Request(`${ORIGIN}/forum/member/PublicMember`), fixture.env, "PublicMember");

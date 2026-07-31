@@ -1,4 +1,5 @@
 import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf } from "./account-auth.mjs";
+import { avatarPublicFields } from "./forum-avatars.mjs";
 
 const RESERVED_HANDLES = new Set([
   "admin", "administrator", "moderator", "mod", "owner", "staff", "support",
@@ -52,7 +53,7 @@ export async function getPublicProfile(env, requestedHandle) {
   const checked = validateHandle(requestedHandle);
   if (!checked.valid) return publicNotFound();
   const row = await requireDb(env).prepare(`
-    SELECT p.handle, p.display_name, p.biography, p.created_at
+    SELECT p.handle, p.display_name, p.biography, p.created_at, p.avatar_object_key, p.avatar_preset_id, p.avatar_version
     FROM forum_profiles p JOIN users u ON u.id = p.user_id
     WHERE p.handle_normalized = ? AND p.status = 'active' AND u.status = 'active'
   `).bind(checked.normalized).first();
@@ -64,7 +65,7 @@ export async function renderPublicProfilePage(request, env, requestedHandle) {
   let row = null;
   if (checked.valid) {
     row = await requireDb(env).prepare(`
-      SELECT p.handle, p.display_name, p.biography, p.created_at
+      SELECT p.handle, p.display_name, p.biography, p.created_at, p.avatar_object_key, p.avatar_preset_id, p.avatar_version
       FROM forum_profiles p JOIN users u ON u.id = p.user_id
       WHERE p.handle_normalized = ? AND p.status = 'active' AND u.status = 'active'
     `).bind(checked.normalized).first();
@@ -72,14 +73,15 @@ export async function renderPublicProfilePage(request, env, requestedHandle) {
   if (!row) return htmlPage("Member not found", "That forum member is not available.", 404);
   const name = row.display_name ? `<p class="forum-member__name">${escapeHtml(row.display_name)}</p>` : "";
   const bio = row.biography ? `<p class="forum-member__bio">${escapeHtml(row.biography).replace(/\r?\n/g, "<br>")}</p>` : "";
+  const avatar = `<img class="forum-avatar forum-avatar--large" src="/forum/avatar/${encodeURIComponent(row.handle)}?v=${Number(row.avatar_version || 0)}" alt="${escapeHtml(row.handle)} forum avatar">`;
   const joined = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(row.created_at));
-  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(row.handle)} | Tobacco Road Games</title><link rel="stylesheet" href="/styles.css"></head><body class="view-section"><main class="page-shell"><section class="store-section forum-member"><p class="section-heading__kicker">Forum member</p><h1>@${escapeHtml(row.handle)}</h1>${name}${bio}<p class="forum-member__joined">Joined ${escapeHtml(joined)}</p><p><a class="button button--secondary" href="/">Tobacco Road Games home</a></p></section></main></body></html>`, { headers: { "content-type": "text/html; charset=utf-8" } });
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${escapeHtml(row.handle)} | Tobacco Road Games</title><link rel="stylesheet" href="/styles.css"></head><body class="view-section"><main class="page-shell"><section class="store-section forum-member"><p class="section-heading__kicker">Forum member</p><div class="forum-member__identity">${avatar}<h1>@${escapeHtml(row.handle)}</h1></div>${name}${bio}<p class="forum-member__joined">Joined ${escapeHtml(joined)}</p><p><a class="button button--secondary" href="/">Tobacco Road Games home</a></p></section></main></body></html>`, { headers: { "content-type": "text/html; charset=utf-8" } });
 }
 
 async function getMyProfile(request, env, options) {
   const session = await getSessionFromRequest(request, env, options);
   if (!session.valid) return json({ error: error("not_authenticated", "Sign in to view your forum profile.") }, 401);
-  const row = await requireDb(env).prepare("SELECT handle, display_name, biography, status, created_at, updated_at FROM forum_profiles WHERE user_id = ?").bind(session.user.id).first();
+  const row = await requireDb(env).prepare("SELECT handle, display_name, biography, status, created_at, updated_at, avatar_object_key, avatar_preset_id, avatar_version, avatar_updated_at FROM forum_profiles WHERE user_id = ?").bind(session.user.id).first();
   return json({ emailVerified: Number(session.user.email_verified) === 1, profile: row ? ownProfile(row) : null });
 }
 
@@ -107,7 +109,7 @@ async function createProfile(request, env, options) {
     if (own) return json({ error: error("profile_exists", "This account already has a forum profile.") }, 409);
     return json({ error: error("handle_unavailable", "That handle is already in use.") }, 409);
   }
-  const row = await db.prepare("SELECT handle, display_name, biography, status, created_at, updated_at FROM forum_profiles WHERE user_id = ?").bind(auth.session.user.id).first();
+  const row = await db.prepare("SELECT handle, display_name, biography, status, created_at, updated_at, avatar_object_key, avatar_preset_id, avatar_version, avatar_updated_at FROM forum_profiles WHERE user_id = ?").bind(auth.session.user.id).first();
   return json({ profile: ownProfile(row) }, 201);
 }
 
@@ -122,7 +124,7 @@ async function editProfile(request, env, options) {
   const result = await requireDb(env).prepare("UPDATE forum_profiles SET display_name = ?, biography = ?, updated_at = ? WHERE user_id = ?")
     .bind(fields.displayName, fields.biography, nowIso(options), auth.session.user.id).run();
   if (affectedRows(result) !== 1) return json({ error: error("profile_missing", "Create a forum profile before editing it.") }, 404);
-  const row = await requireDb(env).prepare("SELECT handle, display_name, biography, status, created_at, updated_at FROM forum_profiles WHERE user_id = ?").bind(auth.session.user.id).first();
+  const row = await requireDb(env).prepare("SELECT handle, display_name, biography, status, created_at, updated_at, avatar_object_key, avatar_preset_id, avatar_version, avatar_updated_at FROM forum_profiles WHERE user_id = ?").bind(auth.session.user.id).first();
   return json({ profile: ownProfile(row) });
 }
 
@@ -154,8 +156,8 @@ async function readJson(request) {
   } catch { return { ok: false, response: json({ error: error("invalid_input", "Send a valid profile request.") }, 400) }; }
 }
 
-function publicProfile(row) { return { biography: row.biography || null, displayName: row.display_name || null, handle: row.handle, joinedAt: row.created_at }; }
-function ownProfile(row) { return { ...publicProfile(row), status: row.status, updatedAt: row.updated_at }; }
+function publicProfile(row) { return { ...avatarPublicFields(row), biography: row.biography || null, displayName: row.display_name || null, handle: row.handle, joinedAt: row.created_at }; }
+function ownProfile(row) { return { ...publicProfile(row), avatarPresetId: row.avatar_preset_id || null, status: row.status, updatedAt: row.updated_at }; }
 function publicNotFound() { return json({ error: error("profile_not_found", "That forum member is not available.") }, 404); }
 function isExpectedUniqueConflict(value) { const message = String(value?.message || value); return /UNIQUE constraint failed: forum_profiles\.(handle_normalized|user_id)/i.test(message); }
 function nowIso(options) { return new Date(Number.isFinite(options.now) ? options.now : Date.now()).toISOString(); }

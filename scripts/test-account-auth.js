@@ -829,12 +829,12 @@ function assertAccountPageAndRoutes() {
   assert.match(accountPage, /Sign in with a TRG account/, "Account page should offer native sign-in.");
   assert.match(accountPage, /Forgot password/, "Account page should offer password reset.");
   assert.match(accountPage, /Sign Out/i, "Account page should offer sign-out.");
-  assert.doesNotMatch(accountPage, /profile photo|avatar/i, "Account page must not expose Google profile photos or avatars.");
-
+  assert.doesNotMatch(accountPage, /Google (?:profile )?(?:photo|avatar)/i, "Account page must not expose Google profile photos or avatars.");
   const accountScript = fs.readFileSync(path.join(ROOT, "assets", "js", "account.js"), "utf8");
   assert.match(accountScript, /\/api\/auth\/google/, "Account script should submit Google credentials to the account API.");
   assert.match(accountScript, /\/api\/account\/me/, "Account script should load account state from the account API.");
   assert.doesNotMatch(accountScript, /rewrite|autofix/i, "Account UI must not add rewriting-style behavior.");
+  assert.doesNotMatch(accountScript, /credentialResponse\.(?:picture|photo)|payload\.picture/i, "Account UI must not import Google profile imagery.");
 
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/api/auth/*"), "Cloudflare routes should include account auth functions.");
