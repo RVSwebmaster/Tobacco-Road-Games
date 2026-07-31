@@ -73,7 +73,7 @@ export async function listActiveCategories(env) {
   const result = await requireDb(env).prepare(`
     SELECT c.slug, c.display_name, c.description, c.display_order,
       (SELECT COUNT(*) FROM forum_topics t WHERE t.category_id = c.id AND t.status = 'active') AS topic_count,
-      (SELECT COUNT(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id WHERE t.category_id = c.id AND t.status = 'active' AND p.status = 'active') AS post_count
+      (SELECT COUNT(*) FROM forum_posts p JOIN forum_topics t ON t.id = p.topic_id JOIN forum_profiles fp ON fp.user_id = p.author_profile_id AND fp.status = 'active' JOIN users pu ON pu.id = fp.user_id AND pu.status = 'active' WHERE t.category_id = c.id AND t.status = 'active' AND p.status = 'active') AS post_count
     FROM forum_categories c
     WHERE c.status = 'active'
     ORDER BY display_order ASC, slug ASC

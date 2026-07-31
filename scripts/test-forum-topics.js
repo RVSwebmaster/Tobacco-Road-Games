@@ -51,7 +51,7 @@ async function creationAndRendering(topics, categories, auth) {
   assert.doesNotMatch(html, /<script>alert/);
   assert.match(html, /@TableGuide/);
   assert.match(html, /Guide Name/);
-  assert.match(html, /Replies are not enabled yet/);
+  assert.match(html, /Want to reply\?/);
 
   fixture.raw.prepare("UPDATE forum_profiles SET handle = 'NewGuide', handle_normalized = 'newguide', display_name = 'New Name', avatar_preset_id = 'brass-d20', avatar_version = avatar_version + 1 WHERE user_id = 'topic-user'").run();
   response = await topics.renderForumTopic(new Request(`${ORIGIN}${first.url}`), fixture.env, first.id, "a-great-campaign");
