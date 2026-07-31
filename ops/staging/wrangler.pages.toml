@@ -22,6 +22,10 @@ migrations_dir = "migrations"
 binding = "TRG_PRODUCTS"
 bucket_name = "trg-products"
 
+[[r2_buckets]]
+binding = "TRG_FORUM_AVATARS"
+bucket_name = "trg-forum-avatars-staging"
+
 [[d1_databases]]
 binding = "TRG_OFFICE"
 database_name = "trg-office-staging"
