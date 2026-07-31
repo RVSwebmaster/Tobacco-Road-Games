@@ -118,6 +118,7 @@ function assertNavigationAndRoutes() {
   }
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/forum/member/*") && routes.include.includes("/api/forum/*"));
+  assert.ok(routes.include.includes("/forum") && routes.include.includes("/forum/category/*"), "Pages must route the forum home and category pages through Functions.");
   assert.ok(fs.existsSync(path.join(ROOT, "functions", "forum", "index.js")));
   assert.ok(fs.existsSync(path.join(ROOT, "functions", "forum", "category", "[[slug]].js")));
 }
