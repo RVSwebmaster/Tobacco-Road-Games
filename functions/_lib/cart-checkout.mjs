@@ -19,6 +19,7 @@ import {
   normalizeSlug
 } from "./runtime-catalog.mjs";
 import { createStripeHostedCheckoutSession, StripeCheckoutError } from "./stripe-checkout.mjs";
+import { readStoreState, storeClosedResponse } from "./store-state.mjs";
 
 export async function onRequestPost(context) {
   return handleCartCheckoutRequest(context.request, context.env);
@@ -30,6 +31,11 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     return jsonResponse({
       error: "Checkout only accepts POST requests."
     }, 405);
+  }
+
+  const initialStoreState = await readStoreState(env, { database: options.storeStateDatabase || options.database });
+  if (!initialStoreState.available || initialStoreState.state !== "OPEN") {
+    return storeClosedResponse(initialStoreState.state);
   }
 
   const database = options.database || env.TRG_ORDERS || null;
@@ -167,6 +173,10 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
   if (order.checkout_session_status === "active"
     && order.stripe_checkout_session_id
     && order.stripe_checkout_session_url) {
+    const currentStoreState = await readStoreState(env, { database: options.storeStateDatabase || database });
+    if (!currentStoreState.available || currentStoreState.state !== "OPEN") {
+      return storeClosedResponse(currentStoreState.state);
+    }
     return createSuccessfulCheckoutResponse({
       checkoutAttemptId,
       checkoutCookieSecret,
@@ -183,6 +193,10 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
   }
 
   const origin = new URL(request.url).origin;
+  const currentStoreState = await readStoreState(env, { database: options.storeStateDatabase || database });
+  if (!currentStoreState.available || currentStoreState.state !== "OPEN") {
+    return storeClosedResponse(currentStoreState.state);
+  }
   let checkoutSession;
   try {
     checkoutSession = await createStripeHostedCheckoutSession({

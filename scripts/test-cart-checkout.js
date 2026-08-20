@@ -9,7 +9,8 @@ const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
   path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
   path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql"),
-  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql")
+  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql"),
+  path.join(ROOT, "migrations", "015_store_state.sql")
 ];
 const TAX_NOTE = "The listed price is the final price. Any applicable sales tax is included.";
 
@@ -536,6 +537,7 @@ function createD1Database() {
   for (const migrationPath of MIGRATION_PATHS) {
     raw.exec(fs.readFileSync(migrationPath, "utf8"));
   }
+  raw.exec("UPDATE runtime_settings SET setting_value = 'OPEN' WHERE setting_key = 'store_state'");
   return {
     d1: createD1Adapter(raw),
     raw

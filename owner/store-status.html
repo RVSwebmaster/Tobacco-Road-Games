@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Store Status | Tobacco Road Games</title>
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="view-section">
+  <header class="site-header"><div class="page-shell site-header__inner"><a class="brand" href="/owner/"><span class="brand__text">Tobacco Road Games</span><span class="brand__tag">Protected owner control</span></a><nav class="site-nav" aria-label="Owner navigation"><a href="/owner/product-intake.html">Products</a><a href="/owner/pricing.html">Pricing</a><a href="/owner/orders.html">Orders</a><a href="/owner/store-status.html" aria-current="page">Store Status</a></nav></div></header>
+  <main class="page-shell"><section class="store-section" aria-labelledby="status-heading"><div class="section-heading"><p class="section-heading__kicker">Owner Tool</p><h1 id="status-heading">Store kill switch</h1><p>Changes take effect at runtime without a rebuild or deployment.</p></div><article class="note-card"><p class="note-card__label">Store Status</p><p style="font-size:2rem;font-weight:800" data-store-admin-state>Loading…</p><p data-store-admin-message aria-live="polite"></p><div class="hero__actions" data-store-admin-actions><button class="button button--primary" type="button" data-state="OPEN">Open Store</button><button class="button button--secondary" type="button" data-state="CLOSED">Close Store</button><button class="button button--secondary" type="button" data-state="MAINTENANCE">Maintenance Mode</button></div></article></section></main>
+  <script>
+    (() => {
+      const stateNode = document.querySelector('[data-store-admin-state]');
+      const messageNode = document.querySelector('[data-store-admin-message]');
+      const buttons = [...document.querySelectorAll('[data-state]')];
+      const cookie = (name) => document.cookie.split(';').map(v => v.trim()).find(v => v.startsWith(name + '='))?.slice(name.length + 1) || '';
+      async function load() {
+        const response = await fetch('/owner/api/store-status', { headers: { accept: 'application/json' }, cache: 'no-store' });
+        const payload = await response.json();
+        stateNode.textContent = payload.state || 'CLOSED';
+        messageNode.textContent = response.ok ? `Last changed ${payload.updatedAt || 'at an unknown time'} by ${payload.updatedBy || 'owner'}.` : (payload.error || 'Status unavailable; checkout is safely closed.');
+      }
+      for (const button of buttons) button.addEventListener('click', async () => {
+        buttons.forEach(item => item.disabled = true);
+        messageNode.textContent = 'Saving…';
+        try {
+          const response = await fetch('/owner/api/store-status', { method: 'POST', headers: { 'content-type': 'application/json', 'x-csrf-token': decodeURIComponent(cookie('trg_owner_csrf')) }, body: JSON.stringify({ state: button.dataset.state }) });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error || 'Status change failed.');
+          stateNode.textContent = payload.state;
+          messageNode.textContent = `Store changed to ${payload.state}.`;
+        } catch (error) { messageNode.textContent = error.message; }
+        finally { buttons.forEach(item => item.disabled = false); }
+      });
+      load().catch(() => { stateNode.textContent = 'CLOSED'; messageNode.textContent = 'Status unavailable; checkout is safely closed.'; });
+    })();
+  </script>
+</body>
+</html>

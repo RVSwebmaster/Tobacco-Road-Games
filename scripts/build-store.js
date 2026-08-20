@@ -817,6 +817,7 @@ function renderLayout({
       ? [structuredData]
       : [];
   const scriptSources = Array.from(new Set([
+    `/assets/js/store-status.js?v=${CACHE_BUST}`,
     `/assets/js/cart.js?v=${CACHE_BUST}`,
     ...extraScripts
   ]));
@@ -1613,7 +1614,7 @@ function renderBuyUi(product) {
 
   if (product.buyMode === "fixed-price" && product.buyUrl) {
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Buy Now</a>`,
+      primary: `<a class="button button--primary" data-store-purchase href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Buy Now</a>`,
       afterPurchase: `
         <article class="note-card">
           <p class="note-card__label">After Purchase</p>
@@ -1627,7 +1628,7 @@ function renderBuyUi(product) {
 
   if (product.buyMode === "manual-invoice" && product.buyUrl) {
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Order Direct</a>`,
+      primary: `<a class="button button--primary" data-store-purchase href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Order Direct</a>`,
       afterPurchase: `
         <article class="note-card">
           <p class="note-card__label">After Purchase</p>
@@ -1657,7 +1658,7 @@ function renderBuyUi(product) {
   if (product.buyMode === "pay-what-you-want" && product.buyUrl) {
     const guidance = renderPayWhatYouWantGuidance(product);
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Pay What You Want</a>`,
+      primary: `<a class="button button--primary" data-store-purchase href="${escapeAttribute(product.buyUrl)}" target="_blank" rel="noopener noreferrer">Pay What You Want</a>`,
       afterPurchase: `
         <article class="note-card">
           <p class="note-card__label">After Purchase</p>
