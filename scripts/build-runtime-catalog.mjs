@@ -51,6 +51,7 @@ function buildRuntimeCatalogEntry(product) {
     effectivePriceCents: price.effectivePriceCents,
     fulfillmentEligible: product.libraryEligible !== false,
     lastUpdated: String(product.lastUpdated || "").trim(),
+    listedPriceCents: Number.isInteger(product.priceCents) ? product.priceCents : null,
     priceCents: price.regularPriceCents,
     saleActive: price.saleActive,
     saleEnabled: Boolean(product.saleEnabled),

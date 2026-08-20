@@ -892,7 +892,7 @@ function renderStoreNav(currentNav) {
 
 function renderFeatureSpotlight(product) {
   const authorByline = renderAuthorByline(product);
-  const cartAction = renderCartActionButton(product, {
+  const cartAction = renderDirectActionButton(product, {
     className: "button button--primary"
   });
   return `
@@ -1156,7 +1156,7 @@ function renderProductCard(product, options = {}) {
   ].join(" ").toLowerCase();
   const dataset = withDataset ? renderProductDatasetAttributes(product, searchText) : "";
   const cardId = includeAnchorId ? `id="product-${escapeAttribute(product.slug)}"` : "";
-  const cartAction = renderCartActionButton(product, {
+  const cartAction = renderDirectActionButton(product, {
     className: "button button--primary product-card__button"
   });
 
@@ -1595,6 +1595,20 @@ function renderPreviewSection(product) {
 function renderBuyUi(product) {
   const active = isBuyModeActive(product.buyMode);
   const supportLink = `<a class="inline-link" href="${SUPPORT_URL}">Questions about an order? Contact Tobacco Road Games.</a>`;
+
+  if (isFreeDownloadReady(product)) {
+    return {
+      primary: renderFreeDownloadButton(product, { className: "button button--primary" }),
+      afterPurchase: `
+        <article class="note-card">
+          <p class="note-card__label">Free Download</p>
+          <p>This PDF is delivered through a short-lived private download link. The permanent product file remains private.</p>
+          <p>${supportLink}</p>
+        </article>
+      `,
+      active: true
+    };
+  }
 
   if (isCartReady(product)) {
     return {
@@ -2275,6 +2289,12 @@ function isCartReady(product) {
     && (product.effectivePriceCents ?? product.priceCents) > 0;
 }
 
+function isFreeDownloadReady(product) {
+  return product.status === "available-direct"
+    && Number.isInteger(product.priceCents)
+    && product.priceCents === 0;
+}
+
 function resolveEstimatedCartPriceCents(product) {
   return product.effectivePriceCents ?? product.priceCents;
 }
@@ -2312,6 +2332,16 @@ function renderCartActionButton(product, options = {}) {
 
   const className = options.className || "button button--primary";
   return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}">Add to Cart</button>`;
+}
+
+function renderFreeDownloadButton(product, options = {}) {
+  if (!isFreeDownloadReady(product)) return "";
+  const className = options.className || "button button--primary";
+  return `<a class="${escapeAttribute(className)}" data-store-purchase data-free-download="${escapeAttribute(product.slug)}" href="/store/free-download?product=${encodeURIComponent(product.slug)}">Download Free PDF</a>`;
+}
+
+function renderDirectActionButton(product, options = {}) {
+  return renderFreeDownloadButton(product, options) || renderCartActionButton(product, options);
 }
 
 function isBundleEligible(product, bundleRules) {
