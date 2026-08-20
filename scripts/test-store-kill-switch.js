@@ -11,6 +11,10 @@ async function main() {
   const maintenancePages = await importModule("functions/_lib/store-maintenance.mjs");
   const ownerApi = await importModule("functions/_lib/owner-store-status.mjs");
 
+  const migration = fs.readFileSync(path.join(ROOT, "migrations", "015_store_state.sql"), "utf8");
+  assert.match(migration, /VALUES\s*\(\s*'store_state'\s*,\s*'CLOSED'/i, "The initial deployed store state must be CLOSED.");
+  assert.doesNotMatch(migration, /VALUES\s*\(\s*'store_state'\s*,\s*'OPEN'/i, "The migration must never initialize the store as OPEN.");
+
   const open = await storeState.readStoreState({ TRG_ORDERS: stateDatabase("OPEN") });
   assert.equal(open.state, "OPEN", "OPEN should be read as the purchasable runtime state.");
   assert.equal(open.available, true, "A valid OPEN state should be available.");
