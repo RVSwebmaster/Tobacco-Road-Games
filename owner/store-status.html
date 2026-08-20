@@ -34,7 +34,13 @@
         } catch (error) { messageNode.textContent = error.message; }
         finally { buttons.forEach(item => item.disabled = false); }
       });
-      load().catch(() => { stateNode.textContent = 'CLOSED'; messageNode.textContent = 'Status unavailable; checkout is safely closed.'; });
+      load().then(() => {
+        const requestedState = new URLSearchParams(location.search).get('set')?.toUpperCase();
+        const requestedButton = buttons.find(button => button.dataset.state === requestedState);
+        if (!requestedButton) return;
+        history.replaceState({}, '', location.pathname);
+        if (confirm(`Change the live store state to ${requestedState}?`)) requestedButton.click();
+      }).catch(() => { stateNode.textContent = 'CLOSED'; messageNode.textContent = 'Status unavailable; checkout is safely closed.'; });
     })();
   </script>
 </body>
