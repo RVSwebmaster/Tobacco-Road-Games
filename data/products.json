@@ -3,7 +3,7 @@
     "slug": "sirrocans",
     "title": "Sirrocans",
     "subtitle": "A 5E-compatible character race of giant-blooded desert nomads",
-    "featured": true,
+    "featured": false,
     "authors": [
       "RV Sawyer"
     ],
@@ -165,7 +165,7 @@
     "slug": "tablecraft-primer",
     "title": "Tablecraft Primer",
     "subtitle": "Practical Tools For Better Play",
-    "featured": false,
+    "featured": true,
     "authors": [
       "RV Sawyer"
     ],
