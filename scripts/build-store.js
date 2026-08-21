@@ -94,6 +94,8 @@ function main() {
     writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, products));
   }
 
+  buildHomepage(products);
+
   for (const system of indexes.systems) {
     writeFile(`store/systems/${system.slug}/index.html`, renderCollectionPage({
       title: system.name,
@@ -888,6 +890,38 @@ function renderStoreNav(currentNav) {
       ${items.map((item) => `<a href="${item.href}"${currentNav === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
     </nav>
   `;
+}
+
+function buildHomepage(products) {
+  const homepagePath = path.join(ROOT, "index.html");
+  const configPath = path.join(ROOT, "data", "homepage.json");
+  if (!fs.existsSync(homepagePath) || !fs.existsSync(configPath)) return;
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  const productMap = new Map(products.map((product) => [product.slug, product]));
+  const selected = (Array.isArray(config.workInProgressSlugs) ? config.workInProgressSlugs : [])
+    .map((slug) => productMap.get(slug))
+    .filter(Boolean);
+  const cards = selected.length
+    ? selected.map((product) => `        <article class="workshop-card">
+          <div class="workshop-card__media">
+            <img src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover">
+          </div>
+          <div class="workshop-card__copy">
+            <p class="workshop-card__label">${escapeHtml(product.statusLabel)}</p>
+            <h3>${escapeHtml(product.title)}</h3>
+            <p>${escapeHtml(product.shortDescription)}</p>
+            <p class="workshop-card__stage"><strong>Current stage:</strong> ${escapeHtml(product.statusLabel)}</p>
+            <a class="button button--secondary" href="${escapeAttribute(product.url)}">View Product</a>
+          </div>
+        </article>`).join("\n")
+    : "        <p>No work-in-progress titles are selected right now.</p>";
+  const html = fs.readFileSync(homepagePath, "utf8");
+  const next = html.replace(
+    /(      <section class="workshop" id="workshop"[\s\S]*?<\/div>\r?\n)([\s\S]*?)(\s*<\/section>\s*\n\s*<section class="commitment")/,
+    `$1${cards}$3`
+  );
+  if (next === html) throw new Error("Homepage work-in-progress section could not be regenerated.");
+  fs.writeFileSync(homepagePath, next);
 }
 
 function renderFeatureSpotlight(product) {

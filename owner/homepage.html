@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tobacco Road Games Homepage Editor</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" type="image/png" href="../assets/logo.png?v=20260604e">
+  <link rel="stylesheet" href="../styles.css?v=20260604e">
+  <style>
+    .homepage-editor { display: grid; gap: 18px; max-width: 900px; }
+    .homepage-editor__panel { display: grid; gap: 14px; padding: 18px; border: 1px solid rgba(242,216,170,.16); border-radius: 16px; background: rgba(255,255,255,.045); }
+    .homepage-editor__panel label { color: var(--muted); font-family: "Trebuchet MS","Segoe UI",Arial,sans-serif; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .homepage-editor__list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .homepage-editor__choice { display: flex; gap: 9px; align-items: center; padding: 11px; border: 1px solid rgba(242,216,170,.14); border-radius: 12px; }
+    .homepage-editor__status { min-height: 1.5rem; color: var(--accent-strong); }
+    @media (max-width: 700px) { .homepage-editor__list { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="view-section"><div class="page-shell">
+  <header class="site-header"><a class="brand" href="/"><img class="brand__logo" src="../assets/logo.png?v=20260604e" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span><span class="brand__tag">Owner homepage controls</span></div></a>
+    <nav class="site-nav" aria-label="Owner navigation"><a href="product-intake.html">Product Intake</a><a href="pricing.html">Pricing Editor</a><a href="homepage.html" aria-current="page">Homepage Editor</a><a href="/owner/logout">Logout</a></nav>
+  </header>
+  <main id="top"><section class="store-section homepage-editor" aria-labelledby="homepage-heading">
+    <div class="section-heading"><p class="section-heading__kicker">Owner Tool</p><h1 id="homepage-heading">Homepage Selections</h1><p>Choose one listed product as the store’s featured title and any number of listed products for the public homepage’s Work in Progress section.</p></div>
+    <div class="homepage-editor__panel"><label for="homepage-featured">Featured title</label><select id="homepage-featured" class="dock-input"><option value="">Loading products…</option></select><p>The selected title replaces the current featured title; only one product can be featured.</p></div>
+    <div class="homepage-editor__panel"><label>Work in Progress items</label><div id="homepage-wip" class="homepage-editor__list" aria-describedby="homepage-wip-help"></div><p id="homepage-wip-help">Check every product that should appear. Leave all unchecked to show no work-in-progress cards.</p></div>
+    <button id="homepage-publish" class="button button--primary" type="button">Publish Selections</button>
+    <p id="homepage-status" class="homepage-editor__status" aria-live="polite"></p>
+  </section></main>
+  <footer class="site-footer"><p>&copy; 2026 Tobacco Road Games.</p><p>Manual controls for storefront highlights.</p></footer>
+</div><script src="../assets/js/owner-homepage-editor.js?v=20260821a"></script></body>
+</html>

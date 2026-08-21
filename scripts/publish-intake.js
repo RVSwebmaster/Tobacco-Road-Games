@@ -61,6 +61,10 @@ function loadClientPayload(options) {
 }
 
 async function applyPublishPayload(rootDir, clientPayload) {
+  if (String(clientPayload?.operation || "").trim() === "homepage_update") {
+    return applyHomepageUpdatePayload(rootDir, clientPayload);
+  }
+
   if (String(clientPayload?.operation || "").trim() === "pricing_update") {
     return applyPricingUpdatePayload(rootDir, clientPayload);
   }
@@ -184,6 +188,35 @@ function normalizePublishMetadata(metadata) {
   }
 
   return normalized;
+}
+
+function applyHomepageUpdatePayload(rootDir, clientPayload) {
+  const featuredSlug = normalizeSlug(clientPayload?.featuredSlug);
+  const workInProgressSlugs = [...new Set(
+    (Array.isArray(clientPayload?.workInProgressSlugs) ? clientPayload.workInProgressSlugs : [])
+      .map(normalizeSlug)
+      .filter(Boolean)
+  )];
+  const productsPath = path.join(rootDir, "data", "products.json");
+  const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
+  const knownSlugs = new Set(products.map((product) => product.slug));
+  if (!featuredSlug || !knownSlugs.has(featuredSlug)) {
+    throw new Error("Homepage updates require a featured product from the current catalog.");
+  }
+  const missing = workInProgressSlugs.filter((slug) => !knownSlugs.has(slug));
+  if (missing.length) {
+    throw new Error(`Unknown work-in-progress product: ${missing.join(", ")}.`);
+  }
+
+  for (const product of products) {
+    product.featured = product.slug === featuredSlug;
+  }
+  fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
+  fs.writeFileSync(path.join(rootDir, "data", "homepage.json"), `${JSON.stringify({
+    featuredSlug,
+    workInProgressSlugs
+  }, null, 2)}\n`);
+  return { folder: "", metadata: { slug: featuredSlug } };
 }
 
 function normalizePricingMetadata(metadata) {
@@ -602,6 +635,7 @@ function clone(value) {
 
 module.exports = {
   SHARED_FOLDER_MAP_PATH,
+  applyHomepageUpdatePayload,
   applyPublishPayload,
   applyPricingUpdatePayload,
   normalizePublishMetadata,
