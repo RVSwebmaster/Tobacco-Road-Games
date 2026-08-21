@@ -14,6 +14,10 @@
     .homepage-editor__list { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
     .homepage-editor__choice { display: flex; gap: 9px; align-items: center; padding: 11px; border: 1px solid rgba(242,216,170,.14); border-radius: 12px; }
     .homepage-editor__status { min-height: 1.5rem; color: var(--accent-strong); }
+    .homepage-editor__status:not(:empty) { padding: 14px 16px; border: 1px solid rgba(242,216,170,.22); border-radius: 12px; background: rgba(10,7,5,.56); }
+    .homepage-editor__status[data-state="success"] { color: #d9f5d8; border-color: rgba(111,201,124,.55); background: rgba(35,91,48,.42); }
+    .homepage-editor__status[data-state="error"] { color: #ffd5ce; border-color: rgba(218,101,82,.6); background: rgba(103,42,32,.4); }
+    #homepage-publish[data-state="success"] { border-color: #8bd495; background: #326b3d; color: #fff; }
     @media (max-width: 700px) { .homepage-editor__list { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -25,8 +29,8 @@
     <div class="section-heading"><p class="section-heading__kicker">Owner Tool</p><h1 id="homepage-heading">Homepage Selections</h1><p>Choose one listed product as the store’s featured title and any number of listed products for the public homepage’s Work in Progress section.</p></div>
     <div class="homepage-editor__panel"><label for="homepage-featured">Featured title</label><select id="homepage-featured" class="dock-input"><option value="">Loading products…</option></select><p>The selected title replaces the current featured title; only one product can be featured.</p></div>
     <div class="homepage-editor__panel"><label>Work in Progress items</label><div id="homepage-wip" class="homepage-editor__list" aria-describedby="homepage-wip-help"></div><p id="homepage-wip-help">Check every product that should appear. Leave all unchecked to show no work-in-progress cards.</p></div>
-    <button id="homepage-publish" class="button button--primary" type="button">Publish Selections</button>
-    <p id="homepage-status" class="homepage-editor__status" aria-live="polite"></p>
+    <button id="homepage-publish" class="button button--primary" type="button" data-state="loading" disabled>Loading Current Selections…</button>
+    <p id="homepage-status" class="homepage-editor__status" aria-live="polite" role="status"></p>
   </section></main>
   <footer class="site-footer"><p>&copy; 2026 Tobacco Road Games.</p><p>Manual controls for storefront highlights.</p></footer>
 </div><script src="../assets/js/owner-homepage-editor.js?v=20260821a"></script></body>
