@@ -32,7 +32,7 @@ export async function handleOwnerMiddleware(context) {
   if (pathname === "/owner" || pathname === "/owner/") {
     const hasSession = await hasValidOwnerSession(request, context.env);
     if (hasSession) {
-      return finish(Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303));
+      return finish(Response.redirect(new URL("/owner/index.html", request.url).toString(), 303));
     }
     return finish(redirectToOwnerLogin(request));
   }
@@ -78,7 +78,7 @@ async function handleOwnerAccessMiddleware(context, accessConfig) {
   }
 
   if (pathname === "/owner" || pathname === "/owner/" || pathname === "/owner/login") {
-    return finish(Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303));
+    return finish(Response.redirect(new URL("/owner/index.html", request.url).toString(), 303));
   }
 
   if (ownerIntakeAliases.has(pathname)) {

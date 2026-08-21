@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>RV's Owner Dashboard | Tobacco Road Games</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png?v=20260604e">
+  <link rel="stylesheet" href="../styles.css?v=20260604e">
+  <style>
+    .owner-dashboard { display: grid; gap: 22px; }
+    .owner-dashboard__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .owner-dashboard__card { display: grid; gap: 12px; align-content: start; padding: 20px; border: 1px solid rgba(242,216,170,.16); border-radius: 16px; background: rgba(255,255,255,.045); }
+    .owner-dashboard__card h2, .owner-dashboard__card p { margin: 0; }
+    .owner-dashboard__card p { color: var(--muted); line-height: 1.6; }
+    .owner-dashboard__card .button { align-self: end; justify-self: start; margin-top: auto; }
+    .owner-dashboard__card--status { border-color: rgba(214,168,85,.42); }
+    .owner-dashboard__state { color: var(--accent-strong) !important; font-size: 1.45rem; font-weight: 800; }
+    @media (max-width: 900px) { .owner-dashboard__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 620px) { .owner-dashboard__grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="view-section"><div class="page-shell">
+  <header class="site-header">
+    <a class="brand" href="/owner/" aria-label="RV's owner dashboard"><img class="brand__logo" src="../assets/logo.png?v=20260604e" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">RV's Owner Dashboard</span><span class="brand__tag">Tobacco Road Games controls and workbench</span></div></a>
+    <nav class="site-nav" aria-label="Owner navigation"><a href="/" target="_blank">View Site</a><a href="/store/" target="_blank">View Store</a><a href="/owner/" aria-current="page">Dashboard</a><a href="/owner/logout">Log Out</a></nav>
+  </header>
+  <main id="top"><section class="store-section owner-dashboard" aria-labelledby="owner-dashboard-heading">
+    <div class="section-heading"><p class="section-heading__kicker">Private Owner Area</p><h1 id="owner-dashboard-heading">What do you need to work on?</h1><p>This is your jump page for the live site. Store status affects public visitors only; while signed in, you can continue browsing and working in every mode.</p></div>
+    <div class="owner-dashboard__grid">
+      <article class="owner-dashboard__card owner-dashboard__card--status"><p class="section-heading__kicker">Live Store</p><h2>Store Status</h2><p class="owner-dashboard__state" data-owner-dashboard-state>Loading…</p><p>Open or close purchasing, or place the public store in maintenance mode.</p><a class="button button--primary" href="/owner/store-status.html">Manage Store Status</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Catalog</p><h2>Product Intake</h2><p>Create a new listing or update an existing product and its files.</p><a class="button button--secondary" href="/owner/product-intake.html">Open Product Intake</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Storefront</p><h2>Homepage Selections</h2><p>Choose the featured title and the products shown as work in progress.</p><a class="button button--secondary" href="/owner/homepage.html">Edit Homepage</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Sales</p><h2>Pricing Editor</h2><p>Change regular prices, sale prices, and sale schedules for listed products.</p><a class="button button--secondary" href="/owner/pricing.html">Edit Pricing</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Customers</p><h2>Orders</h2><p>Find orders, review delivery details, and repair customer fulfillment.</p><a class="button button--secondary" href="/owner/orders.html">Open Orders</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Community</p><h2>Author Discussions</h2><p>Read public messages and post official author responses.</p><a class="button button--secondary" href="/owner/discussions.html">Open Discussions</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Advertising</p><h2>Ad Upload</h2><p>Upload and manage advertising assets for the public ad depot.</p><a class="button button--secondary" href="/owner/ad-upload.html">Open Ad Upload</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Public Site</p><h2>Browse as Owner</h2><p>Open the live storefront with your owner access, even while the public store is closed or under maintenance.</p><a class="button button--secondary" href="/store/" target="_blank" rel="noopener">Browse Store</a></article>
+      <article class="owner-dashboard__card"><p class="section-heading__kicker">Workspace</p><h2>TRG Office</h2><p>Open the private office workspace for planning and operational work.</p><a class="button button--secondary" href="https://office-staging.tobaccoroadgames.com/office/" target="_blank" rel="noopener">Open Office</a></article>
+    </div>
+    <p id="owner-dashboard-status" aria-live="polite"></p>
+  </section></main>
+  <footer class="site-footer"><p>&copy; 2026 Tobacco Road Games.</p><p>Private working controls for RV Sawyer.</p></footer>
+</div>
+<script>
+  fetch('/owner/api/store-status', { headers: { accept: 'application/json' }, cache: 'no-store' })
+    .then(response => response.json().then(payload => ({ ok: response.ok, payload })))
+    .then(({ ok, payload }) => {
+      document.querySelector('[data-owner-dashboard-state]').textContent = payload.state || 'CLOSED';
+      if (!ok) document.getElementById('owner-dashboard-status').textContent = payload.error || 'Store status is unavailable.';
+    })
+    .catch(() => { document.querySelector('[data-owner-dashboard-state]').textContent = 'UNAVAILABLE'; });
+</script>
+</body>
+</html>

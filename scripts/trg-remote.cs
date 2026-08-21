@@ -25,7 +25,7 @@ public sealed class TrgRemote : Form
         AddLabel("Office and live store controls", 26, 98, 488, 26, 10, Color.FromArgb(170, 158, 139));
 
         AddLaunchButton("Office Repo", "https://office-staging.tobaccoroadgames.com/office/", 142, panel);
-        AddLaunchButton("Product Intake", "https://tobaccoroadgames.com/owner/intake", 207, panel);
+        AddLaunchButton("RV's Owner Dashboard", "https://tobaccoroadgames.com/owner/", 207, panel);
         AddLaunchButton("Ad Depot", "https://tobaccoroadgames.com/ad-depot", 272, panel);
 
         AddLabel("STORE KILL SWITCH", 26, 347, 488, 25, 11, gold);
