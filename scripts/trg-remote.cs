@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 public sealed class TrgRemote : Form
@@ -9,6 +11,12 @@ public sealed class TrgRemote : Form
     private readonly Color accent = Color.FromArgb(111, 205, 255);
     private readonly Color muted = Color.FromArgb(118, 132, 148);
     private readonly Color text = Color.FromArgb(223, 232, 241);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int message, IntPtr wParam, IntPtr lParam);
 
     public TrgRemote()
     {
@@ -22,6 +30,8 @@ public sealed class TrgRemote : Form
         BackColor = Color.FromArgb(22, 27, 35);
         ForeColor = text;
         Font = new Font("Segoe UI", 7);
+        ApplyRemoteShape();
+        MouseDown += MoveRemote;
 
         AddLabel("TRG", 21, 18, 76, 18, 9, accent);
         AddLabel("QUICK ACCESS", 21, 36, 76, 12, 5, muted);
@@ -34,9 +44,48 @@ public sealed class TrgRemote : Form
             BackColor = panel, ForeColor = muted, FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI", 10), Cursor = Cursors.Hand
         };
-        closeButton.FlatAppearance.BorderColor = panel;
+        closeButton.FlatAppearance.BorderColor = muted;
+        closeButton.FlatAppearance.BorderSize = 1;
         closeButton.Click += (sender, args) => Close();
         Controls.Add(closeButton);
+    }
+
+    protected override void OnPaint(PaintEventArgs args)
+    {
+        base.OnPaint(args);
+        args.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        using (var outline = RoundedPath(new Rectangle(0, 0, ClientSize.Width - 1, ClientSize.Height - 1), 36))
+        using (var pen = new Pen(Color.FromArgb(92, 106, 121)))
+        {
+            args.Graphics.DrawPath(pen, outline);
+        }
+    }
+
+    private void ApplyRemoteShape()
+    {
+        using (var shape = RoundedPath(new Rectangle(0, 0, ClientSize.Width, ClientSize.Height), 38))
+        {
+            Region = new Region(shape);
+        }
+    }
+
+    private static GraphicsPath RoundedPath(Rectangle bounds, int radius)
+    {
+        var path = new GraphicsPath();
+        var diameter = radius * 2;
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    private void MoveRemote(object sender, MouseEventArgs args)
+    {
+        if (args.Button != MouseButtons.Left) return;
+        ReleaseCapture();
+        SendMessage(Handle, 0xA1, new IntPtr(0x2), IntPtr.Zero);
     }
 
     private void AddLabel(string value, int left, int top, int width, int height, float size, Color color)
@@ -56,7 +105,8 @@ public sealed class TrgRemote : Form
             BackColor = panel, ForeColor = text, FlatStyle = FlatStyle.Flat,
             Font = new Font("Segoe UI Semibold", 7), Cursor = Cursors.Hand
         };
-        button.FlatAppearance.BorderColor = panel;
+        button.FlatAppearance.BorderColor = muted;
+        button.FlatAppearance.BorderSize = 1;
         button.Click += (sender, args) => {
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
             catch { MessageBox.Show("Windows could not open the configured address.", "TRG Remote", MessageBoxButtons.OK, MessageBoxIcon.Error); }
