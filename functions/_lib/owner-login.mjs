@@ -187,7 +187,7 @@ async function handleLoginPost(request, env, url) {
 function renderLoginPage(options = {}) {
   const errorMessage = options.errorMessage || "";
   const loggedOut = Boolean(options.loggedOut);
-  const nextPath = options.nextPath || "/owner/index.html";
+  const nextPath = options.nextPath || "/owner/";
   const username = escapeHtml(options.username || "");
 
   return `<!DOCTYPE html>

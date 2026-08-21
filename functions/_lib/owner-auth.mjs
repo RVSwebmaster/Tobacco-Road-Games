@@ -239,7 +239,7 @@ export function getOwnerSecrets(env) {
   };
 }
 
-export function buildOwnerLoginLocation(requestUrl, nextPath = "/owner/index.html") {
+export function buildOwnerLoginLocation(requestUrl, nextPath = "/owner/") {
   const url = new URL("/owner/login", requestUrl);
   url.searchParams.set("next", nextPath);
   return url.toString();
@@ -248,11 +248,11 @@ export function buildOwnerLoginLocation(requestUrl, nextPath = "/owner/index.htm
 export function getSafeOwnerNextPath(rawNextPath) {
   const nextPath = String(rawNextPath || "").trim();
   if (!nextPath.startsWith("/owner/")) {
-    return "/owner/index.html";
+    return "/owner/";
   }
 
   if (nextPath === "/owner/login" || nextPath === "/owner/logout") {
-    return "/owner/index.html";
+    return "/owner/";
   }
 
   return nextPath;
