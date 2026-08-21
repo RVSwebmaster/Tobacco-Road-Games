@@ -117,7 +117,7 @@ function redirectToOwnerLogin(request, clearInvalidCookies = false) {
   if (clearInvalidCookies) {
     headers.append("set-cookie", clearCookie(SESSION_COOKIE_NAME, {
       httpOnly: true,
-      path: "/owner",
+      path: "/",
       sameSite: "Strict"
     }));
     headers.append("set-cookie", clearCookie(CSRF_COOKIE_NAME, {

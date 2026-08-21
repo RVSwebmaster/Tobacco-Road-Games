@@ -1,8 +1,10 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import {
   CSRF_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
   buildCookie,
+  createSessionToken,
   createCsrfToken,
   getOwnerSecrets,
   htmlResponse,
@@ -181,6 +183,14 @@ export async function attachOwnerAccessCsrfCookie(response, request, env, access
   headers.append("set-cookie", buildCookie(CSRF_COOKIE_NAME, csrfToken, {
     maxAge: SESSION_TTL_SECONDS,
     path: "/owner",
+    sameSite: "Strict"
+  }));
+  const sessionSecret = String(env.OWNER_SESSION_SECRET || csrfSecret);
+  const sessionToken = await createSessionToken(accessState.csrfSubject, sessionSecret);
+  headers.append("set-cookie", buildCookie(SESSION_COOKIE_NAME, sessionToken, {
+    httpOnly: true,
+    maxAge: SESSION_TTL_SECONDS,
+    path: "/",
     sameSite: "Strict"
   }));
 

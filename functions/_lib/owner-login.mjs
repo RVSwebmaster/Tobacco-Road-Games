@@ -56,7 +56,17 @@ export async function handleOwnerLoginRequest(request, env) {
 
 export async function handleOwnerLogoutRequest(request, env) {
   if (getOwnerAccessConfig(env).enabled) {
-    return Response.redirect(buildOwnerAccessLogoutUrl(request), 303);
+    const headers = new Headers({ location: buildOwnerAccessLogoutUrl(request) });
+    headers.append("set-cookie", clearCookie(SESSION_COOKIE_NAME, {
+      httpOnly: true,
+      path: "/",
+      sameSite: "Strict"
+    }));
+    headers.append("set-cookie", clearCookie(CSRF_COOKIE_NAME, {
+      path: "/owner",
+      sameSite: "Strict"
+    }));
+    return new Response(null, { headers, status: 303 });
   }
 
   const redirectUrl = new URL("/owner/login", request.url);
@@ -66,7 +76,7 @@ export async function handleOwnerLogoutRequest(request, env) {
   });
   headers.append("set-cookie", clearCookie(SESSION_COOKIE_NAME, {
     httpOnly: true,
-    path: "/owner",
+    path: "/",
     sameSite: "Strict"
   }));
   headers.append("set-cookie", clearCookie(CSRF_COOKIE_NAME, {
@@ -159,7 +169,7 @@ async function handleLoginPost(request, env, url) {
   headers.append("set-cookie", buildCookie(SESSION_COOKIE_NAME, sessionToken, {
     httpOnly: true,
     maxAge: SESSION_TTL_SECONDS,
-    path: "/owner",
+    path: "/",
     sameSite: "Strict"
   }));
   headers.append("set-cookie", buildCookie(CSRF_COOKIE_NAME, csrfToken, {
