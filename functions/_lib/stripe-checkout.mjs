@@ -13,7 +13,8 @@ export class StripeCheckoutError extends Error {
 }
 
 export async function createStripeHostedCheckoutSession(input, options = {}) {
-  const secretKey = validateStripeSandboxKey(options.secretKey);
+  const stripeConfiguration = validateStripeKey(options.secretKey, options.pipelineStage);
+  const secretKey = stripeConfiguration.secretKey;
   const idempotencyKey = requiredString(options.idempotencyKey, "idempotencyKey");
   const fetchImpl = options.fetchImpl || globalThis.fetch;
   if (typeof fetchImpl !== "function") {
@@ -63,7 +64,7 @@ export async function createStripeHostedCheckoutSession(input, options = {}) {
   if (!payload
     || typeof payload.id !== "string"
     || typeof payload.url !== "string"
-    || payload.livemode !== false
+    || payload.livemode !== stripeConfiguration.livemode
     || payload.ui_mode !== "hosted_page") {
     throw new StripeCheckoutError("The Stripe response could not be safely confirmed.", {
       classification: "indeterminate",
@@ -76,6 +77,10 @@ export async function createStripeHostedCheckoutSession(input, options = {}) {
 }
 
 export function validateStripeSandboxKey(secretKey) {
+  return validateStripeKey(secretKey, "staging").secretKey;
+}
+
+export function validateStripeKey(secretKey, pipelineStage) {
   const normalizedKey = String(secretKey || "").trim();
   if (!normalizedKey) {
     throw new StripeCheckoutError("STRIPE_SECRET_KEY is not configured.", {
@@ -83,13 +88,21 @@ export function validateStripeSandboxKey(secretKey) {
       code: "stripe_configuration_missing"
     });
   }
-  if (!normalizedKey.startsWith("sk_test_")) {
-    throw new StripeCheckoutError("STRIPE_SECRET_KEY must be a Stripe sandbox test key for this phase.", {
+  const normalizedStage = String(pipelineStage || "staging").trim().toLowerCase();
+  const production = normalizedStage === "production";
+  const expectedPrefix = production ? "sk_live_" : "sk_test_";
+  if (!normalizedKey.startsWith(expectedPrefix)) {
+    throw new StripeCheckoutError(production
+      ? "Production checkout requires a Stripe live secret key."
+      : "Non-production checkout requires a Stripe test secret key.", {
       classification: "definitive",
-      code: "stripe_configuration_not_test_mode"
+      code: production ? "stripe_configuration_not_live_mode" : "stripe_configuration_not_test_mode"
     });
   }
-  return normalizedKey;
+  return {
+    livemode: production,
+    secretKey: normalizedKey
+  };
 }
 
 function buildStripeCheckoutFormBody(input) {

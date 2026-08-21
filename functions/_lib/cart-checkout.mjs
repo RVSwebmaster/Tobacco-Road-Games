@@ -216,6 +216,7 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
       apiBase: options.stripeApiBase,
       fetchImpl: options.stripeFetchImpl,
       idempotencyKey: buildStripeIdempotencyKey(checkoutAttemptId),
+      pipelineStage: options.pipelineStage || env.PAYMENT_PIPELINE_STAGE,
       secretKey: options.stripeSecretKey || env.STRIPE_SECRET_KEY
     });
   } catch (error) {

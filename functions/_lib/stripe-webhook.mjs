@@ -221,8 +221,9 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   };
 
   const pipelineStage = String(options.pipelineStage || "staging").toLowerCase();
-  if (pipelineStage !== "production" && stripeEvent?.livemode !== false) {
-    return fail("live_mode_rejected");
+  const expectedLivemode = pipelineStage === "production";
+  if (stripeEvent?.livemode !== expectedLivemode) {
+    return fail(expectedLivemode ? "test_mode_rejected" : "live_mode_rejected");
   }
   if (String(stripeEvent?.api_version || "") !== STRIPE_API_VERSION) {
     return fail("stripe_api_version_mismatch");

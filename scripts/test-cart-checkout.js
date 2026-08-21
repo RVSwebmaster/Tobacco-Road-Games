@@ -250,7 +250,66 @@ async function testCheckoutValidation(cartCheckout) {
       url: "https://checkout.stripe.com/c/pay/cs_test_created"
     })
   });
-  assert.equal(response.status, 502, "Checkout should reject non-sandbox Stripe keys in this phase.");
+  assert.equal(response.status, 502, "Checkout should reject live Stripe keys outside an explicit production pipeline.");
+
+  const liveDb = createD1Database().d1;
+  let liveStripeCalled = false;
+  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000015",
+      email: "buyer@example.com",
+      emailConfirmation: "buyer@example.com",
+      items: [{ quantity: 1, slug: "agency" }]
+    }),
+    method: "POST"
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    ORDER_EMAIL_HASH_SECRET: "email-secret",
+    PAYMENT_PIPELINE_STAGE: "production",
+    STRIPE_SECRET_KEY: "sk_live_mocked",
+    TRG_ORDERS: liveDb
+  }, {
+    catalogProducts: validCatalog,
+    now: Date.parse("2026-07-09T12:00:00.000Z"),
+    stripeFetchImpl: async () => {
+      liveStripeCalled = true;
+      return createJsonResponse({
+        id: "cs_live_created",
+        livemode: true,
+        ui_mode: "hosted_page",
+        url: "https://checkout.stripe.com/c/pay/cs_live_created"
+      });
+    }
+  });
+  assert.equal(response.status, 201, "Explicit production checkout should accept a live key and live Session.");
+  assert.equal(liveStripeCalled, true, "Explicit production checkout should call Stripe.");
+
+  const mismatchedLiveDb = createD1Database().d1;
+  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000016",
+      email: "buyer@example.com",
+      emailConfirmation: "buyer@example.com",
+      items: [{ quantity: 1, slug: "agency" }]
+    }),
+    method: "POST"
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    ORDER_EMAIL_HASH_SECRET: "email-secret",
+    PAYMENT_PIPELINE_STAGE: "production",
+    STRIPE_SECRET_KEY: "sk_live_mocked",
+    TRG_ORDERS: mismatchedLiveDb
+  }, {
+    catalogProducts: validCatalog,
+    now: Date.parse("2026-07-09T12:00:00.000Z"),
+    stripeFetchImpl: async () => createJsonResponse({
+      id: "cs_test_wrong_mode",
+      livemode: false,
+      ui_mode: "hosted_page",
+      url: "https://checkout.stripe.com/c/pay/cs_test_wrong_mode"
+    })
+  });
+  assert.equal(response.status, 503, "Production checkout must reject a test-mode Session response.");
 
   const retiredUiModeDb = createD1Database().d1;
   response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {

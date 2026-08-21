@@ -4,6 +4,12 @@ const DELIVERY_PRODUCTS = Object.freeze({
     customerFilename: "Agency.pdf",
     productSlug: "agency",
     r2ObjectKey: "agency/product.pdf"
+  }),
+  janni: Object.freeze({
+    contentType: "application/pdf",
+    customerFilename: "Janni.pdf",
+    productSlug: "janni",
+    r2ObjectKey: "janni/product.pdf"
   })
 });
 

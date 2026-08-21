@@ -8,12 +8,19 @@ const SECRET = "free-download-test-secret-at-least-32-characters";
 const PDF = new TextEncoder().encode("%PDF-1.7\nAgency free test\n%%EOF\n");
 
 async function main() {
+  const { getDeliveryProduct } = await import(pathToFileURL(path.join(ROOT, "functions/_lib/product-delivery.mjs")).href);
   const free = await importModule("functions/_lib/free-download.mjs");
   const agencyPage = fs.readFileSync(path.join(ROOT, "store/products/agency/index.html"), "utf8");
   const janniPage = fs.readFileSync(path.join(ROOT, "store/products/janni/index.html"), "utf8");
   assert.match(agencyPage, /Download Free PDF/, "$0.00 products should display the free-download control.");
   assert.doesNotMatch(agencyPage, /data-cart-add="agency"/, "Free products must not display Add to Cart.");
   assert.match(janniPage, /data-cart-add="janni"/, "Paid products must retain the existing cart control.");
+  assert.deepEqual(getDeliveryProduct("janni"), {
+    contentType: "application/pdf",
+    customerFilename: "Janni.pdf",
+    productSlug: "janni",
+    r2ObjectKey: "janni/product.pdf"
+  }, "Janni must have an exact private paid-delivery mapping.");
 
   let stripeCalls = 0;
   const bucket = createBucket();

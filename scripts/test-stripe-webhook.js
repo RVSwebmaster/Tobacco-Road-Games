@@ -192,6 +192,24 @@ async function testLiveAndVersionRejection(webhook, ordersD1) {
   assert.equal((await getOnlyWebhookEvent(fixture.d1)).failure_code, "live_mode_rejected", "Live-mode rejection should be reviewable.");
 
   fixture = await createFixture(ordersD1);
+  response = await deliver(webhook, fixture.d1, makeEvent(fixture.order), {
+    PAYMENT_PIPELINE_STAGE: "production"
+  });
+  assert.equal(response.status, 400, "Test-mode Events must be rejected by production.");
+  assert.equal((await getOrder(fixture.d1, fixture.order.id)).payment_status, "pending", "Rejected test Events must leave production orders unpaid.");
+  assert.equal((await getOnlyWebhookEvent(fixture.d1)).failure_code, "test_mode_rejected", "Test-mode production rejection should be reviewable.");
+
+  fixture = await createFixture(ordersD1);
+  response = await deliver(webhook, fixture.d1, makeEvent(fixture.order, {
+    livemode: true,
+    session: { livemode: true }
+  }), {
+    PAYMENT_PIPELINE_STAGE: "production"
+  });
+  assert.equal(response.status, 200, "Production should accept a correctly signed live-mode Event.");
+  assert.equal((await getOrder(fixture.d1, fixture.order.id)).payment_status, "paid", "A verified live production Event should mark its matching order paid.");
+
+  fixture = await createFixture(ordersD1);
   response = await deliver(webhook, fixture.d1, makeEvent(fixture.order, {
     apiVersion: "2025-06-30.basil"
   }));
