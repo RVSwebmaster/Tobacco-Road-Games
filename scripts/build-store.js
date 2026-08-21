@@ -916,11 +916,14 @@ function buildHomepage(products) {
         </article>`).join("\n")
     : "        <p>No work-in-progress titles are selected right now.</p>";
   const html = fs.readFileSync(homepagePath, "utf8");
+  const workshopPattern = /(      <section class="workshop" id="workshop"[\s\S]*?<\/div>\r?\n)([\s\S]*?)(\s*<\/section>\s*\n\s*<section class="commitment")/;
+  if (!workshopPattern.test(html)) {
+    throw new Error("Homepage work-in-progress section could not be found.");
+  }
   const next = html.replace(
-    /(      <section class="workshop" id="workshop"[\s\S]*?<\/div>\r?\n)([\s\S]*?)(\s*<\/section>\s*\n\s*<section class="commitment")/,
+    workshopPattern,
     `$1${cards}$3`
   );
-  if (next === html) throw new Error("Homepage work-in-progress section could not be regenerated.");
   fs.writeFileSync(homepagePath, next);
 }
 

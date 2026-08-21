@@ -31,9 +31,11 @@ export async function handleOwnerHomepagePublishRequest(request, env, options = 
   }, env, options.dispatchOptions);
   if (!dispatchResult.ok) return jsonResponse({ error: `The homepage selections could not be published. ${dispatchResult.userMessage}`, runUrl: dispatchResult.runUrl || "" }, 502);
   return jsonResponse({
+    featuredSlug,
     message: dispatchResult.pending ? "Homepage update accepted. The live site may take another minute to update." : "Homepage selections published successfully.",
     ok: true,
     pending: Boolean(dispatchResult.pending),
-    runUrl: dispatchResult.runUrl || ""
+    runUrl: dispatchResult.runUrl || "",
+    workInProgressSlugs
   }, dispatchResult.pending ? 202 : 200);
 }

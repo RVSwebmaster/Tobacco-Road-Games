@@ -25,7 +25,9 @@
       const response = await fetch("/owner/api/homepage", { method: "POST", headers: { "content-type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify({ featuredSlug: featured.value, workInProgressSlugs: [...wip.querySelectorAll('input:checked')].map((input) => input.value) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Publish failed.");
-      status.innerHTML = escapeHtml(result.message) + (result.runUrl ? ` <a href="${escapeHtml(result.runUrl)}" target="_blank" rel="noopener">View workflow</a>` : "");
+      const selectedTitles = [...wip.querySelectorAll('input:checked')].map((input) => input.closest("label")?.innerText.trim() || input.value);
+      const selectionMessage = selectedTitles.length ? ` Work in Progress: ${selectedTitles.join(", ")}.` : " Work in Progress is cleared.";
+      status.innerHTML = escapeHtml(result.message + selectionMessage) + (result.runUrl ? ` <a href="${escapeHtml(result.runUrl)}" target="_blank" rel="noopener">View workflow</a>` : "") + ' <a href="/" target="_blank" rel="noopener">View public homepage</a>';
     } catch (error) { status.textContent = error.message; } finally { publish.disabled = false; }
   });
 
