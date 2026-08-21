@@ -5,53 +5,58 @@ using System.Windows.Forms;
 
 public sealed class TrgRemote : Form
 {
-    private readonly Color panel = Color.FromArgb(28, 25, 21);
-    private readonly Color gold = Color.FromArgb(214, 168, 85);
-    private readonly Color text = Color.FromArgb(243, 234, 217);
+    private readonly Color panel = Color.FromArgb(48, 56, 68);
+    private readonly Color accent = Color.FromArgb(111, 205, 255);
+    private readonly Color muted = Color.FromArgb(118, 132, 148);
+    private readonly Color text = Color.FromArgb(223, 232, 241);
 
     public TrgRemote()
     {
         Text = "TRG Remote";
-        ClientSize = new Size(540, 600);
+        ClientSize = new Size(118, 266);
         StartPosition = FormStartPosition.CenterScreen;
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox = false;
-        BackColor = Color.FromArgb(17, 16, 14);
+        FormBorderStyle = FormBorderStyle.None;
+        MaximizeBox = true;
+        TopMost = true;
+        ShowInTaskbar = true;
+        BackColor = Color.FromArgb(22, 27, 35);
         ForeColor = text;
-        Font = new Font("Segoe UI", 10);
+        Font = new Font("Segoe UI", 7);
 
-        AddLabel("TOBACCO ROAD GAMES", 26, 24, 488, 24, 12, gold);
-        AddLabel("TRG Remote", 26, 51, 488, 45, 25, text, true);
-        AddLabel("Office and live store controls", 26, 98, 488, 26, 10, Color.FromArgb(170, 158, 139));
+        AddLabel("TRG", 21, 18, 76, 18, 9, accent);
+        AddLabel("QUICK ACCESS", 21, 36, 76, 12, 5, muted);
+        AddLaunchButton("Office Repo", "https://office-staging.tobaccoroadgames.com/office/", 58);
+        AddLaunchButton("RV's Dashboard", "https://tobaccoroadgames.com/owner/", 108);
+        AddLaunchButton("Ad Depot", "https://tobaccoroadgames.com/ad-depot", 158);
 
-        AddLaunchButton("Office Repo", "https://office-staging.tobaccoroadgames.com/office/", 142, panel);
-        AddLaunchButton("RV's Owner Dashboard", "https://tobaccoroadgames.com/owner/", 207, panel);
-        AddLaunchButton("Ad Depot", "https://tobaccoroadgames.com/ad-depot", 272, panel);
-
-        AddLabel("STORE KILL SWITCH", 26, 347, 488, 25, 11, gold);
-        AddLaunchButton("OPEN", "https://tobaccoroadgames.com/owner/store-status?set=OPEN", 383, Color.FromArgb(45, 82, 55));
-        AddLaunchButton("CLOSED", "https://tobaccoroadgames.com/owner/store-status?set=CLOSED", 448, Color.FromArgb(105, 48, 38));
-        AddLaunchButton("MAINTENANCE", "https://tobaccoroadgames.com/owner/store-status?set=MAINTENANCE", 513, Color.FromArgb(79, 62, 33));
+        var closeButton = new Button {
+            Text = "×", Location = new Point(46, 218), Size = new Size(26, 26),
+            BackColor = panel, ForeColor = muted, FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 10), Cursor = Cursors.Hand
+        };
+        closeButton.FlatAppearance.BorderColor = panel;
+        closeButton.Click += (sender, args) => Close();
+        Controls.Add(closeButton);
     }
 
-    private void AddLabel(string value, int left, int top, int width, int height, float size, Color color, bool serif = false)
+    private void AddLabel(string value, int left, int top, int width, int height, float size, Color color)
     {
         var label = new Label {
             Text = value, Location = new Point(left, top), Size = new Size(width, height),
-            Font = new Font(serif ? "Georgia" : "Segoe UI Semibold", size, serif ? FontStyle.Bold : FontStyle.Regular),
-            ForeColor = color, TextAlign = ContentAlignment.MiddleCenter
+            Font = new Font("Segoe UI Semibold", size), ForeColor = color,
+            TextAlign = ContentAlignment.MiddleCenter
         };
         Controls.Add(label);
     }
 
-    private void AddLaunchButton(string label, string url, int top, Color color)
+    private void AddLaunchButton(string label, string url, int top)
     {
         var button = new Button {
-            Text = label, Location = new Point(65, top), Size = new Size(410, 52), BackColor = color,
-            ForeColor = text, FlatStyle = FlatStyle.Flat, Font = new Font("Segoe UI Semibold", 13),
-            Cursor = Cursors.Hand
+            Text = label, Location = new Point(16, top), Size = new Size(86, 44),
+            BackColor = panel, ForeColor = text, FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI Semibold", 7), Cursor = Cursors.Hand
         };
-        button.FlatAppearance.BorderColor = gold;
+        button.FlatAppearance.BorderColor = panel;
         button.Click += (sender, args) => {
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
             catch { MessageBox.Show("Windows could not open the configured address.", "TRG Remote", MessageBoxButtons.OK, MessageBoxIcon.Error); }
