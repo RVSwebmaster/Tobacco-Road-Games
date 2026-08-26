@@ -9,12 +9,14 @@ import { repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
 import { OrderDeliveryError, deliverPaidOrderEmail } from "./order-delivery.mjs";
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
 import { creatorSaleStatements, getEffectiveFeePolicy, resolveFeePolicy } from "./creator-finance.mjs";
+import { processStripeCreatorFinanceEvent, STRIPE_CREATOR_FINANCE_EVENTS } from "./creator-provider-finance.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
   "checkout.session.completed",
   "checkout.session.expired",
   "checkout.session.async_payment_succeeded",
-  "checkout.session.async_payment_failed"
+  "checkout.session.async_payment_failed",
+  ...STRIPE_CREATOR_FINANCE_EVENTS
 ]);
 
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -155,6 +157,8 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     stripePaymentIntentId: paymentIntentId
   });
 
+  if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)&&["processed","ignored"].includes(eventRecord.event.processing_status))return{duplicate:true,event:eventRecord.event,processingResult:eventRecord.event.processing_result||"duplicate_noop"};
+
   if (["processed", "ignored"].includes(eventRecord.event.processing_status)) {
     const fulfillment = await repairProcessedPaidOrder(
       database,
@@ -182,6 +186,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     attemptedAt: receivedAt
   });
   if (!claimed.claimed) {
+    if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)&&["processed","ignored"].includes(claimed.event?.processing_status))return{duplicate:true,event:claimed.event,processingResult:claimed.event.processing_result||"duplicate_noop"};
     if (["processed", "ignored"].includes(claimed.event?.processing_status)) {
       const fulfillment = await repairProcessedPaidOrder(
         database,
@@ -229,6 +234,11 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   }
   if (String(stripeEvent?.api_version || "") !== STRIPE_API_VERSION) {
     return fail("stripe_api_version_mismatch");
+  }
+
+  if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)){
+    try{const providerResult=await processStripeCreatorFinanceEvent(database,stripeEvent,{createdAt:stripeEventTimestamp(stripeEvent,receivedAt)}),result=await finalizeWebhookEvent(database,eventRecord.event,processingToken,{internalOrderId:providerResult.orderId,processingResult:providerResult.action,processingStatus:"processed",processedAt:receivedAt});return{...result,duplicate:Boolean(providerResult.duplicate),providerFinance:providerResult};}
+    catch{return fail("provider_financial_accounting_failed",400,null);}
   }
 
   if (!STRIPE_WEBHOOK_EVENT_TYPES.includes(eventType)) {
