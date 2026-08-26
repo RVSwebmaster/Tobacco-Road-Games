@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/office/*", "/owner/*", "/product-assets/*", "/ad-media/*", "/api/ads", "/api/auth/*", "/api/account/me", "/api/account/library", "/api/account/claim-order", "/api/forum/*", "/api/store/status", "/forum", "/forum/avatar/*", "/forum/category/*", "/forum/member/*", "/forum/topic/*", "/forum/moderation", "/api/cart/quote", "/api/cart/checkout", "/api/stripe/webhook", "/api/resend/webhook", "/api/orders/pending", "/api/orders/repair-fulfillment", "/api/discussions", "/api/discussions/*", "/store/*"],
+  "include": ["/office/*", "/owner/*", "/creator/*", "/product-assets/*", "/ad-media/*", "/api/ads", "/api/auth/*", "/api/account/me", "/api/account/library", "/api/account/claim-order", "/api/creator/*", "/api/forum/*", "/api/store/status", "/forum", "/forum/avatar/*", "/forum/category/*", "/forum/member/*", "/forum/topic/*", "/forum/moderation", "/api/cart/quote", "/api/cart/checkout", "/api/stripe/webhook", "/api/resend/webhook", "/api/orders/pending", "/api/orders/repair-fulfillment", "/api/discussions", "/api/discussions/*", "/store/*"],
   "exclude": []
 }
