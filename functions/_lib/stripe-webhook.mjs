@@ -8,6 +8,7 @@ import {
 import { repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
 import { OrderDeliveryError, deliverPaidOrderEmail } from "./order-delivery.mjs";
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
+import { creatorSaleStatements, getEffectiveFeePolicy, resolveFeePolicy } from "./creator-finance.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
   "checkout.session.completed",
@@ -73,7 +74,8 @@ export async function handleStripeWebhookRequest(request, env = {}, options = {}
       processingToken: options.processingToken,
       productsBucket: env.TRG_PRODUCTS,
       deliveryEnv: env,
-      deliveryFetchImpl: options.deliveryFetchImpl
+      deliveryFetchImpl: options.deliveryFetchImpl,
+      feePolicy: await getEffectiveFeePolicy(env.TRG_ORDERS,env,options.nowMs)
     });
     return jsonResponse({
       duplicate: result.duplicate,
@@ -285,6 +287,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       orderAction,
       paidAt: stripeEventTimestamp(stripeEvent, receivedAt),
       paymentIntentId,
+      feePolicy: options.feePolicy,
       processingResult,
       processingStatus: "processed",
       processedAt: receivedAt
@@ -392,6 +395,7 @@ async function finalizeWebhookEvent(database, eventRecord, processingToken, outc
       outcome.order.currency,
       outcome.paymentIntentId
     ));
+    statements.push(...await creatorSaleStatements(database,outcome.order,outcome.feePolicy||resolveFeePolicy({},Date.parse(outcome.paidAt)),outcome.paidAt));
   } else if (outcome.orderAction === "expired") {
     statements.push(database.prepare(`
       UPDATE orders SET payment_status = 'expired'
