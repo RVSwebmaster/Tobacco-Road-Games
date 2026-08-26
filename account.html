@@ -80,6 +80,15 @@
           <h2 id="library-heading">My Library</h2>
           <p id="library-status" class="discussion-status" role="status" aria-live="polite">Loading your library...</p>
           <div id="library-list" class="product-card-grid"></div>
+          <details class="account-recovery" id="purchase-recovery">
+            <summary>Recover a Previous Purchase</summary>
+            <p>Paste the secure order-access link from your delivery email. Your signed-in email must be verified and match the purchase.</p>
+            <form id="purchase-recovery-form" class="account-form">
+              <label>Order-access link <input name="accessLink" type="url" autocomplete="off" required></label>
+              <button type="submit" class="button button--secondary">Recover Purchase</button>
+            </form>
+            <p id="purchase-recovery-status" class="discussion-status" role="status" aria-live="polite"></p>
+          </details>
         </section>
 
         <section class="account-card account-card--reset" id="reset-panel" hidden aria-labelledby="reset-heading">

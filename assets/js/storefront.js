@@ -83,6 +83,16 @@
     const matchesFormat = !state.format || formats.includes(state.format);
     const matchesPriceType = !state.priceType || item.dataset.priceType === state.priceType;
     const matchesSale = !state.saleOnly || item.dataset.saleActive === "true";
+    const matchesDiscovery = !window.TRGMarketplaceDiscovery || window.TRGMarketplaceDiscovery.matchesMarketplaceProduct({
+      genre: item.dataset.genre,
+      playerCountMin: item.dataset.playerCountMin,
+      playerCountMax: item.dataset.playerCountMax,
+      gmMode: item.dataset.gmMode,
+      prepBurden: item.dataset.prepBurden,
+      playMode: item.dataset.playMode,
+      rulesComplexity: item.dataset.rulesComplexity,
+      mediaType: item.dataset.mediaType
+    }, state);
 
     return matchesQuery
       && matchesAuthor
@@ -92,7 +102,8 @@
       && matchesStatus
       && matchesFormat
       && matchesPriceType
-      && matchesSale;
+      && matchesSale
+      && matchesDiscovery;
   };
 
   const sortItems = (items, sortMode) => {
@@ -127,7 +138,14 @@
     format: root.querySelector("[data-filter-format]")?.value || "",
     priceType: root.querySelector("[data-filter-price-type]")?.value || "",
     sortMode: root.querySelector("[data-filter-sort]")?.value || "title",
-    saleOnly: Boolean(root.querySelector("[data-filter-sale]")?.checked)
+    saleOnly: Boolean(root.querySelector("[data-filter-sale]")?.checked),
+    genre: root.querySelector("[data-filter-genre]")?.value || "",
+    playerCount: root.querySelector("[data-filter-player-count]")?.value || "",
+    gmMode: root.querySelector("[data-filter-gm-mode]")?.value || "",
+    prepBurden: root.querySelector("[data-filter-prep-burden]")?.value || "",
+    playMode: root.querySelector("[data-filter-play-mode]")?.value || "",
+    rulesComplexity: root.querySelector("[data-filter-rules-complexity]")?.value || "",
+    mediaType: root.querySelector("[data-filter-media-type]")?.value || ""
   });
 
   const getAvailableViews = (root) => {

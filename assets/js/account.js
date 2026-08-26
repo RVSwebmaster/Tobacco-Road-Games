@@ -24,6 +24,8 @@
   const libraryPanel = document.querySelector("#library-panel");
   const libraryStatus = document.querySelector("#library-status");
   const libraryList = document.querySelector("#library-list");
+  const recoveryForm = document.querySelector("#purchase-recovery-form");
+  const recoveryStatus = document.querySelector("#purchase-recovery-status");
   let preparedAvatar = null;
   let previewObjectUrl = "";
   let csrfToken = "";
@@ -133,6 +135,24 @@
     }
     libraryStatus.textContent = `${payload.items.length} owned digital product${payload.items.length === 1 ? "" : "s"}.`;
   }
+
+  recoveryForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    recoveryStatus.textContent = "Verifying purchase access...";
+    recoveryStatus.classList.remove("discussion-status--error");
+    try {
+      const url = new URL(recoveryForm.elements.accessLink.value, window.location.origin);
+      const credential = url.searchParams.get("credential") || "";
+      if (!credential) throw new Error("Paste the complete order-access link from your delivery email.");
+      const payload = await api("/api/account/claim-order", { credential });
+      recoveryStatus.textContent = payload.message;
+      recoveryForm.reset();
+      await refreshLibrary();
+    } catch (error) {
+      recoveryStatus.textContent = error.message;
+      recoveryStatus.classList.add("discussion-status--error");
+    }
+  });
 
   async function refreshForumProfile(emailVerified) {
     const response = await fetch("/api/forum/profile/me", { credentials: "same-origin" });

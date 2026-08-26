@@ -69,6 +69,8 @@
       "Giant-Blooded",
       "Preview"
     ],
+    "genre": "fantasy",
+    "mediaType": "digital",
     "creationMethod": "Human-authored by RV Sawyer. All artwork in this product is Copyright 2026 RV Sawyer.",
     "legalNote": "Independent work compatible with fifth edition fantasy roleplaying games. Not affiliated with, endorsed by, sponsored by, or approved by Wizards of the Coast LLC. Includes SRD 5.1 and SRD 5.2.1 material under the Creative Commons Attribution 4.0 International License.",
     "version": "2026 release file",
@@ -580,6 +582,8 @@
       "SRD 5.1",
       "Preview"
     ],
+    "genre": "fantasy",
+    "mediaType": "digital",
     "creationMethod": "Human-authored by RV Sawyer.",
     "legalNote": "",
     "version": "2026 catalog preview",
@@ -802,6 +806,7 @@
     "tags": [
       "Tablecraft"
     ],
+    "mediaType": "digital",
     "creationMethod": "Human-authored by RV Sawyer.",
     "legalNote": "© 2026 Tobacco Road Game. All rights reserved. Written by RV Sawyer.",
     "version": "1.0",
@@ -882,6 +887,8 @@
       "Dungeons & Dragons",
       "SRD 5.1"
     ],
+    "genre": "fantasy",
+    "mediaType": "digital",
     "creationMethod": "Human-authored by RV Sawyer.",
     "legalNote": "",
     "version": "1.0",

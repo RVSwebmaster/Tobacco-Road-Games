@@ -368,6 +368,7 @@ function buildIndexes(products, authors) {
   const statusMap = new Map();
   const formatMap = new Map();
   const priceTypeMap = new Map();
+  const genres = new Set();
 
   for (const author of authors) {
     authorMap.set(author.slug, {
@@ -377,6 +378,7 @@ function buildIndexes(products, authors) {
   }
 
   for (const product of products) {
+    if (product.genre) genres.add(product.genre);
     for (const author of product.authorLinks) {
       const slug = author.slug;
       if (!authorMap.has(slug)) {
@@ -427,6 +429,7 @@ function buildIndexes(products, authors) {
     statuses: sortByName([...statusMap.values()], "label"),
     formats: sortByName([...formatMap.values()]),
     priceTypes: sortByName([...priceTypeMap.values()], "label"),
+    genres: [...genres].sort((left, right) => left.localeCompare(right)),
     hasActiveSales: products.some((product) => product.saleActive)
   };
 }
@@ -442,7 +445,7 @@ function renderStoreHome(products, indexes) {
     canonicalPath: "/store/",
     ogImage: featured?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
-    extraScripts: ["/assets/js/storefront.js?v=" + CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: STORE_TITLE,
       description: "Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games.",
@@ -564,7 +567,7 @@ function renderCatalogPage(products, indexes) {
     canonicalPath: "/store/catalog/",
     ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
-    extraScripts: ["/assets/js/storefront.js?v=" + CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
       description: "Search and browse Tobacco Road Games titles by creator, game system, product line, series, release status, and title.",
@@ -606,6 +609,7 @@ function renderProductPage(product, products) {
     ...(product.brand ? [renderIdentityItem("Brand", product.brand)] : []),
     renderIdentityItem("Game System", product.gameSystem),
     renderIdentityItem("Product Line", renderProductLineValue(product)),
+    ...renderMarketplaceIdentityItems(product),
     ...(product.series ? [renderIdentityItem("Series", renderSeriesValue(product))] : []),
     renderIdentityItem("Format", product.format.join(", ") || "TBD"),
     renderIdentityItem("Pages", product.pageCount ? String(product.pageCount) : "TBD"),
@@ -1225,6 +1229,14 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
           ${indexes.priceTypes.map((entry) => `<option value="${escapeAttribute(entry.slug)}">${escapeHtml(entry.label)}</option>`).join("")}
         </select>
       </label>
+
+      ${renderDiscoveryFilter("Genre", "genre", indexes.genres)}
+      <label class="catalog-control"><span>Players</span><input class="dock-input" type="number" min="1" max="100" placeholder="Any group size" data-filter-player-count></label>
+      ${renderDiscoveryFilter("GM", "gm-mode", ["required", "optional", "gm-less"])}
+      ${renderDiscoveryFilter("Prep", "prep-burden", ["none", "low", "moderate", "high"])}
+      ${renderDiscoveryFilter("Play", "play-mode", ["one-shot", "campaign", "either"])}
+      ${renderDiscoveryFilter("Complexity", "rules-complexity", ["light", "medium", "heavy"])}
+      ${renderDiscoveryFilter("Media", "media-type", ["digital", "physical", "hybrid"])}
 
       ${saleToggle}
 
@@ -2245,6 +2257,26 @@ function renderCatalogMeta(product) {
   ].filter(Boolean).join(" | ") || product.gameSystem;
 }
 
+function renderDiscoveryFilter(label, attribute, values) {
+  return `<label class="catalog-control"><span>${escapeHtml(label)}</span><select class="dock-input" data-filter-${attribute}><option value="">Any ${escapeHtml(label)}</option>${values.map((value) => `<option value="${value}">${escapeHtml(humanizeMetadata(value))}</option>`).join("")}</select></label>`;
+}
+
+function renderMarketplaceIdentityItems(product) {
+  const players = product.playerCountMin && product.playerCountMax
+    ? (product.playerCountMin === product.playerCountMax ? String(product.playerCountMin) : `${product.playerCountMin}–${product.playerCountMax}`) : "";
+  return [
+    players && renderIdentityItem("Players", players),
+    product.genre && renderIdentityItem("Genre", humanizeMetadata(product.genre)),
+    product.gmMode && renderIdentityItem("GM", humanizeMetadata(product.gmMode)),
+    product.prepBurden && renderIdentityItem("Prep", humanizeMetadata(product.prepBurden)),
+    product.playMode && renderIdentityItem("Play", humanizeMetadata(product.playMode)),
+    product.rulesComplexity && renderIdentityItem("Complexity", humanizeMetadata(product.rulesComplexity)),
+    product.mediaType && renderIdentityItem("Media", humanizeMetadata(product.mediaType))
+  ].filter(Boolean).map((item) => item.trimEnd());
+}
+
+function humanizeMetadata(value) { return String(value || "").replace("gm-less", "GMless").replace("one-shot", "One-shot").replace(/-/g, " ").replace(/^./, (letter) => letter.toUpperCase()); }
+
 function renderProductDatasetAttributes(product, searchText) {
   const resolvedSearchText = (searchText || [
     product.title,
@@ -2273,6 +2305,14 @@ function renderProductDatasetAttributes(product, searchText) {
     `data-release="${escapeAttribute(String(product.releaseStamp))}"`,
     `data-updated="${escapeAttribute(String(product.updatedStamp))}"`,
     `data-sale-active="${product.saleActive ? "true" : "false"}"`,
+    `data-genre="${escapeAttribute(product.genre || "")}"`,
+    `data-player-count-min="${escapeAttribute(String(product.playerCountMin || ""))}"`,
+    `data-player-count-max="${escapeAttribute(String(product.playerCountMax || ""))}"`,
+    `data-gm-mode="${escapeAttribute(product.gmMode || "")}"`,
+    `data-prep-burden="${escapeAttribute(product.prepBurden || "")}"`,
+    `data-play-mode="${escapeAttribute(product.playMode || "")}"`,
+    `data-rules-complexity="${escapeAttribute(product.rulesComplexity || "")}"`,
+    `data-media-type="${escapeAttribute(product.mediaType || "")}"`,
     `data-search="${escapeAttribute(resolvedSearchText)}"`
   ].join(" ");
 }
