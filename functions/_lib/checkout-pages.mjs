@@ -2,6 +2,7 @@ import { clearCheckoutAccessCookie, readCheckoutAccessCookie } from "./checkout-
 import { createDownloadCredential, isDownloadSigningSecretConfigured } from "./download-authorization.mjs";
 import { getOrderEntitlements } from "./order-fulfillment.mjs";
 import { getOrderByPublicId } from "./orders-d1.mjs";
+import { renderPublicNavigation } from "./public-navigation.mjs";
 
 const CACHE_BUST = "20260709b";
 
@@ -121,14 +122,10 @@ function htmlPage({ title, body }, setCookie) {
         <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Publisher-owned store and workshop catalog</span>
+          <span class="brand__tag">Independent games, remarkable creators, and tools for the table</span>
         </div>
       </a>
-      <nav class="site-nav" aria-label="Store navigation">
-        <a href="/">Home</a>
-        <a href="/store/">Store</a>
-        <a href="/store/cart/">Cart</a>
-      </nav>
+      ${renderPublicNavigation("store", "Store navigation")}
     </header>
     <main>
       <section class="store-section statement-page">

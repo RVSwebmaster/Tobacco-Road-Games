@@ -2,11 +2,18 @@ const AUTHORS = [
   {
     slug: "rv-sawyer",
     displayName: "RV Sawyer",
+    profileImage: "",
+    logo: "",
+    bannerImage: "",
     title: "Game Master, writer, and founder of Tobacco Road Games",
     shortBio:
       "RV Sawyer is the founder of Tobacco Road Games, shaped by 46 years behind the screen across fantasy, science fiction, horror, superheroes, pulp, westerns, survival play, and stranger roads besides.",
     longBio:
       "RV Sawyer writes tabletop tools, adventures, essays, and game material from the working side of the GM screen. Tobacco Road Games grew out of decades of actual table play: campaigns that survived, systems that taught hard lessons, monsters that became memories, and rules tested against real players doing beautifully unreasonable things.",
+    profileTemplate: "bookshelf",
+    accent: "",
+    marketplaceStatus: "active",
+    joinDate: "2026-05-27",
     links: [],
     blogPosts: [
       {

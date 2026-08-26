@@ -1,5 +1,6 @@
 import { getSessionFromRequest } from "./account-auth.mjs";
 import { getEligibleTopicCreator, listCategoryTopics } from "./forum-topics.mjs";
+import { renderPublicNavigation } from "./public-navigation.mjs";
 
 export async function handleForumCategoriesApi(request, env) {
   if (request.method !== "GET") return json({ error: { code: "method_not_allowed", message: "Use GET for forum categories." } }, 405);
@@ -104,11 +105,7 @@ function renderTopicCard(topic) {
 function formatDate(value) { return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value)); }
 
 function pageShell({ title, body, current }) {
-  const nav = [
-    ["home", "/", "Home"], ["store", "/store/", "Store"], ["authors", "/authors.html", "Authors"],
-    ["forum", "/forum", "Forum"], ["account", "/account.html", "Account"]
-  ].map(([key, href, label]) => `<a href="${href}"${current === key ? ' aria-current="page"' : ""}>${label}</a>`).join("");
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)} | Tobacco Road Games</title><meta name="description" content="Tobacco Road Games community forum"><link rel="icon" type="image/png" href="/assets/logo.png"><link rel="stylesheet" href="/styles.css?v=20260731b"></head><body class="view-section"><div class="page-shell"><header class="site-header"><a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/logo.png" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span><span class="brand__tag">A working GM's bench for strange tables and long campaigns</span></div></a><nav class="site-nav" aria-label="Primary">${nav}</nav></header><main>${body}</main></div></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)} | Tobacco Road Games</title><meta name="description" content="Tobacco Road Games community forum"><link rel="icon" type="image/png" href="/assets/logo.png"><link rel="stylesheet" href="/styles.css?v=20260731b"></head><body class="view-section"><div class="page-shell"><header class="site-header"><a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/logo.png" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span><span class="brand__tag">Independent games, remarkable creators, and tools for the table</span></div></a>${renderPublicNavigation(current)}</header><main>${body}</main></div></body></html>`;
 }
 
 function normalizeSlug(value) {

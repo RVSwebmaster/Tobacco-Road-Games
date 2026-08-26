@@ -17,6 +17,18 @@ const CACHE_BUST = "20260712-shelf12-hinges";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
+const CREATOR_TEMPLATES = new Set(["bookshelf", "catalog"]);
+const PUBLIC_NAV_ITEMS = Object.freeze([
+  { key: "store", href: "/store/", label: "Marketplace" },
+  { key: "creators", href: "/authors.html", label: "Creators" },
+  { key: "releases", href: "/store/#new-releases-bookshelf-heading", label: "New Releases" },
+  { key: "sales", href: "/store/catalog/", label: "Sales & Bundles" },
+  { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
+  { key: "forum", href: "/forum", label: "Community" },
+  { key: "about", href: "/#about", label: "About TRG" },
+  { key: "account", href: "/account.html", label: "Account / My Library" },
+  { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
+]);
 
 const STATUS_LABELS = {
   "available-direct": "Available Direct",
@@ -55,13 +67,15 @@ function main() {
   const products = loadProducts(authorLookup);
   const assetWarnings = collectAssetWarnings(products);
   const bundleRules = loadBundleRules();
-  const indexes = buildIndexes(products, authors);
+  const indexes = buildIndexes(products, authors.filter((creator) => creator.marketplaceStatus === "active"));
 
   fs.rmSync(STORE_DIR, { recursive: true, force: true });
   fs.mkdirSync(STORE_DIR, { recursive: true });
   fs.rmSync(path.join(ROOT, "authors"), { recursive: true, force: true });
+  fs.rmSync(path.join(ROOT, "creators"), { recursive: true, force: true });
 
   writeFile("authors.html", renderAuthorsIndexPage(indexes.authors));
+  writeFile("creators/index.html", renderCreatorDirectoryAlias());
   writeFile("store/authors/index.html", renderAliasPage({
     pageTitle: `Creators | ${STORE_TITLE}`,
     description: "Public creator profiles live on the main Tobacco Road Games site.",
@@ -74,9 +88,10 @@ function main() {
   }));
   for (const author of indexes.authors) {
     writeFile(`authors/${author.slug}/index.html`, renderAuthorProfilePage(author));
+    writeFile(`creators/${author.slug}/index.html`, renderCreatorProfileAlias(author));
     writeFile(`store/authors/${author.slug}/index.html`, renderAliasPage({
       pageTitle: `${author.name} | ${STORE_TITLE}`,
-      description: `Public author profile for ${author.name}.`,
+      description: `Public creator profile for ${author.name}.`,
       canonicalPath: author.url,
       currentNav: "authors",
       targetPath: author.url,
@@ -94,7 +109,10 @@ function main() {
     writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, products));
   }
 
-  buildHomepage(products);
+  buildHomepage(products, indexes, bundleRules);
+  buildAccountPage();
+  buildStaticPublicPage("ai-statement.html", "");
+  buildStaticPublicPage("support.html", "");
 
   for (const system of indexes.systems) {
     writeFile(`store/systems/${system.slug}/index.html`, renderCollectionPage({
@@ -205,13 +223,20 @@ function loadAuthors() {
       title: author.title || author.tagline || "",
       shortBio: author.shortBio || "",
       longBio: author.longBio || "",
-      imagePath: author.imagePath || author.avatar || "",
+      profileImage: author.profileImage || author.imagePath || author.avatar || "",
+      logo: author.logo || "",
+      bannerImage: author.bannerImage || "",
+      profileTemplate: CREATOR_TEMPLATES.has(author.profileTemplate) ? author.profileTemplate : "catalog",
+      accent: author.accent || "",
+      marketplaceStatus: author.marketplaceStatus || "active",
+      joinDate: author.joinDate || "",
       links: ensureArray(author.links).map((link) => ({
         label: link.label || link.title || link.name || "Link",
         url: link.url || link.href || ""
       })).filter((link) => link.url),
       blogPosts,
       url: `/authors/${slug}/`,
+      creatorUrl: `/creators/${slug}/`,
       storeUrl: `/store/authors/${slug}/`,
       products: []
     };
@@ -353,7 +378,13 @@ function buildIndexes(products, authors) {
           title: "",
           shortBio: "",
           longBio: "",
-          imagePath: "",
+          profileImage: "",
+          logo: "",
+          bannerImage: "",
+          profileTemplate: "catalog",
+          accent: "",
+          marketplaceStatus: "active",
+          joinDate: "",
           links: [],
           blogPosts: [],
           url: author.url || `/authors/${slug}/`,
@@ -561,7 +592,9 @@ function renderProductPage(product, products) {
   const previewSection = renderPreviewSection(product);
   const authorByline = renderAuthorByline(product);
   const detailsItems = [
-    renderIdentityItem("Author", product.authors.join(", ")),
+    renderIdentityItem("Creator", product.authors.join(", ")),
+    ...(product.publisher ? [renderIdentityItem("Publisher / Imprint", product.publisher)] : []),
+    ...(product.brand ? [renderIdentityItem("Brand", product.brand)] : []),
     renderIdentityItem("Game System", product.gameSystem),
     renderIdentityItem("Product Line", renderProductLineValue(product)),
     ...(product.series ? [renderIdentityItem("Series", renderSeriesValue(product))] : []),
@@ -875,24 +908,10 @@ function renderLayout({
 }
 
 function renderStoreNav(currentNav) {
-  const items = [
-    { key: "home", href: "/", label: "Home" },
-    { key: "authors", href: "/authors.html", label: "Creators" },
-    { key: "forum", href: "/forum", label: "Forum" },
-    { key: "store", href: "/store/", label: "Store" },
-    { key: "catalog", href: "/store/catalog/", label: "Catalog" },
-    { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' },
-    { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
-  ];
-
-  return `
-    <nav class="site-nav" aria-label="Store navigation">
-      ${items.map((item) => `<a href="${item.href}"${currentNav === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
-    </nav>
-  `;
+  return renderSharedPublicNav(currentNav, "Store navigation");
 }
 
-function buildHomepage(products) {
+function buildHomepage(products, indexes, bundleRules) {
   const homepagePath = path.join(ROOT, "index.html");
   const configPath = path.join(ROOT, "data", "homepage.json");
   if (!fs.existsSync(homepagePath) || !fs.existsSync(configPath)) return;
@@ -924,7 +943,68 @@ function buildHomepage(products) {
     workshopPattern,
     `$1${cards}$3`
   );
-  fs.writeFileSync(homepagePath, next);
+  const marketplaceSections = renderMarketplaceHomepageSections(products, indexes, bundleRules);
+  const generatedSectionPattern = /<!-- marketplace-home:start -->[\s\S]*?<!-- marketplace-home:end -->/;
+  const legacySectionPattern = /      <section class="latest" id="available"[\s\S]*?<\/section>\s*\n(?=\s*<section class="workshop")/;
+  const unmarkedGeneratedPattern = /<section class="latest" id="homepage-new-releases"[\s\S]*?<\/section>\s*\n(?=\s*<section class="workshop")/;
+  const withMarketplaceSections = generatedSectionPattern.test(next)
+    ? next.replace(generatedSectionPattern, marketplaceSections)
+    : legacySectionPattern.test(next)
+      ? next.replace(legacySectionPattern, `${marketplaceSections}\n`)
+      : unmarkedGeneratedPattern.test(next)
+        ? next.replace(unmarkedGeneratedPattern, `${marketplaceSections}\n`)
+        : (() => { throw new Error("Homepage marketplace entry section could not be found."); })();
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>/;
+  const withSharedNav = withMarketplaceSections.replace(navPattern, renderSharedPublicNav("home", "Primary"));
+  fs.writeFileSync(homepagePath, withSharedNav);
+}
+
+function buildAccountPage() {
+  const accountPath = path.join(ROOT, "account.html");
+  if (!fs.existsSync(accountPath)) return;
+  const html = fs.readFileSync(accountPath, "utf8");
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>/;
+  if (!navPattern.test(html)) throw new Error("Account navigation could not be found.");
+  const next = html
+    .replace(navPattern, renderSharedPublicNav("account", "Primary"))
+    .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
+    .replace("Your Tobacco Road Games Account", "Account / My Library")
+    .replace("Shared account foundation", "Customer account");
+  fs.writeFileSync(accountPath, next);
+}
+
+function buildStaticPublicPage(relativePath, currentNav) {
+  const pagePath = path.join(ROOT, relativePath);
+  if (!fs.existsSync(pagePath)) return;
+  const html = fs.readFileSync(pagePath, "utf8");
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>/;
+  if (!navPattern.test(html)) throw new Error(`${relativePath} navigation could not be found.`);
+  const next = html
+    .replace(navPattern, renderSharedPublicNav(currentNav, "Primary"))
+    .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
+    .replace("Published by RV Sawyer, built for tables that still surprise the person running them.", "A marketplace for independent creators, operated by Tobacco Road Games.");
+  fs.writeFileSync(pagePath, next);
+}
+
+function renderMarketplaceHomepageSections(products, indexes, bundleRules) {
+  const newReleases = chooseNewReleases(products).slice(0, 3);
+  const featured = sortProducts(products.filter((product) => product.featured), "title").slice(0, 3);
+  const sales = sortProducts(products.filter((product) => product.saleActive), "title").slice(0, 3);
+  const creators = indexes.authors.slice(0, 3);
+  const sections = [
+    renderHomepageProductSection("New Releases", "The latest creator releases in the marketplace.", newReleases),
+    renderHomepageProductSection("Featured Products", "Products selected through explicit catalog data.", featured),
+    renderHomepageProductSection("Current Sales", "Active discounts verified from current catalog pricing.", sales),
+    bundleRules.active ? `<section class="latest" aria-labelledby="homepage-bundles"><div class="section-heading"><p class="section-heading__kicker">Bundles</p><h2 id="homepage-bundles">Sales &amp; Bundles</h2><p>Browse the currently available marketplace bundle options.</p></div><div class="available__action"><a class="button button--primary" href="/store/bundles/bundle-what-you-want/">Browse Bundles</a></div></section>` : "",
+    creators.length ? `<section class="latest" aria-labelledby="homepage-creators"><div class="section-heading"><p class="section-heading__kicker">Creator Spotlight</p><h2 id="homepage-creators">Meet marketplace creators</h2><p>Active creators shown in neutral alphabetical order.</p></div><div class="browse-card-grid">${creators.map((creator) => `<a class="browse-card" href="${escapeAttribute(creator.url)}"><strong>${escapeHtml(creator.name)}</strong><span>${escapeHtml(creator.shortBio || `${creator.products.length} marketplace titles`)}</span></a>`).join("")}</div></section>` : ""
+  ];
+  return `<!-- marketplace-home:start -->\n${sections.filter(Boolean).join("\n")}\n<!-- marketplace-home:end -->`;
+}
+
+function renderHomepageProductSection(title, description, products) {
+  if (!products.length) return "";
+  const id = `homepage-${slugify(title)}`;
+  return `<section class="latest" id="${id}" aria-labelledby="${id}-heading"><div class="section-heading"><p class="section-heading__kicker">Marketplace</p><h2 id="${id}-heading">${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p></div><div class="browse-card-grid">${products.map((product) => `<a class="browse-card" href="${escapeAttribute(product.url)}"><strong>${escapeHtml(product.title)}</strong><span>By ${escapeHtml(product.authors.join(", "))}</span></a>`).join("")}</div></section>`;
 }
 
 function renderFeatureSpotlight(product) {
@@ -1356,15 +1436,7 @@ function renderAuthorProfilePage(author) {
             <p class="section-heading__kicker">Products</p>
             <h2 id="author-products-heading">Creator Catalog</h2>
           </div>
-          ${author.products.length ? `
-            <div class="bookshelf-stack author-product-bookshelf">
-              ${renderBookshelfRows(sortProducts(author.products, "title"), (product, shelfIndex) => renderBookshelfBook(product, { edgeRight: shelfIndex >= 10 }))}
-            </div>
-          ` : `
-            <div class="about__panel">
-              <p>Public catalog titles will appear here as they are added to the store.</p>
-            </div>
-          `}
+          ${renderCreatorProducts(author)}
         </section>
 
         <section class="store-section" aria-labelledby="author-posts-heading">
@@ -1511,17 +1583,51 @@ function renderAliasPage({
 }
 
 function renderPublicNav(currentNav) {
-  const items = [
-    { key: "home", href: "/", label: "Home" },
-    { key: "authors", href: "/authors.html", label: "Authors" },
-    { key: "forum", href: "/forum", label: "Forum" },
-    { key: "store", href: "/store/", label: "Store" },
-    { key: "ai", href: "/ai-statement.html", label: "AI Statement" }
-  ];
+  return renderSharedPublicNav(currentNav, "Primary");
+}
 
+function renderCreatorProducts(creator) {
+  if (!creator.products.length) {
+    return `<div class="about__panel"><p>Public catalog titles will appear here as they are added to the marketplace.</p></div>`;
+  }
+  const products = sortProducts(creator.products, "title");
+  if (creator.profileTemplate === "bookshelf") {
+    return `<div class="bookshelf-stack author-product-bookshelf" data-creator-template="bookshelf">${renderBookshelfRows(products, (product, shelfIndex) => renderBookshelfBook(product, { edgeRight: shelfIndex >= 10 }))}</div>`;
+  }
+  return `<div class="product-card-grid" data-creator-template="catalog">${products.map((product) => renderProductCard(product)).join("")}</div>`;
+}
+
+function renderCreatorDirectoryAlias() {
+  return renderAliasPage({
+    pageTitle: "Creators | Tobacco Road Games",
+    description: "Browse active creators publishing through Tobacco Road Games.",
+    canonicalPath: "/authors.html",
+    currentNav: "creators",
+    targetPath: "/authors.html",
+    kicker: "Creators",
+    title: "The creator directory has moved.",
+    body: "Continue to the public Tobacco Road Games creator directory. This alias prepares the marketplace for permanent creator URLs without breaking existing links."
+  });
+}
+
+function renderCreatorProfileAlias(creator) {
+  return renderAliasPage({
+    pageTitle: `${creator.name} | Tobacco Road Games`,
+    description: creator.shortBio || `Creator profile for ${creator.name}.`,
+    canonicalPath: creator.url,
+    currentNav: "creators",
+    targetPath: creator.url,
+    kicker: "Creator",
+    title: creator.name,
+    body: "Continue to this creator's established profile. The /creators/ address is a compatibility alias while public URLs transition safely."
+  });
+}
+
+function renderSharedPublicNav(currentNav, ariaLabel) {
+  const normalizedCurrent = currentNav === "authors" ? "creators" : currentNav === "catalog" ? "sales" : currentNav;
   return `
-    <nav class="site-nav" aria-label="Primary">
-      ${items.map((item) => `<a href="${item.href}"${currentNav === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
+    <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}">
+      ${PUBLIC_NAV_ITEMS.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
     </nav>
   `;
 }
@@ -1529,6 +1635,7 @@ function renderPublicNav(currentNav) {
 function renderAuthorCard(author) {
   return `
     <article class="author-card">
+      ${author.profileImage ? `<img class="author-card__image" src="${escapeAttribute(author.profileImage)}" alt="${escapeAttribute(author.name)} profile image">` : ""}
       <p class="note-card__label">Creator</p>
       <h2>${escapeHtml(author.name)}</h2>
       ${author.title ? `<p class="author-card__tagline">${escapeHtml(author.title)}</p>` : ""}

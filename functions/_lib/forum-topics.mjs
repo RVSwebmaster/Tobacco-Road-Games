@@ -2,6 +2,7 @@ import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf }
 import { avatarPublicFields } from "./forum-avatars.mjs";
 import { getModeratorSession, REPORT_REASONS } from "./forum-moderation.mjs";
 import { checkForumActionLimit } from "./forum-rate-limits.mjs";
+import { renderPublicNavigation } from "./public-navigation.mjs";
 
 const JSON_LIMIT = 24 * 1024;
 
@@ -240,7 +241,7 @@ function invalid(code, message) { return { valid: false, code, message }; }
 function escapeHtml(value) { return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 function publicNotFound(code, message) { return jsonError(code, message, 404); }
 function topicNotFound() { return htmlResponse(pageShell({ title: "Forum topic not found", body: `<section class="store-section"><h1>Forum topic not found</h1><p>That forum topic is not available.</p><p><a class="button button--secondary" href="/forum">Back to Forum Home</a></p></section>` }), 404); }
-function pageShell({ title, body }) { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)} | Tobacco Road Games</title><link rel="icon" type="image/png" href="/assets/logo.png"><link rel="stylesheet" href="/styles.css?v=20260731c"></head><body class="view-section"><div class="page-shell"><header class="site-header"><a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/logo.png" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span><span class="brand__tag">A working GM's bench for strange tables and long campaigns</span></div></a><nav class="site-nav" aria-label="Primary"><a href="/">Home</a><a href="/store/">Store</a><a href="/authors.html">Authors</a><a href="/forum" aria-current="page">Forum</a><a href="/account.html">Account</a></nav></header><main>${body}</main></div></body></html>`; }
+function pageShell({ title, body }) { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)} | Tobacco Road Games</title><link rel="icon" type="image/png" href="/assets/logo.png"><link rel="stylesheet" href="/styles.css?v=20260731c"></head><body class="view-section"><div class="page-shell"><header class="site-header"><a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/logo.png" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span><span class="brand__tag">Independent games, remarkable creators, and tools for the table</span></div></a>${renderPublicNavigation("forum")}</header><main>${body}</main></div></body></html>`; }
 function htmlResponse(body, status = 200) { return new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8" } }); }
 function json(payload, status = 200, extraHeaders = {}) { return new Response(JSON.stringify(payload), { status, headers: { "cache-control": "private, no-store", "content-type": "application/json; charset=utf-8", ...extraHeaders } }); }
 function jsonError(code, message, status) { return json({ error: { code, message } }, status); }
