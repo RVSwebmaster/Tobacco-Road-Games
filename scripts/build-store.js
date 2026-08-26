@@ -63,14 +63,14 @@ function main() {
 
   writeFile("authors.html", renderAuthorsIndexPage(indexes.authors));
   writeFile("store/authors/index.html", renderAliasPage({
-    pageTitle: `Authors | ${STORE_TITLE}`,
-    description: "Public author profiles live on the main Tobacco Road Games site.",
+    pageTitle: `Creators | ${STORE_TITLE}`,
+    description: "Public creator profiles live on the main Tobacco Road Games site.",
     canonicalPath: "/authors.html",
     currentNav: "authors",
     targetPath: "/authors.html",
-    kicker: "Authors",
-    title: "Public author profiles now live outside the catalog.",
-    body: "Use the main Authors page to browse public profiles, workshop notes, and linked products."
+    kicker: "Creators",
+    title: "Public creator profiles now live outside the catalog.",
+    body: "Use the main Creators page to browse public profiles, workshop notes, and linked products."
   }));
   for (const author of indexes.authors) {
     writeFile(`authors/${author.slug}/index.html`, renderAuthorProfilePage(author));
@@ -80,9 +80,9 @@ function main() {
       canonicalPath: author.url,
       currentNav: "authors",
       targetPath: author.url,
-      kicker: "Author",
+      kicker: "Creator",
       title: author.name,
-      body: "This public author profile has moved to the main Tobacco Road Games author section so workshop pages and store pages can point to the same place."
+      body: "This public creator profile has moved to the main Tobacco Road Games creator section so workshop pages and store pages can point to the same place."
     }));
   }
 
@@ -494,13 +494,13 @@ function renderStoreHome(products, indexes) {
         ${renderBrowseSection("Browse by Game System", indexes.systems, (entry) => `/store/systems/${entry.slug}/`)}
         ${renderBrowseSection("Browse by Product Line", indexes.lines, (entry) => `/store/lines/${entry.slug}/`)}
         ${renderBrowseSection("Browse by Series", indexes.series, (entry) => `/store/series/${entry.slug}/`)}
-        ${renderBrowseSection("Browse by Author", indexes.authors, (entry) => entry.url)}
+        ${renderBrowseSection("Browse by Creator", indexes.authors, (entry) => entry.url)}
 
         <section class="store-section store-callout" aria-labelledby="catalog-link-heading">
           <div class="store-callout__copy">
             <p class="section-heading__kicker">Catalog</p>
             <h2 id="catalog-link-heading">Search and browse the full Tobacco Road Games catalog.</h2>
-            <p>Search titles by author, game system, product line, series, status, format, and price type from one clean catalog page.</p>
+            <p>Search titles by creator, game system, product line, series, status, format, and price type from one clean catalog page.</p>
           </div>
           <div class="store-callout__panel">
             <p class="note-card__label">Catalog Access</p>
@@ -520,14 +520,14 @@ function renderCatalogPage(products, indexes) {
 
   return renderLayout({
     pageTitle: `${STORE_TITLE} Catalog | Search and Browse Titles`,
-    description: "Search and browse Tobacco Road Games titles by author, game system, product line, series, release status, and title.",
+    description: "Search and browse Tobacco Road Games titles by creator, game system, product line, series, release status, and title.",
     canonicalPath: "/store/catalog/",
     ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
     extraScripts: ["/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
-      description: "Search and browse Tobacco Road Games titles by author, game system, product line, series, release status, and title.",
+      description: "Search and browse Tobacco Road Games titles by creator, game system, product line, series, release status, and title.",
       url: `${BASE_URL}/store/catalog/`
     }),
     content: `
@@ -538,7 +538,7 @@ function renderCatalogPage(products, indexes) {
           <div class="section-heading">
             <p class="section-heading__kicker">Catalog</p>
             <h1 id="catalog-heading">Search and browse Tobacco Road Games titles.</h1>
-            <p>Browse by author, game system, category or line, series, release status, format, and price type.</p>
+            <p>Browse by creator, game system, category or line, series, release status, format, and price type.</p>
           </div>
           ${renderStoreBrowser(sortedProducts, indexes, {
             browserId: "catalog-browser",
@@ -866,7 +866,7 @@ function renderLayout({
         <img src="/assets/logo.png?v=${CACHE_BUST}" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
-      <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
+      <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
       <a class="footer-link" href="/ai-statement.html">Read the AI Statement</a>
     </footer>
   </div>
@@ -877,7 +877,7 @@ function renderLayout({
 function renderStoreNav(currentNav) {
   const items = [
     { key: "home", href: "/", label: "Home" },
-    { key: "authors", href: "/authors.html", label: "Authors" },
+    { key: "authors", href: "/authors.html", label: "Creators" },
     { key: "forum", href: "/forum", label: "Forum" },
     { key: "store", href: "/store/", label: "Store" },
     { key: "catalog", href: "/store/catalog/", label: "Catalog" },
@@ -1059,13 +1059,13 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
     <div class="catalog-controls" data-store-controls>
       <label class="catalog-control">
         <span>Title Search</span>
-        <input class="dock-input" type="search" placeholder="Search titles, authors, systems, series, tags" data-filter-search>
+        <input class="dock-input" type="search" placeholder="Search titles, creators, systems, series, tags" data-filter-search>
       </label>
 
       <label class="catalog-control">
-        <span>Author</span>
+        <span>Creator</span>
         <select class="dock-input" data-filter-author>
-          <option value="">All Authors</option>
+          <option value="">All Creators</option>
           ${indexes.authors.map((author) => `<option value="${escapeAttribute(author.slug)}">${escapeHtml(author.name)}</option>`).join("")}
         </select>
       </label>
@@ -1268,8 +1268,8 @@ function renderBrowseSection(title, entries, hrefBuilder) {
 
 function renderAuthorsIndexPage(authors) {
   return renderPublicLayout({
-    pageTitle: "Authors | Tobacco Road Games",
-    description: "Meet the public authors writing tabletop tools, adventures, essays, and workshop material for Tobacco Road Games.",
+    pageTitle: "Creators | Tobacco Road Games",
+    description: "Meet the creators publishing tabletop games, tools, adventures, and workshop material through Tobacco Road Games.",
     canonicalPath: "/authors.html",
     currentNav: "authors",
     structuredData: renderBreadcrumbSchema([
@@ -1280,13 +1280,13 @@ function renderAuthorsIndexPage(authors) {
       <main id="top">
         ${renderBreadcrumbs([
           { label: "Home", href: "/" },
-          { label: "Authors" }
+          { label: "Creators" }
         ])}
         <section class="store-section" aria-labelledby="authors-heading">
           <div class="section-heading">
-            <p class="section-heading__kicker">Authors</p>
-            <h1 id="authors-heading">The people behind the work.</h1>
-            <p>Meet the public authors writing from the working side of the screen at Tobacco Road Games.</p>
+            <p class="section-heading__kicker">Creators</p>
+            <h1 id="authors-heading">Meet the people behind the work.</h1>
+            <p>Explore creators publishing through the Tobacco Road Games marketplace.</p>
           </div>
           <div class="author-card-grid">
             ${authors.map((author) => renderAuthorCard(author)).join("")}
@@ -1306,7 +1306,7 @@ function renderAuthorProfilePage(author) {
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Home", href: "/" },
-        { label: "Authors", href: "/authors.html" },
+        { label: "Creators", href: "/authors.html" },
         { label: author.name, href: author.url }
       ]),
       renderPersonSchema(author)
@@ -1315,13 +1315,13 @@ function renderAuthorProfilePage(author) {
       <main id="top">
         ${renderBreadcrumbs([
           { label: "Home", href: "/" },
-          { label: "Authors", href: "/authors.html" },
+          { label: "Creators", href: "/authors.html" },
           { label: author.name }
         ])}
 
         <section class="author-hero store-section" aria-labelledby="${escapeAttribute(author.slug)}-heading">
           <div class="author-hero__copy">
-            <p class="section-heading__kicker">Author</p>
+            <p class="section-heading__kicker">Creator</p>
             <h1 id="${escapeAttribute(author.slug)}-heading">${escapeHtml(author.name)}</h1>
             ${author.title ? `<p class="product-subtitle">${escapeHtml(author.title)}</p>` : ""}
             ${author.shortBio ? `<p class="hero__lead">${escapeHtml(author.shortBio)}</p>` : ""}
@@ -1354,7 +1354,7 @@ function renderAuthorProfilePage(author) {
         <section class="store-section" aria-labelledby="author-products-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Products</p>
-            <h2 id="author-products-heading">Author Products</h2>
+            <h2 id="author-products-heading">Creator Catalog</h2>
           </div>
           ${author.products.length ? `
             <div class="bookshelf-stack author-product-bookshelf">
@@ -1370,7 +1370,7 @@ function renderAuthorProfilePage(author) {
         <section class="store-section" aria-labelledby="author-posts-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">News and Notes</p>
-            <h2 id="author-posts-heading">Author Blog and Workshop Posts</h2>
+            <h2 id="author-posts-heading">Creator News and Workshop Posts</h2>
           </div>
           ${author.blogPosts.length ? `
             <div class="author-post-grid">
@@ -1450,7 +1450,7 @@ function renderPublicLayout({
         <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">A working GM's bench for strange tables and long campaigns</span>
+          <span class="brand__tag">Independent games, remarkable creators, and tools for the table</span>
         </div>
       </a>
 
@@ -1464,7 +1464,7 @@ function renderPublicLayout({
         <img src="/assets/logo.png?v=${CACHE_BUST}" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
-      <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
+      <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
       <a class="footer-link" href="/ai-statement.html">Read the AI Statement</a>
     </footer>
   </div>
@@ -1529,7 +1529,7 @@ function renderPublicNav(currentNav) {
 function renderAuthorCard(author) {
   return `
     <article class="author-card">
-      <p class="note-card__label">Author</p>
+      <p class="note-card__label">Creator</p>
       <h2>${escapeHtml(author.name)}</h2>
       ${author.title ? `<p class="author-card__tagline">${escapeHtml(author.title)}</p>` : ""}
       ${author.shortBio ? `<p class="author-card__bio">${escapeHtml(author.shortBio)}</p>` : ""}

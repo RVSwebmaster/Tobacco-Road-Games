@@ -7,80 +7,34 @@
   <title>Tobacco Road Games</title>
   <meta
     name="description"
-    content="Tobacco Road Games is the tabletop publishing workshop of RV Sawyer, a Game Master with 46 years behind the screen."
+    content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."
   >
   <link rel="canonical" href="https://tobaccoroadgames.com/">
   <meta name="theme-color" content="#120c08">
-  <script>
-    (() => {
-      const introKey = "trgWallpaperIntroSeen";
-
-      const hasWindowNameFlag = () =>
-        typeof window.name === "string" && window.name.split("|").includes(`${introKey}=1`);
-
-      const markIntroSeen = () => {
-        try {
-          window.sessionStorage.setItem(introKey, "1");
-        } catch {}
-
-        if (!hasWindowNameFlag()) {
-          window.name = window.name ? `${window.name}|${introKey}=1` : `${introKey}=1`;
-        }
-      };
-
-      try {
-        const introSeen = window.sessionStorage.getItem(introKey) === "1" || hasWindowNameFlag();
-        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-        if (!introSeen && !prefersReducedMotion) {
-          document.documentElement.classList.add("trg-intro-pending");
-          markIntroSeen();
-        } else if (prefersReducedMotion) {
-          markIntroSeen();
-        }
-      } catch {
-        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-        if (!hasWindowNameFlag() && !prefersReducedMotion) {
-          document.documentElement.classList.add("trg-intro-pending");
-          markIntroSeen();
-        } else if (prefersReducedMotion) {
-          markIntroSeen();
-        }
-      }
-    })();
-  </script>
   <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
   <link rel="stylesheet" href="styles.css?v=20260717a">
 </head>
 <body>
-  <div class="site-intro" aria-hidden="true">
-    <div class="site-intro__panel">
-      <p class="site-intro__kicker">Tobacco Road Games</p>
-      <p class="site-intro__copy">Enter when you're ready.</p>
-      <button type="button" class="button button--secondary site-intro__button">Enter Site</button>
-    </div>
-  </div>
-
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="#top" aria-label="Tobacco Road Games home">
         <img class="brand__logo" src="assets/logo.png?v=20260717a" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">A working GM's bench for strange tables and long campaigns</span>
+          <span class="brand__tag">Independent games, remarkable creators, and tools for the table</span>
         </div>
       </a>
 
       <nav class="site-nav" aria-label="Primary">
-        <a href="#about">About</a>
-        <a href="authors.html">Authors</a>
-        <a href="#workshop">Workshop</a>
-        <a href="/store/">Live Store</a>
+        <a href="/store/">Marketplace</a>
+        <a href="authors.html">Creators</a>
+        <a href="/store/#new-releases-bookshelf-heading">New Releases</a>
+        <a href="/store/catalog/">Sales &amp; Bundles</a>
+        <a href="#physical-goods">Physical Goods</a>
         <a href="/forum">Forum</a>
-        <a href="#pillars">What We Build</a>
-        <a href="ai-statement.html">AI Statement</a>
-        <a href="account.html">Account</a>
+        <a href="#about">About TRG</a>
+        <a href="account.html">Account / My Library</a>
+        <a href="/store/cart/">Cart</a>
       </nav>
     </header>
 
@@ -88,30 +42,29 @@
       <section class="hero" aria-label="Tobacco Road Games introduction">
         <div class="hero__panel">
           <p class="hero__eyebrow">Tobacco Road Games</p>
-          <h1>Games with teeth. Stories with roots. Tools for the table.</h1>
+          <h1>Find your next game—and the creators behind it.</h1>
           <p class="hero__lead">
-            Tobacco Road Games is the tabletop publishing workshop of RV Sawyer, shaped by 46 years behind the screen
-            across fantasy, science fiction, horror, superheroes, pulp, westerns, survival play, and stranger roads
-            besides.
+            Tobacco Road Games is an independent tabletop marketplace connecting players with distinctive games,
+            practical tools, and creator-led releases. RV Sawyer is one of the creators publishing here.
           </p>
 
           <div class="hero__actions">
-            <a class="button button--primary" href="/store/">Browse the Store</a>
-            <a class="button button--secondary" href="#workshop">From the Workshop</a>
+            <a class="button button--primary" href="/store/">Browse the Marketplace</a>
+            <a class="button button--secondary" href="authors.html">Meet the Creators</a>
           </div>
         </div>
 
-        <aside class="hero__bench" aria-label="Workshop notes">
+        <aside class="hero__bench" aria-label="Marketplace highlights">
           <article class="note-card">
-            <p class="note-card__label">Behind the screen</p>
-            <h2>46 years behind the screen</h2>
-            <p>Decades of live table experience across genres, systems, campaigns, one-shots, disasters, miracles, and the beautiful nonsense only players can create.</p>
+            <p class="note-card__label">Creator-led</p>
+            <h2>Know who made the game</h2>
+            <p>Every game belongs to its creator or publisher identity, with room for new voices as the marketplace grows.</p>
           </article>
 
           <article class="note-card">
-            <p class="note-card__label">What comes out of the shop</p>
-            <h2>Rules with scars, monsters with motives</h2>
-            <p>The work here grows out of actual sessions, where theory has to survive players, pacing, and bad decisions in the dark.</p>
+            <p class="note-card__label">Built for discovery</p>
+            <h2>Browse your way</h2>
+            <p>Use the catalog, filters, and bookshelf to explore by creator, system, line, format, price, and release status.</p>
           </article>
         </aside>
       </section>
@@ -120,18 +73,18 @@
         <div class="section-heading">
           <p class="section-heading__kicker">Available now</p>
           <h2 id="available-heading">Books for the table</h2>
-          <p>Tabletop roleplaying material published by Tobacco Road Games and available through the direct store.</p>
+          <p>Tabletop games and tools from independent creators, available through the Tobacco Road Games marketplace.</p>
         </div>
         <div class="available__action">
-          <a class="button button--primary" href="/store/">Browse All Products</a>
+          <a class="button button--primary" href="/store/">Browse the Marketplace</a>
         </div>
       </section>
 
       <section class="workshop" id="workshop" aria-labelledby="workshop-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Work in progress</p>
-          <h2 id="workshop-heading">From the Workshop</h2>
-          <p>What Tobacco Road Games is developing, where the work stands, and what is ready to examine.</p>
+          <p class="section-heading__kicker">Recently updated</p>
+          <h2 id="workshop-heading">Fresh from the creators</h2>
+          <p>New and updated work from creators publishing through Tobacco Road Games.</p>
         </div>
         <article class="workshop-card">
           <div class="workshop-card__media">
@@ -167,45 +120,45 @@
 
       <section class="about" id="about" aria-labelledby="about-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Built from the working side of the screen</p>
-          <h2 id="about-heading">Table-tested, not theory-tested</h2>
+          <p class="section-heading__kicker">About the marketplace</p>
+          <h2 id="about-heading">Tobacco Road Games operates the road. Creators make the games.</h2>
         </div>
 
         <div class="about__panel">
           <p>
-            RV Sawyer has spent decades running games across systems, genres, tones, and player temperaments. Tobacco
-            Road Games grows out of that practical table experience, not from abstract advice written at a distance.
+            Tobacco Road Games is the marketplace operator: the home for catalog discovery, commerce, customer
+            accounts, and community. Creator, publisher, imprint, brand, and product identities remain distinct.
           </p>
           <p>
-            This is a working GM's bench, rules with scars, adventures with
-            weather, monsters with motives, and tools that know the table is alive.
+            RV Sawyer is the founder and a creator on the marketplace. RV Sawyer products use the same creator system
+            that future marketplace creators will use.
           </p>
         </div>
       </section>
 
-      <section class="pillars" aria-labelledby="pillars-heading">
+      <section class="pillars" id="physical-goods" aria-labelledby="pillars-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Three roads through the workshop</p>
-          <h2 id="pillars-heading">What Tobacco Road Games builds</h2>
+          <p class="section-heading__kicker">More ways to explore</p>
+          <h2 id="pillars-heading">The marketplace is growing</h2>
         </div>
 
         <div class="pillar-grid">
           <article class="pillar-card">
-            <p class="pillar-card__label">Tablecraft</p>
-            <h3>GM tools that survive contact with play</h3>
-            <p>GM advice, monster behavior, consequences, procedures, encounter tools, and practical guidance for tables where tension has to earn its keep.</p>
+            <p class="pillar-card__label">Digital games</p>
+            <h3>Creator releases for the table</h3>
+            <p>Discover adventures, settings, player options, systems, and practical tools across creators and game lines.</p>
           </article>
 
           <article class="pillar-card">
-            <p class="pillar-card__label">Charactercraft</p>
-            <h3>Player-facing material with something to say</h3>
-            <p>Player options, class and subclass material, character-facing rules, sheets, growth tools, and inspiration engines built for actual use.</p>
+            <p class="pillar-card__label">Community</p>
+            <h3>Conversation beyond the catalog</h3>
+            <p>Join the forum and creator discussions without changing the community systems already in place.</p>
           </article>
 
           <article class="pillar-card">
-            <p class="pillar-card__label">Strange Roads</p>
-            <h3>Adventures, systems, folklore, weather, and weird frontiers</h3>
-            <p>Adventures, systems, survival-minded play, folklore horror, science fiction grit, mythic forests, pulp danger, and stranger country besides.</p>
+            <p class="pillar-card__label">TRG house goods</p>
+            <h3>Physical goods are coming later</h3>
+            <p>Future coffee, shirts, dice, accessories, and promotional goods will belong to the Tobacco Road Games brand—not to a creator identity.</p>
           </article>
         </div>
       </section>
@@ -217,27 +170,13 @@
         <img src="assets/logo.png?v=20260717a" alt="">
       </a>
       <p>&copy; <span id="year-text">2026</span> Tobacco Road Games.</p>
-      <p>Published by RV Sawyer, built for tables that still surprise the person running them.</p>
+      <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
       <a class="footer-link" href="ai-statement.html">Read the AI Statement</a>
     </footer>
   </div>
 
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const introRoot = document.documentElement;
-      const introButton = document.querySelector(".site-intro__button");
-      const introIsActive = introRoot.classList.contains("trg-intro-pending");
-      const introDelayMs = 20000;
-
-      if (introIsActive) {
-        const dismissIntro = () => {
-          introRoot.classList.remove("trg-intro-pending");
-        };
-
-        introButton?.addEventListener("click", dismissIntro, { once: true });
-        window.setTimeout(dismissIntro, introDelayMs);
-      }
-
       const body = document.body;
       const hero = document.querySelector(".hero");
 
