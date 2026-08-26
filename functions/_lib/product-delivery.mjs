@@ -1,3 +1,5 @@
+import { getRuntimeCatalogProduct } from "./runtime-catalog.mjs";
+
 const DELIVERY_PRODUCTS = Object.freeze({
   agency: Object.freeze({
     contentType: "application/pdf",
@@ -14,8 +16,14 @@ const DELIVERY_PRODUCTS = Object.freeze({
 });
 
 export function getDeliveryProduct(productSlug) {
-  return DELIVERY_PRODUCTS[String(productSlug || "").trim().toLowerCase()] || null;
+  const slug=String(productSlug||"").trim().toLowerCase();
+  if(DELIVERY_PRODUCTS[slug])return DELIVERY_PRODUCTS[slug];
+  const product=getRuntimeCatalogProduct(slug);
+  if(!product?.creatorId||!product.fulfillmentEligible)return null;
+  return {contentType:"application/pdf",customerFilename:`${safeFilename(product.title)}.pdf`,productSlug:slug,r2ObjectKey:`${slug}/product.pdf`};
 }
+
+function safeFilename(value){return String(value||"Product").replace(/[<>:"/\\|?*\u0000-\u001F]/g,"").trim().slice(0,120)||"Product";}
 
 export function isExactDeliveryMapping(entitlement, product) {
   return Boolean(

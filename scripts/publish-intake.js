@@ -7,6 +7,12 @@ const PRODUCTS_PATH = path.join(ROOT, "data", "products.json");
 const INTAKE_MAP_PATH = path.join(ROOT, "data", "product-intake-map.json");
 const SHARED_FOLDER_MAP_PATH = path.join(ROOT, "shared", "product-folder-map.mjs");
 
+function atomicWriteFile(target, contents) {
+  const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporary, contents);
+  fs.renameSync(temporary, target);
+}
+
 if (require.main === module) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
@@ -68,6 +74,12 @@ async function applyPublishPayload(rootDir, clientPayload) {
   if (String(clientPayload?.operation || "").trim() === "pricing_update") {
     return applyPricingUpdatePayload(rootDir, clientPayload);
   }
+  if (String(clientPayload?.operation || "").trim() === "creator_bundle_publication") {
+    return applyCreatorBundlePayload(rootDir, clientPayload);
+  }
+  if (String(clientPayload?.operation || "").trim() === "creator_pause") {
+    return applyCreatorPausePayload(rootDir, clientPayload);
+  }
 
   const metadata = normalizePublishMetadata(clientPayload.metadata || {});
   const folder = normalizeFolderName(clientPayload.folder);
@@ -92,9 +104,9 @@ async function applyPublishPayload(rootDir, clientPayload) {
   const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
   const nextProducts = upsertProducts(products, metadata);
 
-  fs.writeFileSync(sharedMapPath, renderSharedFolderMapModule(nextSharedFolderMap));
-  fs.writeFileSync(intakeMapPath, `${JSON.stringify(nextIntakeMap, null, 2)}\n`);
-  fs.writeFileSync(productsPath, `${JSON.stringify(nextProducts, null, 2)}\n`);
+  atomicWriteFile(sharedMapPath, renderSharedFolderMapModule(nextSharedFolderMap));
+  atomicWriteFile(intakeMapPath, `${JSON.stringify(nextIntakeMap, null, 2)}\n`);
+  atomicWriteFile(productsPath, `${JSON.stringify(nextProducts, null, 2)}\n`);
 
   return {
     folder,
@@ -141,6 +153,7 @@ function normalizePublishMetadata(metadata) {
     buyMode,
     buyUrl: buyMode === "cart" ? "" : chooseText(metadata.buyUrl, ""),
     creationMethod: chooseText(metadata.creationMethod, "Human-authored by RV Sawyer."),
+    creatorId: chooseText(metadata.creatorId, ""),
     currency: chooseText(metadata.currency, "USD"),
     excludeFromBundles: metadata.excludeFromBundles !== false,
     features: normalizeStringArray(metadata.features),
@@ -151,10 +164,18 @@ function normalizePublishMetadata(metadata) {
     teaserVideo: chooseText(metadata.teaserVideo, ""),
     gameSystem: chooseText(metadata.gameSystem, ""),
     gameSystemSlug: normalizeSlug(chooseText(metadata.gameSystemSlug, metadata.gameSystem, "")),
+    genre: chooseText(metadata.genre, ""),
+    gmMode: chooseText(metadata.gmMode, ""),
+    language: chooseText(metadata.language, ""),
     lastUpdated: chooseText(metadata.lastUpdated, ""),
     legalNote: chooseText(metadata.legalNote, ""),
     longDescription: chooseText(metadata.longDescription, ""),
     pageCount: chooseNullableInteger(metadata.pageCount, null),
+    playerCountMin: chooseNullableInteger(metadata.playerCountMin, null),
+    playerCountMax: chooseNullableInteger(metadata.playerCountMax, null),
+    playDuration: chooseText(metadata.playDuration, ""),
+    playMode: chooseText(metadata.playMode, ""),
+    prepBurden: chooseText(metadata.prepBurden, ""),
     price: chooseText(normalizeMoneyText(metadata.price), ""),
     priceCents: chooseNullableInteger(metadata.priceCents, normalizePriceCents(metadata.price)),
     productLine: chooseText(metadata.productLine, ""),
@@ -169,6 +190,11 @@ function normalizePublishMetadata(metadata) {
     salePriceCents: hasSalePriceCents || hasSalePrice
       ? chooseNullableInteger(metadata.salePriceCents, normalizePriceCents(metadata.salePrice))
       : undefined,
+    saleStart: chooseText(metadata.saleStart, ""),
+    saleEnd: chooseText(metadata.saleEnd, ""),
+    rulesComplexity: chooseText(metadata.rulesComplexity, ""),
+    mediaType: chooseText(metadata.mediaType, ""),
+    contentDescriptors: normalizeStringArray(metadata.contentDescriptors),
     shortDescription: chooseText(metadata.shortDescription, ""),
     slug: normalizeSlug(metadata.slug),
     status: chooseText(metadata.status, "preview-available"),
@@ -176,6 +202,7 @@ function normalizePublishMetadata(metadata) {
     subtitle: chooseText(metadata.subtitle, ""),
     tags: normalizeStringArray(metadata.tags),
     title: chooseText(metadata.title, ""),
+    libraryEligible: metadata.libraryEligible !== false,
     updateEligible: metadata.updateEligible !== false,
     version: chooseText(metadata.version, "1.0")
   };
@@ -189,6 +216,9 @@ function normalizePublishMetadata(metadata) {
 
   return normalized;
 }
+
+function applyCreatorBundlePayload(rootDir,clientPayload){const bundle=clientPayload?.bundle||{},slug=normalizeSlug(bundle.slug),title=chooseText(bundle.title,""),productSlugs=[...new Set(normalizeStringArray(bundle.productSlugs).map(normalizeSlug).filter(Boolean))],priceCents=chooseNullableInteger(bundle.priceCents,null);if(!slug||!title||productSlugs.length<2||!Number.isInteger(priceCents)||priceCents<0)throw new Error("Creator bundle publication requires a slug, title, at least two products, and integer-cent price.");const products=JSON.parse(fs.readFileSync(path.join(rootDir,"data","products.json"),"utf8")),known=new Set(products.map(product=>product.slug));if(productSlugs.some(productSlug=>!known.has(productSlug)))throw new Error("Creator bundles may include only public products.");const target=path.join(rootDir,"data","bundle-rules.json"),rules=JSON.parse(fs.readFileSync(target,"utf8")),entries=Array.isArray(rules.creatorBundles)?rules.creatorBundles:[],next={slug,title,description:chooseText(bundle.description,""),creatorId:chooseText(bundle.creatorId,""),productSlugs,priceCents,active:true};const index=entries.findIndex(entry=>entry.slug===slug);if(index>=0)entries[index]=next;else entries.push(next);rules.creatorBundles=entries.sort((left,right)=>left.slug.localeCompare(right.slug));fs.writeFileSync(target,`${JSON.stringify(rules,null,2)}\n`);return{folder:"",metadata:{slug}};}
+function applyCreatorPausePayload(rootDir,clientPayload){const slug=normalizeSlug(clientPayload?.metadata?.slug),target=path.join(rootDir,"data","products.json"),products=JSON.parse(fs.readFileSync(target,"utf8")),index=products.findIndex(product=>product.slug===slug);if(index<0)throw new Error("Pause requires an existing public product.");products[index]={...products[index],status:"legacy-not-for-sale",statusLabel:"Legacy Not For Sale",buyMode:"retired",saleEnabled:false};fs.writeFileSync(target,`${JSON.stringify(products,null,2)}\n`);return{folder:"",metadata:{slug}};}
 
 function applyHomepageUpdatePayload(rootDir, clientPayload) {
   const featuredSlug = normalizeSlug(clientPayload?.featuredSlug);
@@ -355,9 +385,13 @@ function upsertProducts(products, metadata) {
     featured: chooseBoolean(metadata.featured, existing.featured, false),
     authors: chooseArray(metadata.authors, existing.authors, ["RV Sawyer"]),
     authorSlugs: chooseArray(metadata.authorSlugs, existing.authorSlugs, ["rv-sawyer"]),
+    creatorId: chooseText(metadata.creatorId, existing.creatorId, ""),
     publisher: chooseText(metadata.publisher, existing.publisher, "Tobacco Road Games"),
     gameSystem: chooseText(metadata.gameSystem, existing.gameSystem, "System TBD"),
     gameSystemSlug: chooseText(metadata.gameSystemSlug, existing.gameSystemSlug, normalizeSlug(metadata.gameSystem)),
+    genre: chooseText(metadata.genre, existing.genre, ""),
+    gmMode: chooseText(metadata.gmMode, existing.gmMode, ""),
+    language: chooseText(metadata.language, existing.language, ""),
     productLine: chooseText(metadata.productLine, existing.productLine, "Other Games & Experiments"),
     productLineSlug: chooseText(metadata.productLineSlug, existing.productLineSlug, normalizeSlug(metadata.productLine)),
     series: chooseText(metadata.series, existing.series, ""),
@@ -365,6 +399,11 @@ function upsertProducts(products, metadata) {
     format: chooseArray(metadata.format, existing.format, ["PDF"]),
     fileList: chooseArray(metadata.fileList, existing.fileList, [`${title} PDF`]),
     pageCount: chooseNullableInteger(metadata.pageCount, existing.pageCount, null),
+    playerCountMin: chooseNullableInteger(metadata.playerCountMin, existing.playerCountMin, null),
+    playerCountMax: chooseNullableInteger(metadata.playerCountMax, existing.playerCountMax, null),
+    playDuration: chooseText(metadata.playDuration, existing.playDuration, ""),
+    playMode: chooseText(metadata.playMode, existing.playMode, ""),
+    prepBurden: chooseText(metadata.prepBurden, existing.prepBurden, ""),
     price: chooseText(metadata.price, existing.price, ""),
     priceCents: chooseNullableInteger(metadata.priceCents, existing.priceCents, null),
     minimumPrice: chooseText(existing.minimumPrice, ""),
@@ -375,10 +414,13 @@ function upsertProducts(products, metadata) {
     regularPriceCents: chooseNullableInteger(existing.regularPriceCents, null),
     salePrice: chooseText(metadata.salePrice, existing.salePrice, ""),
     salePriceCents: chooseNullableInteger(metadata.salePriceCents, existing.salePriceCents, null),
-    saleStart: chooseText(existing.saleStart, ""),
-    saleEnd: chooseText(existing.saleEnd, ""),
+    saleStart: chooseText(metadata.saleStart, existing.saleStart, ""),
+    saleEnd: chooseText(metadata.saleEnd, existing.saleEnd, ""),
     saleLabel: chooseText(existing.saleLabel, ""),
     saleEnabled: chooseBoolean(metadata.saleEnabled, existing.saleEnabled, false),
+    rulesComplexity: chooseText(metadata.rulesComplexity, existing.rulesComplexity, ""),
+    mediaType: chooseText(metadata.mediaType, existing.mediaType, ""),
+    contentDescriptors: chooseArray(metadata.contentDescriptors, existing.contentDescriptors, []),
     currency: chooseText(metadata.currency, existing.currency, "USD"),
     status: chooseText(metadata.status, existing.status, "preview-available"),
     statusLabel: resolveStatusLabel(chooseText(metadata.status, existing.status, "preview-available")),
@@ -402,7 +444,7 @@ function upsertProducts(products, metadata) {
     releaseDate: chooseText(metadata.releaseDate, existing.releaseDate, ""),
     lastUpdated: chooseText(metadata.lastUpdated, existing.lastUpdated, metadata.releaseDate, ""),
     relatedProducts: chooseArray(metadata.relatedProducts, existing.relatedProducts, []),
-    libraryEligible: chooseBoolean(existing.libraryEligible, true),
+    libraryEligible: chooseBoolean(metadata.libraryEligible, existing.libraryEligible, true),
     updateEligible: chooseBoolean(existing.updateEligible, true),
     bundleEligible: chooseBoolean(existing.bundleEligible, false),
     bundleMinPriceCents: chooseNullableInteger(existing.bundleMinPriceCents, 100),
@@ -636,6 +678,8 @@ function clone(value) {
 module.exports = {
   SHARED_FOLDER_MAP_PATH,
   applyHomepageUpdatePayload,
+  applyCreatorBundlePayload,
+  applyCreatorPausePayload,
   applyPublishPayload,
   applyPricingUpdatePayload,
   normalizePublishMetadata,

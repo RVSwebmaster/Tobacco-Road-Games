@@ -30,7 +30,8 @@ function isSaleActive(product, options = {}) {
   if (start && now < start) {
     return false;
   }
-  if (end && now > end + 86400000 - 1) {
+  const endBoundary = /^\d{4}-\d{2}-\d{2}$/.test(String(product?.saleEnd || "").trim()) ? end + 86400000 - 1 : end;
+  if (endBoundary && now > endBoundary) {
     return false;
   }
 

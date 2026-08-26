@@ -48,6 +48,7 @@ function buildRuntimeCatalogEntry(product) {
     buyMode: String(product.buyMode || "").trim(),
     coverUrl: String(product.coverImage || product.frontCoverImage || "").trim(),
     contentDescriptors: Array.isArray(product.contentDescriptors) ? product.contentDescriptors.map(String) : [],
+    creatorId: String(product.creatorId || "").trim(),
     currency: price.currency,
     effectivePriceCents: price.effectivePriceCents,
     fulfillmentEligible: product.libraryEligible !== false,

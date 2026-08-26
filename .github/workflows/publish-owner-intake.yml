@@ -47,6 +47,6 @@ jobs:
             echo "No repo changes were produced by this publish."
             exit 0
           fi
-          git add shared/product-folder-map.mjs shared/runtime-catalog.mjs data/product-intake-map.json data/products.json data/homepage.json index.html store authors sitemap.xml
+          git add shared/product-folder-map.mjs shared/runtime-catalog.mjs data/product-intake-map.json data/products.json data/homepage.json data/bundle-rules.json index.html store authors sitemap.xml
           git commit -m "Publish ${TARGET_SLUG} from owner intake"
           git push origin "HEAD:${TARGET_REF}"
