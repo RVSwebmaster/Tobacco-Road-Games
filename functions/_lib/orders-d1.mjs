@@ -34,7 +34,8 @@ export async function createPendingOrder(database, orderInput, itemSnapshots, op
     stripeCheckoutSessionUrl: nullableString(orderInput?.stripeCheckoutSessionUrl),
     stripePaymentIntentId: nullableString(orderInput?.stripePaymentIntentId),
     subtotalCents: requiredInteger(orderInput?.subtotalCents, "subtotalCents"),
-    totalCents: requiredInteger(orderInput?.totalCents, "totalCents")
+    totalCents: requiredInteger(orderInput?.totalCents, "totalCents"),
+    userId: nullableString(orderInput?.userId)
   };
 
   const normalizedItems = normalizeItemSnapshots(itemSnapshots);
@@ -447,6 +448,7 @@ function prepareOrderInsert(database, order) {
   return database.prepare(`
     INSERT INTO orders (
       public_id,
+      user_id,
       checkout_attempt_id,
       checkout_request_hash,
       checkout_session_status,
@@ -472,9 +474,10 @@ function prepareOrderInsert(database, order) {
       refunded_at,
       disputed_at,
       checkout_updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     order.publicId,
+    order.userId,
     order.checkoutAttemptId,
     order.checkoutRequestHash,
     order.checkoutSessionStatus,

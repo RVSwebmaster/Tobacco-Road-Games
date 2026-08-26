@@ -9,7 +9,9 @@ const MIGRATION_PATHS = [
   path.join(ROOT, "migrations", "001_direct_storefront.sql"),
   path.join(ROOT, "migrations", "003_checkout_attempt_idempotency.sql"),
   path.join(ROOT, "migrations", "004_verified_stripe_webhooks.sql"),
-  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql")
+  path.join(ROOT, "migrations", "005_secure_download_entitlements.sql"),
+  path.join(ROOT, "migrations", "007_shared_accounts.sql"),
+  path.join(ROOT, "migrations", "016_order_account_ownership.sql")
 ];
 const NOW = Date.parse("2026-07-14T16:00:00.000Z");
 const WEBHOOK_SECRET = "whsec_test_signing_secret";

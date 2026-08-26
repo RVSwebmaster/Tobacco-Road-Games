@@ -21,6 +21,9 @@
   const avatarDelete = document.querySelector("#forum-avatar-delete");
   const avatarStatus = document.querySelector("#forum-avatar-status");
   const avatarPresets = document.querySelector("#forum-avatar-presets");
+  const libraryPanel = document.querySelector("#library-panel");
+  const libraryStatus = document.querySelector("#library-status");
+  const libraryList = document.querySelector("#library-list");
   let preparedAvatar = null;
   let previewObjectUrl = "";
   let csrfToken = "";
@@ -61,6 +64,7 @@
       signout.hidden = true;
       resend.hidden = true;
       if (forumPanel) forumPanel.hidden = true;
+      if (libraryPanel) libraryPanel.hidden = true;
       setStatus("Choose Google, sign in, or create a TRG account.");
       return;
     }
@@ -79,7 +83,55 @@
         forumProfileStatus.classList.add("discussion-status--error");
       });
     }
+    refreshLibrary().catch((error) => {
+      if (libraryStatus) libraryStatus.textContent = error.message;
+    });
     setStatus("Account loaded.");
+  }
+
+  async function refreshLibrary() {
+    if (!libraryPanel || !libraryList || !libraryStatus) return;
+    libraryPanel.hidden = false;
+    libraryStatus.textContent = "Loading your library...";
+    const response = await fetch("/api/account/library", { credentials: "same-origin" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error?.message || "My Library could not be loaded.");
+    libraryList.replaceChildren();
+    if (!payload.items?.length) {
+      libraryStatus.textContent = "Your library is empty. Digital purchases made while signed in will appear here.";
+      return;
+    }
+    for (const item of payload.items) {
+      const card = document.createElement("article");
+      card.className = "product-card";
+      const body = document.createElement("div");
+      body.className = "product-card__body";
+      const title = document.createElement("h3");
+      title.className = "product-card__title";
+      title.textContent = item.productTitle;
+      const creator = document.createElement("p");
+      creator.className = "product-card__meta";
+      creator.textContent = item.creator ? `By ${item.creator}` : "Creator information unavailable";
+      const order = document.createElement("p");
+      order.className = "product-card__meta";
+      order.textContent = `Order ${item.orderReference} · ${new Date(item.purchaseDate).toLocaleDateString()}`;
+      body.append(title, creator, order);
+      if (item.downloadUrl) {
+        const link = document.createElement("a");
+        link.className = "button button--primary";
+        link.href = item.downloadUrl;
+        link.textContent = "Download";
+        body.append(link);
+      } else {
+        const note = document.createElement("p");
+        note.className = "product-card__meta";
+        note.textContent = item.downloadAvailable ? "Download access is temporarily unavailable." : "No active download entitlement.";
+        body.append(note);
+      }
+      card.append(body);
+      libraryList.append(card);
+    }
+    libraryStatus.textContent = `${payload.items.length} owned digital product${payload.items.length === 1 ? "" : "s"}.`;
   }
 
   async function refreshForumProfile(emailVerified) {

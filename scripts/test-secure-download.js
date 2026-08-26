@@ -9,7 +9,9 @@ const MIGRATION_PATHS = [
   "001_direct_storefront.sql",
   "003_checkout_attempt_idempotency.sql",
   "004_verified_stripe_webhooks.sql",
-  "005_secure_download_entitlements.sql"
+  "005_secure_download_entitlements.sql",
+  "007_shared_accounts.sql",
+  "016_order_account_ownership.sql"
 ].map((name) => path.join(ROOT, "migrations", name));
 const SECRET = "secure-download-test-secret-which-is-long-enough";
 const NOW = Date.parse("2026-07-14T18:00:00.000Z");

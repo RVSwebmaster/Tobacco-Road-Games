@@ -29,6 +29,14 @@ const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "account", href: "/account.html", label: "Account / My Library" },
   { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
 ]);
+const MARKETPLACE_METADATA_ENUMS = Object.freeze({
+  gmMode: new Set(["required", "optional", "gm-less"]),
+  prepBurden: new Set(["none", "low", "moderate", "high"]),
+  playDuration: new Set(["short", "standard", "extended"]),
+  playMode: new Set(["one-shot", "campaign", "either"]),
+  rulesComplexity: new Set(["light", "medium", "heavy"]),
+  mediaType: new Set(["digital", "physical", "hybrid"])
+});
 
 const STATUS_LABELS = {
   "available-direct": "Available Direct",
@@ -250,6 +258,7 @@ function buildAuthorLookup(authors) {
 function loadProducts(authorLookup) {
   const raw = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
   return raw.map((product) => {
+    validateMarketplaceMetadata(product);
     const authorSlugs = resolveProductAuthorSlugs(product);
     const authors = resolveProductAuthorNames(product, authorSlugs, authorLookup);
     const normalized = {
@@ -911,6 +920,25 @@ function renderStoreNav(currentNav) {
   return renderSharedPublicNav(currentNav, "Store navigation");
 }
 
+function validateMarketplaceMetadata(product) {
+  for (const [field, allowed] of Object.entries(MARKETPLACE_METADATA_ENUMS)) {
+    if (product[field] !== undefined && product[field] !== "" && !allowed.has(product[field])) {
+      throw new Error(`${product.slug || "Product"}: ${field} is not supported.`);
+    }
+  }
+  for (const field of ["playerCountMin", "playerCountMax"]) {
+    if (product[field] !== undefined && product[field] !== null && (!Number.isInteger(product[field]) || product[field] < 1 || product[field] > 100)) {
+      throw new Error(`${product.slug || "Product"}: ${field} must be an integer from 1 to 100.`);
+    }
+  }
+  if (Number.isInteger(product.playerCountMin) && Number.isInteger(product.playerCountMax) && product.playerCountMin > product.playerCountMax) {
+    throw new Error(`${product.slug || "Product"}: playerCountMin cannot exceed playerCountMax.`);
+  }
+  if (product.contentDescriptors !== undefined && !Array.isArray(product.contentDescriptors)) {
+    throw new Error(`${product.slug || "Product"}: contentDescriptors must be an array.`);
+  }
+}
+
 function buildHomepage(products, indexes, bundleRules) {
   const homepagePath = path.join(ROOT, "index.html");
   const configPath = path.join(ROOT, "data", "homepage.json");
@@ -954,8 +982,8 @@ function buildHomepage(products, indexes, bundleRules) {
       : unmarkedGeneratedPattern.test(next)
         ? next.replace(unmarkedGeneratedPattern, `${marketplaceSections}\n`)
         : (() => { throw new Error("Homepage marketplace entry section could not be found."); })();
-  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>/;
-  const withSharedNav = withMarketplaceSections.replace(navPattern, renderSharedPublicNav("home", "Primary"));
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
+  const withSharedNav = withMarketplaceSections.replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `);
   fs.writeFileSync(homepagePath, withSharedNav);
 }
 
@@ -963,10 +991,10 @@ function buildAccountPage() {
   const accountPath = path.join(ROOT, "account.html");
   if (!fs.existsSync(accountPath)) return;
   const html = fs.readFileSync(accountPath, "utf8");
-  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>/;
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
   if (!navPattern.test(html)) throw new Error("Account navigation could not be found.");
   const next = html
-    .replace(navPattern, renderSharedPublicNav("account", "Primary"))
+    .replace(navPattern, `${renderSharedPublicNav("account", "Primary")}\n    `)
     .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
     .replace("Your Tobacco Road Games Account", "Account / My Library")
     .replace("Shared account foundation", "Customer account");
@@ -977,10 +1005,10 @@ function buildStaticPublicPage(relativePath, currentNav) {
   const pagePath = path.join(ROOT, relativePath);
   if (!fs.existsSync(pagePath)) return;
   const html = fs.readFileSync(pagePath, "utf8");
-  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>/;
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
   if (!navPattern.test(html)) throw new Error(`${relativePath} navigation could not be found.`);
   const next = html
-    .replace(navPattern, renderSharedPublicNav(currentNav, "Primary"))
+    .replace(navPattern, `${renderSharedPublicNav(currentNav, "Primary")}\n    `)
     .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
     .replace("Published by RV Sawyer, built for tables that still surprise the person running them.", "A marketplace for independent creators, operated by Tobacco Road Games.");
   fs.writeFileSync(pagePath, next);
@@ -1628,8 +1656,7 @@ function renderSharedPublicNav(currentNav, ariaLabel) {
   return `
     <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}">
       ${PUBLIC_NAV_ITEMS.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
-    </nav>
-  `;
+    </nav>`;
 }
 
 function renderAuthorCard(author) {

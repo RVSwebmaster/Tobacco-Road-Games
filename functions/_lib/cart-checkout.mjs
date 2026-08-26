@@ -20,6 +20,7 @@ import {
 } from "./runtime-catalog.mjs";
 import { createStripeHostedCheckoutSession, StripeCheckoutError } from "./stripe-checkout.mjs";
 import { readStoreState, storeClosedResponse } from "./store-state.mjs";
+import { getSessionFromRequest } from "./account-auth.mjs";
 
 export async function onRequestPost(context) {
   return handleCartCheckoutRequest(context.request, context.env);
@@ -66,6 +67,7 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
       unavailableItems: parsed.unavailableItems || []
     }, parsed.status);
   }
+  const accountSession = await getOptionalAccountSession(request, env, options);
 
   let checkoutAttemptId;
   try {
@@ -145,7 +147,8 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
       paymentStatus: "pending",
       processorFeeCents: null,
       subtotalCents: resolution.subtotalCents,
-      totalCents: resolution.totalCents
+      totalCents: resolution.totalCents,
+      userId: accountSession?.user?.id || null
     }, resolution.itemSnapshots);
   } catch {
     return jsonResponse({
@@ -276,6 +279,15 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     reused: orderResult.created !== true,
     status: orderResult.created === true ? 201 : 200
   });
+}
+
+async function getOptionalAccountSession(request, env, options) {
+  try {
+    const session = await getSessionFromRequest(request, env, options.accountSessionOptions || {});
+    return session.valid ? session : null;
+  } catch {
+    return null;
+  }
 }
 
 async function createSuccessfulCheckoutResponse({

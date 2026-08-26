@@ -35,6 +35,14 @@ const ALLOWED_BUY_MODES = new Set([
   "preview-only",
   "retired"
 ]);
+const MARKETPLACE_ENUMS = Object.freeze({
+  gmMode: new Set(["required", "optional", "gm-less"]),
+  prepBurden: new Set(["none", "low", "moderate", "high"]),
+  playDuration: new Set(["short", "standard", "extended"]),
+  playMode: new Set(["one-shot", "campaign", "either"]),
+  rulesComplexity: new Set(["light", "medium", "heavy"]),
+  mediaType: new Set(["digital", "physical", "hybrid"])
+});
 
 const REQUIRED_TEXT_FIELDS = [
   ["title", "Product title"],
@@ -242,6 +250,8 @@ function parsePublishForm(formData) {
     coverFile: null
   };
 
+  applyMarketplaceMetadata(formData, payload.metadata, errors);
+
   payload.isExistingProduct = hasFolderForSlug(slug);
   payload.existingFolder = getFolderForSlug(slug);
   const requireAllFiles = !payload.isExistingProduct || payload.existingFolder !== folder;
@@ -281,6 +291,30 @@ function parsePublishForm(formData) {
     valid: true,
     payload
   };
+}
+
+export function applyMarketplaceMetadata(formData, metadata, errors) {
+  for (const [field, allowed] of Object.entries(MARKETPLACE_ENUMS)) {
+    const value = String(formData.get(field) || "").trim();
+    if (!value) continue;
+    if (!allowed.has(value)) errors.push(`${field} is not a supported marketplace value.`);
+    else metadata[field] = value;
+  }
+  for (const field of ["genre", "language"]) {
+    const value = String(formData.get(field) || "").trim();
+    if (value) metadata[field] = value;
+  }
+  const minRaw = String(formData.get("playerCountMin") || "").trim();
+  const maxRaw = String(formData.get("playerCountMax") || "").trim();
+  const min = minRaw ? Number(minRaw) : null;
+  const max = maxRaw ? Number(maxRaw) : null;
+  if (min !== null && (!Number.isInteger(min) || min < 1 || min > 100)) errors.push("playerCountMin must be an integer from 1 to 100.");
+  else if (min !== null) metadata.playerCountMin = min;
+  if (max !== null && (!Number.isInteger(max) || max < 1 || max > 100)) errors.push("playerCountMax must be an integer from 1 to 100.");
+  else if (max !== null) metadata.playerCountMax = max;
+  if (min !== null && max !== null && min > max) errors.push("playerCountMin cannot exceed playerCountMax.");
+  const descriptors = parseList(formData.get("contentDescriptors"));
+  if (descriptors.length) metadata.contentDescriptors = descriptors;
 }
 
 function normalizeTeaserVideo(value) {

@@ -23,11 +23,6 @@
     <nav class="site-nav" aria-label="Primary">
       <a href="/store/">Marketplace</a><a href="/authors.html">Creators</a><a href="/store/#new-releases-bookshelf-heading">New Releases</a><a href="/store/catalog/">Sales & Bundles</a><a href="/#physical-goods">Physical Goods</a><a href="/forum">Community</a><a href="/#about">About TRG</a><a href="/account.html" aria-current="page">Account / My Library</a><a href="/store/cart/">Cart <span class="cart-count-badge" data-cart-count>0</span></a>
     </nav>
-  
-  
-  
-  
-  
     </header>
 
     <main>
@@ -79,6 +74,13 @@
             <button type="button" class="button button--secondary" id="signout-button" hidden>Sign Out</button>
           </section>
         </div>
+
+        <section class="account-card account-card--library" id="library-panel" hidden aria-labelledby="library-heading">
+          <p class="section-heading__kicker">Digital purchases</p>
+          <h2 id="library-heading">My Library</h2>
+          <p id="library-status" class="discussion-status" role="status" aria-live="polite">Loading your library...</p>
+          <div id="library-list" class="product-card-grid"></div>
+        </section>
 
         <section class="account-card account-card--reset" id="reset-panel" hidden aria-labelledby="reset-heading">
           <h2 id="reset-heading">Set a new password</h2>

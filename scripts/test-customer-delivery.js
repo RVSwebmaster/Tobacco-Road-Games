@@ -5,7 +5,7 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const MIGRATIONS = ["001_direct_storefront.sql", "003_checkout_attempt_idempotency.sql", "004_verified_stripe_webhooks.sql", "005_secure_download_entitlements.sql", "006_customer_delivery_owner_controls.sql"]
+const MIGRATIONS = ["001_direct_storefront.sql", "003_checkout_attempt_idempotency.sql", "004_verified_stripe_webhooks.sql", "005_secure_download_entitlements.sql", "006_customer_delivery_owner_controls.sql", "007_shared_accounts.sql", "016_order_account_ownership.sql"]
   .map((name) => path.join(ROOT, "migrations", name));
 const NOW = Date.parse("2026-07-14T20:00:00.000Z");
 const ACCESS_SECRET = "order-access-signing-secret-at-least-thirty-two-bytes";

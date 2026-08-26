@@ -34,6 +34,17 @@
     authors: document.getElementById("product-authors"),
     publisher: document.getElementById("product-publisher"),
     system: document.getElementById("product-system"),
+    genre: document.getElementById("product-genre"),
+    playerCountMin: document.getElementById("product-player-min"),
+    playerCountMax: document.getElementById("product-player-max"),
+    gmMode: document.getElementById("product-gm-mode"),
+    prepBurden: document.getElementById("product-prep-burden"),
+    playDuration: document.getElementById("product-play-duration"),
+    playMode: document.getElementById("product-play-mode"),
+    rulesComplexity: document.getElementById("product-rules-complexity"),
+    mediaType: document.getElementById("product-media-type"),
+    language: document.getElementById("product-language"),
+    contentDescriptors: document.getElementById("product-content-descriptors"),
     line: document.getElementById("product-line"),
     series: document.getElementById("product-series"),
     productLineManagerInput: document.getElementById("product-line-manager-input"),
@@ -867,6 +878,17 @@
       buyUrl: fields.buyMode.value === CART_BUY_MODE ? "" : fields.buyUrl.value.trim(),
       creationMethod: fields.creationMethod.value.trim() || "Human-authored by RV Sawyer.",
       currency: fields.currency.value.trim() || "USD",
+      genre: fields.genre?.value.trim() || "",
+      playerCountMin: fields.playerCountMin?.value ? Number(fields.playerCountMin.value) : null,
+      playerCountMax: fields.playerCountMax?.value ? Number(fields.playerCountMax.value) : null,
+      gmMode: fields.gmMode?.value || "",
+      prepBurden: fields.prepBurden?.value || "",
+      playDuration: fields.playDuration?.value || "",
+      playMode: fields.playMode?.value || "",
+      rulesComplexity: fields.rulesComplexity?.value || "",
+      mediaType: fields.mediaType?.value || "",
+      language: fields.language?.value.trim() || "",
+      contentDescriptors: parseList(fields.contentDescriptors?.value || ""),
       features: parseLines(fields.features.value),
       fileList,
       folder,
@@ -913,6 +935,12 @@
     if (!payload.seriesSlug) {
       delete payload.seriesSlug;
     }
+    for (const field of ["genre", "gmMode", "prepBurden", "playDuration", "playMode", "rulesComplexity", "mediaType", "language"]) {
+      if (!payload[field]) delete payload[field];
+    }
+    if (payload.playerCountMin === null) delete payload.playerCountMin;
+    if (payload.playerCountMax === null) delete payload.playerCountMax;
+    if (!payload.contentDescriptors.length) delete payload.contentDescriptors;
 
     return payload;
   };
@@ -1089,6 +1117,10 @@
       formData.set("salePrice", payload.salePrice);
       formData.set("saleEnabled", payload.saleEnabled ? "true" : "false");
       formData.set("currency", payload.currency);
+      for (const field of ["genre", "playerCountMin", "playerCountMax", "gmMode", "prepBurden", "playDuration", "playMode", "rulesComplexity", "mediaType", "language"]) {
+        formData.set(field, Object.prototype.hasOwnProperty.call(payload, field) ? String(payload[field]) : "");
+      }
+      formData.set("contentDescriptors", (payload.contentDescriptors || []).join(", "));
       formData.set("status", payload.status);
       formData.set("buyMode", payload.buyMode);
       formData.set("buyUrl", payload.buyUrl);
@@ -1295,6 +1327,17 @@
     fields.authors.value = "RV Sawyer";
     fields.publisher.value = "Tobacco Road Games";
     fields.system.value = product.gameSystem || "";
+    if (fields.genre) fields.genre.value = product.genre || "";
+    if (fields.playerCountMin) fields.playerCountMin.value = product.playerCountMin ?? "";
+    if (fields.playerCountMax) fields.playerCountMax.value = product.playerCountMax ?? "";
+    if (fields.gmMode) fields.gmMode.value = product.gmMode || "";
+    if (fields.prepBurden) fields.prepBurden.value = product.prepBurden || "";
+    if (fields.playDuration) fields.playDuration.value = product.playDuration || "";
+    if (fields.playMode) fields.playMode.value = product.playMode || "";
+    if (fields.rulesComplexity) fields.rulesComplexity.value = product.rulesComplexity || "";
+    if (fields.mediaType) fields.mediaType.value = product.mediaType || "";
+    if (fields.language) fields.language.value = product.language || "";
+    if (fields.contentDescriptors) fields.contentDescriptors.value = Array.isArray(product.contentDescriptors) ? product.contentDescriptors.join(", ") : "";
     fields.line.value = product.productLine || "";
     fields.series.value = product.series || "";
     fields.format.value = formatListValue(product.format) || "PDF";
