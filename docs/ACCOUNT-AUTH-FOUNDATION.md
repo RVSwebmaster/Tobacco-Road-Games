@@ -106,3 +106,11 @@ Staging account email requires the same Resend variables used by store delivery:
 The staging helper `ops/staging/configure-resend.ps1` installs those names without printing their values. It also installs Resend webhook and order-access secrets used by store delivery.
 
 The account page is `account.html`. Google sign-in is presented as one option beside native sign-in and registration; it is not required.
+
+## Settled account-policy target
+
+The credential foundation is narrower than the settled customer-account policy. A normal customer account may additionally contain a real/legal name, optional shipping addresses, optional birthday, optional public display/profile name and avatar, notification preferences, order history, My Library entitlements, and only safe Stripe references for saved payment methods. Guest checkout remains available. Native and Google authentication continue to resolve to the same ordinary customer identity.
+
+Seller registration upgrades that ordinary customer identity into a Creator relationship; it does not create a separate authentication system and is not an artistic or merit-based application. One seller registration includes one free primary Creator identity. Genuinely separate additional Creator identities cost $10 monthly or $100 annually each, with any Preferred fee added separately. This prevents aliases from multiplying free account-level benefits.
+
+Every Creator identity must maintain a valid Stripe-hosted payment method. Creators may establish their profile and drafts before Connect onboarding completes, but a paid product cannot publish until payout readiness is valid. Stripe remains authoritative for card, bank, identity, KYC, and tax data; TRG stores only opaque references and safe display metadata. The present account schema does not yet implement these expanded fields, payment-method readiness, identity ownership, billing, or six-month operational audit state.

@@ -1,21 +1,24 @@
 # Tobacco Road Games Marketplace Policy Canon
 
-Status: Canonical pre–Pass 10 business policy
+Status: Canonical business policy, updated after Pass 12
 
-Implementation baseline: `ae7d1ef Add Stripe Connect sandbox payout preparation`
+Implementation baseline: `8eeb799 Remove public AI philosophy statement`
 Audience: internal product, policy, and engineering work
 
 This document is the authoritative source for settled Tobacco Road Games marketplace policy. Implementation notes and temporary development defaults do not override it. Items explicitly marked unsettled must not be invented during implementation.
 
 ## 1. Accounts and seller registration
 
-TRG supports guest customers, registered customers, and registered sellers/creators.
+TRG supports guest customers, registered customers, and registered sellers/creators. Guest checkout remains intentionally supported, and registered customers may authenticate through existing supported methods, including native credentials and Google login.
 
 - Guest checkout remains intentionally supported. A customer may buy by card and receive legitimate delivery without creating an account.
-- Registered customers receive conveniences such as My Library, purchase history, recovery, and account-managed access. A customer account is not automatically a seller account.
-- Any account holder may register as a seller after satisfying required identity, public-profile, agreement, contact, payout, legal, and technical requirements.
+- A normal customer account may contain real/legal name, email, optional shipping addresses, optional birthday, optional public display/profile name and avatar, Stripe-hosted saved-payment-method references, order history, My Library/entitlements, notification preferences, and recovery/verification support.
+- A customer account is not automatically a seller account. Seller registration upgrades an ordinary customer account into a Creator account.
+- Creator registration requires a public Creator name and slug/handle, short public bio, optional logo/avatar/banner, legal name, business name when different, business type, country, state/region, mailing/business address, contact email, optional phone, Creator Agreement acceptance, confirmation of sufficient rights to sell submitted material, Stripe Connect onboarding status, and a valid Stripe-hosted payment method.
 
-Seller registration is onboarding, not an application or artistic merit review. TRG does not decide whether a creator is “good enough.” Product review is separate and is limited to marketplace, technical, delivery, rights, safety, and policy compliance—not taste. Detailed registration fields remain unsettled.
+Seller registration is onboarding, not an application or artistic merit review. A Creator may register, build a public profile, and create drafts before payout onboarding is complete. A paid product may not go live until payout setup is valid. Product review is separate and evaluates legality, seller rights, accurate representation, technical safety, delivery integrity, and marketplace-policy compliance—not taste, ideology, artistic merit, technology, or production method.
+
+No AI-use disclosure is required in seller registration, the Creator Agreement, listing declarations, creator profiles, or marketplace compliance review. TRG does not police production-method ideology.
 
 ## 2. Fees, catalog capacity, and Preferred Creator
 
@@ -37,6 +40,10 @@ Preferred Creator is a paid service tier, not a merit or performance status. It 
 The monthly choice is payment cadence for the annual commitment, not a seasonal month-to-month subscription. Cancellation stops renewal; benefits last through the paid or committed term.
 
 Preferred benefits are a 90/10 creator/TRG split while active, 22 active listings, five active public product ads, no outside-vendor creator-dashboard ad, and additional promotional consideration where applicable. Marketplace-wide holiday and special promotions remain available to all creators.
+
+One seller registration includes one primary Creator account/profile free. Additional Creator accounts are available for genuinely separate public identities or brands at $10 per month or $100 per year prepaid per additional account. Each is a separate marketplace identity with its own profile and ordinary account-level entitlements. Preferred fees apply in addition when an additional account is Preferred. Additional identities are an account-management option and anti-gaming control, not a promoted growth product; aliases must not multiply free catalog, ad, PWYW, promotional, or other account-level benefits.
+
+Every primary or additional, Free or Preferred Creator account must maintain a valid Stripe-hosted payment method. It may support marketplace purchases, Ad Credits, Preferred billing, additional-account fees, and future creator-side paid services. TRG stores only safe provider references and basic display metadata such as card brand and last four where appropriate, never raw payment credentials.
 
 ## 3. Marketplace revenue splits
 
@@ -111,34 +118,35 @@ RV Sawyer may use unlimited catalog capacity as marketplace owner, but receives 
 
 ## 11. Privacy, rights, content, and agreements
 
-Seller registration must eventually establish marketplace-agreement acceptance, rights and content compliance, required public profile information, private operational contact information, identity, and payout readiness. Public and private creator information must be deliberately separated. Provider-hosted onboarding remains the preferred boundary for sensitive identity and payout information.
+Public Creator fields are the Creator name, profile slug/handle, short bio, and any supplied logo/avatar/banner. Legal identity, business details, address, contact details, provider references, agreement records, and operational status are private. Stripe remains the system of record for sensitive identity, KYC, tax, bank, and payment information. TRG must not store raw card numbers, bank credentials, SSNs/EINs, identity documents, or comparable sensitive material when Stripe can hold it.
 
-Full creator agreement language, exact legal fields, a detailed rights/content policy, an AI-disclosure policy, public/private field definitions, and the exact timing of payout onboarding are not yet settled. Implementation must not infer or publish these terms.
+The Creator Agreement must cover legal capacity; accurate account/business information; permission for TRG to market, sell, display, deliver, and maintain customer access; creator retention of IP except where separately agreed; only the operational license TRG needs to run the marketplace; creator responsibility for rights/licenses; marketplace fees and splits; refund, chargeback, and payout treatment; catalog, PWYW, advertising, and inactivity rules; suspension/removal for legal, technical, fraud, malware, rights, or marketplace-policy reasons; preservation of legitimate historical entitlements; and that TRG is not the creator’s employer, partner, agent, attorney, accountant, or tax preparer.
 
-## 12. Implementation gap register at baseline `ae7d1ef`
+Each product-level declaration must confirm sufficient rights to sell, accurate representation of what the customer receives, and seller responsibility for required third-party licenses and attributions. It must not request AI-use disclosure.
+
+TRG does not prepare or file creator tax returns. Stripe handles the identity, tax, KYC, payout, and reporting functions belonging to Stripe Connect. TRG provides business records: annual gross sales, TRG fees, refunds/chargebacks, net payouts, monthly statements, and year-to-date totals. These records are not tax preparation.
+
+## 12. Creator account operational audit
+
+Every Creator account undergoes a light operational audit every six months, separate from the rolling 12-month product inactivity lifecycle. The audit is not re-application and does not evaluate artistic quality or ideological merit. It checks valid contact email, valid payment method, payout status where required, current Agreement acceptance, unresolved fraud/chargeback/policy issues, tier-entitlement accuracy, current additional-account billing, and obvious duplicate-account or privilege-gaming abuse. Fixable issues receive a reasonable cure period before account restriction.
+
+## 13. Implementation gap register at baseline `8eeb799`
 
 The following are compatibility findings, not authorization to implement them in this policy pass.
 
 ### Existing behavior that conflicts with canon
 
-- `creator-finance.mjs` falls back to a flat 1,500 basis-point (15%) development fee. Canon requires sale-time selection among the one-time 10% launch fee, standard 20%, active-Preferred 10%, and any creator-favorable event policy.
-- Creator tools currently require `marketplace_status='approved'` and tell a blocked user that the account is “not approved.” This can imply gatekeeping. The state should become compliance/onboarding eligibility, not artistic approval.
+- Creator access still depends on a legacy `marketplace_status='approved'` value. Public copy has been reframed, but durable state should express registration/compliance eligibility rather than artistic approval.
 - Creator listing review uses broad “Approve” language. Product review may remain, but its states, copy, and reason taxonomy must be explicitly compliance/technical/rights/safety focused rather than merit review.
-- Existing paid acquisition flows assume catalog prices; PWYW appears as intake metadata but does not yet provide authoritative customer-entered pricing and dual $0/paid checkout behavior.
+- The current schema permits one user to hold memberships in multiple Creator records without primary/additional ownership or billing state; policy does not permit this authorization relationship to multiply free benefits.
 
 ### Missing enforcement and durable state
 
-- No durable product identity carries an immutable first-publication timestamp or one-time launch window.
-- No sale-time policy resolver snapshots launch, Preferred, or TRG event precedence and reason.
-- No Preferred annual-term, billing-cadence, benefit-window, renewal, or cancellation model exists.
-- No 20/22 active catalog capacity or 1/2 PWYW capacity enforcement exists, and the RV Sawyer catalog exception is not modeled.
-- No public ad creative, eligibility, included slot, rotation fairness, house-ad cap, or calm banner system exists.
-- No outside-sponsor inventory or Free-versus-Preferred dashboard placement exists.
-- No Ad Credit purchase balance, activation, 30-day slot, or equal-weight rule exists.
 - No creator coupon campaign or product-level non-stacking checkout mechanism exists.
-- No rolling activity timestamp, warning, grace, automatic inactivity, notice, or capacity-releasing/reactivation model exists.
-- Free download delivery exists, but marketplace creator acquisition, entitlement, analytics, and inactivity qualification need a single durable event model.
-- Public/private creator field definitions, agreement acceptance, rights/content policy, AI disclosure, and detailed seller-registration data remain intentionally undefined.
+- Customer legal/profile data, addresses, birthday, notification preferences, and safe saved-payment-method metadata are not yet modeled as settled here.
+- Creator legal/business/contact/address fields, Agreement acceptance/versioning, rights declarations, primary-versus-additional identity ownership, additional-account billing, payment-method readiness, and six-month audit/cure state are not yet modeled.
+- Paid-product publication validates marketplace capacity and files but does not yet require valid Connect payout setup and payment-method readiness together.
+- Current statements expose monthly finance records, but the annual/YTD business-record package is incomplete.
 
 ### Compatible foundations to retain
 
@@ -146,22 +154,18 @@ The following are compatibility findings, not authorization to implement them in
 - Registered account library, order recovery, and entitlement foundations remain compatible.
 - Creator financial snapshots and the provider-independent ledger preserve historical economics and can support policy-reason snapshots.
 - Connect hosted onboarding preserves the sensitive-data boundary.
-- Creator listing lifecycle and operator publication tooling can be reframed around objective compliance review.
-- Paused/inactive catalog behavior already has partial technical concepts, but not the settled rolling-activity policy.
+- Creator listing lifecycle, inactivity, advertising, and operator publication tooling provide compatible enforcement boundaries for the new registration rules.
 
-## 13. Recommended Pass 10 implementation order
+## 14. Recommended implementation order
 
-1. Add policy vocabulary and durable identities: distinguish seller registration eligibility from product compliance review; add immutable product identity and first-publication time.
-2. Build an effective-dated sale policy resolver and snapshot the exact split, basis points, source/reason, Preferred term, launch window, promotion, and discounted basis on every order line.
-3. Add Preferred annual-term state and benefits without enabling production billing until its payment workflow is separately approved.
-4. Enforce active catalog and PWYW limits, including the owner catalog exception but no promotional exception.
-5. Complete free/PWYW acquisition semantics and durable activity events before inactivity automation.
-6. Add rolling 12-month warning/grace/inactivation state and notices while preserving entitlements and the original launch timestamp.
-7. Add creator coupons and Ad Credit accounting with checkout guardrails and immutable redemption history.
-8. Add public creator-ad inventory and accessible rotation fairness, then separate dashboard sponsorship inventory and Preferred suppression.
-9. Add agreement, rights/content, AI disclosure, and public/private profile fields only after the intentionally unsettled policies are decided.
-10. Keep production Connect and payout execution disabled until their separate operational and policy approvals.
+1. Add the settled customer and Creator registration fields with explicit public/private projections.
+2. Add versioned Creator Agreement acceptance and product-level rights/representation declarations, with no AI disclosure.
+3. Model a legal seller’s free primary Creator identity and separately billed additional identities; compose additional-account and Preferred fees without multiplying free benefits.
+4. Add safe Stripe payment-method readiness and enforce it for all Creator accounts; require valid Connect readiness before paid publication.
+5. Implement the six-month operational audit and reasonable cure workflow separately from product inactivity.
+6. Complete annual and year-to-date downloadable business records while retaining monthly statements.
+7. Keep raw payment, identity, KYC, tax, and bank data in Stripe and keep production payout execution gated by its separate operational approval.
 
-## 14. Intentionally unsettled
+## 15. Intentionally unsettled
 
-Do not invent or publish policy for detailed seller-registration fields, exact seller legal-information requirements, payout-onboarding timing, full creator agreement language, rights/content terms, AI disclosure, public/private field definitions, advertiser rate card, sponsor inventory cap, reactivation workflow details, production Connect, production payout execution, detailed Preferred event mechanics beyond settled benefits, or any unannounced brand expansion.
+Do not invent exact agreement prose, cure-period length, data-retention periods, payment-method provider workflow, advertiser rate card, sponsor inventory cap, production Connect/payout execution, detailed Preferred event mechanics beyond settled benefits, or any unannounced brand expansion. AI disclosure is settled as not required and must not be reintroduced indirectly.
