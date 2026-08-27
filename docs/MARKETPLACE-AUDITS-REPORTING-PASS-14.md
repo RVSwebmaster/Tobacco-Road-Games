@@ -1,0 +1,13 @@
+# Creator Account Audits and Business Reporting — Pass 14
+
+Every owned Creator identity receives an objective operational audit six calendar months after registration or the last cleared/completed audit. Migration 027 deterministically anchors legacy identities to `registration_completed_at`, falling back to Creator creation time. Primary, additional, Free, and Preferred identities use the same state machine: scheduled, in progress, passed, cure required, and restricted.
+
+The audit checks account/contact/registration existence, safe payment-method status, Connect readiness when the identity has charge-capable listings, current agreement acceptance, ownership and billing entitlement, active Preferred-term coherence, and explicit unresolved account risk flags. It contains no merit, artistic, ideological, production-method, or product-content criteria. Staff membership remains separate from ownership.
+
+The cure window is configurable with `CREATOR_AUDIT_CURE_DAYS`. Its development default is **30 days** and requires owner policy confirmation before production scheduling is enabled. Upcoming and deadline notice windows default to 30 and 7 days and are also configurable. Notices are durable dashboard records; outbound production email delivery remains deferred. Repeated scheduling is idempotent by Creator and cycle due date plus notice dedupe keys.
+
+An expired unresolved cure restricts the Creator ownership and registration states. This blocks new paid publication while preserving dashboard access, drafts, listings, historical sales, financial records, and customer entitlements. It does not invoke or alter the independent product-inactivity lifecycle. Resolving objective issues and rerunning the audit clears an audit-applied restriction.
+
+Creator business reports support month, current-year-to-date, and completed calendar year CSV exports. Each report remains scoped to one membership-authorized Creator identity. Rows use immutable sale snapshots and ledger entries, retain the sale-time fee basis points and policy reason, and include orders, products, gross, discounts, TRG fees, Creator share, refunds, chargebacks, payouts, currency, and status/reference fields. Generation fails visibly when sale, reversal, or payout records do not reconcile to the immutable ledger. Empty periods produce valid zero reports. TRG supplies business records, not tax preparation; Stripe-sensitive identity, payment, bank, and tax data are excluded.
+
+Deferred: production scheduler activation, production outbound audit email dispatch, final cure-duration policy confirmation, consolidated legal-owner reports, tax forms/advice, and any automatic deletion or product-content reapproval.
