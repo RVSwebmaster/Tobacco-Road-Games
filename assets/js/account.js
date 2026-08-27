@@ -26,6 +26,7 @@
   const libraryList = document.querySelector("#library-list");
   const recoveryForm = document.querySelector("#purchase-recovery-form");
   const recoveryStatus = document.querySelector("#purchase-recovery-status");
+  const accountProfilePanel=document.querySelector('#account-profile-panel'),accountProfileForm=document.querySelector('#account-profile-form'),accountProfileStatus=document.querySelector('#account-profile-status'),creatorRegistrationPanel=document.querySelector('#creator-registration-panel'),creatorRegistrationForm=document.querySelector('#creator-registration-form'),creatorRegistrationStatus=document.querySelector('#creator-registration-status');
   let preparedAvatar = null;
   let previewObjectUrl = "";
   let csrfToken = "";
@@ -67,6 +68,7 @@
       resend.hidden = true;
       if (forumPanel) forumPanel.hidden = true;
       if (libraryPanel) libraryPanel.hidden = true;
+      if(accountProfilePanel)accountProfilePanel.hidden=true;if(creatorRegistrationPanel)creatorRegistrationPanel.hidden=true;
       setStatus("Choose Google, sign in, or create a TRG account.");
       return;
     }
@@ -88,6 +90,7 @@
     refreshLibrary().catch((error) => {
       if (libraryStatus) libraryStatus.textContent = error.message;
     });
+    refreshRegistrationPanels().catch(error=>{if(accountProfileStatus)accountProfileStatus.textContent=error.message;});
     setStatus("Account loaded.");
   }
 
@@ -475,6 +478,10 @@
       window.setTimeout(scheduleGoogleInitialization, 250);
     }
   }
+
+  async function refreshRegistrationPanels(){accountProfilePanel.hidden=false;const profile=await fetch('/api/account/profile',{credentials:'same-origin'}).then(async r=>{const p=await r.json();if(!r.ok)throw Error(p.error?.message||'Account profile unavailable.');return p;});for(const key of ['legalName','birthday','phone','displayName','avatarUrl'])if(accountProfileForm.elements[key])accountProfileForm.elements[key].value=profile.user[key]||'';accountProfileForm.elements.accountNotices.checked=Boolean(profile.user.notificationPreferences?.accountNotices);const registration=await fetch('/api/creator-registration',{credentials:'same-origin'}).then(r=>r.json());creatorRegistrationPanel.hidden=Boolean(registration.ownedCreators?.some(x=>x.identity_type==='primary'));if(!creatorRegistrationPanel.hidden)creatorRegistrationForm.elements.contactEmail.value=profile.user.email;}
+  accountProfileForm?.addEventListener('submit',async event=>{event.preventDefault();const f=event.currentTarget;try{await api('/api/account/profile',{legalName:f.legalName.value,birthday:f.birthday.value||null,phone:f.phone.value,displayName:f.displayName.value,avatarUrl:f.avatarUrl.value,notificationPreferences:{accountNotices:f.accountNotices.checked}});accountProfileStatus.textContent='Private account profile saved.';}catch(error){accountProfileStatus.textContent=error.message;}});
+  creatorRegistrationForm?.addEventListener('submit',async event=>{event.preventDefault();const f=event.currentTarget,d=Object.fromEntries(new FormData(f));d.acceptAgreement=f.acceptAgreement.checked;d.confirmRights=f.confirmRights.checked;try{const result=await api('/api/creator-registration',d);creatorRegistrationStatus.textContent=`Creator identity ${result.slug} registered. Payout and payment-method setup remain separate.`;await refreshRegistrationPanels();}catch(error){creatorRegistrationStatus.textContent=error.message;}});
 
   window.addEventListener("load", () => window.setTimeout(scheduleGoogleInitialization, 100));
   refreshAccount().then(() => {
