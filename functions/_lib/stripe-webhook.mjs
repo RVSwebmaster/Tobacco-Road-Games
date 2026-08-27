@@ -10,6 +10,7 @@ import { OrderDeliveryError, deliverPaidOrderEmail } from "./order-delivery.mjs"
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
 import { creatorSaleStatements, getEffectiveFeePolicy, resolveFeePolicy } from "./creator-finance.mjs";
 import {recordQualifyingActivity} from './product-inactivity.mjs';
+import {fulfillCreditPurchase} from './creator-advertising.mjs';
 import { processStripeCreatorFinanceEvent, STRIPE_CREATOR_FINANCE_EVENTS } from "./creator-provider-finance.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
@@ -141,6 +142,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   const session = stripeEvent?.data?.object && typeof stripeEvent.data.object === "object"
     ? stripeEvent.data.object
     : {};
+  if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(eventType)&&session?.metadata?.trg_service_type==='ad_credit_pack'&&String(session?.metadata?.trg_checkout_attempt_id||'').startsWith('ad-credit-')&&await fulfillCreditPurchase(database,session,{nowMs:options.nowMs}))return{duplicate:false,event:null,processingResult:'ad_credit_pack_fulfilled'};
   const internalOrderId = parsePositiveInteger(session?.metadata?.trg_order_id);
   const paymentIntentId = normalizeStripeId(session?.payment_intent);
   const receivedAt = nowIso(options.nowMs);

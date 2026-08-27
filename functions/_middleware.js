@@ -16,5 +16,8 @@ export async function onRequest(context) {
       return maintenanceResponse();
     }
   }
-  return handleOwnerMiddleware(context);
+  const response=await handleOwnerMiddleware(context);
+  if(requestsPublicBanner(pathname,response))return new HTMLRewriter().on('header.site-header',{element(element){element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`,{html:true});}}).transform(response);
+  return response;
 }
+function requestsPublicBanner(pathname,response){return !pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}

@@ -114,12 +114,19 @@ function buildStripeCheckoutFormBody(input) {
   params.set("client_reference_id", requiredString(input?.clientReferenceId, "clientReferenceId"));
   params.set("customer_email", requiredString(input?.customerEmail, "customerEmail"));
   params.set("payment_method_types[0]", "card");
-  params.set("metadata[trg_order_id]", String(requiredPositiveInteger(input?.internalOrderId, "internalOrderId")));
-  params.set("metadata[trg_order_public_id]", requiredString(input?.clientReferenceId, "clientReferenceId"));
   params.set("metadata[trg_checkout_attempt_id]", requiredString(input?.checkoutAttemptId, "checkoutAttemptId"));
-  params.set("payment_intent_data[metadata][trg_order_id]", String(requiredPositiveInteger(input?.internalOrderId, "internalOrderId")));
-  params.set("payment_intent_data[metadata][trg_order_public_id]", requiredString(input?.clientReferenceId, "clientReferenceId"));
   params.set("payment_intent_data[metadata][trg_checkout_attempt_id]", requiredString(input?.checkoutAttemptId, "checkoutAttemptId"));
+  if(input?.serviceType){
+    params.set("metadata[trg_service_type]", requiredString(input.serviceType,"serviceType"));
+    params.set("metadata[trg_service_reference_id]", requiredString(input.clientReferenceId,"clientReferenceId"));
+    params.set("payment_intent_data[metadata][trg_service_type]", requiredString(input.serviceType,"serviceType"));
+    params.set("payment_intent_data[metadata][trg_service_reference_id]", requiredString(input.clientReferenceId,"clientReferenceId"));
+  }else{
+    params.set("metadata[trg_order_id]", String(requiredPositiveInteger(input?.internalOrderId, "internalOrderId")));
+    params.set("metadata[trg_order_public_id]", requiredString(input?.clientReferenceId, "clientReferenceId"));
+    params.set("payment_intent_data[metadata][trg_order_id]", String(requiredPositiveInteger(input?.internalOrderId, "internalOrderId")));
+    params.set("payment_intent_data[metadata][trg_order_public_id]", requiredString(input?.clientReferenceId, "clientReferenceId"));
+  }
 
   const lineItems = Array.isArray(input?.lineItems) ? input.lineItems : [];
   lineItems.forEach((item, index) => {

@@ -2759,3 +2759,4 @@ body.view-section .site-footer {
     transition-duration: 120ms;
   }
 }
+.marketplace-ad-banner{height:clamp(72px,12vw,150px);margin:0 auto 1rem;max-width:1200px;overflow:hidden;background:#17130f;border:1px solid rgba(242,216,170,.18);opacity:0;transition:opacity .8s ease}.marketplace-ad-banner.is-visible{opacity:1}.marketplace-ad-banner a{display:grid;height:100%;position:relative}.marketplace-ad-banner img{height:100%;width:100%;object-fit:cover}.marketplace-ad-banner span{position:absolute;z-index:1;padding:.2rem .45rem;background:rgba(0,0,0,.72);color:#fff;font-size:.72rem}.creator-dashboard-banner{margin-bottom:1rem}@media(prefers-reduced-motion:reduce){.marketplace-ad-banner{transition:none}}

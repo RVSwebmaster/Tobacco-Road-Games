@@ -1,0 +1,4 @@
+import {getSessionFromRequest} from '../_lib/account-auth.mjs';
+import {getRotation,logAdEvent} from '../_lib/ad-rotation.mjs';
+export async function onRequestGet({request,env}){const pool=new URL(request.url).searchParams.get('pool')||'public';let creatorId='';if(pool==='creator-dashboard'){const session=await getSessionFromRequest(request,env);if(!session.valid)return Response.json({items:[]},{status:401});creatorId=(await env.TRG_ORDERS.prepare('SELECT creator_id FROM creator_memberships WHERE user_id=? LIMIT 1').bind(session.user.id).first())?.creator_id||'';}return Response.json(await getRotation(env.TRG_ORDERS,{pool,creatorId}),{headers:{'cache-control':'private, no-store'}});}
+export async function onRequestPost({request,env}){let body={};try{body=await request.json();}catch{}await logAdEvent(env.TRG_ORDERS,body);return Response.json({ok:true});}
