@@ -150,12 +150,32 @@ export async function acceptCreatorAgreement(
   ]);
   return { agreementId, agreementVersion, acceptedAt: now };
 }
-export async function getCreatorAccountReadiness(db, creatorId) {
+export async function getCreatorAccountReadiness(
+  db,
+  creatorId,
+  { markInitialCompletion = false, nowMs = Date.now() } = {},
+) {
   const creator = await db
-      .prepare("SELECT * FROM marketplace_creators WHERE id=?")
-      .bind(creatorId)
-      .first(),
-    owner = await db
+    .prepare("SELECT * FROM marketplace_creators WHERE id=?")
+    .bind(creatorId)
+    .first();
+  if (
+    creator &&
+    !Object.prototype.hasOwnProperty.call(creator, "registration_status")
+  )
+    return {
+      registrationComplete: creator.marketplace_status === "approved",
+      initialRegistrationPreviouslyCompleted: true,
+      requirementsComplete: true,
+      checks: { legacySchema: true },
+      agreementCurrent: true,
+      paymentMethodReady: true,
+      payoutReady: true,
+      identityEntitled: true,
+      owner: null,
+      creator,
+    };
+  const owner = await db
       .prepare("SELECT * FROM creator_identity_ownership WHERE creator_id=?")
       .bind(creatorId)
       .first(),
@@ -163,6 +183,14 @@ export async function getCreatorAccountReadiness(db, creatorId) {
       .prepare("SELECT * FROM creator_registration_details WHERE creator_id=?")
       .bind(creatorId)
       .first(),
+    user = owner
+      ? await db
+          .prepare(
+            "SELECT status,email_verified,email_normalized FROM users WHERE id=?",
+          )
+          .bind(owner.owner_user_id)
+          .first()
+      : null,
     agreement = await db
       .prepare(
         "SELECT 1 ok FROM creator_agreement_acceptances WHERE creator_id=? AND agreement_id=? AND agreement_version=? AND superseded_at IS NULL",
@@ -172,7 +200,7 @@ export async function getCreatorAccountReadiness(db, creatorId) {
     payment = owner
       ? await db
           .prepare(
-            "SELECT payment_method_status FROM user_account_profiles WHERE user_id=?",
+            "SELECT legal_name,payment_method_status FROM user_account_profiles WHERE user_id=?",
           )
           .bind(owner.owner_user_id)
           .first()
@@ -183,10 +211,79 @@ export async function getCreatorAccountReadiness(db, creatorId) {
       )
       .bind(creatorId)
       .first();
-  return {
-    registrationComplete: Boolean(
-      creator?.registration_status === "active" && registration,
+  const checks = {
+      customerAccountComplete: Boolean(
+        user?.status === "active" &&
+        Number(user?.email_verified) === 1 &&
+        /^\S+@\S+\.\S+$/.test(user?.email_normalized || "") &&
+        payment?.legal_name,
+      ),
+      creatorPublicComplete: Boolean(
+        creator?.marketplace_status === "approved" &&
+          creator.slug &&
+          creator.display_name &&
+          creator.short_bio,
+      ),
+      creatorDetailsComplete: hasRequiredCreatorRegistration(registration),
+      agreementCurrent: Boolean(agreement),
+      paymentMethodReady: payment?.payment_method_status === "ready",
+      payoutReady: Boolean(
+        payout?.onboarding_status === "complete" &&
+        payout?.verification_status === "verified" &&
+        Number(payout?.payouts_enabled) === 1,
+      ),
+      identityEntitled: Boolean(
+        owner?.account_status === "active" &&
+        (owner.identity_type === "primary" ||
+          ["current", "legacy_grandfathered"].includes(owner.billing_status)),
+      ),
+    },
+    requirementsComplete = Object.values(checks).every(Boolean),
+    completionFieldAvailable = Object.prototype.hasOwnProperty.call(
+      creator || {},
+      "intake_registration_completed_at",
     ),
+    previouslyCompleted = Boolean(
+      completionFieldAvailable
+        ? creator?.intake_registration_completed_at
+        : creator?.registration_completed_at,
+    ),
+    registrationComplete = previouslyCompleted || requirementsComplete;
+  if (markInitialCompletion && requirementsComplete && !previouslyCompleted) {
+    const completedAt = new Date(nowMs).toISOString();
+    await db
+      .prepare(
+        completionFieldAvailable
+          ? "UPDATE marketplace_creators SET registration_status='active',registration_completed_at=COALESCE(registration_completed_at,?),intake_registration_completed_at=?,updated_at=? WHERE id=? AND intake_registration_completed_at IS NULL"
+          : "UPDATE marketplace_creators SET registration_status='active',registration_completed_at=?,updated_at=? WHERE id=? AND registration_completed_at IS NULL",
+      )
+      .bind(
+        ...(completionFieldAvailable
+          ? [completedAt, completedAt, completedAt, creatorId]
+          : [completedAt, completedAt, creatorId]),
+      )
+      .run();
+    creator.registration_status = "active";
+    creator.registration_completed_at = completedAt;
+    if (completionFieldAvailable)
+      creator.intake_registration_completed_at = completedAt;
+    try {
+      await db
+        .prepare(
+          "UPDATE creator_account_audit_states SET audit_anchor_at=?,next_audit_due_at=?,updated_at=? WHERE creator_id=? AND state='scheduled'",
+        )
+        .bind(completedAt, sixMonthsAfter(completedAt), completedAt, creatorId)
+        .run();
+    } catch (error) {
+      if (!/no such table:\s*creator_account_audit_states/i.test(String(error)))
+        throw error;
+    }
+  }
+  return {
+    registrationComplete,
+    initialRegistrationPreviouslyCompleted: previouslyCompleted,
+    requirementsComplete,
+    checks,
     agreementCurrent: Boolean(agreement),
     paymentMethodReady: payment?.payment_method_status === "ready",
     payoutReady: Boolean(
@@ -202,6 +299,34 @@ export async function getCreatorAccountReadiness(db, creatorId) {
     owner,
     creator,
   };
+}
+function hasRequiredCreatorRegistration(registration) {
+  return Boolean(
+    registration?.legal_name &&
+    registration.business_type &&
+    registration.country &&
+    registration.state_region &&
+    registration.address_line1 &&
+    registration.city &&
+    registration.postal_code &&
+    /^\S+@\S+\.\S+$/.test(registration.contact_email || "") &&
+    registration.rights_confirmation_at,
+  );
+}
+function sixMonthsAfter(value) {
+  const source = new Date(value),
+    targetMonth = source.getUTCMonth() + 6,
+    targetYear = source.getUTCFullYear() + Math.floor(targetMonth / 12),
+    normalizedMonth = ((targetMonth % 12) + 12) % 12,
+    lastDay = new Date(
+      Date.UTC(targetYear, normalizedMonth + 1, 0),
+    ).getUTCDate();
+  source.setUTCFullYear(
+    targetYear,
+    normalizedMonth,
+    Math.min(source.getUTCDate(), lastDay),
+  );
+  return source.toISOString();
 }
 async function createCreator(
   db,
@@ -234,7 +359,7 @@ async function createCreator(
   await db.batch([
     db
       .prepare(
-        `INSERT INTO marketplace_creators(id,slug,display_name,profile_image,logo,banner_image,short_bio,links_json,marketplace_status,registration_status,registration_completed_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,'approved','active',?,?,?)`,
+        `INSERT INTO marketplace_creators(id,slug,display_name,profile_image,logo,banner_image,short_bio,links_json,marketplace_status,registration_status,registration_completed_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,'approved','incomplete',NULL,?,?)`,
       )
       .bind(
         id,
@@ -247,8 +372,12 @@ async function createCreator(
         JSON.stringify(fields.links),
         now,
         now,
-        now,
       ),
+    db
+      .prepare(
+        "INSERT INTO user_account_profiles(user_id,legal_name,created_at,updated_at) VALUES(?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET legal_name=CASE WHEN user_account_profiles.legal_name='' THEN excluded.legal_name ELSE user_account_profiles.legal_name END,updated_at=excluded.updated_at",
+      )
+      .bind(userId, fields.legalName, now, now),
     db
       .prepare(
         "INSERT INTO creator_memberships(user_id,creator_id,permission,created_at) VALUES(?,?,'manager',?)",
@@ -304,7 +433,7 @@ async function createCreator(
     creatorId: id,
     slug,
     identityType,
-    registrationStatus: "active",
+    registrationStatus: "incomplete",
     payoutStatus: "not_started",
     paymentMethodStatus: "missing",
   };

@@ -1,10 +1,235 @@
-import { getSessionFromRequest,validateSameOriginRequest,validateSessionCsrf } from "./account-auth.mjs";
-const LIMITS={product:50*1024*1024,cover:10*1024*1024,preview:10*1024*1024,supporting:20*1024*1024};
-const ALLOWED={product:["application/pdf"],cover:["image/webp"],preview:["image/webp"],supporting:["application/pdf","image/webp","image/png","image/jpeg"]};
-export async function handleCreatorFileUpload(request,env={},listingId,options={}){
- if(request.method!=="POST")return json({error:{code:"method_not_allowed",message:"Use POST to upload a creator file."}},405);const db=options.database||env.TRG_ORDERS,session=await getSessionFromRequest(request,env,options.sessionOptions||{});if(!session.valid)return json({error:{code:"not_authenticated",message:"Sign in to upload listing files."}},401);if(!validateSameOriginRequest(request)||!(await validateSessionCsrf(request,session)).valid)return json({error:{code:"request_not_verified",message:"The upload request could not be verified."}},403);
- const listing=await db.prepare(`SELECT cl.id,cl.creator_id,cm.permission FROM creator_listings cl JOIN creator_memberships cm ON cm.creator_id=cl.creator_id WHERE cl.id=? AND cm.user_id=?`).bind(listingId,session.user.id).first();if(!listing||!["manager","editor"].includes(listing.permission))return json({error:{code:"creator_access_denied",message:"You cannot upload files for that listing."}},403);if(!env.TRG_PRODUCTS?.put)return json({error:{code:"creator_storage_unavailable",message:"Private creator file staging is unavailable."}},503);
- let form;try{form=await request.formData();}catch{return invalid("Upload form is invalid.");}const file=form.get("file"),purpose=String(form.get("purpose")||"");if(!(file instanceof File)||!ALLOWED[purpose])return invalid("Choose a file and its purpose.");if(file.size<1||file.size>LIMITS[purpose])return invalid(`File must be smaller than ${Math.floor(LIMITS[purpose]/1024/1024)} MB.`);const bytes=new Uint8Array(await file.arrayBuffer()),detected=detectType(bytes);if(!detected||!ALLOWED[purpose].includes(detected)||!ALLOWED[purpose].includes(file.type))return json({error:{code:"creator_file_type_rejected",message:"The file contents and declared type must match an allowed PDF, WebP, PNG, or JPEG type."}},415);
- const id=crypto.randomUUID(),name=normalizeFilename(file.name,detected),key=`creator-quarantine/${listing.creator_id}/${listing.id}/${id}/${name}`,now=new Date(Number.isFinite(options.nowMs)?options.nowMs:Date.now()).toISOString();await env.TRG_PRODUCTS.put(key,bytes,{httpMetadata:{contentType:detected},customMetadata:{listingId:listing.id,purpose,scanState:"pending"}});await db.batch([db.prepare("UPDATE creator_listing_files SET validation_state='superseded',validated_at=? WHERE listing_id=? AND purpose=? AND validation_state IN ('uploaded','validating','accepted')").bind(now,listing.id,purpose),db.prepare("INSERT INTO creator_listing_files(id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,validation_state,uploaded_at) VALUES(?,?,?,?,?,?,?,?,?,'uploaded',?)").bind(id,listing.id,listing.creator_id,purpose,String(file.name).slice(0,255),name,detected,file.size,key,now),db.prepare("INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'creator',?,'file_uploaded',?,?)").bind(listing.id,listing.creator_id,session.user.id,JSON.stringify({fileId:id,purpose,contentType:detected,sizeBytes:file.size}),now)]);return json({ok:true,file:{id,purpose,filename:name,state:"uploaded"}},201);
+import {
+  getSessionFromRequest,
+  validateSameOriginRequest,
+  validateSessionCsrf,
+} from "./account-auth.mjs";
+import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+const LIMITS = {
+  product: 50 * 1024 * 1024,
+  cover: 10 * 1024 * 1024,
+  preview: 10 * 1024 * 1024,
+  supporting: 20 * 1024 * 1024,
+};
+const ALLOWED = {
+  product: ["application/pdf"],
+  cover: ["image/webp"],
+  preview: ["image/webp"],
+  supporting: ["application/pdf", "image/webp", "image/png", "image/jpeg"],
+};
+export async function handleCreatorFileUpload(
+  request,
+  env = {},
+  listingId,
+  options = {},
+) {
+  if (request.method !== "POST")
+    return json(
+      {
+        error: {
+          code: "method_not_allowed",
+          message: "Use POST to upload a creator file.",
+        },
+      },
+      405,
+    );
+  const db = options.database || env.TRG_ORDERS,
+    session = await getSessionFromRequest(
+      request,
+      env,
+      options.sessionOptions || {},
+    );
+  if (!session.valid)
+    return json(
+      {
+        error: {
+          code: "not_authenticated",
+          message: "Sign in to upload listing files.",
+        },
+      },
+      401,
+    );
+  if (
+    !validateSameOriginRequest(request) ||
+    !(await validateSessionCsrf(request, session)).valid
+  )
+    return json(
+      {
+        error: {
+          code: "request_not_verified",
+          message: "The upload request could not be verified.",
+        },
+      },
+      403,
+    );
+  const listing = await db
+    .prepare(
+      `SELECT cl.id,cl.creator_id,cm.permission FROM creator_listings cl JOIN creator_memberships cm ON cm.creator_id=cl.creator_id WHERE cl.id=? AND cm.user_id=?`,
+    )
+    .bind(listingId, session.user.id)
+    .first();
+  if (!listing || !["manager", "editor"].includes(listing.permission))
+    return json(
+      {
+        error: {
+          code: "creator_access_denied",
+          message: "You cannot upload files for that listing.",
+        },
+      },
+      403,
+    );
+  const readiness = await getCreatorAccountReadiness(db, listing.creator_id, {
+    markInitialCompletion: true,
+    nowMs: options.nowMs,
+  });
+  if (!readiness.registrationComplete)
+    return json(
+      {
+        error: {
+          code: "creator_registration_incomplete",
+          message:
+            "Creator registration must be fully complete before product intake or listing tools become available.",
+        },
+      },
+      403,
+    );
+  if (!env.TRG_PRODUCTS?.put)
+    return json(
+      {
+        error: {
+          code: "creator_storage_unavailable",
+          message: "Private creator file staging is unavailable.",
+        },
+      },
+      503,
+    );
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return invalid("Upload form is invalid.");
+  }
+  const file = form.get("file"),
+    purpose = String(form.get("purpose") || "");
+  if (!(file instanceof File) || !ALLOWED[purpose])
+    return invalid("Choose a file and its purpose.");
+  if (file.size < 1 || file.size > LIMITS[purpose])
+    return invalid(
+      `File must be smaller than ${Math.floor(LIMITS[purpose] / 1024 / 1024)} MB.`,
+    );
+  const bytes = new Uint8Array(await file.arrayBuffer()),
+    detected = detectType(bytes);
+  if (
+    !detected ||
+    !ALLOWED[purpose].includes(detected) ||
+    !ALLOWED[purpose].includes(file.type)
+  )
+    return json(
+      {
+        error: {
+          code: "creator_file_type_rejected",
+          message:
+            "The file contents and declared type must match an allowed PDF, WebP, PNG, or JPEG type.",
+        },
+      },
+      415,
+    );
+  const id = crypto.randomUUID(),
+    name = normalizeFilename(file.name, detected),
+    key = `creator-quarantine/${listing.creator_id}/${listing.id}/${id}/${name}`,
+    now = new Date(
+      Number.isFinite(options.nowMs) ? options.nowMs : Date.now(),
+    ).toISOString();
+  await env.TRG_PRODUCTS.put(key, bytes, {
+    httpMetadata: { contentType: detected },
+    customMetadata: { listingId: listing.id, purpose, scanState: "pending" },
+  });
+  await db.batch([
+    db
+      .prepare(
+        "UPDATE creator_listing_files SET validation_state='superseded',validated_at=? WHERE listing_id=? AND purpose=? AND validation_state IN ('uploaded','validating','accepted')",
+      )
+      .bind(now, listing.id, purpose),
+    db
+      .prepare(
+        "INSERT INTO creator_listing_files(id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,validation_state,uploaded_at) VALUES(?,?,?,?,?,?,?,?,?,'uploaded',?)",
+      )
+      .bind(
+        id,
+        listing.id,
+        listing.creator_id,
+        purpose,
+        String(file.name).slice(0, 255),
+        name,
+        detected,
+        file.size,
+        key,
+        now,
+      ),
+    db
+      .prepare(
+        "INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'creator',?,'file_uploaded',?,?)",
+      )
+      .bind(
+        listing.id,
+        listing.creator_id,
+        session.user.id,
+        JSON.stringify({
+          fileId: id,
+          purpose,
+          contentType: detected,
+          sizeBytes: file.size,
+        }),
+        now,
+      ),
+  ]);
+  return json(
+    { ok: true, file: { id, purpose, filename: name, state: "uploaded" } },
+    201,
+  );
 }
-function detectType(b){if(b.length>=5&&String.fromCharCode(...b.slice(0,5))==="%PDF-")return"application/pdf";if(b.length>=12&&String.fromCharCode(...b.slice(0,4))==="RIFF"&&String.fromCharCode(...b.slice(8,12))==="WEBP")return"image/webp";if(b.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>b[i]===v))return"image/png";if(b.length>=3&&b[0]===255&&b[1]===216&&b[2]===255)return"image/jpeg";return"";}function normalizeFilename(name,type){const ext={"application/pdf":"pdf","image/webp":"webp","image/png":"png","image/jpeg":"jpg"}[type];const base=String(name||"file").replace(/\.[^.]*$/,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,80)||"file";return`${base}.${ext}`;}function invalid(message){return json({error:{code:"invalid_creator_file",message}},400);}function json(payload,status){return new Response(JSON.stringify(payload),{status,headers:{"cache-control":"private, no-store","content-type":"application/json; charset=utf-8"}});}
+function detectType(b) {
+  if (b.length >= 5 && String.fromCharCode(...b.slice(0, 5)) === "%PDF-")
+    return "application/pdf";
+  if (
+    b.length >= 12 &&
+    String.fromCharCode(...b.slice(0, 4)) === "RIFF" &&
+    String.fromCharCode(...b.slice(8, 12)) === "WEBP"
+  )
+    return "image/webp";
+  if (
+    b.length >= 8 &&
+    [137, 80, 78, 71, 13, 10, 26, 10].every((v, i) => b[i] === v)
+  )
+    return "image/png";
+  if (b.length >= 3 && b[0] === 255 && b[1] === 216 && b[2] === 255)
+    return "image/jpeg";
+  return "";
+}
+function normalizeFilename(name, type) {
+  const ext = {
+    "application/pdf": "pdf",
+    "image/webp": "webp",
+    "image/png": "png",
+    "image/jpeg": "jpg",
+  }[type];
+  const base =
+    String(name || "file")
+      .replace(/\.[^.]*$/, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80) || "file";
+  return `${base}.${ext}`;
+}
+function invalid(message) {
+  return json({ error: { code: "invalid_creator_file", message } }, 400);
+}
+function json(payload, status) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "cache-control": "private, no-store",
+      "content-type": "application/json; charset=utf-8",
+    },
+  });
+}

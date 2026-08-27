@@ -1,4 +1,144 @@
-import {getSessionFromRequest,validateSameOriginRequest,validateSessionCsrf} from './account-auth.mjs';
-import {activateIncluded,deactivateSlot,getAdvertising,reassignSlot,redeemCredit,startCreditPurchase,uploadCreative} from './creator-advertising.mjs';
-export async function handleCreatorAdvertisingRequest(request,env={},options={}){const db=options.database||env.TRG_ORDERS,session=await getSessionFromRequest(request,env,options.sessionOptions||{});if(!session.valid)return json({error:{message:'Sign in to access advertising tools.'}},401);const creator=await db.prepare("SELECT c.*,cm.permission,u.email_normalized contact_email FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id JOIN users u ON u.id=cm.user_id WHERE cm.user_id=? AND c.marketplace_status='approved' LIMIT 1").bind(session.user.id).first();if(!creator)return json({error:{message:'Creator access is unavailable.'}},403);if(request.method==='GET')return json(await getAdvertising(db,creator.id,{nowMs:options.nowMs}));if(!validateSameOriginRequest(request)||!(await validateSessionCsrf(request,session)).valid)return json({error:{message:'The advertising request could not be verified.'}},403);try{if(request.headers.get('content-type')?.includes('multipart/form-data'))return json({ok:true,...await uploadCreative(request,db,env.TRG_PRODUCTS,creator,session,{nowMs:options.nowMs})},201);const body=await request.json();if(body.action==='activate_included')return json({ok:true,...await activateIncluded(db,{creatorId:creator.id,creativeId:body.creativeId,slotIndex:body.slotIndex,actorId:session.user.id,nowMs:options.nowMs})});if(body.action==='redeem_credit')return json({ok:true,...await redeemCredit(db,{creatorId:creator.id,creativeId:body.creativeId,actorId:session.user.id,nowMs:options.nowMs})});if(body.action==='reassign')return json({ok:true,...await reassignSlot(db,{creatorId:creator.id,slotId:body.slotId,creativeId:body.creativeId,actorId:session.user.id,nowMs:options.nowMs})});if(body.action==='deactivate')return json({ok:true,...await deactivateSlot(db,{creatorId:creator.id,slotId:body.slotId,actorId:session.user.id,nowMs:options.nowMs})});if(body.action==='purchase_credits')return json({ok:true,...await startCreditPurchase(db,creator,env,{fetchImpl:options.fetchImpl,nowMs:options.nowMs})});return json({error:{message:'Advertising action is invalid.'}},400);}catch(error){return json({error:{message:error.message}},409);}}
-function json(x,status=200){return new Response(JSON.stringify(x),{status,headers:{'cache-control':'private, no-store','content-type':'application/json; charset=utf-8'}});}
+import {
+  getSessionFromRequest,
+  validateSameOriginRequest,
+  validateSessionCsrf,
+} from "./account-auth.mjs";
+import {
+  activateIncluded,
+  deactivateSlot,
+  getAdvertising,
+  reassignSlot,
+  redeemCredit,
+  startCreditPurchase,
+  uploadCreative,
+} from "./creator-advertising.mjs";
+import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+export async function handleCreatorAdvertisingRequest(
+  request,
+  env = {},
+  options = {},
+) {
+  const db = options.database || env.TRG_ORDERS,
+    session = await getSessionFromRequest(
+      request,
+      env,
+      options.sessionOptions || {},
+    );
+  if (!session.valid)
+    return json(
+      { error: { message: "Sign in to access advertising tools." } },
+      401,
+    );
+  const creator = await db
+    .prepare(
+      "SELECT c.*,cm.permission,u.email_normalized contact_email FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id JOIN users u ON u.id=cm.user_id WHERE cm.user_id=? AND c.marketplace_status='approved' LIMIT 1",
+    )
+    .bind(session.user.id)
+    .first();
+  if (!creator)
+    return json({ error: { message: "Creator access is unavailable." } }, 403);
+  const readiness = await getCreatorAccountReadiness(db, creator.id, {
+    markInitialCompletion: true,
+    nowMs: options.nowMs,
+  });
+  if (!readiness.registrationComplete)
+    return json(
+      {
+        error: {
+          message:
+            "Creator registration must be fully complete before product intake or listing tools become available.",
+        },
+      },
+      403,
+    );
+  if (request.method === "GET")
+    return json(await getAdvertising(db, creator.id, { nowMs: options.nowMs }));
+  if (
+    !validateSameOriginRequest(request) ||
+    !(await validateSessionCsrf(request, session)).valid
+  )
+    return json(
+      { error: { message: "The advertising request could not be verified." } },
+      403,
+    );
+  try {
+    if (request.headers.get("content-type")?.includes("multipart/form-data"))
+      return json(
+        {
+          ok: true,
+          ...(await uploadCreative(
+            request,
+            db,
+            env.TRG_PRODUCTS,
+            creator,
+            session,
+            { nowMs: options.nowMs },
+          )),
+        },
+        201,
+      );
+    const body = await request.json();
+    if (body.action === "activate_included")
+      return json({
+        ok: true,
+        ...(await activateIncluded(db, {
+          creatorId: creator.id,
+          creativeId: body.creativeId,
+          slotIndex: body.slotIndex,
+          actorId: session.user.id,
+          nowMs: options.nowMs,
+        })),
+      });
+    if (body.action === "redeem_credit")
+      return json({
+        ok: true,
+        ...(await redeemCredit(db, {
+          creatorId: creator.id,
+          creativeId: body.creativeId,
+          actorId: session.user.id,
+          nowMs: options.nowMs,
+        })),
+      });
+    if (body.action === "reassign")
+      return json({
+        ok: true,
+        ...(await reassignSlot(db, {
+          creatorId: creator.id,
+          slotId: body.slotId,
+          creativeId: body.creativeId,
+          actorId: session.user.id,
+          nowMs: options.nowMs,
+        })),
+      });
+    if (body.action === "deactivate")
+      return json({
+        ok: true,
+        ...(await deactivateSlot(db, {
+          creatorId: creator.id,
+          slotId: body.slotId,
+          actorId: session.user.id,
+          nowMs: options.nowMs,
+        })),
+      });
+    if (body.action === "purchase_credits")
+      return json({
+        ok: true,
+        ...(await startCreditPurchase(db, creator, env, {
+          fetchImpl: options.fetchImpl,
+          nowMs: options.nowMs,
+        })),
+      });
+    return json({ error: { message: "Advertising action is invalid." } }, 400);
+  } catch (error) {
+    return json({ error: { message: error.message } }, 409);
+  }
+}
+function json(x, status = 200) {
+  return new Response(JSON.stringify(x), {
+    status,
+    headers: {
+      "cache-control": "private, no-store",
+      "content-type": "application/json; charset=utf-8",
+    },
+  });
+}
