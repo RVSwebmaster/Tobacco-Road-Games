@@ -112,7 +112,7 @@ function assertNavigationAndRoutes() {
   assert.match(build, /href: "\/forum", label: "Community"/, "Generated public and store navigation must include Community.");
   const account = fs.readFileSync(path.join(ROOT, "account.html"), "utf8");
   assert.match(account, /href="\/forum">Community<\/a>/, "Account navigation must include Community.");
-  for (const page of ["index.html", "ai-statement.html", "support.html"]) {
+  for (const page of ["index.html", "support.html"]) {
     const source = fs.readFileSync(path.join(ROOT, page), "utf8");
     assert.match(source, /href="\/forum">Community<\/a>/, `${page} navigation must include Community.`);
   }

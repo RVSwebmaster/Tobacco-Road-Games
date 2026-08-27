@@ -119,7 +119,6 @@ function main() {
 
   buildHomepage(products, indexes, bundleRules);
   buildAccountPage();
-  buildStaticPublicPage("ai-statement.html", "");
   buildStaticPublicPage("support.html", "");
 
   for (const system of indexes.systems) {
@@ -913,7 +912,6 @@ function renderLayout({
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
-      <a class="footer-link" href="/ai-statement.html">Read the AI Statement</a>
     </footer>
   </div>
 </body>
@@ -1577,7 +1575,6 @@ function renderPublicLayout({
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
-      <a class="footer-link" href="/ai-statement.html">Read the AI Statement</a>
     </footer>
   </div>
 </body>
@@ -1994,7 +1991,6 @@ function renderRootSitemap(authors) {
     "/",
     "/authors.html",
     ...authors.map((author) => author.url),
-    "/ai-statement.html",
     "/support.html",
     "/store/",
     "/store/cart/"
