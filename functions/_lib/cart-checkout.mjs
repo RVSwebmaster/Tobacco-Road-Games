@@ -21,6 +21,7 @@ import {
 import { createStripeHostedCheckoutSession, StripeCheckoutError } from "./stripe-checkout.mjs";
 import { readStoreState, storeClosedResponse } from "./store-state.mjs";
 import { getSessionFromRequest } from "./account-auth.mjs";
+import {repairPaidOrderFulfillment} from './order-fulfillment.mjs';
 
 export async function onRequestPost(context) {
   return handleCartCheckoutRequest(context.request, context.env);
@@ -163,6 +164,8 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
       retryable: false
     }, 409);
   }
+
+  if(Number(order.total_cents)===0){const paidAt=new Date(now).toISOString();await database.prepare("UPDATE orders SET payment_status='paid',paid_at=?,processor_fee_cents=0,net_proceeds_cents=0,checkout_session_status='legacy',checkout_updated_at=? WHERE id=? AND total_cents=0 AND payment_status='pending'").bind(paidAt,paidAt,Number(order.id)).run();const fulfillment=await repairPaidOrderFulfillment(database,env.TRG_PRODUCTS,Number(order.id),{nowMs:now});if(!fulfillment.ready)return jsonResponse({error:'The free acquisition was recorded but secure delivery is not ready.',publicOrderReference:order.public_id},503);return jsonResponse({acquisitionComplete:true,checkoutAttemptId,currency:order.currency,items:resolution.responseItems,paymentProvider:'none',paymentStatus:'paid',publicOrderReference:order.public_id,subtotalCents:0,totalCents:0,accessUrl:`/account.html`},201);}
 
   if (order.checkout_session_status === "failed_terminal" || order.payment_status === "failed") {
     return jsonResponse({

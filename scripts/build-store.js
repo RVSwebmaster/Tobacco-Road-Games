@@ -1840,7 +1840,7 @@ function renderBuyUi(product) {
 
   if (product.buyMode === "free-download" && product.buyUrl) {
     return {
-      primary: `<a class="button button--primary" href="${escapeAttribute(product.buyUrl)}">Download Free</a>`,
+      primary: renderFreeDownloadButton(product),
       afterPurchase: `
         <article class="note-card">
           <p class="note-card__label">After Purchase</p>
@@ -2542,13 +2542,14 @@ function renderCartActionButton(product, options = {}) {
   }
 
   const className = options.className || "button button--primary";
-  return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}">Add to Cart</button>`;
+  const pwyw=product.pricingModel==='pwyw'||product.buyMode==='pay-what-you-want';const amount=pwyw?` data-pwyw-suggested-cents="${escapeAttribute(String(product.suggestedPriceCents??product.priceCents??0))}"`:'';
+  return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}"${amount}>${pwyw?'Choose Price':'Add to Cart'}</button>`;
 }
 
 function renderFreeDownloadButton(product, options = {}) {
   if (!isFreeDownloadReady(product)) return "";
   const className = options.className || "button button--primary";
-  return `<a class="${escapeAttribute(className)}" data-store-purchase data-free-download="${escapeAttribute(product.slug)}" href="/store/free-download?product=${encodeURIComponent(product.slug)}">Download Free PDF</a>`;
+  return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}">Download Free PDF</button>`;
 }
 
 function renderDirectActionButton(product, options = {}) {

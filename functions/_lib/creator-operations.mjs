@@ -12,7 +12,7 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
   const session = await getSessionFromRequest(request, env, options.sessionOptions || {});
   if (!session.valid) return json({ error: { code: "not_authenticated", message: "Sign in to access creator tools." } }, 401);
   const creator = await resolveCreator(database, session.user.id, request);
-  if (!creator) return json({ error: { code: "creator_access_denied", message: "This account is not approved for creator tools." } }, 403);
+  if (!creator) return json({ error: { code: "creator_access_denied", message: "Seller registration is incomplete or restricted." } }, 403);
   const route = routePath(request);
   if (request.method !== "GET") {
     if (!validateSameOriginRequest(request) || !(await validateSessionCsrf(request, session)).valid) return json({ error: { code: "request_not_verified", message: "The creator request could not be verified." } }, 403);

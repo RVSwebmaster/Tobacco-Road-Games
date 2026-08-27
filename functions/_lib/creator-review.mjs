@@ -12,7 +12,7 @@ export async function handleCreatorReviewRequest(request, env = {}, options = {}
     return jsonResponse({listings:result.results||[],files:files.results||[]});
   }
   if(request.method!=="POST")return jsonResponse({error:"Use GET or POST."},405);
-  const auth=await verifyAuthenticatedOwnerMutationRequest(request,env);if(!auth.valid)return jsonResponse({error:auth.userMessage},auth.status);actor=auth.username;
+  const auth=await verifyAuthenticatedOwnerMutationRequest(request,env,{nowMs:options.nowMs});if(!auth.valid)return jsonResponse({error:auth.userMessage},auth.status);actor=auth.username;
   let body={};try{body=await request.json();}catch{}
   const action=String(body.action||""), next={approve:"active",request_changes:"needs_changes",reject:"rejected"}[action];if(!next)return jsonResponse({error:"Review action is invalid."},400);
   const listing=await database.prepare("SELECT id,creator_id,lifecycle_state FROM creator_listings WHERE id=?").bind(String(body.listingId||"")).first();if(!listing||listing.lifecycle_state!=="submitted")return jsonResponse({error:"Submitted listing not found."},404);

@@ -213,12 +213,15 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       unavailableItems.push(buildUnavailableItem(slug, "inactive_product", "This item is not currently available for direct purchase."));
       continue;
     }
-    if (product.buyMode !== "cart") {
+    if (product.buyMode !== "cart" && !(product.buyMode==='free-download'&&Number(product.priceCents)===0)) {
       unavailableItems.push(buildUnavailableItem(slug, "not_cart_mode", "This item is not enabled for cart checkout."));
       continue;
     }
 
-    const priceCheck = validateCartPrice(product, { now: options.now });
+    const pricingModel=String(product.pricingModel||((Number(product.priceCents)===0)?'free':'fixed'));let priceCheck;
+    if(pricingModel==='free')priceCheck={valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:0,regularPriceCents:0,saleActive:false}};
+    else if(pricingModel==='pwyw'){const offered=Number(entry.amountCents);if(!Number.isInteger(offered)||offered<0||offered>100000000){unavailableItems.push(buildUnavailableItem(slug,"invalid_pwyw_amount","The Pay What You Want amount is invalid."));continue;}priceCheck={valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:offered,regularPriceCents:Number(product.suggestedPriceCents||product.priceCents||0),saleActive:false}};}
+    else priceCheck = validateCartPrice(product, { now: options.now });
     if (!priceCheck.valid) {
       unavailableItems.push(buildUnavailableItem(slug, "invalid_price", "This item cannot be priced right now."));
       continue;

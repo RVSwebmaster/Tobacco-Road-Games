@@ -48,6 +48,7 @@
       seen.add(slug);
       items.push({
         addedAt: isIsoLike(entry?.addedAt) ? String(entry.addedAt) : nowIso(),
+        ...(Number.isInteger(entry?.amountCents)&&entry.amountCents>=0?{amountCents:entry.amountCents}:{}),
         quantity: 1,
         slug
       });
@@ -112,7 +113,7 @@
     return sanitized;
   }
 
-  function addItem(slug, storage = getStorage()) {
+  function addItem(slug, storage = getStorage(), amountCents = null) {
     const normalizedSlug = normalizeSlug(slug);
     const current = readCart(storage);
     if (!normalizedSlug || current.items.some((entry) => entry.slug === normalizedSlug)) {
@@ -126,6 +127,7 @@
         ...current.items,
         {
           addedAt: stamp,
+          ...(Number.isInteger(amountCents)&&amountCents>=0?{amountCents}:{}),
           quantity: 1,
           slug: normalizedSlug
         }
@@ -178,6 +180,7 @@
     const sanitized = sanitizeCart(cart);
     return {
       items: sanitized.items.map((entry) => ({
+        ...(Number.isInteger(entry.amountCents)?{amountCents:entry.amountCents}:{}),
         quantity: 1,
         slug: entry.slug
       }))
@@ -717,7 +720,7 @@
       }
       button.dataset.cartBound = "true";
       button.addEventListener("click", () => {
-        addItem(button.dataset.cartAdd, storage);
+        const suggested=Number(button.dataset.pwywSuggestedCents);let amount=null;if(Number.isInteger(suggested)&&suggested>=0){const entered=globalThis.prompt?.(`Choose your price in dollars (suggested $${(suggested/100).toFixed(2)}; enter 0 for free):`,(suggested/100).toFixed(2));if(entered===null)return;const dollars=Number(entered);amount=Number.isFinite(dollars)&&dollars>=0&&Math.round(dollars*100)===dollars*100?Math.round(dollars*100):null;if(amount===null){globalThis.alert?.('Enter a valid non-negative dollar amount with no more than two decimal places.');return;}}addItem(button.dataset.cartAdd, storage, amount);
         void renderAll(documentRef, storage, options);
       });
     });

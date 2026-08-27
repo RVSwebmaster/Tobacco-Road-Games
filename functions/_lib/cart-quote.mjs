@@ -61,12 +61,12 @@ export async function handleCartQuoteRequest(request, options = {}) {
       continue;
     }
 
-    if (product.buyMode !== "cart") {
+    if (product.buyMode !== "cart" && !(product.buyMode==='free-download'&&Number(product.priceCents)===0)) {
       unavailableItems.push(buildUnavailableItem(item.slug, "not_cart_mode", "This item is not available through the cart yet."));
       continue;
     }
 
-    const priceCheck = validateCartPrice(product, { now });
+    const priceCheck = product.buyMode==='free-download'&&Number(product.priceCents)===0?{valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:0,regularPriceCents:0,saleActive:false}}:validateCartPrice(product, { now });
     if (!priceCheck.valid) {
       unavailableItems.push(buildUnavailableItem(item.slug, "invalid_price", "This item cannot be quoted right now."));
       continue;

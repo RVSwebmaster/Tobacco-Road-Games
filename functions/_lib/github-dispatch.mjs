@@ -137,7 +137,7 @@ async function findMatchingWorkflowRun(options) {
   return runs.find((run) => {
     const createdAt = Date.parse(run.created_at || "");
     const displayTitle = String(run.display_title || run.name || "");
-    return createdAt >= options.createdAfterMs && displayTitle === expectedTitle;
+    return Number.isFinite(createdAt) && displayTitle === expectedTitle;
   }) || null;
 }
 

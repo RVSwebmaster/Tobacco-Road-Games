@@ -13,7 +13,7 @@ async function main() {
   const agencyPage = fs.readFileSync(path.join(ROOT, "store/products/agency/index.html"), "utf8");
   const janniPage = fs.readFileSync(path.join(ROOT, "store/products/janni/index.html"), "utf8");
   assert.match(agencyPage, /Download Free PDF/, "$0.00 products should display the free-download control.");
-  assert.doesNotMatch(agencyPage, /data-cart-add="agency"/, "Free products must not display Add to Cart.");
+  assert.match(agencyPage, /data-cart-add="agency"/, "Free products must use recorded acquisition checkout.");
   assert.match(janniPage, /data-cart-add="janni"/, "Paid products must retain the existing cart control.");
   assert.deepEqual(getDeliveryProduct("janni"), {
     contentType: "application/pdf",
