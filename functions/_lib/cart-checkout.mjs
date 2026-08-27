@@ -22,6 +22,7 @@ import { createStripeHostedCheckoutSession, StripeCheckoutError } from "./stripe
 import { readStoreState, storeClosedResponse } from "./store-state.mjs";
 import { getSessionFromRequest } from "./account-auth.mjs";
 import {repairPaidOrderFulfillment} from './order-fulfillment.mjs';
+import {recordQualifyingActivity} from './product-inactivity.mjs';
 
 export async function onRequestPost(context) {
   return handleCartCheckoutRequest(context.request, context.env);
@@ -102,6 +103,8 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
   const pricingPolicy = options.pricingPolicy || getRuntimePricingPolicy();
   const resolution = resolvePendingOrderItems(parsed.body.items, checkoutCatalogMap, { now });
 
+  try{for(const item of resolution.items){const listing=await database.prepare("SELECT inactivity_state FROM creator_listings WHERE source_product_slug=? OR public_product_slug=? LIMIT 1").bind(item.productSlug,item.productSlug).first();if(listing?.inactivity_state==='inactive')resolution.unavailableItems.push({code:'inactive_product',message:'This product is not currently available for new acquisition.',quantity:1,slug:item.productSlug});}}catch{}
+
   if (resolution.unavailableItems.length) {
     return jsonResponse({
       error: "One or more cart items are not available for checkout.",
@@ -165,7 +168,7 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     }, 409);
   }
 
-  if(Number(order.total_cents)===0){const paidAt=new Date(now).toISOString();await database.prepare("UPDATE orders SET payment_status='paid',paid_at=?,processor_fee_cents=0,net_proceeds_cents=0,checkout_session_status='legacy',checkout_updated_at=? WHERE id=? AND total_cents=0 AND payment_status='pending'").bind(paidAt,paidAt,Number(order.id)).run();const fulfillment=await repairPaidOrderFulfillment(database,env.TRG_PRODUCTS,Number(order.id),{nowMs:now});if(!fulfillment.ready)return jsonResponse({error:'The free acquisition was recorded but secure delivery is not ready.',publicOrderReference:order.public_id},503);return jsonResponse({acquisitionComplete:true,checkoutAttemptId,currency:order.currency,items:resolution.responseItems,paymentProvider:'none',paymentStatus:'paid',publicOrderReference:order.public_id,subtotalCents:0,totalCents:0,accessUrl:`/account.html`},201);}
+  if(Number(order.total_cents)===0){const paidAt=new Date(now).toISOString();await database.prepare("UPDATE orders SET payment_status='paid',paid_at=?,processor_fee_cents=0,net_proceeds_cents=0,checkout_session_status='legacy',checkout_updated_at=? WHERE id=? AND total_cents=0 AND payment_status='pending'").bind(paidAt,paidAt,Number(order.id)).run();await recordQualifyingActivity(database,{orderId:Number(order.id),nowMs:now}).catch(()=>{});const fulfillment=await repairPaidOrderFulfillment(database,env.TRG_PRODUCTS,Number(order.id),{nowMs:now});if(!fulfillment.ready)return jsonResponse({error:'The free acquisition was recorded but secure delivery is not ready.',publicOrderReference:order.public_id},503);return jsonResponse({acquisitionComplete:true,checkoutAttemptId,currency:order.currency,items:resolution.responseItems,paymentProvider:'none',paymentStatus:'paid',publicOrderReference:order.public_id,subtotalCents:0,totalCents:0,accessUrl:`/account.html`},201);}
 
   if (order.checkout_session_status === "failed_terminal" || order.payment_status === "failed") {
     return jsonResponse({

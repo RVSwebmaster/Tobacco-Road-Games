@@ -9,6 +9,7 @@ import { repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
 import { OrderDeliveryError, deliverPaidOrderEmail } from "./order-delivery.mjs";
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
 import { creatorSaleStatements, getEffectiveFeePolicy, resolveFeePolicy } from "./creator-finance.mjs";
+import {recordQualifyingActivity} from './product-inactivity.mjs';
 import { processStripeCreatorFinanceEvent, STRIPE_CREATOR_FINANCE_EVENTS } from "./creator-provider-finance.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
@@ -439,6 +440,7 @@ async function finalizeWebhookEvent(database, eventRecord, processingToken, outc
   ));
 
   await database.batch(statements);
+  if(outcome.orderAction==='paid')await recordQualifyingActivity(database,{orderId:Number(outcome.order.id),nowMs:Date.parse(outcome.paidAt)}).catch(()=>{});
   const finalizedEvent = await getWebhookEventById(database, Number(eventRecord.id));
   if (!finalizedEvent || finalizedEvent.processing_status !== outcome.processingStatus) {
     throw new Error("The webhook event did not reach its final state.");

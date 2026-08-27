@@ -5,6 +5,7 @@ import {getCreatorPayoutStatus,getOperatorPayoutReadiness,reconcileProviderFinan
 import {reconcileConnectSandbox} from './stripe-connect-sandbox.mjs';
 import {approvePayoutBatch,cancelPayoutBatch,listPayoutBatches,preparePayoutBatch} from './payout-batches.mjs';
 import {cancelPreferredRenewal,correctFirstPublication,createPreferredTerm} from './marketplace-policy.mjs';
+import {listInactivityOperations,runInactivityCheck} from './product-inactivity.mjs';
 
 export async function handleCreatorFinanceOwnerRequest(request,env={},options={}){
  const db=options.database||env.TRG_ORDERS;
@@ -12,7 +13,7 @@ export async function handleCreatorFinanceOwnerRequest(request,env={},options={}
   const secrets=getOwnerSecrets(env),auth=await verifySessionToken(readCookie(request,SESSION_COOKIE_NAME),secrets.sessionSecret,options.nowMs||Date.now());
   if(!auth.valid)return json({error:'Operator access required.'},403);
   const creatorId=new URL(request.url).searchParams.get('creator');
-  if(creatorId)return json({...await getCreatorFinance(db,creatorId,{nowMs:options.nowMs}),payout:await getCreatorPayoutStatus(db,creatorId,{env,nowMs:options.nowMs})});const finance=await getOperatorFinance(db,{nowMs:options.nowMs}),payout=await getOperatorPayoutReadiness(db,{env,nowMs:options.nowMs});return json({...finance,...payout,providerReconciliation:await reconcileProviderFinance(db),payoutBatches:await listPayoutBatches(db)});
+  if(creatorId)return json({...await getCreatorFinance(db,creatorId,{nowMs:options.nowMs}),payout:await getCreatorPayoutStatus(db,creatorId,{env,nowMs:options.nowMs})});const finance=await getOperatorFinance(db,{nowMs:options.nowMs}),payout=await getOperatorPayoutReadiness(db,{env,nowMs:options.nowMs});let inactivity={warnings:[],recentInactive:[],recentReactivated:[],lifecycleErrors:[]};try{inactivity=await listInactivityOperations(db);}catch{}return json({...finance,...payout,providerReconciliation:await reconcileProviderFinance(db),payoutBatches:await listPayoutBatches(db),inactivity});
  }
  if(request.method!=='POST')return json({error:'Use GET or POST.'},405);
  const auth=await verifyAuthenticatedOwnerMutationRequest(request,env,{nowMs:options.nowMs});if(!auth.valid)return json({error:auth.userMessage},auth.status);let body={};try{body=await request.json();}catch{}
@@ -30,6 +31,7 @@ export async function handleCreatorFinanceOwnerRequest(request,env={},options={}
   if(body.action==='create_preferred_term')return json({ok:true,term:await createPreferredTerm(db,{creatorId:body.creatorId,paymentCadence:body.paymentCadence,termStartedAt:body.termStartedAt,operatorActor:auth.username,nowMs:options.nowMs})});
   if(body.action==='cancel_preferred_renewal')return json({ok:true,term:await cancelPreferredRenewal(db,{termId:body.termId,operatorActor:auth.username,nowMs:options.nowMs})});
   if(body.action==='correct_first_publication')return json({ok:true,correction:await correctFirstPublication(db,{listingId:body.listingId,correctedTimestamp:body.correctedTimestamp,reason:body.reason,operatorActor:auth.username,nowMs:options.nowMs})});
+  if(body.action==='run_inactivity_check')return json({ok:true,result:await runInactivityCheck(db,{nowMs:options.nowMs})});
   return json({error:'Finance action is invalid.'},400);
  }catch(error){return json({error:error.message},409);}
 }
