@@ -2351,6 +2351,19 @@ h4 {
   align-content: start;
 }
 
+.creator-onboarding { gap: 16px; }
+.creator-registration-details > summary { cursor: pointer; color: var(--accent-strong); font-weight: 700; }
+.creator-registration-form fieldset { display: grid; gap: 10px; margin: 0; padding: 18px; border: 1px solid rgba(242, 216, 170, 0.18); border-radius: 14px; }
+.creator-registration-form legend { padding: 0 6px; color: var(--text); font-weight: 700; }
+.creator-registration-form legend span { margin-left: 6px; color: var(--accent-strong); font-size: 0.78rem; text-transform: uppercase; }
+.creator-agreement { padding: 12px; border: 1px solid rgba(242, 216, 170, 0.14); border-radius: 10px; background: rgba(12, 8, 6, 0.25); }
+.creator-agreement summary { cursor: pointer; font-weight: 700; }
+.creator-status-list { display: grid; gap: 8px; padding: 0; list-style: none; }
+.creator-status-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 18px; padding: 11px 13px; border: 1px solid rgba(242, 216, 170, 0.15); border-radius: 10px; }
+.creator-status-item--complete span { color: #a8d79b; }
+.creator-status-item--attention span { color: var(--accent-strong); }
+.creator-onboarding-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
 @media (max-width: 640px) {
   .discussion-form__fields {
     grid-template-columns: 1fr;

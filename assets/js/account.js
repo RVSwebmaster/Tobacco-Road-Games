@@ -26,7 +26,7 @@
   const libraryList = document.querySelector("#library-list");
   const recoveryForm = document.querySelector("#purchase-recovery-form");
   const recoveryStatus = document.querySelector("#purchase-recovery-status");
-  const accountProfilePanel=document.querySelector('#account-profile-panel'),accountProfileForm=document.querySelector('#account-profile-form'),accountProfileStatus=document.querySelector('#account-profile-status'),creatorRegistrationPanel=document.querySelector('#creator-registration-panel'),creatorRegistrationForm=document.querySelector('#creator-registration-form'),creatorRegistrationStatus=document.querySelector('#creator-registration-status');
+  const accountProfilePanel=document.querySelector('#account-profile-panel'),accountProfileForm=document.querySelector('#account-profile-form'),accountProfileStatus=document.querySelector('#account-profile-status'),creatorRegistrationPanel=document.querySelector('#creator-registration-panel'),creatorRegistrationForm=document.querySelector('#creator-registration-form'),creatorRegistrationStatus=document.querySelector('#creator-registration-status'),creatorRegistrationDetails=document.querySelector('#creator-registration-details'),creatorOnboardingStatus=document.querySelector('#creator-onboarding-status'),creatorOnboardingMessage=document.querySelector('#creator-onboarding-message'),creatorStatusList=document.querySelector('#creator-status-list'),creatorAgreementVersion=document.querySelector('#creator-agreement-version'),creatorAgreementAccept=document.querySelector('#creator-agreement-accept'),creatorDashboardLink=document.querySelector('#creator-dashboard-link'),creatorPaymentGuidance=document.querySelector('#creator-payment-guidance');
   let preparedAvatar = null;
   let previewObjectUrl = "";
   let csrfToken = "";
@@ -479,9 +479,32 @@
     }
   }
 
-  async function refreshRegistrationPanels(){accountProfilePanel.hidden=false;const profile=await fetch('/api/account/profile',{credentials:'same-origin'}).then(async r=>{const p=await r.json();if(!r.ok)throw Error(p.error?.message||'Account profile unavailable.');return p;});for(const key of ['legalName','birthday','phone','displayName','avatarUrl'])if(accountProfileForm.elements[key])accountProfileForm.elements[key].value=profile.user[key]||'';accountProfileForm.elements.accountNotices.checked=Boolean(profile.user.notificationPreferences?.accountNotices);const registration=await fetch('/api/creator-registration',{credentials:'same-origin'}).then(r=>r.json());creatorRegistrationPanel.hidden=Boolean(registration.ownedCreators?.some(x=>x.identity_type==='primary'));if(!creatorRegistrationPanel.hidden)creatorRegistrationForm.elements.contactEmail.value=profile.user.email;}
+  async function refreshRegistrationPanels(){
+    accountProfilePanel.hidden=false;
+    const profile=await fetch('/api/account/profile',{credentials:'same-origin'}).then(async r=>{const p=await r.json();if(!r.ok)throw Error(p.error?.message||'Account profile unavailable.');return p;});
+    for(const key of ['legalName','birthday','phone','displayName','avatarUrl'])if(accountProfileForm.elements[key])accountProfileForm.elements[key].value=profile.user[key]||'';
+    accountProfileForm.elements.accountNotices.checked=Boolean(profile.user.notificationPreferences?.accountNotices);
+    const registration=await fetch('/api/creator-registration',{credentials:'same-origin'}).then(async r=>{const p=await r.json();if(!r.ok)throw Error(p.error?.message||'Creator registration status is unavailable.');return p;});
+    creatorRegistrationPanel.hidden=false;
+    creatorAgreementVersion.textContent=registration.agreement?.version||'Current version';
+    const primary=registration.ownedCreators?.find(x=>(x.identityType||x.identity_type)==='primary');
+    creatorRegistrationDetails.hidden=Boolean(primary);
+    creatorOnboardingStatus.hidden=!primary;
+    if(!primary){creatorRegistrationForm.elements.contactEmail.value=profile.user.email;creatorRegistrationForm.elements.legalName.value=profile.user.legalName||'';return;}
+    renderCreatorReadiness(primary,registration.paymentCollection);
+  }
+  function renderCreatorReadiness(creator,paymentCollection){
+    const labels={customerAccountComplete:'Customer Account',creatorPublicComplete:'Creator Identity',creatorDetailsComplete:'Business Information',agreementCurrent:'Creator Agreement',paymentMethodReady:'Payment Method',payoutReady:'Payout Setup',identityEntitled:'Creator Account'};
+    creatorStatusList.replaceChildren(...Object.entries(labels).map(([key,label])=>{const item=document.createElement('li'),name=document.createElement('strong'),state=document.createElement('span'),complete=Boolean(creator.checks?.[key]);name.textContent=label;state.textContent=complete?'Complete':'Needs attention';item.className=complete?'creator-status-item creator-status-item--complete':'creator-status-item creator-status-item--attention';item.append(name,state);return item;}));
+    creatorOnboardingMessage.textContent=creator.registrationComplete?'Your Creator registration is complete. You can now add products to Tobacco Road Games.':'Complete the items marked “Needs attention.” Product and listing tools remain unavailable until every registration requirement is complete.';
+    creatorDashboardLink.hidden=!creator.registrationComplete;
+    creatorAgreementAccept.hidden=Boolean(creator.checks?.agreementCurrent);
+    creatorAgreementAccept.dataset.creatorId=creator.id;
+    creatorPaymentGuidance.textContent=creator.paymentMethodReady?'Your Stripe-hosted payment method is ready.':paymentCollection?.staging?'Stripe-hosted payment-method collection is intentionally unavailable in this staging build. TRG does not collect or store raw card numbers.':'Stripe-hosted payment-method setup is not available yet. TRG does not collect or store raw card numbers.';
+  }
   accountProfileForm?.addEventListener('submit',async event=>{event.preventDefault();const f=event.currentTarget;try{await api('/api/account/profile',{legalName:f.legalName.value,birthday:f.birthday.value||null,phone:f.phone.value,displayName:f.displayName.value,avatarUrl:f.avatarUrl.value,notificationPreferences:{accountNotices:f.accountNotices.checked}});accountProfileStatus.textContent='Private account profile saved.';}catch(error){accountProfileStatus.textContent=error.message;}});
-  creatorRegistrationForm?.addEventListener('submit',async event=>{event.preventDefault();const f=event.currentTarget,d=Object.fromEntries(new FormData(f));d.acceptAgreement=f.acceptAgreement.checked;d.confirmRights=f.confirmRights.checked;try{const result=await api('/api/creator-registration',d);creatorRegistrationStatus.textContent=`Creator identity ${result.slug} registered. Payout and payment-method setup remain separate.`;await refreshRegistrationPanels();}catch(error){creatorRegistrationStatus.textContent=error.message;}});
+  creatorRegistrationForm?.addEventListener('submit',async event=>{event.preventDefault();const f=event.currentTarget,d=Object.fromEntries(new FormData(f));d.acceptAgreement=f.acceptAgreement.checked;d.confirmRights=f.confirmRights.checked;d.links=d.website?[{label:'Website',url:d.website}]:[];delete d.website;try{const result=await api('/api/creator-registration',d);creatorRegistrationStatus.textContent=`Creator identity ${result.slug} created. Complete payment-method and payout setup to unlock product intake.`;await refreshRegistrationPanels();}catch(error){creatorRegistrationStatus.textContent=error.message;}});
+  creatorAgreementAccept?.addEventListener('click',async()=>{try{await api('/api/creator-registration',{action:'accept_current_agreement',creatorId:creatorAgreementAccept.dataset.creatorId});creatorRegistrationStatus.textContent='Current Creator Agreement accepted.';await refreshRegistrationPanels();}catch(error){creatorRegistrationStatus.textContent=error.message;}});
 
   window.addEventListener("load", () => window.setTimeout(scheduleGoogleInitialization, 100));
   refreshAccount().then(() => {

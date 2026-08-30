@@ -12,7 +12,7 @@ const MIGRATION = [
 const ORIGIN = "https://tobaccoroadgames.com";
 const TEST_OPTIONS = Object.freeze({
   disableRateLimit: true,
-  now: Date.parse("2026-07-30T12:00:00.000Z"),
+  now: Date.now(),
   passwordHashOptions: { N: 16, dkLen: 16, p: 1, r: 1 }
 });
 

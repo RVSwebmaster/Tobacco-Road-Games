@@ -53,8 +53,10 @@
     status.textContent = summary.intakeAccess
       ? `Profile ${summary.overview.profileStatus}.`
       : "Complete every registration and payout-onboarding requirement to unlock product intake and listing tools.";
+    document.querySelector("#creator-metrics").hidden = !summary.intakeAccess;
     document.querySelector("#creator-metrics").textContent =
       `${summary.overview.activeListings} active · ${summary.overview.draftListings} drafts · ${summary.overview.unavailableListings} unavailable · ${summary.overview.recentOrderCount} paid orders`;
+    renderRegistrationReadiness(summary);
     const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
     document.querySelector("#creator-finance-summary").textContent =
       `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · available ${money(finance.summary.availableBalanceCents)} · dispute held ${money(finance.payout.providerHeldCents)} · paid ${money(finance.summary.paidBalanceCents)} · unpaid ${money(finance.summary.unpaidBalanceCents)}`;
@@ -62,12 +64,17 @@
       .payout.eligible
       ? `Payout ready: ${money(finance.payout.eligibleAmountCents)} is eligible.`
       : `Payout blocked: ${finance.payout.blockedReasons.join(" ")}`;
+    document.querySelector("#creator-payment-method-status").textContent =
+      summary.registrationChecks?.paymentMethodReady
+        ? "Payment method — Complete"
+        : "Payment method — Needs attention. Stripe-hosted collection is not available yet.";
     fillProfile(profileData.creator);
     overview.hidden =
       profilePanel.hidden =
       document.querySelector("#creator-finance").hidden =
         false;
     if (!summary.intakeAccess) return;
+    document.querySelector("#creator-business-records").hidden = false;
     const [listingData, analytics, advertising] = await Promise.all([
       api("listings"),
       api("analytics"),
@@ -85,6 +92,37 @@
     listingsPanel.hidden = document.querySelector(
       "#creator-advertising",
     ).hidden = false;
+  }
+  function renderRegistrationReadiness(summary) {
+    const labels = {
+        customerAccountComplete: "Customer Account",
+        creatorPublicComplete: "Creator Identity",
+        creatorDetailsComplete: "Business Information",
+        agreementCurrent: "Creator Agreement",
+        paymentMethodReady: "Payment Method",
+        payoutReady: "Payout Setup",
+        identityEntitled: "Creator Account",
+      },
+      root = document.querySelector("#creator-registration-checklist");
+    root.replaceChildren(
+      ...Object.entries(labels).map(([key, label]) => {
+        const item = document.createElement("li"),
+          name = document.createElement("strong"),
+          state = document.createElement("span"),
+          complete = Boolean(summary.registrationChecks?.[key]);
+        name.textContent = label;
+        state.textContent = complete ? "Complete" : "Needs attention";
+        item.className = complete
+          ? "creator-status-item creator-status-item--complete"
+          : "creator-status-item creator-status-item--attention";
+        item.append(name, state);
+        return item;
+      }),
+    );
+    document.querySelector("#creator-registration-message").textContent =
+      summary.intakeAccess
+        ? "Your Creator registration is complete. Product and listing tools are available below."
+        : "Finish the items marked “Needs attention.” Product intake, drafts, uploads, pricing, bundles, analytics, and advertising remain unavailable until registration is complete.";
   }
   function renderListings(items, files) {
     const root = document.querySelector("#creator-listing-list");

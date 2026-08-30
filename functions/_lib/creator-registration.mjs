@@ -24,7 +24,12 @@ export async function handleCreatorRegistrationRequest(
       401,
     );
   if (request.method === "GET")
-    return json(await registrationState(db, session.user.id));
+    return json(
+      await registrationState(db, session.user.id, {
+        nowMs: options.nowMs,
+        pipelineStage: env.PAYMENT_PIPELINE_STAGE,
+      }),
+    );
   if (request.method !== "POST")
     return json({ error: { message: "Use GET or POST." } }, 405);
   if (
@@ -40,6 +45,26 @@ export async function handleCreatorRegistrationRequest(
     body = await request.json();
   } catch {}
   try {
+    if (body.action === "accept_current_agreement") {
+      const creatorId = String(body.creatorId || ""),
+        owned = await db
+          .prepare(
+            "SELECT 1 ok FROM creator_identity_ownership WHERE creator_id=? AND owner_user_id=?",
+          )
+          .bind(creatorId, session.user.id)
+          .first();
+      if (!owned)
+        return json({ error: { message: "Creator ownership is required." } }, 403);
+      return json({
+        ok: true,
+        acceptance: await acceptCreatorAgreement(db, {
+          creatorId,
+          userId: session.user.id,
+          sourceContext: "creator_onboarding",
+          nowMs: options.nowMs,
+        }),
+      });
+    }
     return json(
       {
         ok: true,
@@ -438,7 +463,11 @@ async function createCreator(
     paymentMethodStatus: "missing",
   };
 }
-async function registrationState(db, userId) {
+async function registrationState(
+  db,
+  userId,
+  { nowMs = Date.now(), pipelineStage = "" } = {},
+) {
   const owned = await rows(
     db
       .prepare(
@@ -446,7 +475,33 @@ async function registrationState(db, userId) {
       )
       .bind(userId),
   );
-  return { agreement: CREATOR_AGREEMENT, ownedCreators: owned };
+  const ownedCreators = [];
+  for (const creator of owned) {
+    const readiness = await getCreatorAccountReadiness(db, creator.creator_id, {
+      markInitialCompletion: true,
+      nowMs,
+    });
+    ownedCreators.push({
+      id: creator.creator_id,
+      slug: creator.slug,
+      displayName: creator.display_name,
+      identityType: creator.identity_type,
+      identity_type: creator.identity_type,
+      registrationComplete: readiness.registrationComplete,
+      checks: readiness.checks,
+      paymentMethodReady: readiness.paymentMethodReady,
+      payoutReady: readiness.payoutReady,
+    });
+  }
+  return {
+    agreement: CREATOR_AGREEMENT,
+    ownedCreators,
+    paymentCollection: {
+      hostedByStripe: true,
+      available: false,
+      staging: String(pipelineStage || "").toLowerCase() === "staging",
+    },
+  };
 }
 function registrationFields(b, email) {
   const f = {
