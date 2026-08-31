@@ -125,6 +125,31 @@
             </form>
           </div>
         </section>
+        <section class="account-card" id="creator-preferred" hidden>
+          <h2>Preferred Creator</h2>
+          <p>
+            $20 per month under a 12-month commitment, or $200 annually prepaid.
+            Pricing and benefits are unchanged.
+          </p>
+          <p id="creator-preferred-summary"></p>
+          <p>
+            Creator Balance must cover the full charge. Split tender is not
+            available and balance is never spent automatically.
+          </p>
+          <button
+            class="button button--secondary"
+            data-preferred-balance-plan="monthly_commitment"
+          >
+            Pay $20 Monthly Charge with Creator Balance
+          </button>
+          <button
+            class="button button--secondary"
+            data-preferred-balance-plan="annual_prepaid"
+          >
+            Pay $200 Annual Charge with Creator Balance
+          </button>
+          <p id="creator-preferred-status" role="status"></p>
+        </section>
         <section class="account-card" id="creator-remediations" hidden>
           <h2>Product Remediation</h2>
           <p>
@@ -219,6 +244,12 @@
           </details>
           <button class="button button--secondary" id="creator-buy-ad-credits">
             Buy 5 Ad Credits for $5
+          </button>
+          <button
+            class="button button--secondary"
+            id="creator-buy-ad-credits-balance"
+          >
+            Pay $5 with Creator Balance
           </button>
           <p id="creator-ad-status" role="status"></p>
         </section>

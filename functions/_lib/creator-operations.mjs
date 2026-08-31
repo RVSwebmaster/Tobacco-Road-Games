@@ -21,6 +21,10 @@ import {
 } from "./marketplace-operations.mjs";
 import { getCreatorRatingSummary } from "./creator-reputation.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
+import {
+  purchaseServiceWithCreatorBalance,
+  SERVICE_PRICING,
+} from "./creator-service-purchases.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -128,6 +132,58 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
     return creatorFinance(request, database, creator, { ...options, env });
   if (request.method === "GET" && route === "operations")
     return json(await listOperations(database, { creatorId: creator.id }));
+  if (request.method === "GET" && route === "preferred") {
+    const term = await database
+      .prepare(
+        "SELECT * FROM creator_preferred_terms WHERE creator_id=? AND status='active' AND term_ends_at>? ORDER BY term_ends_at DESC LIMIT 1",
+      )
+      .bind(creator.id, new Date(options.nowMs || Date.now()).toISOString())
+      .first();
+    const balance = await getCreatorBalance(database, {
+      creatorId: creator.id,
+      userId: session.user.id,
+      nowMs: options.nowMs,
+    });
+    return json({
+      term,
+      balance,
+      pricing: {
+        monthlyCommitmentCents: SERVICE_PRICING.preferred_monthly.amountCents,
+        annualPrepaidCents: SERVICE_PRICING.preferred_annual.amountCents,
+      },
+      automaticBalanceBilling: false,
+    });
+  }
+  if (request.method === "POST" && route === "preferred") {
+    try {
+      const body = await bodyJson(request),
+        sku =
+          body.plan === "annual_prepaid"
+            ? "preferred_annual"
+            : body.plan === "monthly_commitment"
+              ? "preferred_monthly"
+              : "";
+      if (body.paymentSource !== "creator_balance" || !sku)
+        throw new Error(
+          "Choose a valid Preferred plan and explicitly select Creator Balance.",
+        );
+      return json(
+        {
+          ok: true,
+          ...(await purchaseServiceWithCreatorBalance(database, {
+            creatorId: creator.id,
+            userId: session.user.id,
+            sku,
+            idempotencyKey: String(body.idempotencyKey || ""),
+            nowMs: options.nowMs,
+          })),
+        },
+        201,
+      );
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
   if (request.method === "POST" && route === "payout-request") {
     try {
       const body = await bodyJson(request);
@@ -534,12 +590,19 @@ async function creatorFinance(request, db, creator, options) {
       creatorId: creator.id,
       userId: owner.owner_user_id,
       nowMs: options.nowMs,
-    });
+    }),
+    serviceResult = await db
+      .prepare(
+        "SELECT id,service_type,service_sku,quantity,amount_cents,currency,payment_source,settlement_method,processor_fee_cents,status,created_at,reversed_at FROM marketplace_service_purchases WHERE creator_id=? ORDER BY created_at DESC LIMIT 100",
+      )
+      .bind(creator.id)
+      .all();
   return json({
     creator: publicCreator(creator),
     ...finance,
     payout,
     creatorBalance,
+    servicePurchases: serviceResult.results || [],
   });
 }
 async function creatorStatement(request, db, creator, options) {

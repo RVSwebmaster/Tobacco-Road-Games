@@ -43,12 +43,14 @@
       credentials: "same-origin",
     }).then((r) => r.json());
     csrf = account.csrfToken || "";
-    const [summary, profileData, finance, operations] = await Promise.all([
-      api("overview"),
-      api("profile"),
-      api("finance"),
-      api("operations"),
-    ]);
+    const [summary, profileData, finance, operations, preferred] =
+      await Promise.all([
+        api("overview"),
+        api("profile"),
+        api("finance"),
+        api("operations"),
+        api("preferred"),
+      ]);
     document.querySelector("#creator-name").textContent =
       summary.creator.displayName;
     status.textContent = summary.intakeAccess
@@ -69,6 +71,17 @@
       summary.registrationChecks?.paymentMethodReady
         ? "Payment method — Complete"
         : "Payment method — Needs attention. Stripe-hosted collection is not available yet.";
+    document.querySelector("#creator-preferred").hidden = false;
+    document.querySelector("#creator-preferred-summary").textContent =
+      `Creator Balance ${money(preferred.balance.availableCents)} available · ${preferred.term ? `Preferred active through ${formatDate(preferred.term.term_ends_at)}` : "Standard tier"}. Automatic Creator Balance billing is not enabled.`;
+    for (const button of document.querySelectorAll(
+      "[data-preferred-balance-plan]",
+    ))
+      button.disabled =
+        preferred.balance.availableCents <
+        (button.dataset.preferredBalancePlan === "annual_prepaid"
+          ? 20000
+          : 2000);
     renderOperations(operations);
     fillProfile(profileData.creator);
     overview.hidden =
@@ -260,7 +273,9 @@
   }
   function renderAdvertising(data) {
     document.querySelector("#creator-ad-summary").textContent =
-      `${data.tier} tier · ${data.includedEntitlement} included active slot${data.includedEntitlement === 1 ? "" : "s"} · ${data.unusedCredits} unused Ad Credits.`;
+      `${data.tier} tier · ${data.includedEntitlement} included active slot${data.includedEntitlement === 1 ? "" : "s"} · ${data.slots.filter((x) => x.slot_type === "purchased").length} active credit-funded slots · ${data.unusedCredits} unused Ad Credits · Creator Balance $${(data.creatorBalance.availableCents / 100).toFixed(2)} available.`;
+    document.querySelector("#creator-buy-ad-credits-balance").disabled =
+      data.creatorBalance.availableCents < 500;
     const slots = document.querySelector("#creator-ad-slots");
     slots.replaceChildren(
       ...data.slots.map((slot) => {
@@ -316,6 +331,21 @@
             await load();
           };
           body.append(purchased);
+          for (const slot of data.slots) {
+            const swap = document.createElement("button");
+            swap.className = "button button--secondary";
+            swap.textContent = `Place in ${slot.slot_type} slot ${slot.slot_index}`;
+            swap.disabled = slot.creative_id === item.id;
+            swap.onclick = async () => {
+              await api("advertising", {
+                action: "reassign",
+                slotId: slot.id,
+                creativeId: item.id,
+              });
+              await load();
+            };
+            body.append(swap);
+          }
         }
         card.append(body);
         return card;
@@ -360,6 +390,41 @@
       } catch (error) {
         document.querySelector("#creator-draft-status").textContent =
           error.message;
+      }
+    });
+  for (const button of document.querySelectorAll(
+    "[data-preferred-balance-plan]",
+  ))
+    button.addEventListener("click", async () => {
+      const output = document.querySelector("#creator-preferred-status");
+      try {
+        output.textContent = "Processing internal service payment…";
+        const result = await api("preferred", {
+          plan: button.dataset.preferredBalancePlan,
+          paymentSource: "creator_balance",
+          idempotencyKey: `svc_${crypto.randomUUID()}`,
+        });
+        output.textContent = `Preferred payment complete. Creator Balance charged $${(result.amountCents / 100).toFixed(2)}.`;
+        await load();
+      } catch (error) {
+        output.textContent = error.message;
+      }
+    });
+  document
+    .querySelector("#creator-buy-ad-credits-balance")
+    .addEventListener("click", async () => {
+      const output = document.querySelector("#creator-ad-status");
+      try {
+        output.textContent = "Processing Creator Balance payment…";
+        const result = await api("advertising", {
+          action: "purchase_credits_with_creator_balance",
+          paymentSource: "creator_balance",
+          idempotencyKey: `svc_${crypto.randomUUID()}`,
+        });
+        output.textContent = `Purchase complete. ${result.creditsIssued} Ad Credits issued.`;
+        await load();
+      } catch (error) {
+        output.textContent = error.message;
       }
     });
   document

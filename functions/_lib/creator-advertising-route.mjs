@@ -12,6 +12,8 @@ import {
   startCreditPurchase,
   uploadCreative,
 } from "./creator-advertising.mjs";
+import { purchaseServiceWithCreatorBalance } from "./creator-service-purchases.mjs";
+import { getCreatorBalance } from "./creator-balance.mjs";
 import { getCreatorAccountReadiness } from "./creator-registration.mjs";
 export async function handleCreatorAdvertisingRequest(
   request,
@@ -52,7 +54,14 @@ export async function handleCreatorAdvertisingRequest(
       403,
     );
   if (request.method === "GET")
-    return json(await getAdvertising(db, creator.id, { nowMs: options.nowMs }));
+    return json({
+      ...(await getAdvertising(db, creator.id, { nowMs: options.nowMs })),
+      creatorBalance: await getCreatorBalance(db, {
+        creatorId: creator.id,
+        userId: session.user.id,
+        nowMs: options.nowMs,
+      }),
+    });
   if (
     !validateSameOriginRequest(request) ||
     !(await validateSessionCsrf(request, session)).valid
@@ -128,6 +137,25 @@ export async function handleCreatorAdvertisingRequest(
           nowMs: options.nowMs,
         })),
       });
+    if (body.action === "purchase_credits_with_creator_balance") {
+      if (body.paymentSource !== "creator_balance")
+        throw new Error(
+          "Explicit Creator Balance payment selection is required.",
+        );
+      return json(
+        {
+          ok: true,
+          ...(await purchaseServiceWithCreatorBalance(db, {
+            creatorId: creator.id,
+            userId: session.user.id,
+            sku: "ad_credit_package",
+            idempotencyKey: String(body.idempotencyKey || ""),
+            nowMs: options.nowMs,
+          })),
+        },
+        201,
+      );
+    }
     return json({ error: { message: "Advertising action is invalid." } }, 400);
   } catch (error) {
     return json({ error: { message: error.message } }, 409);

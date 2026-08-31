@@ -23,10 +23,10 @@ assert.doesNotMatch(account, /AI disclosure|production-method disclosure/i);
 
 assert.match(accountScript, /Creator registration is complete/);
 assert.match(accountScript, /Needs attention/);
-assert.match(accountScript, /paymentMethodReady:'Payment Method'/);
-assert.match(accountScript, /payoutReady:'Payout Setup'/);
+assert.match(accountScript, /paymentMethodReady:\s*["']Payment Method["']/);
+assert.match(accountScript, /payoutReady:\s*["']Payout Setup["']/);
 assert.match(accountScript, /accept_current_agreement/);
-assert.match(accountScript, /creatorDashboardLink\.hidden=!creator\.registrationComplete/);
+assert.match(accountScript, /creatorDashboardLink\.hidden\s*=\s*!creator\.registrationComplete/);
 
 assert.match(creator, /id="creator-listings" hidden/);
 assert.match(creator, /id="creator-advertising" hidden/);
