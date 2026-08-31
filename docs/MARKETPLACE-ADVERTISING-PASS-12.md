@@ -2,6 +2,8 @@
 
 Creator ad creative, rotation entitlements, purchased slots, and Ad Credits are separate durable records. Standard creators receive one included active slot and Preferred creators receive five. A five-credit pack costs 500 integer cents; each redemption creates one interchangeable 30-day purchased slot. Credit sales are TRG service revenue and never enter creator earnings.
 
+Post-audit accounting convergence: Creator Balance and Stripe-funded packages both create the canonical `ad_credit_package` service purchase and one matching service-revenue entry. Only payment source, settlement method, balance-debit behavior, safe provider references, and authoritative processor-fee availability differ. Stripe fulfillment occurs only through the verified webhook processing lease and is idempotent across event replay; failed or expired payment attempts create neither credits nor completed revenue.
+
 The five-credit package may be paid through the existing external path or explicitly with at least $5 of cleared Creator Balance. Creator Balance settlement records zero Stripe processing and no product GMV. Credits remain unused until redemption. Redeeming one credit creates one additional 30-day slot; changing the eligible validated creative or product in that slot consumes no additional credit and does not reset its clock. Expiration ends rotation capacity without automatic renewal.
 
 The development banner specification is PNG/JPEG/WebP, 5 MB maximum, 1200×240 (5:1), required alt text, an approximately 120-second visible interval, and an 800 ms fade. Specifications are centralized in `AD_SPEC`. Creator files are magic-byte checked and privately staged before operator acceptance.

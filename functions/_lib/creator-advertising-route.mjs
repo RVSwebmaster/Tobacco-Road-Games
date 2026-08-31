@@ -137,6 +137,7 @@ export async function handleCreatorAdvertisingRequest(
         ...(await startCreditPurchase(db, creator, env, {
           fetchImpl: options.fetchImpl,
           nowMs: options.nowMs,
+          userId: session.user.id,
         })),
       });
     if (body.action === "purchase_credits_with_creator_balance") {

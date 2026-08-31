@@ -19,6 +19,149 @@ export const SERVICE_PRICING = Object.freeze({
   },
 });
 
+export async function settleStripeAdCreditPurchase(
+  db,
+  {
+    purchaseId,
+    stripeCheckoutSessionId,
+    stripePaymentIntentId,
+    providerEventId,
+    amountCents,
+    currency,
+    paymentStatus,
+    processorFeeCents = null,
+    nowMs = Date.now(),
+  } = {},
+) {
+  const price = SERVICE_PRICING.ad_credit_package;
+  if (
+    !purchaseId ||
+    !String(stripeCheckoutSessionId || "").startsWith("cs_") ||
+    !String(stripePaymentIntentId || "").startsWith("pi_") ||
+    !String(providerEventId || "").startsWith("evt_") ||
+    Number(amountCents) !== price.amountCents ||
+    String(currency || "").toUpperCase() !== "USD" ||
+    paymentStatus !== "paid"
+  )
+    throw new Error("Authoritative Stripe Ad Credit payment data is invalid.");
+  const purchase = await db
+    .prepare("SELECT * FROM creator_ad_credit_purchases WHERE id=?")
+    .bind(String(purchaseId))
+    .first();
+  if (!purchase) throw new Error("Stripe Ad Credit purchase was not found.");
+  if (
+    purchase.stripe_checkout_session_id &&
+    purchase.stripe_checkout_session_id !== stripeCheckoutSessionId
+  )
+    throw new Error("Stripe Ad Credit checkout session does not match.");
+  const existing = purchase.service_purchase_id
+    ? await db
+        .prepare("SELECT * FROM marketplace_service_purchases WHERE id=?")
+        .bind(purchase.service_purchase_id)
+        .first()
+    : await db
+        .prepare(
+          "SELECT * FROM marketplace_service_purchases WHERE stripe_checkout_session_id=?",
+        )
+        .bind(stripeCheckoutSessionId)
+        .first();
+  if (
+    existing &&
+    (existing.creator_id !== purchase.creator_id ||
+      existing.service_type !== "ad_credit_package" ||
+      Number(existing.amount_cents) !== price.amountCents ||
+      Number(existing.quantity) !== price.quantity ||
+      existing.payment_source !== "stripe")
+  )
+    throw new Error("Existing Stripe service settlement is inconsistent.");
+  if (existing)
+    return {
+      purchaseId: existing.id,
+      creditsIssued: 5,
+      idempotent: true,
+      paymentSource: existing.payment_source,
+    };
+  if (purchase.status !== "pending")
+    throw new Error("Stripe Ad Credit purchase is not payable.");
+  const owner = await db
+      .prepare(
+        "SELECT owner_user_id FROM creator_identity_ownership WHERE creator_id=?",
+      )
+      .bind(purchase.creator_id)
+      .first(),
+    userId = purchase.initiated_by_user_id || owner?.owner_user_id;
+  if (!userId) throw new Error("Stripe Ad Credit purchaser is unavailable.");
+  const now = new Date(nowMs).toISOString(),
+    servicePurchaseId = crypto.randomUUID(),
+    feeKnown = Number.isInteger(processorFeeCents) && processorFeeCents >= 0,
+    fee = feeKnown ? Number(processorFeeCents) : 0,
+    serviceKey = `stripe-ad-credit:${purchase.id}`;
+  await db.batch([
+    db
+      .prepare(
+        "INSERT INTO marketplace_service_purchases(id,creator_id,user_id,service_type,service_sku,quantity,amount_cents,currency,payment_source,settlement_method,processor_fee_cents,status,stripe_checkout_session_id,idempotency_key,context_json,created_at,provider_event_id,provider_payment_reference,processor_fee_authoritative,completed_at) VALUES(?,?,?,'ad_credit_package','ad_credit_package',5,500,'USD','stripe','external_provider',?,'settled',?,?,?,?,?,?,?,?)",
+      )
+      .bind(
+        servicePurchaseId,
+        purchase.creator_id,
+        userId,
+        fee,
+        stripeCheckoutSessionId,
+        serviceKey,
+        JSON.stringify({
+          adCreditPurchaseId: purchase.id,
+          creditsIssued: 5,
+          processorFeeKnown: feeKnown,
+        }),
+        now,
+        providerEventId,
+        stripePaymentIntentId,
+        feeKnown ? 1 : 0,
+        now,
+      ),
+    db
+      .prepare(
+        "INSERT INTO marketplace_service_revenue_ledger(service_purchase_id,service_type,entry_type,amount_cents,currency,idempotency_key,created_at) VALUES(?,'ad_credit_package','service_revenue',500,'USD',?,?)",
+      )
+      .bind(servicePurchaseId, `service-revenue:${serviceKey}`, now),
+    db
+      .prepare(
+        "UPDATE creator_ad_credit_purchases SET status='paid',paid_at=?,stripe_checkout_session_id=COALESCE(stripe_checkout_session_id,?),service_purchase_id=?,payment_source='stripe',settlement_method='external_provider',initiated_by_user_id=COALESCE(initiated_by_user_id,?) WHERE id=? AND status='pending'",
+      )
+      .bind(
+        now,
+        stripeCheckoutSessionId,
+        servicePurchaseId,
+        userId,
+        purchase.id,
+      ),
+    db
+      .prepare(
+        "INSERT INTO creator_ad_credit_ledger(creator_id,entry_type,quantity,stripe_checkout_session_id,idempotency_key,context_json,created_at) VALUES(?,'pack_purchase',5,?,?,?,?)",
+      )
+      .bind(
+        purchase.creator_id,
+        stripeCheckoutSessionId,
+        `service-credit:${serviceKey}`,
+        JSON.stringify({
+          servicePurchaseId,
+          amountCents: 500,
+          currency: "USD",
+          paymentSource: "stripe",
+          providerEventId,
+        }),
+        now,
+      ),
+  ]);
+  return {
+    purchaseId: servicePurchaseId,
+    creditsIssued: 5,
+    idempotent: false,
+    paymentSource: "stripe",
+    processorFeeCents: feeKnown ? fee : null,
+  };
+}
+
 export async function purchaseServiceWithCreatorBalance(
   db,
   { creatorId, userId, sku, idempotencyKey, nowMs = Date.now() } = {},
@@ -83,7 +226,7 @@ export async function purchaseServiceWithCreatorBalance(
         ),
       db
         .prepare(
-          "INSERT INTO marketplace_service_purchases(id,creator_id,user_id,service_type,service_sku,quantity,amount_cents,currency,payment_source,settlement_method,processor_fee_cents,status,balance_reservation_id,balance_transaction_id,idempotency_key,context_json,created_at) VALUES(?,?,?,?,?,?,?,'USD','creator_balance','internal_ledger',0,'settled',?,NULL,?,'{}',?)",
+          "INSERT INTO marketplace_service_purchases(id,creator_id,user_id,service_type,service_sku,quantity,amount_cents,currency,payment_source,settlement_method,processor_fee_cents,status,balance_reservation_id,balance_transaction_id,idempotency_key,context_json,created_at,processor_fee_authoritative,completed_at) VALUES(?,?,?,?,?,?,?,'USD','creator_balance','internal_ledger',0,'settled',?,NULL,?,'{}',?,1,?)",
         )
         .bind(
           purchaseId,
@@ -95,6 +238,7 @@ export async function purchaseServiceWithCreatorBalance(
           price.amountCents,
           reservationId,
           String(idempotencyKey),
+          now,
           now,
         ),
       db

@@ -142,7 +142,6 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   const session = stripeEvent?.data?.object && typeof stripeEvent.data.object === "object"
     ? stripeEvent.data.object
     : {};
-  if(['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(eventType)&&session?.metadata?.trg_service_type==='ad_credit_pack'&&String(session?.metadata?.trg_checkout_attempt_id||'').startsWith('ad-credit-')&&await fulfillCreditPurchase(database,session,{nowMs:options.nowMs}))return{duplicate:false,event:null,processingResult:'ad_credit_pack_fulfilled'};
   const internalOrderId = parsePositiveInteger(session?.metadata?.trg_order_id);
   const paymentIntentId = normalizeStripeId(session?.payment_intent);
   const receivedAt = nowIso(options.nowMs);
@@ -237,6 +236,89 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   }
   if (String(stripeEvent?.api_version || "") !== STRIPE_API_VERSION) {
     return fail("stripe_api_version_mismatch");
+  }
+
+  if (session?.metadata?.trg_service_type === "ad_credit_pack") {
+    if (session?.object !== "checkout.session")
+      return fail("checkout_session_object_missing", 400, null);
+    if (session?.livemode !== stripeEvent?.livemode)
+      return fail("session_event_mode_mismatch", 400, null);
+    const purchaseId = String(session?.client_reference_id || ""),
+      serviceReference = String(
+        session?.metadata?.trg_service_reference_id || "",
+      ),
+      attemptId = String(session?.metadata?.trg_checkout_attempt_id || ""),
+      purchase = purchaseId
+        ? await database
+            .prepare("SELECT * FROM creator_ad_credit_purchases WHERE id=?")
+            .bind(purchaseId)
+            .first()
+        : null;
+    if (!purchase || serviceReference !== purchaseId)
+      return fail("unknown_ad_credit_purchase", 400, null);
+    if (attemptId !== `ad-credit-${purchaseId}`)
+      return fail("ad_credit_attempt_mismatch", 400, null);
+    if (
+      purchase.stripe_checkout_session_id &&
+      purchase.stripe_checkout_session_id !== session.id
+    )
+      return fail("ad_credit_session_mismatch", 400, null);
+    if (
+      Number(session.amount_total) !== 500 ||
+      normalizedCurrencyOrNull(session.currency) !== "USD"
+    )
+      return fail("ad_credit_price_mismatch", 400, null);
+    let processingResult = "ad_credit_payment_pending";
+    try {
+      if (
+        [
+          "checkout.session.completed",
+          "checkout.session.async_payment_succeeded",
+        ].includes(eventType) &&
+        session.payment_status === "paid"
+      ) {
+        if (!paymentIntentId)
+          return fail("payment_intent_missing", 400, null);
+        const settlement = await fulfillCreditPurchase(database, session, {
+          nowMs: options.nowMs,
+          providerEventId: eventId,
+        });
+        processingResult = settlement.idempotent
+          ? "ad_credit_pack_already_fulfilled"
+          : "ad_credit_pack_fulfilled";
+      } else if (eventType === "checkout.session.expired") {
+        await database
+          .prepare(
+            "UPDATE creator_ad_credit_purchases SET status='expired' WHERE id=? AND status='pending'",
+          )
+          .bind(purchaseId)
+          .run();
+        processingResult = "ad_credit_checkout_expired";
+      } else if (eventType === "checkout.session.async_payment_failed") {
+        await database
+          .prepare(
+            "UPDATE creator_ad_credit_purchases SET status='failed' WHERE id=? AND status='pending'",
+          )
+          .bind(purchaseId)
+          .run();
+        processingResult = "ad_credit_payment_failed";
+      } else if (!STRIPE_WEBHOOK_EVENT_TYPES.includes(eventType)) {
+        return fail("unsupported_ad_credit_event", 400, null);
+      }
+      const result = await finalizeWebhookEvent(
+        database,
+        eventRecord.event,
+        processingToken,
+        {
+          processingResult,
+          processingStatus: "processed",
+          processedAt: receivedAt,
+        },
+      );
+      return { ...result, duplicate: false };
+    } catch (error) {
+      return fail("ad_credit_service_settlement_failed", 500, null);
+    }
   }
 
   if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)){
