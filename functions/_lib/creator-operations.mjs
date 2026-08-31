@@ -19,6 +19,7 @@ import {
   requestPayout,
   submitRemediationCorrection,
 } from "./marketplace-operations.mjs";
+import { getCreatorRatingSummary } from "./creator-reputation.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -480,6 +481,12 @@ async function changeListingState(request, db, creator, id, state) {
 }
 async function analytics(db, creator) {
   const totals = await salesRows(db, creator.id);
+  let reputation = null;
+  try {
+    reputation = await getCreatorRatingSummary(db, creator.id, { includePrivate: true });
+  } catch (error) {
+    if (!/no such table:\s*creator_reputation_ratings/i.test(String(error))) throw error;
+  }
   const products = await all(
     db
       .prepare(
@@ -491,6 +498,7 @@ async function analytics(db, creator) {
     creator: publicCreator(creator),
     analytics: {
       ...totals,
+      reputation,
       products: products.map((row) => ({
         slug: row.slug,
         title: row.title,
