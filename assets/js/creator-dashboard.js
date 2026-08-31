@@ -43,10 +43,11 @@
       credentials: "same-origin",
     }).then((r) => r.json());
     csrf = account.csrfToken || "";
-    const [summary, profileData, finance] = await Promise.all([
+    const [summary, profileData, finance, operations] = await Promise.all([
       api("overview"),
       api("profile"),
       api("finance"),
+      api("operations"),
     ]);
     document.querySelector("#creator-name").textContent =
       summary.creator.displayName;
@@ -68,6 +69,7 @@
       summary.registrationChecks?.paymentMethodReady
         ? "Payment method — Complete"
         : "Payment method — Needs attention. Stripe-hosted collection is not available yet.";
+    renderOperations(operations);
     fillProfile(profileData.creator);
     overview.hidden =
       profilePanel.hidden =
@@ -92,6 +94,37 @@
     listingsPanel.hidden = document.querySelector(
       "#creator-advertising",
     ).hidden = false;
+  }
+  function renderOperations(data) {
+    const panel = document.querySelector("#creator-remediations"),
+      root = document.querySelector("#creator-remediation-list");
+    panel.hidden = false;
+    root.replaceChildren(
+      ...(data.remediations || []).map((item) => {
+        const card = document.createElement("article"),
+          title = document.createElement("h3"),
+          details = document.createElement("p");
+        card.className = "product-card__body";
+        title.textContent = item.title;
+        details.textContent = `${item.status} · opened ${item.opened_at} · deadline ${item.repair_due_at} · ${item.required_correction || "Correction details are in the operator notice."} · compliance ${item.compliance_result} · ${item.waiting_count} waiting · ${item.refund_required_count} refund-required`;
+        card.append(title, details);
+        if (item.status === "repair_open") {
+          const form = document.createElement("form");
+          form.className = "account-form";
+          form.innerHTML =
+            '<label>Approved private replacement object key <input name="objectKey" required maxlength="500"></label><button class="button button--secondary">Submit correction for compliance review</button>';
+          form.onsubmit = async (event) => {
+            event.preventDefault();
+            await api(`remediations/${item.id}/submit`, {
+              objectKey: form.elements.objectKey.value,
+            });
+            await load();
+          };
+          card.append(form);
+        }
+        return card;
+      }),
+    );
   }
   function renderRegistrationReadiness(summary) {
     const labels = {
@@ -423,6 +456,25 @@
       location.assign(
         `/api/creator/finance/report?period=year&value=${encodeURIComponent(event.currentTarget.elements.year.value)}`,
       );
+    });
+  document
+    .querySelector("#creator-payout-request-form")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const output = document.querySelector("#creator-payout-request-result");
+      try {
+        const cents = Math.round(
+            Number(event.currentTarget.elements.amount.value) * 100,
+          ),
+          result = await api("payout-request", {
+            amountCents: cents,
+            currency: "USD",
+          });
+        output.textContent = `Payout request ${result.id} recorded. External transfer has not been executed.`;
+        await load();
+      } catch (error) {
+        output.textContent = error.message;
+      }
     });
   async function loadAudit() {
     const summary = await api("overview"),

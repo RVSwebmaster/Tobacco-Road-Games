@@ -14,6 +14,11 @@ import {
   resolveReportPeriod,
 } from "./creator-business-report.mjs";
 import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+import {
+  listOperations,
+  requestPayout,
+  submitRemediationCorrection,
+} from "./marketplace-operations.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -119,6 +124,46 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
     return analytics(database, creator);
   if (request.method === "GET" && route === "finance")
     return creatorFinance(request, database, creator, { ...options, env });
+  if (request.method === "GET" && route === "operations")
+    return json(await listOperations(database, { creatorId: creator.id }));
+  if (request.method === "POST" && route === "payout-request") {
+    try {
+      const body = await bodyJson(request);
+      return json(
+        {
+          ok: true,
+          ...(await requestPayout(database, {
+            creatorId: creator.id,
+            amountCents: Number(body.amountCents),
+            currency: body.currency || "USD",
+            nowMs: options.nowMs,
+          })),
+        },
+        201,
+      );
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
+  if (
+    request.method === "POST" &&
+    /^remediations\/[^/]+\/submit$/.test(route)
+  ) {
+    try {
+      const body = await bodyJson(request);
+      return json({
+        ok: true,
+        ...(await submitRemediationCorrection(database, {
+          caseId: route.split("/")[1],
+          creatorId: creator.id,
+          objectKey: body.objectKey,
+          nowMs: options.nowMs,
+        })),
+      });
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
   if (request.method === "GET" && route === "finance/statement")
     return creatorStatement(request, database, creator, options);
   if (request.method === "GET" && route === "finance/report")
