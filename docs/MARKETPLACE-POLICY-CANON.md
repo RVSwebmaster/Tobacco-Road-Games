@@ -102,7 +102,7 @@ Listings do not expire arbitrarily while commercially active.
 
 After 12 consecutive months without qualifying activity, the listing enters an inactivity-warning state and the creator receives dashboard and email notice. A 30-day grace period follows. During grace, the creator may leave it alone, promote it, coupon it, revise it, or create qualifying activity. TRG does not police a creator’s legitimate self-purchase; a legitimate sale is a sale.
 
-With no qualifying activity by the end of grace, the listing becomes inactive: it leaves the active catalog and ad rotation, becomes unavailable for new sales, stops consuming active capacity, and remains visible in the creator dashboard. Historical buyers retain all legitimate orders, entitlements, and access. The creator may later reactivate it if capacity is available. Reactivation never restarts the launch split. Preferred status gives no inactivity exemption. Exact reactivation workflow details remain unsettled.
+With no qualifying activity by the end of grace, the listing becomes inactive: it leaves the active catalog and ad rotation, becomes unavailable for new sales, stops consuming active capacity, and remains visible in the creator dashboard. Historical buyers retain all legitimate orders, entitlements, and access. The creator may immediately use the freed capacity for another eligible product. The inactivity-delisted product must remain off sale for at least one full calendar month before reactivation. Reactivation then requires available capacity, current files and pricing, and ordinary marketplace compliance. It never restarts the launch split. Preferred status gives no inactivity exemption.
 
 ## 9. Free and Pay What You Want products
 
@@ -130,9 +130,9 @@ TRG does not prepare or file creator tax returns. Stripe handles the identity, t
 
 Every Creator account undergoes a light operational audit every six months, separate from the rolling 12-month product inactivity lifecycle. The audit is not re-application and does not evaluate artistic quality or ideological merit. It checks valid contact email, valid payment method, payout status where required, current Agreement acceptance, unresolved fraud/chargeback/policy issues, tier-entitlement accuracy, current additional-account billing, and obvious duplicate-account or privilege-gaming abuse. Fixable issues receive a reasonable cure period before account restriction.
 
-## 13. Implementation gap register at baseline `8eeb799`
+## 13. Historical implementation gap register at baseline `8eeb799` (superseded)
 
-The following are compatibility findings, not authorization to implement them in this policy pass.
+The following findings describe the named historical baseline and are retained for audit history. They do not describe the current implementation. Current status is maintained in `CREATOR-AGREEMENT-POLICY-CROSSWALK.md` and later pass documentation.
 
 ### Existing behavior that conflicts with canon
 
@@ -156,7 +156,7 @@ The following are compatibility findings, not authorization to implement them in
 - Connect hosted onboarding preserves the sensitive-data boundary.
 - Creator listing lifecycle, inactivity, advertising, and operator publication tooling provide compatible enforcement boundaries for the new registration rules.
 
-## 14. Recommended implementation order
+## 14. Historical recommended implementation order (completed or superseded)
 
 1. Add the settled customer and Creator registration fields with explicit public/private projections.
 2. Add versioned Creator Agreement acceptance and product-level rights/representation declarations, with no AI disclosure.
@@ -166,9 +166,9 @@ The following are compatibility findings, not authorization to implement them in
 6. Complete annual and year-to-date downloadable business records while retaining monthly statements.
 7. Keep raw payment, identity, KYC, tax, and bank data in Stripe and keep production payout execution gated by its separate operational approval.
 
-## 15. Intentionally unsettled
+## 15. Remaining intentionally unsettled matters
 
-Do not invent exact agreement prose, cure-period length, data-retention periods, payment-method provider workflow, advertiser rate card, sponsor inventory cap, production Connect/payout execution, detailed Preferred event mechanics beyond settled benefits, or any unannounced brand expansion. AI disclosure is settled as not required and must not be reintroduced indirectly.
+Do not invent final counsel-approved legal boilerplate, data-retention periods, advertiser rate card, sponsor inventory cap, production Connect/payout execution, detailed Preferred event mechanics beyond settled benefits, or any unannounced brand expansion. The business-level Creator Agreement draft and six-month audit cure workflow now exist; their counsel-finalized legal terms and production scheduling remain separate operational approvals. AI disclosure is settled as not required and must not be reintroduced indirectly.
 
 ## 16. Verified purchases and durable ownership
 
