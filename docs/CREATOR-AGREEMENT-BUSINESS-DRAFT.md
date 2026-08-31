@@ -30,6 +30,8 @@ Creator retains ownership of Creator’s products and intellectual property. Own
 
 Creator grants Tobacco Road Games a limited, worldwide, nonexclusive license only as reasonably necessary to display, market, offer, sell, deliver, and preserve customer access to products; provide customer support; process transactions; and conduct technical, security, backup, archival, and recovery operations. This includes the practical ability to reproduce, format, cache, transmit, and display submitted files and promotional materials for those purposes. It does not grant ownership or an exclusive distribution right.
 
+**Attorney review required:** Counsel must confirm the worldwide scope and duration of this limited operational license without changing its nonexclusive character or expanding it beyond marketplace operation and customer-entitlement fulfillment.
+
 ## 6. Rights, permissions, and Creator warranties
 
 Creator represents and warrants that:
@@ -69,9 +71,9 @@ A Standard Creator may maintain 20 active products. A Preferred Creator may main
 
 ## 12. Product activity, inactivity, and relisting
 
-A paid product must record at least one legitimate sale during each rolling 12-month period. A Free product or Pay What You Want product acquired at $0 may satisfy activity through at least one legitimate recorded acquisition or download. A Pay What You Want product may qualify through either legitimate paid or acquisition activity.
+A paid product must record at least one legitimate sale during each rolling 12-month period. A Free product or Pay What You Want product acquired at $0 must record at least one qualifying legitimate acquisition or download during each rolling 12-month period. A Pay What You Want product may qualify through either legitimate paid or acquisition activity.
 
-If the activity requirement is not satisfied after the applicable warning and grace process, Tobacco Road Games may delist the product, remove it from new sale or acquisition, remove it from advertising eligibility, free its active catalog slot, and preserve its historical records and customer entitlements. Creator may immediately use the freed slot for another eligible product.
+When a product reaches the 12-month inactivity threshold, Tobacco Road Games provides a 30-day warning and grace period. Qualifying legitimate activity recorded during that 30-day period preserves the active listing. If no qualifying activity is recorded by the end of the 30-day period, Tobacco Road Games will delist the product, remove it from new sale or acquisition, remove it from advertising eligibility, free its active catalog slot, and preserve its historical records and customer entitlements. Creator may immediately use the freed slot for another eligible product.
 
 An inactivity-delisted product must remain delisted for at least one full calendar month before relisting. Relisting requires available catalog capacity and continued marketplace compliance. Relisting does not restart the original 30-day launch period. This inactivity period is separate from the 30-day defect-repair process in Section 18.
 
@@ -89,7 +91,7 @@ Every paid, Free, and Pay What You Want-at-$0 acquisition requires a verified em
 
 ## 16. Duplicate digital purchase prevention
 
-A customer who already owns a durable digital product should not ordinarily be able to purchase it again. When ownership can be safely established through an account or verified email, Tobacco Road Games should direct the customer to My Library, order recovery, or existing download access. Repeat downloads remain available through legitimate entitlement. Duplicate purchase should be prevented rather than treated as a routine refund category.
+When Tobacco Road Games can establish through an account, verified email, order history, or entitlement that a customer already owns the same durable digital product, the customer may not purchase it again through the ordinary digital purchase flow. Tobacco Road Games directs the customer to My Library, order recovery, or existing entitlement and download access. Repeat downloads remain available through legitimate entitlement. Duplicate purchase is prevented rather than treated as a routine refund category.
 
 ## 17. Refund eligibility
 
@@ -101,7 +103,7 @@ Refunds are appropriate for objectively demonstrable problems such as a corrupt 
 
 Once Tobacco Road Games confirms a Creator-caused defect or material misrepresentation, Tobacco Road Games will immediately delist the product and notify Creator. Creator has 30 days to submit an acceptable correction. Each affected customer may choose an immediate refund or wait for the repaired product.
 
-If a waiting customer’s product is acceptably corrected within 30 days, the corrected file is delivered through the existing entitlement after ordinary compliance review. If no acceptable correction arrives within 30 days, affected waiting customers are refunded as appropriate and the product remains delisted. The product remains delisted until the correction satisfies ordinary marketplace review.
+If a waiting customer’s product is acceptably corrected within 30 days, the corrected file is delivered through the existing entitlement after ordinary compliance review. If no acceptable correction arrives within 30 days, each affected customer who elected to wait will be refunded, subject only to an actual legal or payment-provider impossibility, and the product remains delisted. The product remains delisted until the correction satisfies ordinary marketplace review.
 
 ## 19. Refund accounting and provider costs
 
@@ -121,7 +123,9 @@ Tobacco Road Games may suspend or ban a reasonably confirmed fraudulent customer
 
 ## 22. Negative Creator balances
 
-Creator-responsible refunds, disputes, chargebacks, or legitimate adjustments may create a negative balance. Tobacco Road Games will not automatically charge Creator’s stored card or debit Creator’s bank account to collect it. Future eligible earnings first reduce the negative balance; only earnings above zero may become withdrawable. Withdrawals are unavailable while negative. If Creator stops selling with a substantial unresolved balance, Tobacco Road Games may seek repayment separately, subject to final counsel-approved terms.
+Creator-responsible refunds, disputes, chargebacks, or legitimate adjustments may create a negative balance. Tobacco Road Games will not automatically charge Creator’s stored card or debit Creator’s bank account to collect it. Future eligible earnings first reduce the negative balance; only earnings above zero may become withdrawable. Withdrawals are unavailable while negative. If Creator stops selling and an unresolved negative balance remains, Tobacco Road Games retains the right to seek repayment under final counsel-approved collection terms.
+
+**Attorney review required:** Counsel must define lawful notice, collection, dispute, and recovery procedures for an unresolved negative balance without adding an undisclosed monetary threshold or authorizing automatic card or bank debits.
 
 ## 23. Creator-requested payouts
 
@@ -139,11 +143,13 @@ Creator is responsible for Creator’s accounting, taxes, filings, and professio
 
 ## 26. Six-month Creator account audits
 
-Each Creator identity is subject to an operational audit approximately every six months. Audits address objective matters such as valid contact information, current Agreement acceptance, payment and payout readiness, entitlement accuracy, billing status, unresolved fraud or payment issues, and misuse of account privileges. They are not artistic, ideological, or merit review. Correctable problems ordinarily receive a reasonable cure period. Restrictions do not erase historical sales, customer entitlements, financial records, or Creator data.
+Each Creator identity is subject to an operational audit on a six-month cycle. Audits address objective matters such as valid contact information, current Agreement acceptance, payment and payout readiness, entitlement accuracy, billing status, unresolved fraud or payment issues, and misuse of account privileges. They are not artistic, ideological, or merit review. Correctable problems receive a reasonable cure opportunity unless immediate restriction is necessary for legal compliance, fraud prevention, security, payment risk, or protection of customers or third parties. Restrictions do not erase historical sales, customer entitlements, financial records, or Creator data.
 
 ## 27. Customer access to prior purchases
 
 When a product is paused, delisted, inactive, withdrawn, or unavailable to new buyers, legitimate prior purchasers may retain access where technically and legally possible. Creator may not withdraw a product solely to deprive prior purchasers. Creator authorizes Tobacco Road Games to retain necessary delivery copies and entitlement records for continuing fulfillment, support, security, and legal compliance.
+
+**Attorney review required:** Counsel must finalize the legal mechanism and survival period for entitlement preservation after withdrawal or termination while retaining the settled business intent that legitimate prior access continues where technically and legally possible.
 
 ## 28. Intellectual-property complaints
 
@@ -160,6 +166,8 @@ Tobacco Road Games may suspend or restrict a product or account for fraud, unlaw
 ## 31. Effect of termination
 
 Creator retains ownership after termination. The operational license ends except as reasonably necessary to preserve legitimate customer access, maintain financial and accounting records, resolve refunds, disputes, or chargebacks, satisfy legal obligations, prevent fraud, and preserve required audit, security, backup, or archive records. Terms that logically must continue may survive, subject to counsel-approved final language.
+
+**Attorney review required:** Counsel must define the survival and duration of the limited post-termination operational license and record-retention duties without transferring ownership or creating a broader continuing distribution right.
 
 ## 32. Independent marketplace seller; no other relationship
 
