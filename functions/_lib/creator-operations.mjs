@@ -20,6 +20,7 @@ import {
   submitRemediationCorrection,
 } from "./marketplace-operations.mjs";
 import { getCreatorRatingSummary } from "./creator-reputation.mjs";
+import { getCreatorBalance } from "./creator-balance.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -483,9 +484,12 @@ async function analytics(db, creator) {
   const totals = await salesRows(db, creator.id);
   let reputation = null;
   try {
-    reputation = await getCreatorRatingSummary(db, creator.id, { includePrivate: true });
+    reputation = await getCreatorRatingSummary(db, creator.id, {
+      includePrivate: true,
+    });
   } catch (error) {
-    if (!/no such table:\s*creator_reputation_ratings/i.test(String(error))) throw error;
+    if (!/no such table:\s*creator_reputation_ratings/i.test(String(error)))
+      throw error;
   }
   const products = await all(
     db
@@ -510,7 +514,13 @@ async function analytics(db, creator) {
   });
 }
 async function creatorFinance(request, db, creator, options) {
-  const url = new URL(request.url),
+  const owner = await db
+      .prepare(
+        "SELECT owner_user_id FROM creator_identity_ownership WHERE creator_id=? AND account_status='active'",
+      )
+      .bind(creator.id)
+      .first(),
+    url = new URL(request.url),
     finance = await getCreatorFinance(db, creator.id, {
       from: safeDate(url.searchParams.get("from")) || "",
       to: safeDate(url.searchParams.get("to")) || "",
@@ -519,8 +529,18 @@ async function creatorFinance(request, db, creator, options) {
     payout = await getCreatorPayoutStatus(db, creator.id, {
       env: options.env || {},
       nowMs: options.nowMs,
+    }),
+    creatorBalance = await getCreatorBalance(db, {
+      creatorId: creator.id,
+      userId: owner.owner_user_id,
+      nowMs: options.nowMs,
     });
-  return json({ creator: publicCreator(creator), ...finance, payout });
+  return json({
+    creator: publicCreator(creator),
+    ...finance,
+    payout,
+    creatorBalance,
+  });
 }
 async function creatorStatement(request, db, creator, options) {
   const url = new URL(request.url),

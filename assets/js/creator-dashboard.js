@@ -60,7 +60,7 @@
     renderRegistrationReadiness(summary);
     const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
     document.querySelector("#creator-finance-summary").textContent =
-      `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · available ${money(finance.summary.availableBalanceCents)} · dispute held ${money(finance.payout.providerHeldCents)} · paid ${money(finance.summary.paidBalanceCents)} · unpaid ${money(finance.summary.unpaidBalanceCents)}`;
+      `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · Creator Balance available ${money(finance.creatorBalance.availableCents)} · pending ${money(finance.creatorBalance.pendingCents)} · held ${money(finance.creatorBalance.heldCents)} · payout reserved ${money(finance.creatorBalance.payoutReservedCents)} · purchase reserved ${money(finance.creatorBalance.purchaseReservedCents)} · paid ${money(finance.summary.paidBalanceCents)}`;
     document.querySelector("#creator-payout-status").textContent = finance
       .payout.eligible
       ? `Payout ready: ${money(finance.payout.eligibleAmountCents)} is eligible.`
@@ -95,12 +95,29 @@
     ).hidden = false;
   }
   function renderCreatorAnalytics(analytics) {
-    const root=document.querySelector("#creator-analytics");root.replaceChildren();
-    const sales=document.createElement('p');sales.textContent=`${analytics.unitsSold} units · $${(analytics.grossCents/100).toFixed(2)} gross sales`;root.append(sales);
-    if(!analytics.reputation)return;
-    const reputation=analytics.reputation,heading=document.createElement('h3');heading.textContent='Creator reputation';
-    const summary=document.createElement('p');summary.textContent=reputation.privateCount?`${reputation.privateAverage.toFixed(1)} out of 5 · ${reputation.privateCount} verified rating${reputation.privateCount===1?'':'s'} · trend ${String(reputation.recentTrend).replace('_',' ')}`:'No verified Creator ratings yet.';root.append(heading,summary);
-    const list=document.createElement('ul');list.className='creator-rating-distribution';list.setAttribute('aria-label','Creator rating distribution');for(let star=5;star>=1;star--){const item=document.createElement('li');item.textContent=`${star} star${star===1?'':'s'}: ${reputation.distribution[star]||0}`;list.append(item);}root.append(list);
+    const root = document.querySelector("#creator-analytics");
+    root.replaceChildren();
+    const sales = document.createElement("p");
+    sales.textContent = `${analytics.unitsSold} units · $${(analytics.grossCents / 100).toFixed(2)} gross sales`;
+    root.append(sales);
+    if (!analytics.reputation) return;
+    const reputation = analytics.reputation,
+      heading = document.createElement("h3");
+    heading.textContent = "Creator reputation";
+    const summary = document.createElement("p");
+    summary.textContent = reputation.privateCount
+      ? `${reputation.privateAverage.toFixed(1)} out of 5 · ${reputation.privateCount} verified rating${reputation.privateCount === 1 ? "" : "s"} · trend ${String(reputation.recentTrend).replace("_", " ")}`
+      : "No verified Creator ratings yet.";
+    root.append(heading, summary);
+    const list = document.createElement("ul");
+    list.className = "creator-rating-distribution";
+    list.setAttribute("aria-label", "Creator rating distribution");
+    for (let star = 5; star >= 1; star--) {
+      const item = document.createElement("li");
+      item.textContent = `${star} star${star === 1 ? "" : "s"}: ${reputation.distribution[star] || 0}`;
+      list.append(item);
+    }
+    root.append(list);
   }
   function renderOperations(data) {
     const panel = document.querySelector("#creator-remediations"),

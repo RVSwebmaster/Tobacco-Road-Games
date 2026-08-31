@@ -19,6 +19,7 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Tobacco Road Games Store Cart","description":"Review the Tobacco Road Games browser cart before checkout is enabled.","url":"https://tobaccoroadgames.com/store/cart/"}</script>
   <script src="/assets/js/store-status.js?v=20260712-shelf12-hinges" defer></script>
   <script src="/assets/js/cart.js?v=20260712-shelf12-hinges" defer></script>
+  <script src="/assets/js/creator-balance-checkout.js?v=20260831-creator-balance" defer></script>
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -75,6 +76,12 @@
                 <p class="cart-summary__copy">Every acquisition requires a verified email. An account is optional. Paid checkout opens securely on a Stripe-hosted page.</p>
                 <p class="cart-checkout-form__feedback" data-cart-checkout-feedback aria-live="polite"></p>
                 <button type="submit" class="button button--primary cart-summary__button" data-cart-checkout-submit disabled aria-disabled="true">Continue to Secure Checkout</button>
+                <section class="creator-balance-checkout" data-creator-balance hidden>
+                  <p class="note-card__label">Creator Balance</p>
+                  <p data-creator-balance-status>Checking eligibility…</p>
+                  <button type="button" class="button button--secondary cart-summary__button" data-creator-balance-submit>Pay Entire Total with Creator Balance</button>
+                  <p class="cart-checkout-form__feedback" data-creator-balance-feedback aria-live="polite"></p>
+                </section>
               </form>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-retry hidden>Retry Verified Quote</button>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
