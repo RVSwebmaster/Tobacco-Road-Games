@@ -25,7 +25,7 @@ async function main() {
   let stripeCalls = 0;
   const bucket = createBucket();
   const openEnv = { DOWNLOAD_SIGNING_SECRET: SECRET, STRIPE_SECRET_KEY: { get value() { stripeCalls += 1; return ""; } }, TRG_ORDERS: stateDatabase("OPEN"), TRG_PRODUCTS: bucket };
-  const issued = await free.handleFreeDownloadRequest(new Request("https://example.com/store/free-download?product=agency"), openEnv, { nowMs: 1000000 });
+  const issued = await free.handleFreeDownloadRequest(new Request("https://example.com/store/free-download?product=agency"), openEnv, { nowMs: 1000000, allowLegacyAnonymousAcquisition: true });
   assert.equal(issued.status, 303, "OPEN should issue a short-lived free-download redirect.");
   assert.equal(stripeCalls, 0, "Free fulfillment must never inspect or call Stripe.");
   const location = issued.headers.get("location");

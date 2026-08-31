@@ -253,6 +253,13 @@
     return payload;
   }
 
+  async function emailVerification(url, body, fetchImpl) {
+    const response = await fetchImpl(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const payload = await safeJson(response);
+    if (!response.ok) throw new Error(payload?.error || "Email verification failed.");
+    return payload;
+  }
+
   function formatCents(cents, currency = "USD") {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -306,6 +313,9 @@
       checkoutSubmitButton: documentRef.querySelector?.("[data-cart-checkout-submit]") || null,
       emailConfirmationInput: documentRef.querySelector?.("[data-cart-email-confirmation]") || null,
       emailInput: documentRef.querySelector?.("[data-cart-email]") || null,
+      emailCodeInput: documentRef.querySelector?.("[data-cart-email-code]") || null,
+      emailSendButton: documentRef.querySelector?.("[data-cart-email-send]") || null,
+      emailVerifyButton: documentRef.querySelector?.("[data-cart-email-verify]") || null,
       emptyNode,
       itemsNode,
       noteNode: documentRef.querySelector?.("[data-cart-note]") || null,
@@ -519,6 +529,21 @@
       nodes.checkoutForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         await submitCheckout(documentRef, storage, options);
+      });
+    }
+
+    if (nodes.emailSendButton && nodes.emailSendButton.dataset.cartBound !== "true") {
+      nodes.emailSendButton.dataset.cartBound = "true";
+      nodes.emailSendButton.addEventListener("click", async () => {
+        try { await emailVerification("/api/checkout-email/request", { email: nodes.emailInput.value, emailConfirmation: nodes.emailConfirmationInput.value }, options.fetchImpl || globalThis.fetch); setCheckoutFeedback(nodes, "Verification code sent."); }
+        catch (error) { setCheckoutFeedback(nodes, error.message); }
+      });
+    }
+    if (nodes.emailVerifyButton && nodes.emailVerifyButton.dataset.cartBound !== "true") {
+      nodes.emailVerifyButton.dataset.cartBound = "true";
+      nodes.emailVerifyButton.addEventListener("click", async () => {
+        try { await emailVerification("/api/checkout-email/verify", { email: nodes.emailInput.value, code: nodes.emailCodeInput.value }, options.fetchImpl || globalThis.fetch); setCheckoutFeedback(nodes, "Email verified. You may continue checkout."); }
+        catch (error) { setCheckoutFeedback(nodes, error.message); }
       });
     }
 

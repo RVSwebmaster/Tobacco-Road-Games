@@ -8,6 +8,7 @@ const MINIMUM_SECRET_LENGTH = 32;
 export async function handleFreeDownloadRequest(request, env = {}, options = {}) {
   const storeState = await readStoreState(env, { database: options.database });
   if (!storeState.available || storeState.state !== "OPEN") return unavailable(storeState.state);
+  if (!options.allowLegacyAnonymousAcquisition) return errorResponse("verified_checkout_required", 403);
   const product = getFreeDeliveryProduct(new URL(request.url).searchParams.get("product"));
   if (!product) return errorResponse("free_product_not_found", 404);
   if (!env.TRG_PRODUCTS?.head) return errorResponse("free_download_unavailable", 503);

@@ -1,6 +1,6 @@
 # Tobacco Road Games Marketplace Policy Canon
 
-Status: Canonical business policy, updated after Pass 12
+Status: Canonical business policy, updated through verified-purchase, refund, fraud, and Creator-requested payout alignment
 
 Implementation baseline: `8eeb799 Remove public AI philosophy statement`
 Audience: internal product, policy, and engineering work
@@ -169,3 +169,25 @@ The following are compatibility findings, not authorization to implement them in
 ## 15. Intentionally unsettled
 
 Do not invent exact agreement prose, cure-period length, data-retention periods, payment-method provider workflow, advertiser rate card, sponsor inventory cap, production Connect/payout execution, detailed Preferred event mechanics beyond settled benefits, or any unannounced brand expansion. AI disclosure is settled as not required and must not be reintroduced indirectly.
+
+## 16. Verified purchases and durable ownership
+
+Every paid, Free, or PWYW-at-$0 acquisition requires a verified email. A signed-in customer uses the verified account email without redundant verification. A guest verifies the checkout email through a short-lived challenge but is never required to create an account. Orders and entitlements retain the verified-email association for delivery, recovery, support, later account claim, and fraud protection. Anonymous acquisition is not permitted.
+
+The marketplace prevents an ordinary repeat purchase of a durable digital product when ownership is established through the account or verified email. Existing owners are directed to My Library or order recovery and retain repeat-download access.
+
+## 17. Refund, repair, dispute, and fraud policy
+
+Subjective dislike, perceived poor quality, changed expectations, and buyer’s remorse are not refund grounds when a listing is accurate. Refund eligibility requires an objectively demonstrable product or transaction defect. A confirmed Creator-caused defect or material misrepresentation immediately delists the product and opens a separate 30-day repair period. Each affected customer chooses immediate refund or waits with the entitlement preserved. Timely corrections require ordinary compliance review; failure to correct keeps the product delisted and triggers the appropriate refund path for waiting customers.
+
+Refunds reverse the original sale-time Creator and Tobacco Road Games shares. Actual provider refund/dispute costs follow responsibility without markup. Tobacco Road Games absorbs ordinary customer payment fraud and costs, except Creator-caused fraud, unauthorized material, or material misrepresentation is allocated to the Creator; Tobacco Road Games-caused losses remain with Tobacco Road Games. Open disputed funds are held.
+
+Confirmed fraudulent customers may have accounts suspended and verified-email purchase access blocked. Guest fraud blocks use the verified email. IP, session, device, network, and provider signals are supporting evidence rather than permanent identity by themselves. Blocks are internal, auditable, and reversible by an operator.
+
+## 18. Creator balances and requested payouts
+
+The immutable ledger and sale-time snapshots remain the single accounting system. Creator reporting distinguishes available, disputed/held, negative, lifetime, and paid balances. Creator-responsible reversals may create a negative balance; no stored card or bank account is automatically charged. Future earnings offset the deficit first and payouts remain blocked until the eligible balance is positive.
+
+Payouts are Creator-requested, not forced monthly. The ordinary minimum is $10, only one request may be pending per Creator identity, and disputed/held funds are excluded. Tobacco Road Games absorbs ordinary transfer fees. Failed payouts preserve or restore funds. Closing an account pays every remaining positive eligible balance even below $10, subject to disputes, holds, negative balances, legal restrictions, and provider limitations.
+
+This section supersedes older implementation notes or defaults that assumed anonymous free downloads, unverified guest checkout, a $50 payout minimum, forced monthly payouts, automatic negative-balance collection, duplicate-purchase refunds as normal behavior, or automatic Creator allocation of ordinary payment-fraud losses.

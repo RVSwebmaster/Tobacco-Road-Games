@@ -71,7 +71,8 @@
                   <span>Confirm Email</span>
                   <input type="email" name="emailConfirmation" autocomplete="email" inputmode="email" data-cart-email-confirmation>
                 </label>
-                <p class="cart-summary__copy">Checkout opens securely on a Stripe-hosted page.</p>
+                <div data-cart-email-verification><button type="button" class="button button--secondary" data-cart-email-send>Send Verification Code</button><label class="cart-checkout-form__field"><span>Verification Code</span><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" data-cart-email-code></label><button type="button" class="button button--secondary" data-cart-email-verify>Verify Email</button></div>
+                <p class="cart-summary__copy">Every acquisition requires a verified email. An account is optional. Paid checkout opens securely on a Stripe-hosted page.</p>
                 <p class="cart-checkout-form__feedback" data-cart-checkout-feedback aria-live="polite"></p>
                 <button type="submit" class="button button--primary cart-summary__button" data-cart-checkout-submit disabled aria-disabled="true">Continue to Secure Checkout</button>
               </form>
