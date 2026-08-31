@@ -59,7 +59,11 @@
     creatorDashboardLink = document.querySelector("#creator-dashboard-link"),
     creatorPaymentGuidance = document.querySelector(
       "#creator-payment-guidance",
-    );
+    ),
+    creatorIdentityManagement = document.querySelector(
+      "#creator-identity-management",
+    ),
+    creatorIdentityList = document.querySelector("#creator-identity-list");
   let preparedAvatar = null;
   let previewObjectUrl = "";
   let csrfToken = "";
@@ -667,8 +671,75 @@
         profile.user.legalName || "";
       return;
     }
+    renderCreatorIdentities(registration.ownedCreators || []);
     renderCreatorReadiness(primary, registration.paymentCollection);
   }
+  function renderCreatorIdentities(creators) {
+    creatorIdentityManagement.hidden = false;
+    creatorIdentityList.replaceChildren(
+      ...creators.map((creator) => {
+        const card = document.createElement("article"),
+          title = document.createElement("h4"),
+          details = document.createElement("p"),
+          billing = creator.identityBilling || {};
+        card.className = "product-card__body";
+        title.textContent = creator.displayName;
+        const preferred = creator.preferred?.active
+          ? `Preferred through ${new Date(creator.preferred.termEndsAt).toLocaleDateString()}`
+          : "Standard tier";
+        details.textContent = billing.included
+          ? `Primary identity · Included · No additional identity fee · ${preferred}`
+          : `${billing.status === "current" ? "Current" : "Billing required"} · ${billing.billingPlan === "annual_prepaid" ? "Annual prepaid" : billing.billingPlan === "monthly" ? "Monthly" : "No plan"}${billing.coverageEndsAt ? ` · paid through ${new Date(billing.coverageEndsAt).toLocaleDateString()}` : ""} · ${preferred} (billed separately)`;
+        card.append(title, details);
+        if (!billing.included) {
+          const actions = document.createElement("div");
+          actions.className = "creator-onboarding-actions";
+          for (const [plan, label, cents] of [
+            ["monthly", "$10 monthly", 1000],
+            ["annual_prepaid", "$100 annual prepaid", 10000],
+          ]) {
+            const stripe = document.createElement("button"),
+              balance = document.createElement("button");
+            stripe.type = balance.type = "button";
+            stripe.className = "button button--secondary";
+            balance.className = "button button--secondary";
+            stripe.textContent = `Pay ${label} with Stripe`;
+            balance.textContent = `Pay ${label} with Creator Balance`;
+            stripe.dataset.identityBilling = "stripe";
+            balance.dataset.identityBilling = "creator_balance";
+            stripe.dataset.creatorId = balance.dataset.creatorId = creator.id;
+            stripe.dataset.plan = balance.dataset.plan = plan;
+            balance.disabled = Number(creator.creatorBalanceAvailableCents) < cents;
+            actions.append(stripe, balance);
+          }
+          card.append(actions);
+        }
+        return card;
+      }),
+    );
+  }
+  creatorIdentityList?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-identity-billing]");
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const internal = button.dataset.identityBilling === "creator_balance",
+        payload = await api("/api/creator-registration", {
+          action: internal
+            ? "purchase_identity_coverage_with_creator_balance"
+            : "purchase_identity_coverage",
+          creatorId: button.dataset.creatorId,
+          plan: button.dataset.plan,
+          paymentSource: internal ? "creator_balance" : "stripe",
+          idempotencyKey: `svc_${crypto.randomUUID()}`,
+        });
+      if (payload.checkoutUrl) window.location.assign(payload.checkoutUrl);
+      else await refreshRegistrationPanels();
+    } catch (error) {
+      creatorRegistrationStatus.textContent = error.message;
+      button.disabled = false;
+    }
+  });
   function renderCreatorReadiness(creator, paymentCollection) {
     const labels = {
       customerAccountComplete: "Customer Account",

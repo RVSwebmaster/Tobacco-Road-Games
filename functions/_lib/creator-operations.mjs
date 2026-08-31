@@ -604,7 +604,7 @@ async function creatorFinance(request, db, creator, options) {
     }),
     serviceResult = await db
       .prepare(
-        "SELECT id,service_type,service_sku,quantity,amount_cents,currency,payment_source,settlement_method,CASE WHEN processor_fee_authoritative=1 THEN processor_fee_cents ELSE NULL END processor_fee_cents,status,created_at,completed_at,reversed_at FROM marketplace_service_purchases WHERE creator_id=? ORDER BY created_at DESC LIMIT 100",
+        "SELECT p.id,p.service_type,p.service_sku,p.quantity,p.amount_cents,p.currency,p.payment_source,p.settlement_method,CASE WHEN p.processor_fee_authoritative=1 THEN p.processor_fee_cents ELSE NULL END processor_fee_cents,p.status,p.created_at,p.completed_at,p.reversed_at,cp.billing_plan,cp.coverage_starts_at,cp.coverage_ends_at FROM marketplace_service_purchases p LEFT JOIN creator_identity_coverage_periods cp ON cp.service_purchase_id=p.id WHERE p.creator_id=? ORDER BY p.created_at DESC LIMIT 100",
       )
       .bind(creator.id)
       .all();

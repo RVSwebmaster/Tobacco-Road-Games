@@ -1,5 +1,6 @@
 import { CREATOR_AGREEMENT } from "./creator-registration.mjs";
 import { getCreatorTier } from "./marketplace-policy.mjs";
+import { getIdentityBillingState } from "./creator-identity-billing.mjs";
 
 export const CREATOR_AUDIT_POLICY = Object.freeze({
   cadenceMonths: 6,
@@ -438,6 +439,7 @@ export async function assessCreatorAccount(
       .bind(creatorId)
       .first(),
     tier = await getCreatorTier(database, creatorId, nowMs),
+    identityBilling = await getIdentityBillingState(database, creatorId, nowMs),
     checks = {
       accountExists: Boolean(
         owner?.owner_user_id && owner?.user_status === "active",
@@ -459,11 +461,7 @@ export async function assessCreatorAccount(
       identityEntitled: Boolean(
         owner &&
         owner.account_status !== "suspended" &&
-        (owner.identity_type === "primary"
-          ? ["not_required", "legacy_grandfathered"].includes(
-              owner.billing_status,
-            )
-          : ["current", "legacy_grandfathered"].includes(owner.billing_status)),
+          identityBilling.active,
       ),
       preferredCoherent: Boolean(
         !tier.preferred ||

@@ -8,6 +8,7 @@ Creator Balance is a restricted spending source for fully registered Creators. I
 - The store kill switch must be `OPEN`. The option cannot bypass store closure.
 - The complete positive cart total must be covered. Split tender, partial use, transfers, gifting, cash loading, withdrawal through checkout, and arbitrary operator transfers are unsupported.
 - Preferred Creator charges may be paid explicitly from full Creator Balance at the unchanged $20 monthly charge under a 12-month commitment or $200 annual prepaid price. Automatic recurring Creator Balance consumption is not enabled.
+- An additional Creator identity may be paid explicitly from full Creator Balance at $10 for one calendar-clamped month or $100 for one prepaid year. Early renewal starts at the identity's current paid-through timestamp, so remaining coverage is preserved. The included primary identity is never charged.
 - The unchanged Ad Credit package is five credits for $5 and may be paid explicitly from full Creator Balance.
 - Cart products and prices are resolved from the server catalog. Secure delivery objects are checked before settlement.
 - Stripe is not called. The order records `payment_source=creator_balance`, `settlement_method=internal_ledger`, and zero processor fees.
@@ -20,7 +21,7 @@ An internal refund never calls Stripe. It reverses seller earnings and marketpla
 
 ## Marketplace services and Ad Credits
 
-Preferred fees and Ad Credit packages settle through separate marketplace service-purchase and service-revenue ledgers. They are not product orders, product GMV, or new Creator earnings. An internal service settlement reserves cleared funds, records one Creator Balance debit, records one matching TRG service-revenue entry, activates the Preferred term or issues exactly five credits, consumes the reservation, and audits the result in one D1 batch. Processor fees are zero because Stripe is not invoked.
+Preferred fees, additional-identity coverage, and Ad Credit packages settle through separate marketplace service-purchase and service-revenue ledgers. They are not product orders, product GMV, or new Creator earnings. An internal service settlement reserves cleared funds, records one Creator Balance debit, records one matching TRG service-revenue entry, activates the Preferred term or identity coverage or issues exactly five credits, consumes the reservation, and audits the result in one D1 batch. Processor fees are zero because Stripe is not invoked.
 
 Stripe-funded Ad Credit packages converge on those same canonical service-purchase and TRG service-revenue tables after an authoritative paid webhook event. Their payment source is `stripe`, settlement method is `external_provider`, and safe provider event, Checkout Session, and PaymentIntent references support reconciliation. The fixed $5 charge and five-credit output are server-authoritative. Stripe purchases do not create Creator Balance debits or product GMV. A processor fee is shown as unknown until supplied by an authoritative provider-reconciliation path; it is never estimated. Creator Balance service fees remain an authoritative $0.
 

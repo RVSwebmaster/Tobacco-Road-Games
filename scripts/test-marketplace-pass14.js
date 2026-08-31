@@ -50,6 +50,11 @@ async function main() {
     billingStatus: "current",
     nowMs: NOW,
   });
+  // This fixture intentionally stops at migration 027. Preserve its legacy
+  // entitlement representation while current-schema tests require dated coverage.
+  raw.prepare(
+    "UPDATE creator_identity_ownership SET billing_status='current' WHERE creator_id=?",
+  ).run(additional.creatorId);
   assert.equal(
     raw
       .prepare(

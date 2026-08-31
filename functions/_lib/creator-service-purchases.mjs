@@ -17,6 +17,18 @@ export const SERVICE_PRICING = Object.freeze({
     amountCents: 500,
     quantity: 5,
   },
+  additional_identity_monthly: {
+    serviceType: "additional_creator_identity_fee",
+    amountCents: 1000,
+    quantity: 1,
+    cadence: "monthly",
+  },
+  additional_identity_annual: {
+    serviceType: "additional_creator_identity_fee",
+    amountCents: 10000,
+    quantity: 1,
+    cadence: "annual_prepaid",
+  },
 });
 
 export async function settleStripeAdCreditPurchase(
@@ -202,6 +214,18 @@ export async function purchaseServiceWithCreatorBalance(
         `This Preferred charge is already covered through ${covered.coverage_ends_at}.`,
       );
   }
+  if (price.serviceType === "additional_creator_identity_fee") {
+    const identity = await db
+      .prepare(
+        "SELECT * FROM creator_identity_ownership WHERE creator_id=? AND owner_user_id=?",
+      )
+      .bind(creatorId, userId)
+      .first();
+    if (!identity || identity.identity_type !== "additional")
+      throw new Error(
+        "Only the owner may purchase coverage for an additional Creator identity.",
+      );
+  }
   const balance = await getCreatorBalance(db, { creatorId, userId, nowMs });
   if (balance.availableCents < price.amountCents)
     throw new Error(
@@ -254,7 +278,9 @@ export async function purchaseServiceWithCreatorBalance(
           `service-debit:${idempotencyKey}`,
           price.serviceType === "ad_credit_package"
             ? "Creator Balance Ad Credit package"
-            : "Creator Balance Preferred Creator fee",
+            : price.serviceType === "additional_creator_identity_fee"
+              ? "Creator Balance additional Creator identity fee"
+              : "Creator Balance Preferred Creator fee",
           now,
         ),
       db
@@ -309,7 +335,7 @@ export async function purchaseServiceWithCreatorBalance(
         ),
     );
     result = { ...result, creditsIssued: 5 };
-  } else {
+  } else if (price.serviceType === "preferred_creator_fee") {
     const active = await db
         .prepare(
           "SELECT * FROM creator_preferred_terms WHERE creator_id=? AND status='active' AND term_ends_at>? ORDER BY term_ends_at DESC LIMIT 1",
@@ -363,6 +389,47 @@ export async function purchaseServiceWithCreatorBalance(
       termEndsAt: termEnd.toISOString(),
       coverageEndsAt: coverageEnd.toISOString(),
     };
+  } else {
+    const latest = await db
+        .prepare(
+          "SELECT coverage_ends_at FROM creator_identity_coverage_periods WHERE creator_id=? AND status='active' ORDER BY coverage_ends_at DESC LIMIT 1",
+        )
+        .bind(creatorId)
+        .first(),
+      coverageStart = new Date(
+        Math.max(nowMs, Date.parse(latest?.coverage_ends_at || "") || 0),
+      ),
+      coverageEnd =
+        price.cadence === "annual_prepaid"
+          ? addCoverageMonths(coverageStart, 12)
+          : addCoverageMonths(coverageStart, 1),
+      coverageId = crypto.randomUUID();
+    statements.push(
+      db
+        .prepare(
+          "INSERT INTO creator_identity_coverage_periods(id,creator_id,service_purchase_id,billing_plan,coverage_starts_at,coverage_ends_at,payment_source,status,renewal_state,created_at) VALUES(?,?,?,?,?,?,'creator_balance','active','nonrenewing',?)",
+        )
+        .bind(
+          coverageId,
+          creatorId,
+          purchaseId,
+          price.cadence,
+          coverageStart.toISOString(),
+          coverageEnd.toISOString(),
+          now,
+        ),
+      db
+        .prepare(
+          "UPDATE creator_identity_ownership SET billing_cadence=?,billing_status='current',entitlement_source='additional_paid',updated_at=? WHERE creator_id=? AND owner_user_id=? AND identity_type='additional'",
+        )
+        .bind(price.cadence, now, creatorId, userId),
+    );
+    result = {
+      ...result,
+      billingPlan: price.cadence,
+      coverageStartsAt: coverageStart.toISOString(),
+      coverageEndsAt: coverageEnd.toISOString(),
+    };
   }
   statements.push(
     db
@@ -399,6 +466,17 @@ function addYear(date) {
   const x = new Date(date);
   x.setUTCFullYear(x.getUTCFullYear() + 1);
   return x;
+}
+function addCoverageMonths(date, months) {
+  const source = new Date(date),
+    day = source.getUTCDate();
+  source.setUTCDate(1);
+  source.setUTCMonth(source.getUTCMonth() + months);
+  const last = new Date(
+    Date.UTC(source.getUTCFullYear(), source.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  source.setUTCDate(Math.min(day, last));
+  return source;
 }
 function nextCoverageStart(term, cadence, nowMs) {
   if (cadence === "annual_prepaid")

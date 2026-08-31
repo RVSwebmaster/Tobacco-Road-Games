@@ -3,6 +3,13 @@ import {
   validateSameOriginRequest,
   validateSessionCsrf,
 } from "./account-auth.mjs";
+import {
+  getIdentityBillingState,
+  startStripeIdentityCoverage,
+} from "./creator-identity-billing.mjs";
+import { getCreatorBalance } from "./creator-balance.mjs";
+import { purchaseServiceWithCreatorBalance } from "./creator-service-purchases.mjs";
+import { getCreatorTier } from "./marketplace-policy.mjs";
 export const CREATOR_AGREEMENT = Object.freeze({
   id: "trg-creator-marketplace-agreement",
   version: "2026-08-27",
@@ -65,6 +72,58 @@ export async function handleCreatorRegistrationRequest(
         }),
       });
     }
+    if (
+      body.action === "purchase_identity_coverage" ||
+      body.action === "purchase_identity_coverage_with_creator_balance"
+    ) {
+      const creatorId = String(body.creatorId || ""),
+        plan = String(body.plan || ""),
+        owned = await db
+          .prepare(
+            "SELECT identity_type FROM creator_identity_ownership WHERE creator_id=? AND owner_user_id=?",
+          )
+          .bind(creatorId, session.user.id)
+          .first();
+      if (!owned || owned.identity_type !== "additional")
+        return json(
+          { error: { message: "Additional Creator ownership is required." } },
+          403,
+        );
+      if (body.action === "purchase_identity_coverage")
+        return json({
+          ok: true,
+          ...(await startStripeIdentityCoverage(db, {
+            creatorId,
+            userId: session.user.id,
+            plan,
+            email: session.user.email_normalized,
+            env,
+            fetchImpl: options.fetchImpl,
+            nowMs: options.nowMs,
+          })),
+        });
+      if (body.paymentSource !== "creator_balance")
+        throw new Error("Explicit Creator Balance payment selection is required.");
+      const sku =
+        plan === "monthly"
+          ? "additional_identity_monthly"
+          : plan === "annual_prepaid"
+            ? "additional_identity_annual"
+            : "";
+      return json(
+        {
+          ok: true,
+          ...(await purchaseServiceWithCreatorBalance(db, {
+            creatorId,
+            userId: session.user.id,
+            sku,
+            idempotencyKey: String(body.idempotencyKey || ""),
+            nowMs: options.nowMs,
+          })),
+        },
+        201,
+      );
+    }
     return json(
       {
         ok: true,
@@ -113,15 +172,11 @@ export async function createAdditionalCreatorIdentity(
     email,
     body = {},
     billingCadence,
-    billingStatus,
     nowMs = Date.now(),
   } = {},
 ) {
-  if (
-    !["monthly", "annual_prepaid"].includes(billingCadence) ||
-    billingStatus !== "current"
-  )
-    throw new Error("Additional Creator identity billing is not current.");
+  if (!["monthly", "annual_prepaid"].includes(billingCadence))
+    throw new Error("Choose monthly or annual prepaid identity billing.");
   if (
     !(await db
       .prepare(
@@ -137,7 +192,7 @@ export async function createAdditionalCreatorIdentity(
     body,
     identityType: "additional",
     billingCadence,
-    billingStatus,
+    billingStatus: "pending",
     entitlementSource: "additional_paid",
     nowMs,
   });
@@ -245,7 +300,8 @@ export async function getCreatorAccountReadiness(
       db,
       "SELECT state FROM creator_account_audit_states WHERE creator_id=?",
       [creatorId],
-    );
+    ),
+    identityBilling = await getIdentityBillingState(db, creatorId, nowMs);
   const checks = {
       customerAccountComplete: Boolean(
         user?.status === "active" &&
@@ -269,8 +325,7 @@ export async function getCreatorAccountReadiness(
       ),
       identityEntitled: Boolean(
         owner?.account_status === "active" &&
-        (owner.identity_type === "primary" ||
-          ["current", "legacy_grandfathered"].includes(owner.billing_status)),
+          identityBilling.active,
       ),
       creatorAccountOperational: Boolean(
         !["restricted", "suspended"].includes(creator?.registration_status),
@@ -336,9 +391,9 @@ export async function getCreatorAccountReadiness(
     ),
     identityEntitled: Boolean(
       owner?.account_status === "active" &&
-      (owner.identity_type === "primary" ||
-        ["current", "legacy_grandfathered"].includes(owner.billing_status)),
+        identityBilling.active,
     ),
+    identityBilling,
     owner,
     creator,
   };
@@ -561,6 +616,17 @@ async function registrationState(
       markInitialCompletion: true,
       nowMs,
     });
+    const billing = await getIdentityBillingState(
+        db,
+        creator.creator_id,
+        nowMs,
+      ),
+      balance = await optionalCreatorBalance(db, {
+        creatorId: creator.creator_id,
+        userId,
+        nowMs,
+      }),
+      tier = await getCreatorTier(db, creator.creator_id, nowMs);
     ownedCreators.push({
       id: creator.creator_id,
       slug: creator.slug,
@@ -575,6 +641,12 @@ async function registrationState(
       checks: readiness.checks,
       paymentMethodReady: readiness.paymentMethodReady,
       payoutReady: readiness.payoutReady,
+      identityBilling: billing,
+      creatorBalanceAvailableCents: balance.availableCents,
+      preferred: {
+        active: tier.preferred,
+        termEndsAt: tier.term?.term_ends_at || null,
+      },
     });
   }
   return {
@@ -586,6 +658,17 @@ async function registrationState(
       staging: String(pipelineStage || "").toLowerCase() === "staging",
     },
   };
+}
+
+async function optionalCreatorBalance(db, input) {
+  try {
+    return await getCreatorBalance(db, input);
+  } catch (error) {
+    if (/no such table|has no column/i.test(String(error?.message || error))) {
+      return { availableCents: 0 };
+    }
+    throw error;
+  }
 }
 function registrationFields(b, email) {
   const f = {
