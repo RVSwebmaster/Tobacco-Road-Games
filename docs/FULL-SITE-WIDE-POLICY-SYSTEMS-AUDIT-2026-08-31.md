@@ -5,6 +5,8 @@ Audited commit: `027d29533963a1f86e0a926bab8192075ffbdda5`
 Environment: canonical repository and staging; production was not changed  
 Store state during audit: staging `CLOSED`
 
+Post-audit remediation: the continuing Creator eligibility conflict identified below was repaired and regression-tested on 2026-08-31. Historical wording for unrelated findings remains unchanged.
+
 ## Method and status vocabulary
 
 This audit compared the policy canon, Creator Agreement draft and crosswalk, pass-specific documents, migrations 001–034, public/Creator/operator routes, server services, browser UI, automated tests, and staging protections. A hidden panel or documented rule was not treated as enforcement. Enforcement required a server or database boundary. Production-only operations were not exercised.
@@ -28,7 +30,7 @@ The marketplace has a substantial, internally coherent staging implementation: s
 
 It is not production-ready as a marketplace. The store being closed is correct. The largest blockers are:
 
-1. **CONFLICTING — Creator hard gate becomes sticky after first completion.** `getCreatorAccountReadiness` defines `registrationComplete` as `previouslyCompleted || requirementsComplete`. A Creator who once completed onboarding can therefore retain access to intake/dashboard advertising/service tools after current Agreement, payment-method, payout, or additional-identity billing readiness becomes false. Paid publication separately rechecks current fields, but general product-tool access and Free publication do not consistently do so.
+1. **COMPLETE — continuing Creator eligibility is re-enforced.** Historical registration completion remains immutable evidence only. A centralized current-eligibility result is recomputed from active account/email, registration/profile, current Agreement, payment method, Connect/payout, identity entitlement, Creator account state, and disabling audit state. Protected mutations and Free/paid publication enforce it server-side; history and remediation access remain available.
 2. **DOCUMENTATION ONLY — coupons.** The canon settles campaign scope, one-credit funding, 50% standard maximum, non-stacking, dates, and discounted-price commission treatment. No coupon schema, API, checkout validation, Creator UI, operator override, or audit trail exists.
 3. **PARTIAL — paid additional Creator identities.** Ownership, primary/additional classification, cadence and billing status are durable, and the hard-gate reads billing status. There is no $10 monthly/$100 annual checkout, service ledger, renewal/expiry worker, or Creator UI. Legacy additional identities are grandfathered.
 4. **PARTIAL — production money movement.** Stripe Checkout is implemented for product payments and test-mode webhooks. Connect readiness, payout requests, reservations, batches, and reconciliation are implemented, but production Connect execution, real payouts, refund calls, chargeback operations, and provider reconciliation activation remain intentionally disabled.
@@ -82,8 +84,8 @@ Stale or potentially confusing text:
 |---|---|---|
 | Registration data model | **COMPLETE** | Public Creator fields and private legal/business/contact/address data are separated in migrations and response projections. |
 | Initial registration hard gate | **COMPLETE** | Active verified account, legal name, public profile, full private details, current Agreement, ready payment method, verified/payout-enabled Connect, and identity entitlement are required before the completion timestamp is written. |
-| Continuing hard gate | **CONFLICTING** | A historical completion timestamp makes `registrationComplete` remain true even if current requirements later fail. General Creator product tools, files, advertising and services use that sticky result. Paid publication adds current checks; Free publication returns before those checks. Restriction/audit states are not uniformly applied to all direct APIs. |
-| Direct URL/API bypass resistance | **PARTIAL** | Creator routes authenticate, resolve membership/ownership, validate same-origin/CSRF mutations, and generally call readiness. The sticky completion logic is the principal bypass. Legacy-schema fallbacks also intentionally treat old approved creators as complete. |
+| Continuing hard gate | **COMPLETE** | `getCreatorOperationalEligibility` recomputes current requirements independently of the durable initial-completion timestamp. It returns safe reason codes and remediation destinations. Listing/intake mutations, uploads, publication, bundles, advertising, Creator Balance service spending, Preferred, Ad Credits, and payout requests enforce it. |
+| Direct URL/API bypass resistance | **COMPLETE for current supported schema** | Creator routes authenticate, resolve membership/ownership, validate same-origin/CSRF mutations, and enforce current eligibility at server boundaries. Legacy-schema compatibility remains intentionally limited to databases predating the registration schema and is not the deployed schema. |
 | Primary identity | **COMPLETE** | One primary per owner is enforced by a partial unique index; entitlement source and ownership are durable. |
 | Additional identities | **PARTIAL** | Ownership and billing fields exist and current/legacy status participates in readiness. No settled-price checkout, service revenue, recurrence, or customer management UI exists. |
 | Staff roles versus ownership | **PARTIAL** | `creator_memberships` supports manager/staff-style access while `creator_identity_ownership` defines the legal owner. Staff invitation/delegation management is deferred and route-by-route permission granularity is limited. |
@@ -172,7 +174,7 @@ Stale or potentially confusing text:
 
 ### High priority
 
-1. Fix readiness semantics so current requirements and historical completion are separate concepts. A completion timestamp should remain immutable history, but it must not make current eligibility true. Apply current readiness consistently to Creator tools, files, advertising, Creator Balance services, and Free as well as paid publication.
+1. **Completed after audit:** current readiness and historical completion are separate concepts and protected Creator operations now consistently enforce the centralized predicate.
 2. Add explicit tests that revoke Agreement acceptance, payment-method readiness, payout readiness, and additional-identity billing after completion and verify every direct API refuses gated activity.
 
 ### Medium priority
@@ -217,7 +219,7 @@ Required verification for this audit:
 | **SYSTEM ONLY / UNDERDOCUMENTED** | Some API-first operator tools and newer service-ledger/reporting behavior relative to the older crosswalk |
 | **DEFERRED BY POLICY** | Split tender, silent Creator Balance recurrence, written reviews, product ratings, related-device clustering, advertiser self-service, automated service refunds pending rules |
 | **MISSING** | Coupon system; marketplace notice delivery worker; paid additional-identity checkout; general external Preferred self-service flow |
-| **CONFLICTING** | Sticky post-completion Creator readiness; Free publication’s early return before current payment/payout/identity checks when reached through an already-completed Creator context |
+| **CONFLICTING** | None remaining from the sticky Creator-eligibility finding; it was remediated after this audit. |
 | **OBSOLETE / DEAD CODE** | Legacy anonymous free-download capability is nonoperative unless a test-only injection enables it; older pass gap registers are historical, not runtime authority |
 | **NEEDS OWNER DECISION** | Coupon priority, service refund eligibility, audit cure duration, external Preferred billing/recurrence approach, production scheduler cadence |
 | **NEEDS LEGAL COUNSEL** | Agreement final clauses, negative-balance collection, IP complaint process, privacy/retention, entitlement survival and post-termination license |

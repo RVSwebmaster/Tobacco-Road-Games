@@ -179,7 +179,7 @@ async function main() {
       db,
       raw.prepare("SELECT * FROM creator_listings WHERE id='paid'").get(),
     ),
-    /audit restriction blocks new paid publication/,
+    /audit restriction blocks new publication/,
   );
   assert.equal(
     raw

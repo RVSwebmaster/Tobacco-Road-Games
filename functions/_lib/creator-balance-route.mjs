@@ -3,7 +3,7 @@ import {
   validateSameOriginRequest,
   validateSessionCsrf,
 } from "./account-auth.mjs";
-import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
 import {
   getCreatorBalance,
   settleCreatorBalancePurchase,
@@ -43,7 +43,7 @@ export async function handleCreatorBalanceRequest(
     );
   const creator = await db
     .prepare(
-      "SELECT c.* FROM marketplace_creators c JOIN creator_identity_ownership o ON o.creator_id=c.id WHERE o.owner_user_id=? AND o.account_status='active' ORDER BY c.created_at LIMIT 1",
+      "SELECT c.* FROM marketplace_creators c JOIN creator_identity_ownership o ON o.creator_id=c.id WHERE o.owner_user_id=? ORDER BY c.created_at LIMIT 1",
     )
     .bind(session.user.id)
     .first();
@@ -55,15 +55,17 @@ export async function handleCreatorBalanceRequest(
       },
       403,
     );
-  const ready = await getCreatorAccountReadiness(db, creator.id, {
+  const ready = await getCreatorOperationalEligibility(db, creator.id, {
     markInitialCompletion: false,
     nowMs: options.nowMs,
   });
-  if (!ready.registrationComplete)
+  if (request.method !== "GET" && !ready.eligible)
     return json(
       {
-        error: "Complete Creator registration before using Creator Balance.",
-        code: "registration_incomplete",
+        error: "Restore current Creator eligibility before spending Creator Balance.",
+        code: "creator_currently_ineligible",
+        reasons: ready.reasonCodes,
+        remediation: ready.remediation,
       },
       403,
     );

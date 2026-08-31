@@ -13,7 +13,7 @@ import {
   creatorBusinessReportCsv,
   resolveReportPeriod,
 } from "./creator-business-report.mjs";
-import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
 import {
   listOperations,
   requestPayout,
@@ -59,11 +59,15 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       403,
     );
   const route = routePath(request);
-  const readiness = await getCreatorAccountReadiness(database, creator.id, {
-    markInitialCompletion: true,
-    nowMs: options.nowMs,
-  });
-  if (isProductToolRoute(route) && !readiness.registrationComplete)
+  const readiness = await getCreatorOperationalEligibility(
+    database,
+    creator.id,
+    {
+      markInitialCompletion: true,
+      nowMs: options.nowMs,
+    },
+  );
+  if (requiresCurrentEligibility(request.method, route) && !readiness.eligible)
     return registrationRequired(readiness);
   if (request.method !== "GET") {
     if (
@@ -238,18 +242,12 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
 
 async function resolveCreator(db, userId, request) {
   const requested = new URL(request.url).searchParams.get("creator") || "";
-  const rows = (
-    await all(
-      db
-        .prepare(
-          `SELECT c.*, cm.permission, cm.user_id FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id WHERE cm.user_id=? ORDER BY c.display_name`,
-        )
-        .bind(userId),
-    )
-  ).filter((row) =>
-    row.registration_status
-      ? row.registration_status !== "suspended"
-      : row.marketplace_status === "approved",
+  const rows = await all(
+    db
+      .prepare(
+        `SELECT c.*, cm.permission, cm.user_id FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id WHERE cm.user_id=? ORDER BY c.display_name`,
+      )
+      .bind(userId),
   );
   for (const row of rows)
     row.marketplace_status =
@@ -297,7 +295,20 @@ async function overview(db, creator, readiness) {
       grossSalesCents: sales.grossCents,
       profileStatus: creator.marketplace_status,
     },
-    intakeAccess: readiness.registrationComplete,
+    intakeAccess: readiness.eligible,
+    currentEligibility: {
+      eligible: readiness.eligible,
+      reasonCodes: readiness.reasonCodes,
+      remediation: readiness.remediation,
+      evaluatedAt: readiness.currentEligibilityEvaluatedAt,
+    },
+    historicalRegistration: {
+      completed: readiness.historicallyCompleted,
+      completedAt:
+        creator.intake_registration_completed_at ||
+        creator.registration_completed_at ||
+        null,
+    },
     registrationChecks: readiness.checks,
     audit,
     notices,
@@ -793,25 +804,32 @@ function publicListing(row) {
     discoveryMetadataComplete: Boolean(current?.genre && current?.mediaType),
   };
 }
-function isProductToolRoute(route) {
+export function requiresCurrentEligibility(method, route) {
+  if (method === "GET") return false;
+  if (
+    route === "profile" ||
+    route.startsWith("remediations/") ||
+    /^listings\/[^/]+\/pause$/.test(route)
+  )
+    return false;
   return (
     route === "listings" ||
     route.startsWith("listings/") ||
     route === "bundles" ||
-    route === "analytics"
+    route === "preferred" ||
+    route === "payout-request"
   );
 }
 function registrationRequired(readiness) {
-  const missing = Object.entries(readiness.checks || {})
-    .filter(([, ok]) => !ok)
-    .map(([key]) => key);
+  const missing = readiness.reasonCodes || [];
   return json(
     {
       error: {
         code: "creator_registration_incomplete",
         message:
-          "Creator registration must be fully complete before product intake or listing tools become available.",
+          "Current Creator eligibility requirements must be restored before this operation is available.",
         missing,
+        remediation: readiness.remediation || [],
       },
     },
     403,

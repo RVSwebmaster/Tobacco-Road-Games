@@ -8,4 +8,6 @@ The current agreement identifier is `trg-creator-marketplace-agreement`, version
 
 Creator registration must be fully complete before product intake or listing tools become available. Completion requires the verified active customer account and required account information, complete public/private Creator registration, the current agreement, Connect onboarding with verified/enabled payouts, a ready Stripe-hosted payment method, and active identity entitlement. This intake gate applies equally to paid, Free, and PWYW products. Product declarations and ordinary listing compliance remain later per-product requirements.
 
+Post-audit clarification: the completion timestamp is historical evidence, not a permanent authorization grant. Current operational eligibility is recomputed from current requirements for every protected Creator operation. Ineligible Creators retain safe history and remediation access; see `CREATOR-CURRENT-ELIGIBILITY.md`.
+
 Deferred: production SetupIntent/payment-method collection UI, additional-identity billing checkout, staff invitations, full registration UI polish, six-month audits/cure periods, annual/YTD reports, and final legal agreement prose.

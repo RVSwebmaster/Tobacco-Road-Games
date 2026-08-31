@@ -55,6 +55,7 @@ import {
   reviewRemediationCorrection,
   runMarketplaceOperations,
 } from "./marketplace-operations.mjs";
+import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
 
 export async function handleCreatorFinanceOwnerRequest(
   request,
@@ -80,6 +81,11 @@ export async function handleCreatorFinanceOwnerRequest(
         }),
         accountAudits: await listCreatorAuditOperations(db, { creatorId }),
         operations: await listOperations(db, { creatorId }),
+        currentEligibility: await getCreatorOperationalEligibility(
+          db,
+          creatorId,
+          { nowMs: options.nowMs },
+        ),
       });
     const finance = await getOperatorFinance(db, { nowMs: options.nowMs }),
       payout = await getOperatorPayoutReadiness(db, {

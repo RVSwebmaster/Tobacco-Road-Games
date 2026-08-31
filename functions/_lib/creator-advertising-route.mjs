@@ -14,7 +14,7 @@ import {
 } from "./creator-advertising.mjs";
 import { purchaseServiceWithCreatorBalance } from "./creator-service-purchases.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
-import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
 export async function handleCreatorAdvertisingRequest(
   request,
   env = {},
@@ -39,16 +39,18 @@ export async function handleCreatorAdvertisingRequest(
     .first();
   if (!creator)
     return json({ error: { message: "Creator access is unavailable." } }, 403);
-  const readiness = await getCreatorAccountReadiness(db, creator.id, {
+  const readiness = await getCreatorOperationalEligibility(db, creator.id, {
     markInitialCompletion: true,
     nowMs: options.nowMs,
   });
-  if (!readiness.registrationComplete)
+  if (request.method !== "GET" && !readiness.eligible)
     return json(
       {
         error: {
           message:
-            "Creator registration must be fully complete before product intake or listing tools become available.",
+            "Current Creator eligibility requirements must be restored before advertising changes or purchases are available.",
+          reasons: readiness.reasonCodes,
+          remediation: readiness.remediation,
         },
       },
       403,

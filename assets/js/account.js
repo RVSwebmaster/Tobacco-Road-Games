@@ -678,6 +678,8 @@
       paymentMethodReady: "Payment Method",
       payoutReady: "Payout Setup",
       identityEntitled: "Creator Account",
+      creatorAccountOperational: "Account Standing",
+      auditOperational: "Operational Audit",
     };
     creatorStatusList.replaceChildren(
       ...Object.entries(labels).map(([key, label]) => {
@@ -694,10 +696,12 @@
         return item;
       }),
     );
-    creatorOnboardingMessage.textContent = creator.registrationComplete
+    creatorOnboardingMessage.textContent = creator.currentlyEligible
       ? "Your Creator registration is complete. You can now add products to Tobacco Road Games."
+      : creator.historicallyCompleted
+        ? "Your prior registration remains on record, but current eligibility needs attention. Use the Creator dashboard and the items below to restore access."
       : "Complete the items marked “Needs attention.” Product and listing tools remain unavailable until every registration requirement is complete.";
-    creatorDashboardLink.hidden = !creator.registrationComplete;
+    creatorDashboardLink.hidden = !creator.historicallyCompleted;
     creatorAgreementAccept.hidden = Boolean(creator.checks?.agreementCurrent);
     creatorAgreementAccept.dataset.creatorId = creator.id;
     creatorPaymentGuidance.textContent = creator.paymentMethodReady

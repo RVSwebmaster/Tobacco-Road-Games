@@ -54,8 +54,10 @@
     document.querySelector("#creator-name").textContent =
       summary.creator.displayName;
     status.textContent = summary.intakeAccess
-      ? `Profile ${summary.overview.profileStatus}.`
-      : "Complete every registration and payout-onboarding requirement to unlock product intake and listing tools.";
+      ? `Profile ${summary.overview.profileStatus}. Current Creator eligibility confirmed.`
+      : summary.historicalRegistration?.completed
+        ? "Your Creator identity and history are preserved, but current eligibility needs attention before protected operations can resume."
+        : "Complete every registration and payout-onboarding requirement to unlock product intake and listing tools.";
     document.querySelector("#creator-metrics").hidden = !summary.intakeAccess;
     document.querySelector("#creator-metrics").textContent =
       `${summary.overview.activeListings} active · ${summary.overview.draftListings} drafts · ${summary.overview.unavailableListings} unavailable · ${summary.overview.recentOrderCount} paid orders`;
@@ -88,24 +90,32 @@
       profilePanel.hidden =
       document.querySelector("#creator-finance").hidden =
         false;
-    if (!summary.intakeAccess) return;
     document.querySelector("#creator-business-records").hidden = false;
-    const [listingData, analytics, advertising] = await Promise.all([
+    const [listingData, analytics] = await Promise.all([
       api("listings"),
       api("analytics"),
-      api("advertising"),
     ]);
     renderCreatorAnalytics(analytics.analytics);
     document.querySelector("#creator-analytics-card").hidden = false;
     renderListings(listingData.listings, listingData.files || []);
+    listingsPanel.hidden = false;
+    document.querySelector("#creator-draft-form").hidden =
+      document.querySelector("#creator-file-form").hidden =
+        !summary.intakeAccess;
+    document.querySelector("#creator-payout-request-form").hidden =
+      !summary.intakeAccess;
+    for (const button of document.querySelectorAll(
+      "[data-preferred-balance-plan]",
+    ))
+      button.disabled = button.disabled || !summary.intakeAccess;
+    if (!summary.intakeAccess) return;
+    const advertising = await api("advertising");
     renderAdvertising(advertising);
     for (const select of document.querySelectorAll('select[name="listingId"]'))
       select.replaceChildren(
         ...listingData.listings.map((item) => new Option(item.title, item.id)),
       );
-    listingsPanel.hidden = document.querySelector(
-      "#creator-advertising",
-    ).hidden = false;
+    document.querySelector("#creator-advertising").hidden = false;
   }
   function renderCreatorAnalytics(analytics) {
     const root = document.querySelector("#creator-analytics");
@@ -172,6 +182,8 @@
         paymentMethodReady: "Payment Method",
         payoutReady: "Payout Setup",
         identityEntitled: "Creator Account",
+        creatorAccountOperational: "Creator Account Standing",
+        auditOperational: "Operational Audit",
       },
       root = document.querySelector("#creator-registration-checklist");
     root.replaceChildren(
@@ -192,7 +204,25 @@
     document.querySelector("#creator-registration-message").textContent =
       summary.intakeAccess
         ? "Your Creator registration is complete. Product and listing tools are available below."
-        : "Finish the items marked “Needs attention.” Product intake, drafts, uploads, pricing, bundles, analytics, and advertising remain unavailable until registration is complete.";
+        : "Finish the items marked “Needs attention.” Historical records and remediation remain available, but new intake, uploads, publication, advertising changes, service purchases, and payout requests are blocked until current eligibility is restored.";
+    const remediation = document.querySelector(
+      "#creator-eligibility-remediation",
+    );
+    remediation.replaceChildren(
+      ...(summary.currentEligibility?.remediation || []).map((item) => {
+        const link = document.createElement("a");
+        link.className = "button button--secondary";
+        link.href = item.href;
+        link.textContent =
+          {
+            account: "Review account and Agreement",
+            profile: "Correct Creator profile",
+            connect: "Complete Stripe verification",
+            account_remediation: "Review account remediation",
+          }[item.category] || "Resolve Creator eligibility";
+        return link;
+      }),
+    );
   }
   function renderListings(items, files) {
     const root = document.querySelector("#creator-listing-list");

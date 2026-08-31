@@ -189,9 +189,14 @@ export async function getCreatorAccountReadiness(
     !Object.prototype.hasOwnProperty.call(creator, "registration_status")
   )
     return {
+      eligible: creator.marketplace_status === "approved",
+      reasonCodes: [],
+      remediation: [],
       registrationComplete: creator.marketplace_status === "approved",
-      initialRegistrationPreviouslyCompleted: true,
-      requirementsComplete: true,
+      historicallyCompleted: creator.marketplace_status === "approved",
+      initialRegistrationPreviouslyCompleted:
+        creator.marketplace_status === "approved",
+      requirementsComplete: creator.marketplace_status === "approved",
       checks: { legacySchema: true },
       agreementCurrent: true,
       paymentMethodReady: true,
@@ -235,7 +240,12 @@ export async function getCreatorAccountReadiness(
         "SELECT onboarding_status,verification_status,payouts_enabled FROM creator_payout_profiles WHERE creator_id=?",
       )
       .bind(creatorId)
-      .first();
+      .first(),
+    audit = await optionalFirst(
+      db,
+      "SELECT state FROM creator_account_audit_states WHERE creator_id=?",
+      [creatorId],
+    );
   const checks = {
       customerAccountComplete: Boolean(
         user?.status === "active" &&
@@ -262,6 +272,10 @@ export async function getCreatorAccountReadiness(
         (owner.identity_type === "primary" ||
           ["current", "legacy_grandfathered"].includes(owner.billing_status)),
       ),
+      creatorAccountOperational: Boolean(
+        !["restricted", "suspended"].includes(creator?.registration_status),
+      ),
+      auditOperational: audit?.state !== "restricted",
     },
     requirementsComplete = Object.values(checks).every(Boolean),
     completionFieldAvailable = Object.prototype.hasOwnProperty.call(
@@ -273,7 +287,7 @@ export async function getCreatorAccountReadiness(
         ? creator?.intake_registration_completed_at
         : creator?.registration_completed_at,
     ),
-    registrationComplete = previouslyCompleted || requirementsComplete;
+    registrationComplete = requirementsComplete;
   if (markInitialCompletion && requirementsComplete && !previouslyCompleted) {
     const completedAt = new Date(nowMs).toISOString();
     await db
@@ -305,7 +319,11 @@ export async function getCreatorAccountReadiness(
     }
   }
   return {
+    eligible: requirementsComplete,
+    reasonCodes: eligibilityReasonCodes(checks),
+    remediation: eligibilityRemediation(checks),
     registrationComplete,
+    historicallyCompleted: previouslyCompleted,
     initialRegistrationPreviouslyCompleted: previouslyCompleted,
     requirementsComplete,
     checks,
@@ -324,6 +342,68 @@ export async function getCreatorAccountReadiness(
     owner,
     creator,
   };
+}
+export async function getCreatorOperationalEligibility(
+  db,
+  creatorId,
+  options = {},
+) {
+  const readiness = await getCreatorAccountReadiness(db, creatorId, options);
+  return {
+    ...readiness,
+    eligible: readiness.requirementsComplete,
+    currentEligibilityEvaluatedAt: new Date(
+      options.nowMs || Date.now(),
+    ).toISOString(),
+  };
+}
+function eligibilityReasonCodes(checks) {
+  const names = {
+    customerAccountComplete: "account_or_email_required",
+    creatorPublicComplete: "creator_profile_required",
+    creatorDetailsComplete: "creator_details_required",
+    agreementCurrent: "agreement_update_required",
+    paymentMethodReady: "payment_method_required",
+    payoutReady: "connect_or_payout_readiness_required",
+    identityEntitled: "creator_identity_inactive",
+    creatorAccountOperational: "creator_account_restricted",
+    auditOperational: "account_remediation_required",
+  };
+  return Object.entries(checks)
+    .filter(([, ok]) => !ok)
+    .map(([key]) => names[key] || "creator_eligibility_required");
+}
+function eligibilityRemediation(checks) {
+  const links = [];
+  if (
+    !checks.customerAccountComplete ||
+    !checks.creatorDetailsComplete ||
+    !checks.agreementCurrent ||
+    !checks.paymentMethodReady ||
+    !checks.identityEntitled
+  )
+    links.push({
+      category: "account",
+      href: "/account#creator-registration-panel",
+    });
+  if (!checks.creatorPublicComplete)
+    links.push({ category: "profile", href: "/creator/#creator-profile" });
+  if (!checks.payoutReady)
+    links.push({ category: "connect", href: "/creator/#creator-finance" });
+  if (!checks.auditOperational || !checks.creatorAccountOperational)
+    links.push({
+      category: "account_remediation",
+      href: "/creator/#creator-remediations",
+    });
+  return links;
+}
+async function optionalFirst(db, sql, values) {
+  try {
+    return await db.prepare(sql).bind(...values).first();
+  } catch (error) {
+    if (/no such table/i.test(String(error))) return null;
+    throw error;
+  }
 }
 function hasRequiredCreatorRegistration(registration) {
   return Boolean(
@@ -488,6 +568,10 @@ async function registrationState(
       identityType: creator.identity_type,
       identity_type: creator.identity_type,
       registrationComplete: readiness.registrationComplete,
+      currentlyEligible: readiness.eligible,
+      historicallyCompleted: readiness.historicallyCompleted,
+      eligibilityReasons: readiness.reasonCodes,
+      remediation: readiness.remediation,
       checks: readiness.checks,
       paymentMethodReady: readiness.paymentMethodReady,
       payoutReady: readiness.payoutReady,

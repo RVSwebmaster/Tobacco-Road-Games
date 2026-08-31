@@ -3,7 +3,7 @@ import {
   validateSameOriginRequest,
   validateSessionCsrf,
 } from "./account-auth.mjs";
-import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
 const LIMITS = {
   product: 50 * 1024 * 1024,
   cover: 10 * 1024 * 1024,
@@ -77,17 +77,23 @@ export async function handleCreatorFileUpload(
       },
       403,
     );
-  const readiness = await getCreatorAccountReadiness(db, listing.creator_id, {
-    markInitialCompletion: true,
-    nowMs: options.nowMs,
-  });
-  if (!readiness.registrationComplete)
+  const readiness = await getCreatorOperationalEligibility(
+    db,
+    listing.creator_id,
+    {
+      markInitialCompletion: true,
+      nowMs: options.nowMs,
+    },
+  );
+  if (!readiness.eligible)
     return json(
       {
         error: {
           code: "creator_registration_incomplete",
           message:
-            "Creator registration must be fully complete before product intake or listing tools become available.",
+            "Current Creator eligibility requirements must be restored before uploads are available.",
+          reasons: readiness.reasonCodes,
+          remediation: readiness.remediation,
         },
       },
       403,

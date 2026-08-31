@@ -13,6 +13,30 @@ async function main() {
   const operations = await load("functions/_lib/creator-operations.mjs");
   const files = await load("functions/_lib/creator-files.mjs");
   const auth = await load("functions/_lib/account-auth.mjs");
+  assert.equal(operations.requiresCurrentEligibility("GET", "listings"), false);
+  assert.equal(operations.requiresCurrentEligibility("POST", "profile"), false);
+  assert.equal(
+    operations.requiresCurrentEligibility("POST", "remediations/correction"),
+    false,
+  );
+  assert.equal(
+    operations.requiresCurrentEligibility("POST", "listings/item/pause"),
+    false,
+  );
+  for (const route of [
+    "listings",
+    "listings/item",
+    "listings/item/submit",
+    "listings/item/reactivate",
+    "bundles",
+    "preferred",
+    "payout-request",
+  ])
+    assert.equal(
+      operations.requiresCurrentEligibility("POST", route),
+      true,
+      `${route} must require current eligibility.`,
+    );
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
   for (const name of migrations()) raw.exec(readMigration(name));
@@ -20,6 +44,7 @@ async function main() {
   const now = new Date(NOW).toISOString();
   insertUser(raw, "seller", "seller@trg.test", now);
   insertUser(raw, "owner", "owner@trg.test", now, "owner");
+  insertUser(raw, "staff", "staff@trg.test", now);
   raw
     .prepare(
       "INSERT INTO creator_memberships(user_id,creator_id,permission,created_at) VALUES('owner','creator-rv-sawyer','manager',?)",
@@ -60,7 +85,11 @@ async function main() {
   assert.equal((await response.json()).intakeAccess, false);
 
   response = await creatorRequest(operations, db, sellerSession, "listings");
-  assert.equal(response.status, 403, "Direct listing access must be gated.");
+  assert.equal(
+    response.status,
+    200,
+    "Listing history must remain available for remediation and records.",
+  );
   response = await creatorRequest(operations, db, sellerSession, "listings", {
     title: "Free Draft",
     priceCents: 0,
@@ -120,7 +149,11 @@ async function main() {
     status: "ready",
     nowMs: NOW,
   });
-  response = await creatorRequest(operations, db, sellerSession, "listings");
+  response = await creatorRequest(operations, db, sellerSession, "listings", {
+    title: "Connect Blocked Draft",
+    priceCents: 0,
+    pricingModel: "free",
+  });
   assert.equal(
     response.status,
     403,
@@ -137,7 +170,11 @@ async function main() {
       "UPDATE creator_agreement_acceptances SET superseded_at=? WHERE creator_id=?",
     )
     .run(now, creator.creatorId);
-  response = await creatorRequest(operations, db, sellerSession, "listings");
+  response = await creatorRequest(operations, db, sellerSession, "listings", {
+    title: "Agreement Blocked Draft",
+    priceCents: 0,
+    pricingModel: "free",
+  });
   assert.equal(
     response.status,
     403,
@@ -156,12 +193,100 @@ async function main() {
     pricingModel: "free",
   });
   assert.equal(response.status, 201);
-  assert.ok(
+  const historicalCompletion = raw
+    .prepare(
+      "SELECT intake_registration_completed_at FROM marketplace_creators WHERE id=?",
+    )
+    .get(creator.creatorId).intake_registration_completed_at;
+  assert.ok(historicalCompletion);
+  raw
+    .prepare(
+      "INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,idempotency_key,created_at) VALUES(?,'manual_adjustment',1250,'usd',?,'available','preservation fixture','eligibility-history-fixture',?)",
+    )
+    .run(creator.creatorId, now, now);
+  raw
+    .prepare(
+      "INSERT INTO creator_memberships(user_id,creator_id,permission,created_at) VALUES('staff',?,'editor',?)",
+    )
+    .run(creator.creatorId, now);
+  const staffSession = await session(raw, auth, "staff", "staff-token", now);
+
+  await assertEligibilityToggle({
+    raw,
+    registration,
+    creatorId: creator.creatorId,
+    failSql: "UPDATE users SET email_verified=0 WHERE id='seller'",
+    restoreSql: "UPDATE users SET email_verified=1 WHERE id='seller'",
+    reason: "account_or_email_required",
+  });
+  await assertEligibilityToggle({
+    raw,
+    registration,
+    creatorId: creator.creatorId,
+    failSql: `UPDATE creator_agreement_acceptances SET superseded_at='${now}' WHERE creator_id='${creator.creatorId}'`,
+    restoreSql: `UPDATE creator_agreement_acceptances SET superseded_at=NULL WHERE creator_id='${creator.creatorId}'`,
+    reason: "agreement_update_required",
+  });
+  await assertEligibilityToggle({
+    raw,
+    registration,
+    creatorId: creator.creatorId,
+    failSql: "UPDATE user_account_profiles SET payment_method_status='expired' WHERE user_id='seller'",
+    restoreSql: "UPDATE user_account_profiles SET payment_method_status='ready' WHERE user_id='seller'",
+    reason: "payment_method_required",
+  });
+  await assertEligibilityToggle({
+    raw,
+    registration,
+    creatorId: creator.creatorId,
+    failSql: `UPDATE creator_payout_profiles SET payouts_enabled=0 WHERE creator_id='${creator.creatorId}'`,
+    restoreSql: `UPDATE creator_payout_profiles SET payouts_enabled=1 WHERE creator_id='${creator.creatorId}'`,
+    reason: "connect_or_payout_readiness_required",
+  });
+  await assertEligibilityToggle({
+    raw,
+    registration,
+    creatorId: creator.creatorId,
+    failSql: `UPDATE creator_identity_ownership SET identity_type='additional',billing_status='past_due' WHERE creator_id='${creator.creatorId}'`,
+    restoreSql: `UPDATE creator_identity_ownership SET identity_type='primary',billing_status='legacy_grandfathered' WHERE creator_id='${creator.creatorId}'`,
+    reason: "creator_identity_inactive",
+  });
+  raw
+    .prepare(
+      "UPDATE creator_account_audit_states SET state='cure_required' WHERE creator_id=?",
+    )
+    .run(creator.creatorId);
+  assert.equal(
+    (await registration.getCreatorOperationalEligibility(db, creator.creatorId))
+      .eligible,
+    true,
+    "The established cure window must remain operational until restriction.",
+  );
+  await assertEligibilityToggle({
+    raw,
+    registration,
+    creatorId: creator.creatorId,
+    failSql: `UPDATE creator_account_audit_states SET state='restricted' WHERE creator_id='${creator.creatorId}'`,
+    restoreSql: `UPDATE creator_account_audit_states SET state='passed' WHERE creator_id='${creator.creatorId}'`,
+    reason: "account_remediation_required",
+  });
+  assert.equal(
     raw
       .prepare(
-        "SELECT registration_completed_at FROM marketplace_creators WHERE id=?",
+        "SELECT intake_registration_completed_at FROM marketplace_creators WHERE id=?",
       )
-      .get(creator.creatorId).registration_completed_at,
+      .get(creator.creatorId).intake_registration_completed_at,
+    historicalCompletion,
+    "Current eligibility changes must not rewrite historical completion.",
+  );
+  assert.equal(
+    raw
+      .prepare(
+        "SELECT amount_cents FROM creator_earnings_ledger WHERE idempotency_key='eligibility-history-fixture'",
+      )
+      .get().amount_cents,
+    1250,
+    "Eligibility changes must preserve historical financial ledger entries.",
   );
 
   raw
@@ -185,6 +310,28 @@ async function main() {
     200,
     "A later audit restriction must retain listing history access.",
   );
+  response = await creatorRequest(operations, db, sellerSession, "listings", {
+    title: "Restricted Draft",
+    priceCents: 0,
+    pricingModel: "free",
+  });
+  assert.equal(
+    response.status,
+    403,
+    "Historical completion must not authorize a new listing after eligibility lapses.",
+  );
+  response = await creatorRequest(operations, db, staffSession, "listings", {
+    title: "Staff Cannot Bypass",
+    priceCents: 0,
+    pricingModel: "free",
+  });
+  assert.equal(
+    response.status,
+    403,
+    "A staff membership must not bypass creator-wide current eligibility.",
+  );
+  response = await creatorRequest(operations, db, staffSession, "listings");
+  assert.equal(response.status, 200, "Staff may still access retained history.");
 
   const ownerSession = await session(raw, auth, "owner", "owner-token", now);
   response = await creatorRequest(operations, db, ownerSession, "listings");
@@ -200,14 +347,56 @@ async function main() {
   );
   assert.match(dashboard, /if \(!summary\.intakeAccess\) return;/);
   assert.ok(
-    dashboard.indexOf("if (!summary.intakeAccess) return;") <
-      dashboard.indexOf('api("listings")'),
+    dashboard.indexOf('api("listings")') <
+      dashboard.indexOf("if (!summary.intakeAccess) return;"),
   );
   assert.match(
     fs.readFileSync(path.join(ROOT, "creator/index.html"), "utf8"),
     /id="creator-listings" hidden/,
   );
+  const advertisingSource = fs.readFileSync(
+    path.join(ROOT, "functions/_lib/creator-advertising-route.mjs"),
+    "utf8",
+  );
+  const balanceSource = fs.readFileSync(
+    path.join(ROOT, "functions/_lib/creator-balance-route.mjs"),
+    "utf8",
+  );
+  const publicationSource = fs.readFileSync(
+    path.join(ROOT, "functions/_lib/publication-readiness.mjs"),
+    "utf8",
+  );
+  for (const source of [advertisingSource, balanceSource, publicationSource])
+    assert.match(source, /getCreatorOperationalEligibility/);
+  assert.match(advertisingSource, /request\.method !== "GET" && !readiness\.eligible/);
+  assert.match(balanceSource, /request\.method !== "GET" && !ready\.eligible/);
+  assert.doesNotMatch(
+    publicationSource,
+    /if \(!listingCanCharge\(listing\)\) return/,
+    "Free publication must not bypass current eligibility.",
+  );
   console.log("Registration hard-gate tests passed.");
+}
+
+async function assertEligibilityToggle({
+  raw,
+  registration,
+  creatorId,
+  failSql,
+  restoreSql,
+  reason,
+}) {
+  raw.exec(failSql);
+  let state = await registration.getCreatorOperationalEligibility(
+    d1(raw),
+    creatorId,
+  );
+  assert.equal(state.eligible, false);
+  assert.equal(state.historicallyCompleted, true);
+  assert.ok(state.reasonCodes.includes(reason));
+  raw.exec(restoreSql);
+  state = await registration.getCreatorOperationalEligibility(d1(raw), creatorId);
+  assert.equal(state.eligible, true);
 }
 
 async function creatorRequest(module, db, sessionData, route, body) {

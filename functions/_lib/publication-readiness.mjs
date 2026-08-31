@@ -1,4 +1,4 @@
-import { getCreatorAccountReadiness } from "./creator-registration.mjs";
+import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
 
 export function listingCanCharge(listing) {
   return listing.pricing_model === "pwyw"
@@ -28,7 +28,6 @@ export async function assertCreatorPublicationReadiness(database, listing) {
     throw new Error(
       "Current product rights, representation, and license declarations are required.",
     );
-  if (!listingCanCharge(listing)) return { freeOnly: true };
   try {
     const audit = await database
       .prepare(
@@ -38,7 +37,7 @@ export async function assertCreatorPublicationReadiness(database, listing) {
       .first();
     if (audit?.state === "restricted")
       throw new Error(
-        "Creator account audit restriction blocks new paid publication.",
+        "Creator account audit restriction blocks new publication.",
       );
   } catch (error) {
     if (
@@ -48,10 +47,13 @@ export async function assertCreatorPublicationReadiness(database, listing) {
     )
       throw error;
   }
-  const state = await getCreatorAccountReadiness(database, listing.creator_id),
+  const state = await getCreatorOperationalEligibility(
+    database,
+    listing.creator_id,
+  ),
     missing = [];
-  if (!state.registrationComplete)
-    missing.push("Creator registration is incomplete.");
+  if (!state.eligible)
+    missing.push("Current Creator eligibility requirements are not satisfied.");
   if (!state.agreementCurrent)
     missing.push("The current Creator Agreement must be accepted.");
   if (!state.payoutReady)
@@ -61,7 +63,7 @@ export async function assertCreatorPublicationReadiness(database, listing) {
   if (!state.identityEntitled)
     missing.push("Creator identity billing or entitlement is inactive.");
   if (missing.length) throw new Error(missing.join(" "));
-  return state;
+  return { ...state, freeOnly: !listingCanCharge(listing) };
 }
 export async function recordListingDeclaration(
   database,

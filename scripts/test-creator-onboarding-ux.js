@@ -26,17 +26,28 @@ assert.match(accountScript, /Needs attention/);
 assert.match(accountScript, /paymentMethodReady:\s*["']Payment Method["']/);
 assert.match(accountScript, /payoutReady:\s*["']Payout Setup["']/);
 assert.match(accountScript, /accept_current_agreement/);
-assert.match(accountScript, /creatorDashboardLink\.hidden\s*=\s*!creator\.registrationComplete/);
+assert.match(
+  accountScript,
+  /creatorDashboardLink\.hidden\s*=\s*!creator\.historicallyCompleted/,
+);
+assert.match(accountScript, /prior registration remains on record/i);
 
 assert.match(creator, /id="creator-listings" hidden/);
 assert.match(creator, /id="creator-advertising" hidden/);
 assert.match(creator, /id="creator-analytics-card" hidden/);
 assert.match(creatorScript, /if \(!summary\.intakeAccess\) return;/);
 assert.ok(
-  creatorScript.indexOf("if (!summary.intakeAccess) return;") <
-    creatorScript.indexOf('api("listings")'),
+  creatorScript.indexOf('api("listings")') <
+    creatorScript.indexOf("if (!summary.intakeAccess) return;"),
 );
-assert.match(creatorScript, /Product intake, drafts, uploads, pricing, bundles, analytics, and advertising remain unavailable/);
+assert.ok(
+  creatorScript.indexOf("if (!summary.intakeAccess) return;") <
+    creatorScript.indexOf('api("advertising")'),
+);
+assert.match(creatorScript, /#creator-draft-form/);
+assert.match(creatorScript, /#creator-file-form/);
+assert.match(creatorScript, /Historical records and remediation remain available/i);
+assert.match(creatorScript, /new intake, uploads, publication, advertising changes, service purchases, and payout requests are blocked/i);
 
 assert.match(registration, /paymentCollection/);
 assert.match(registration, /accept_current_agreement/);

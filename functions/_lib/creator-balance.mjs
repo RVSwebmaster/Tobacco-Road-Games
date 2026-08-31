@@ -6,7 +6,7 @@ export async function getCreatorBalance(
 ) {
   const owned = await db
     .prepare(
-      "SELECT 1 ok FROM creator_identity_ownership WHERE creator_id=? AND owner_user_id=? AND account_status='active'",
+      "SELECT 1 ok FROM creator_identity_ownership WHERE creator_id=? AND owner_user_id=?",
     )
     .bind(creatorId, userId)
     .first();
