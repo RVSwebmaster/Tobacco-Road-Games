@@ -95,22 +95,17 @@ export async function submitCreatorRating(db, { creatorId, userId, ratingValue, 
   const value = Number(ratingValue);
   if (!Number.isInteger(value) || value < 1 || value > 5) throw new Error("Creator rating must be a whole number from 1 to 5.");
   const normalized = normalizeFeedback(feedback);
-  const acquisition = await db.prepare(`
-    SELECT o.id order_id FROM orders o
-    JOIN order_items oi ON oi.order_id=o.id
-    JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug
-    LEFT JOIN download_entitlements de ON de.order_item_id=oi.id AND de.status='active'
-    WHERE o.user_id=? AND cl.creator_id=? AND o.payment_status='paid'
-      AND (de.id IS NOT NULL OR cl.media_type IN ('physical','hybrid'))
-    ORDER BY o.paid_at DESC,o.id DESC LIMIT 1
-  `).bind(userId, creatorId).first();
-  if (!acquisition) throw new Error("A verified Tobacco Road Games acquisition from this Creator is required.");
+  const customer = await getCustomerRatingState(db, { creatorId, userId });
+  if (!customer.emailVerified) throw new Error("Verify your account email before rating a Creator.");
+  if (!customer.eligible) throw new Error("A verified Tobacco Road Games acquisition from this Creator is required.");
+  const acquisition = { order_id: customer.acquisitionOrderId };
+  /* Eligibility is intentionally centralized so UI previews and submission use the same rule. */
   const existing = await db.prepare("SELECT * FROM creator_reputation_ratings WHERE creator_id=? AND user_id=?").bind(creatorId, userId).first();
   const now = new Date(nowMs).toISOString(), id = existing?.id || crypto.randomUUID();
   if (existing) {
     await db.batch([
-      db.prepare("UPDATE creator_reputation_ratings SET acquisition_order_id=?,rating_value=?,feedback_json=?,moderation_state='visible',fraud_state='clear',updated_at=? WHERE id=?").bind(acquisition.order_id, value, JSON.stringify(normalized), now, id),
-      history(db, { id, creatorId, userId, action: "updated", prior: existing.rating_value, value, moderation: "visible", fraud: "clear", actorType: "customer", actorId: userId, now }),
+      db.prepare("UPDATE creator_reputation_ratings SET acquisition_order_id=?,rating_value=?,feedback_json=?,updated_at=? WHERE id=?").bind(acquisition.order_id, value, JSON.stringify(normalized), now, id),
+      history(db, { id, creatorId, userId, action: "updated", prior: existing.rating_value, value, moderation: existing.moderation_state, fraud: existing.fraud_state, actorType: "customer", actorId: userId, now }),
     ]);
   } else {
     await db.batch([
@@ -118,7 +113,23 @@ export async function submitCreatorRating(db, { creatorId, userId, ratingValue, 
       history(db, { id, creatorId, userId, action: "created", value, moderation: "visible", fraud: "clear", actorType: "customer", actorId: userId, now }),
     ]);
   }
-  return { id, creatorId, ratingValue: value, verifiedAcquisition: true, updated: Boolean(existing) };
+  return { id, creatorId, ratingValue: value, verifiedAcquisition: true, updated: Boolean(existing), updatedAt: now };
+}
+
+export async function getCustomerRatingState(db, { creatorId, userId } = {}) {
+  const user = await db.prepare("SELECT email_verified,status FROM users WHERE id=?").bind(userId).first();
+  const emailVerified = Number(user?.email_verified) === 1 && user?.status === "active";
+  const acquisition = emailVerified ? await db.prepare(`
+    SELECT o.id order_id FROM orders o
+    JOIN order_items oi ON oi.order_id=o.id
+    JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug
+    LEFT JOIN download_entitlements de ON de.order_item_id=oi.id AND de.status='active'
+    WHERE o.user_id=? AND cl.creator_id=? AND o.payment_status='paid'
+      AND (de.id IS NOT NULL OR cl.media_type IN ('physical','hybrid'))
+    ORDER BY o.paid_at DESC,o.id DESC LIMIT 1
+  `).bind(userId, creatorId).first() : null;
+  const current = await db.prepare("SELECT rating_value,created_at,updated_at FROM creator_reputation_ratings WHERE creator_id=? AND user_id=?").bind(creatorId,userId).first();
+  return { eligible: Boolean(emailVerified && acquisition), emailVerified, acquisitionOrderId: acquisition?.order_id || null, currentRating: current ? { ratingValue:Number(current.rating_value), submittedAt:current.created_at, updatedAt:current.updated_at } : null };
 }
 
 export async function getCreatorRatingSummary(db, creatorId, { threshold = DEFAULT_PUBLIC_RATING_THRESHOLD, includePrivate = false } = {}) {

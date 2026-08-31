@@ -106,6 +106,7 @@
       libraryStatus.textContent = "Your library is empty. Digital purchases made while signed in will appear here.";
       return;
     }
+    const ratingCreators = new Set();
     for (const item of payload.items) {
       const card = document.createElement("article");
       card.className = "product-card";
@@ -132,6 +133,13 @@
         note.className = "product-card__meta";
         note.textContent = item.downloadAvailable ? "Download access is temporarily unavailable." : "No active download entitlement.";
         body.append(note);
+      }
+      if (item.creatorId && !ratingCreators.has(item.creatorId) && window.TRGCreatorReputation) {
+        ratingCreators.add(item.creatorId);
+        const ratingRoot = document.createElement("div");
+        ratingRoot.className = "library-creator-rating";
+        body.append(ratingRoot);
+        window.TRGCreatorReputation.customerControl(ratingRoot, item.creatorId, item.creator).catch(() => {});
       }
       card.append(body);
       libraryList.append(card);

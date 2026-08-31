@@ -22,10 +22,20 @@ Public aggregation includes visible, fraud-clear ratings. `CREATOR_RATING_PUBLIC
 
 Operators can hide suspected fraud, flag brigading or abuse, and restore false positives. Every change retains history and an objective reason. Public written reviews are not implemented.
 
+### Customer UI and entry points
+
+Eligible, signed-in, email-verified customers receive “Rate your experience with this Creator” controls in My Library and on the relevant Creator profile. My Library groups the control to one instance per Creator even when several products from that Creator are owned. Eligibility and submission use the same server-side acquisition check; the browser receives only an eligibility boolean and the customer’s own current score/timestamps, never entitlement or moderation internals.
+
+The form is a single 1–5 star fieldset. Submitting creates the relationship score; submitting again updates that score while appending audit history. A customer update cannot undo an operator moderation state. No written feedback field or public review/comment surface is exposed.
+
+Public Creator profiles show the configured neutral or aggregate state, up to three prominent badges, accessible badge descriptions, and a decorative Founding halo only when the durable badge exists. Product attribution and directory cards use a compact maximum of two badges plus the public reputation state and link back to the full profile. Directory order is unchanged and is not based on stars.
+
+Creator-private analytics show average, verified-rating count, trend, and the five-star distribution. They contain no customer IDs, emails, order references, or transaction details.
+
 ## Discovery, accessibility, and deferred work
 
 `creator_reputation_labels` provides non-ranking hooks for Top Rated, Customer Favorite, New & Rising, Best-Selling, and Most Downloaded. No leaderboard or scoring algorithm exists.
 
-Badges have text and accessible labels; ratings have text equivalents. The Founding halo is decorative. Reduced-motion rules disable effects.
+Badges have text and accessible labels; ratings have text equivalents. Each star radio is keyboard operable, has a value-specific screen-reader label, and has a visible focus state. Selection is conveyed by control state as well as appearance. The Founding halo is a decorative CSS pseudo-element and never enters the accessibility tree. Reduced-motion rules disable effects.
 
-Deferred: production dates, campaign activation, participants, achievement assets/awards, customer rating form, directory-card rendering, discovery calculation, and full redesign. No Creator Agreement conflict was found.
+Deferred: production dates, campaign activation, participants, achievement assets/awards, public written reviews/comments, automatic discovery calculation, and full redesign. No Creator Agreement conflict was found.

@@ -82,8 +82,7 @@
       api("analytics"),
       api("advertising"),
     ]);
-    document.querySelector("#creator-analytics").textContent =
-      `${analytics.analytics.unitsSold} units · $${(analytics.analytics.grossCents / 100).toFixed(2)} gross sales`;
+    renderCreatorAnalytics(analytics.analytics);
     document.querySelector("#creator-analytics-card").hidden = false;
     renderListings(listingData.listings, listingData.files || []);
     renderAdvertising(advertising);
@@ -94,6 +93,14 @@
     listingsPanel.hidden = document.querySelector(
       "#creator-advertising",
     ).hidden = false;
+  }
+  function renderCreatorAnalytics(analytics) {
+    const root=document.querySelector("#creator-analytics");root.replaceChildren();
+    const sales=document.createElement('p');sales.textContent=`${analytics.unitsSold} units · $${(analytics.grossCents/100).toFixed(2)} gross sales`;root.append(sales);
+    if(!analytics.reputation)return;
+    const reputation=analytics.reputation,heading=document.createElement('h3');heading.textContent='Creator reputation';
+    const summary=document.createElement('p');summary.textContent=reputation.privateCount?`${reputation.privateAverage.toFixed(1)} out of 5 · ${reputation.privateCount} verified rating${reputation.privateCount===1?'':'s'} · trend ${String(reputation.recentTrend).replace('_',' ')}`:'No verified Creator ratings yet.';root.append(heading,summary);
+    const list=document.createElement('ul');list.className='creator-rating-distribution';list.setAttribute('aria-label','Creator rating distribution');for(let star=5;star>=1;star--){const item=document.createElement('li');item.textContent=`${star} star${star===1?'':'s'}: ${reputation.distribution[star]||0}`;list.append(item);}root.append(list);
   }
   function renderOperations(data) {
     const panel = document.querySelector("#creator-remediations"),

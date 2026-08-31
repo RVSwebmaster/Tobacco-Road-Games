@@ -7,17 +7,34 @@ export async function handleAccountLibraryRequest(request, env = {}, options = {
   const session = await getSessionFromRequest(request, env, options.sessionOptions || {});
   if (!session.valid) return json({ error: { code: "not_authenticated", message: "Sign in to view My Library." } }, 401);
   const database = options.database || env.TRG_ORDERS;
-  const rows = await allRows(database.prepare(`
+  let rows;
+  try {
+    rows = await allRows(database.prepare(`
     SELECT o.public_id, o.created_at, oi.product_slug, oi.product_title_snapshot,
            oi.author_slugs_json, oi.version_snapshot, oi.last_updated_snapshot,
-           de.id AS entitlement_id, de.order_id, de.order_item_id, de.status AS entitlement_status
+           de.id AS entitlement_id, de.order_id, de.order_item_id, de.status AS entitlement_status,
+           cl.creator_id, c.slug AS creator_slug, c.display_name AS creator_display_name
     FROM orders o
     JOIN order_items oi ON oi.order_id = o.id
     LEFT JOIN download_entitlements de
       ON de.order_item_id = oi.id AND de.order_id = o.id AND de.status = 'active'
+    LEFT JOIN creator_listings cl ON cl.source_product_slug = oi.product_slug
+    LEFT JOIN marketplace_creators c ON c.id = cl.creator_id
     WHERE o.user_id = ? AND o.payment_status = 'paid'
     ORDER BY o.created_at DESC, oi.id ASC
-  `).bind(session.user.id));
+    `).bind(session.user.id));
+  } catch (error) {
+    if (!/no such table:\s*(creator_listings|marketplace_creators)/i.test(String(error))) throw error;
+    rows = await allRows(database.prepare(`
+      SELECT o.public_id, o.created_at, oi.product_slug, oi.product_title_snapshot,
+             oi.author_slugs_json, oi.version_snapshot, oi.last_updated_snapshot,
+             de.id AS entitlement_id, de.order_id, de.order_item_id, de.status AS entitlement_status
+      FROM orders o JOIN order_items oi ON oi.order_id=o.id
+      LEFT JOIN download_entitlements de ON de.order_item_id=oi.id AND de.order_id=o.id AND de.status='active'
+      WHERE o.user_id=? AND o.payment_status='paid'
+      ORDER BY o.created_at DESC,oi.id ASC
+    `).bind(session.user.id));
+  }
   const secret = String(options.downloadSigningSecret || env.DOWNLOAD_SIGNING_SECRET || "");
   const canSign = isDownloadSigningSecretConfigured(secret);
   const items = [];
@@ -30,7 +47,9 @@ export async function handleAccountLibraryRequest(request, env = {}, options = {
     }
     items.push({
       coverImage: current?.coverUrl || "",
-      creator: current?.authorDisplay || "",
+      creator: row.creator_display_name || current?.authorDisplay || "",
+      creatorId: row.creator_id || "",
+      creatorSlug: row.creator_slug || "",
       currentLastUpdated: current?.lastUpdated || "",
       currentVersion: current?.version || "",
       downloadAvailable: Boolean(row.entitlement_id && row.entitlement_status === "active"),
