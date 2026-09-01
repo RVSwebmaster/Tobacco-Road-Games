@@ -1,11 +1,83 @@
 # Full site-wide policy and systems audit
 
 Audit date: 2026-08-31  
-Audited commit: `027d29533963a1f86e0a926bab8192075ffbdda5`  
+Original audited commit: `027d29533963a1f86e0a926bab8192075ffbdda5`  
+Post-remediation reread: 2026-09-01 at `588e75b23ff9571ef2f0a0665bfa466c94e435eb`  
 Environment: canonical repository and staging; production was not changed  
 Store state during audit: staging `CLOSED`
 
-Post-audit remediation: the continuing Creator eligibility conflict identified below was repaired and regression-tested on 2026-08-31. Historical wording for unrelated findings remains unchanged.
+Post-audit remediation: all audit-derived software enforcement findings were reread after migrations 035–038 and the eligibility, service-accounting, identity-billing, Preferred-billing, and service-correction passes. The original detailed matrix remains useful as historical evidence; the current disposition immediately below supersedes its old `PARTIAL`, `MISSING`, and priority labels where they conflict.
+
+## 2026-09-01 post-remediation disposition
+
+### Primary result
+
+**No known audit-derived software or settled-policy enforcement blocker remains before Tobacco Road Games leaves audit-remediation mode.** Remaining work is intentionally deferred, legal-counsel work, production activation/operations, or optional post-launch improvement.
+
+The reread verified the full migration chain through 038, current code and tests, the deployed staging commit, store state, protected routes, and the newer financial/service paths. It found no remediation-introduced authorization bypass, parallel financial ledger, stale payment-source bypass, expiring Ad Credit balance, unsupported Creator money-movement claim, or service-refund conflict with the settled non-refundable-after-service-begins rule.
+
+### Original finding reread
+
+| Original finding | Current classification | Current result |
+|---|---|---|
+| Sticky Creator eligibility | **NO LONGER APPLICABLE / RESOLVED** | Current operational eligibility is recomputed from account/email, registration/profile, Agreement, payment method, payout readiness, identity entitlement, account state, and audit restriction. Protected Creator mutations and publication enforce it server-side. |
+| Stripe-funded Ad Credit accounting | **NO LONGER APPLICABLE / RESOLVED** | Stripe and Creator Balance purchases converge on canonical service purchases/revenue; exactly five non-expiring credits are issued with replay protection. |
+| Additional Creator identity billing | **NO LONGER APPLICABLE / RESOLVED** | $10 monthly and $100 annual coverage, both payment sources, dated entitlement, expiry gating, reporting, UI, and webhook replay protection are implemented. |
+| Preferred external/recurring billing | **NO LONGER APPLICABLE / RESOLVED** | $20 monthly twelve-installment commitments and $200 annual prepaid service purchases are durable for Creator Balance and test Stripe paths. |
+| Preferred seven-day grace | **NO LONGER APPLICABLE / RESOLVED** | Exactly seven calendar days is canonical and enforced in billing state, tier eligibility, retry scheduling, notices, and tests. |
+| Creator Balance product/service purchases | **NO LONGER APPLICABLE / RESOLVED** | Full-payment-only atomic reservations, canonical product/service accounting, no split tender, and duplicate/race protections are implemented. |
+| Creator service refund/correction mechanics | **NO LONGER APPLICABLE / RESOLVED** | Operator-only corrections are limited to objective TRG-caused errors/service failures, restore the original funding source, reverse service revenue, preserve history, and adjust entitlements explicitly. Live Stripe execution remains a production-operations item. |
+| Ad Credit expiration | **NO LONGER APPLICABLE / RESOLVED** | Unused Ad Credits do not expire; only redeemed active slots have the settled 30-day life. |
+| Discovery labels | **NO LONGER APPLICABLE / RESOLVED** | Explainable labels, exclusions, suppression, public projections, manual recalculation, and scheduler-safe records exist. Production scheduling is an operations item. |
+| Creator reputation/ratings | **NO LONGER APPLICABLE / RESOLVED** | Verified-customer Creator ratings, privacy threshold, self-rating exclusion, moderation, and history are implemented. Product ratings remain intentionally deferred. |
+| Launch Week/Founding architecture | **NO LONGER APPLICABLE / RESOLVED** | Cohort/window/badge architecture and operator controls exist; campaign dates and awards are intentional activation decisions. |
+| Inactivity lifecycle and six-month audits | **NO LONGER APPLICABLE / RESOLVED** | Idempotent state machines, notices, cure/restriction, reactivation, and manual/scheduler-safe runners exist. Production cron/email are operations items. |
+| Defective-product remediation | **NO LONGER APPLICABLE / RESOLVED** | Delisting, 30-day correction, customer refund/wait election, entitlement preservation/replacement, deadline expiry, refund-required state, audit, and UI exist. Live refunds are operations. |
+| Payouts/reservations and financial ledger | **NO LONGER APPLICABLE / RESOLVED** | Immutable sale/reversal ledger, holds, negative balances, atomic payout reservations, $10 minimum, failure release, and closure exception exist. Live transfers are operations. |
+| Business reporting | **UNDERDOCUMENTED BUT IMPLEMENTED** | Creator sale/ledger/payout reports and unified service purchase/revenue/correction records are durable and operator-visible. Service revenue belongs to TRG rather than Creator earnings, so it is correctly absent from Creator payout statements; feature tests reconcile each newer service type. A consolidated operator export is optional. |
+| Verification, registration, publication, limits and PWYW | **NO LONGER APPLICABLE / RESOLVED** | Verified acquisition, current Creator eligibility, direct-route gates, objective publication, 20/22 capacity, PWYW 1/2 limits, sale-time splits and immutable first-publication behavior remain enforced. |
+| Advertising-slot mechanics | **NO LONGER APPLICABLE / RESOLVED** | Included/purchased slots, five-for-$5 credits, 30-day redemption, swap-without-recharge, expiration, validation, and fair rotation exist. |
+| Store kill switch and operator protections | **NO LONGER APPLICABLE / RESOLVED** | Runtime closure, fail-closed checkout, owner authentication, same-origin and CSRF protections, audit records, and private projections remain operative. |
+
+### Deliberate non-blockers
+
+**INTENTIONALLY DEFERRED**
+
+- Coupon campaigns, coupon-funded Ad Credits, and non-stacking coupon checkout enforcement.
+- Split tender and silent/automatic Creator Balance spending.
+- Product-level Top Rated until a verified product-rating model exists; written customer reviews.
+- Related-account/device clustering, advertiser self-service, and other expressly deferred feature expansions.
+
+**LEGAL COUNSEL**
+
+- Final Creator Agreement clauses, governing law/venue, dispute process, warranties, liability, indemnification, formal IP complaint/counter-notice procedure, privacy/retention/data-processing terms, collection rights, and post-termination license/entitlement duration.
+
+**PRODUCTION OPERATIONS**
+
+- Live Stripe/Connect activation, real refunds/disputes/payouts, provider reconciliation and retry runbooks.
+- Production cron and marketplace notice email delivery/monitoring.
+- Production bindings/secrets/webhooks, R2 isolation/backups/retention/restore, incident response, and final accessibility conformance testing.
+
+**OPTIONAL POST-LAUNCH IMPROVEMENT**
+
+- General customer order-history UI beyond My Library/recovery.
+- Polished owner UI for API-first operations and broader consolidated service-accounting exports.
+- Staff invitation/delegation management and finer route-specific staff permissions.
+- Bundle/scheduled-sale editing polish, automated image-dimension/moderation checks, and expanded accessibility automation before the separately required final production conformance review.
+
+### Eligibility lapse and automatic delisting
+
+This is a **POLICY-DESIGN QUESTION**, not a demonstrated software bug. Current behavior is coherent: current eligibility blocks new protected activity and publication, while explicit inactivity, audit restriction, fraud, rights/safety, payment-risk, and defective-product processes apply their own proportionate listing consequences. Historical customer access, records, remediation, and financial obligations remain available. Existing policy does not require one universal automatic takedown for every eligibility lapse; different lapse types can reasonably require different consequences.
+
+### Staging verification
+
+- Local `HEAD` and `origin/main`: `588e75b23ff9571ef2f0a0665bfa466c94e435eb` before this documentation update.
+- Cloudflare Pages deployment `d1ad01b7-3bda-46cd-83dd-b39464826fa8` reports source `588e75b` on the staging branch.
+- Remote D1 lists migration `038_creator_service_refund_corrections.sql` as latest and reports no pending migrations.
+- Staging `GET /api/store/status` reports `CLOSED`.
+- Unauthenticated Creator overview returns 401; owner finance and Creator Balance endpoints return 403.
+- Staging contains two pre-existing paid proof orders and zero service purchases, payout requests, or service-refund corrections; this reread created no business activity.
+- Full `npm test`, the store-kill-switch suite, and `git diff --check` passed. Production was not queried, deployed, migrated, or mutated.
 
 ## Method and status vocabulary
 
@@ -24,7 +96,7 @@ Statuses mean:
 - **OBSOLETE / DEAD CODE** — retained path is no longer an operative supported flow.
 - **NEEDS OWNER DECISION**, **NEEDS LEGAL COUNSEL**, and **NEEDS PRODUCTION OPERATIONS** identify the party or activation needed.
 
-## Executive conclusion
+## Original executive conclusion (historical; superseded above)
 
 The marketplace has a substantial, internally coherent staging implementation: secure customer authentication and recovery, verified acquisitions, durable orders and entitlements, Creator registration data, publication review, sale-time economics, Creator Balance, service purchases, advertising slots, remediation state, payout reservations, reporting, discovery, ratings, badges, audits, and operator authentication all have real server/database foundations.
 
@@ -61,7 +133,7 @@ Stale or potentially confusing text:
 - The crosswalk needs a post-migration-034 update for Creator Balance service payments.
 - Advertising documentation correctly retains coupons and service-credit refunds as deferred/missing.
 
-## System-by-system audit matrix
+## Original system-by-system audit matrix (historical baseline)
 
 ### Customer accounts, checkout, and ownership
 
@@ -170,7 +242,7 @@ Stale or potentially confusing text:
 | Fraud/account blocks | **COMPLETE foundation** | User/email blocks, evidence, active/reversed states, transaction enforcement, discovery exclusions and operator reversal exist. Device/related-account clustering is deferred. |
 | Accessibility | **PARTIAL** | Semantic headings, labels, live regions, alt text, keyboard-capable controls, focus/hover pause and reduced-motion handling appear across audited surfaces. There is no end-to-end WCAG audit, automated axe suite, or assistive-technology verification. |
 
-## Permissions and bypass findings
+## Original permissions and bypass findings (historical baseline)
 
 ### High priority
 
@@ -208,7 +280,7 @@ Required verification for this audit:
 - unauthenticated Creator and owner financial/service endpoints must reject access
 - no production deploy, migration or state mutation
 
-## Final classification summary
+## Original classification summary (historical; superseded above)
 
 | Classification | Principal items |
 |---|---|
@@ -225,6 +297,6 @@ Required verification for this audit:
 | **NEEDS LEGAL COUNSEL** | Agreement final clauses, negative-balance collection, IP complaint process, privacy/retention, entitlement survival and post-termination license |
 | **NEEDS PRODUCTION OPERATIONS** | Live Stripe/Connect/refunds/payouts, secrets/webhooks, cron, notice delivery, R2 isolation/backups, monitoring and incident runbooks |
 
-## Audit disposition
+## Original audit disposition (historical; superseded above)
 
 The continuing Creator hard gate, Stripe Ad Credit service accounting, additional-identity billing, and Creator service-correction gaps were remediated after this audit. Coupon policy and the remaining legal and operational blockers still precede production readiness. Production must remain closed until those blockers are resolved and the remediated system passes the full suite plus direct negative authorization tests.
