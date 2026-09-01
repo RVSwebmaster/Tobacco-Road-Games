@@ -24,6 +24,15 @@ export async function onRequestGet({ request, env }) {
   const identities = await env.TRG_ORDERS.prepare(
     "SELECT o.creator_id,c.display_name creator_name,o.owner_user_id,o.identity_type,o.account_status,o.billing_cadence,o.billing_status,o.entitlement_source,(SELECT cp.billing_plan FROM creator_identity_coverage_periods cp JOIN marketplace_service_purchases p ON p.id=cp.service_purchase_id WHERE cp.creator_id=o.creator_id AND cp.status='active' AND p.status='settled' ORDER BY cp.coverage_ends_at DESC LIMIT 1) current_plan,(SELECT cp.coverage_starts_at FROM creator_identity_coverage_periods cp JOIN marketplace_service_purchases p ON p.id=cp.service_purchase_id WHERE cp.creator_id=o.creator_id AND cp.status='active' AND p.status='settled' ORDER BY cp.coverage_ends_at DESC LIMIT 1) latest_coverage_starts_at,(SELECT cp.coverage_ends_at FROM creator_identity_coverage_periods cp JOIN marketplace_service_purchases p ON p.id=cp.service_purchase_id WHERE cp.creator_id=o.creator_id AND cp.status='active' AND p.status='settled' ORDER BY cp.coverage_ends_at DESC LIMIT 1) paid_through_at,CASE WHEN o.account_status<>'active' THEN 'inactive' WHEN o.identity_type='primary' THEN 'included' WHEN o.billing_status='legacy_grandfathered' THEN 'legacy_grandfathered' WHEN EXISTS(SELECT 1 FROM creator_identity_coverage_periods cp JOIN marketplace_service_purchases p ON p.id=cp.service_purchase_id WHERE cp.creator_id=o.creator_id AND cp.status='active' AND p.status='settled' AND cp.coverage_ends_at>datetime('now')) THEN 'current' WHEN EXISTS(SELECT 1 FROM creator_identity_coverage_periods cp WHERE cp.creator_id=o.creator_id) THEN 'expired' ELSE 'billing_required' END entitlement_status FROM creator_identity_ownership o JOIN marketplace_creators c ON c.id=o.creator_id ORDER BY o.owner_user_id,o.identity_type DESC,c.created_at",
   ).all();
+  const preferredCommitments = await env.TRG_ORDERS.prepare(
+    "SELECT b.*,c.display_name creator_name,(SELECT COUNT(*) FROM preferred_billing_installments i WHERE i.commitment_id=b.id AND i.status='paid') installments_paid,(SELECT COUNT(*) FROM preferred_billing_installments i WHERE i.commitment_id=b.id AND i.status<>'paid' AND i.status<>'cancelled') installments_outstanding FROM preferred_billing_commitments b JOIN marketplace_creators c ON c.id=b.creator_id ORDER BY b.commitment_starts_at DESC",
+  ).all();
+  const preferredInstallments = await env.TRG_ORDERS.prepare(
+    "SELECT i.*,b.creator_id,b.owner_user_id,p.payment_source,p.provider_event_id,p.provider_payment_reference,p.processor_fee_cents,p.processor_fee_authoritative FROM preferred_billing_installments i JOIN preferred_billing_commitments b ON b.id=i.commitment_id LEFT JOIN marketplace_service_purchases p ON p.id=i.service_purchase_id ORDER BY i.due_at DESC LIMIT 300",
+  ).all();
+  const preferredProviderAttempts = await env.TRG_ORDERS.prepare(
+    "SELECT a.*,i.commitment_id,i.installment_number,b.creator_id FROM preferred_billing_provider_attempts a JOIN preferred_billing_installments i ON i.id=a.installment_id JOIN preferred_billing_commitments b ON b.id=i.commitment_id ORDER BY a.created_at DESC LIMIT 300",
+  ).all();
   const servicePurchases = services.results || [],
     settled = servicePurchases.filter((item) => item.status === "settled"),
     serviceRevenue = {
@@ -55,6 +64,12 @@ export async function onRequestGet({ request, env }) {
           (sum, item) => sum + Number(item.recognized_service_revenue_cents),
           0,
         ),
+      preferredMonthlyInstallmentCents: settled
+        .filter((item) => item.service_sku === "preferred_monthly")
+        .reduce((sum, item) => sum + Number(item.recognized_service_revenue_cents), 0),
+      preferredAnnualPrepaidCents: settled
+        .filter((item) => item.service_sku === "preferred_annual")
+        .reduce((sum, item) => sum + Number(item.recognized_service_revenue_cents), 0),
       authoritativeProcessorFeesCents: settled
         .filter((item) => Number(item.processor_fee_authoritative) === 1)
         .reduce((sum, item) => sum + Number(item.processor_fee_cents), 0),
@@ -65,6 +80,9 @@ export async function onRequestGet({ request, env }) {
   return jsonResponse({
     settlements: result.results || [],
     identityEntitlements: identities.results || [],
+    preferredCommitments: preferredCommitments.results || [],
+    preferredInstallments: preferredInstallments.results || [],
+    preferredProviderAttempts: preferredProviderAttempts.results || [],
     servicePurchases,
     serviceRevenue,
   });

@@ -22,6 +22,13 @@ import {
 import { getCreatorRatingSummary } from "./creator-reputation.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
 import {
+  getPreferredBillingState,
+  markPreferredDoNotRenew,
+  preferredGraceDays,
+  startAnnualPreferredCheckout,
+  startMonthlyPreferredCommitment,
+} from "./preferred-billing.mjs";
+import {
   purchaseServiceWithCreatorBalance,
   SERVICE_PRICING,
 } from "./creator-service-purchases.mjs";
@@ -148,19 +155,62 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       userId: session.user.id,
       nowMs: options.nowMs,
     });
+    const billing = await getPreferredBillingState(
+      database,
+      creator.id,
+      options.nowMs || Date.now(),
+    );
     return json({
       term,
+      billing,
       balance,
       pricing: {
         monthlyCommitmentCents: SERVICE_PRICING.preferred_monthly.amountCents,
         annualPrepaidCents: SERVICE_PRICING.preferred_annual.amountCents,
       },
       automaticBalanceBilling: false,
+      automaticStripeInstallments: true,
+      paymentMethod: {
+        ready: Boolean(readiness.paymentMethodReady),
+      },
     });
   }
   if (request.method === "POST" && route === "preferred") {
     try {
-      const body = await bodyJson(request),
+      const body = await bodyJson(request);
+      if (body.action === "do_not_renew")
+        return json({
+          ok: true,
+          ...(await markPreferredDoNotRenew(database, {
+            creatorId: creator.id,
+            userId: session.user.id,
+            nowMs: options.nowMs,
+          })),
+        });
+      if (body.action === "start_annual_stripe")
+        return json({
+          ok: true,
+          ...(await startAnnualPreferredCheckout(database, {
+            creatorId: creator.id,
+            userId: session.user.id,
+            email: session.user.email_normalized,
+            env,
+            fetchImpl: options.fetchImpl,
+            nowMs: options.nowMs,
+          })),
+        });
+      if (body.action === "start_monthly_commitment")
+        return json({
+          ok: true,
+          ...(await startMonthlyPreferredCommitment(database, {
+            creatorId: creator.id,
+            userId: session.user.id,
+            env,
+            fetchImpl: options.fetchImpl,
+            nowMs: options.nowMs,
+          })),
+        });
+      const
         sku =
           body.plan === "annual_prepaid"
             ? "preferred_annual"
@@ -180,6 +230,7 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
             sku,
             idempotencyKey: String(body.idempotencyKey || ""),
             nowMs: options.nowMs,
+            graceDays: preferredGraceDays(env),
           })),
         },
         201,

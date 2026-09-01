@@ -12,6 +12,7 @@ import { creatorSaleStatements, getEffectiveFeePolicy, resolveFeePolicy } from "
 import {recordQualifyingActivity} from './product-inactivity.mjs';
 import {fulfillCreditPurchase} from './creator-advertising.mjs';
 import { settleStripeIdentityCoverage } from "./creator-identity-billing.mjs";
+import { settleAnnualPreferredStripe } from "./preferred-billing.mjs";
 import { processStripeCreatorFinanceEvent, STRIPE_CREATOR_FINANCE_EVENTS } from "./creator-provider-finance.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
@@ -408,6 +409,61 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       return { ...result, duplicate: false };
     } catch {
       return fail("identity_service_settlement_failed", 500, null);
+    }
+  }
+
+  if (session?.metadata?.trg_service_type === "preferred_creator_annual") {
+    if (session?.object !== "checkout.session")
+      return fail("checkout_session_object_missing", 400, null);
+    const attemptId = String(session?.client_reference_id || ""),
+      attempt = await database
+        .prepare("SELECT * FROM preferred_external_billing_attempts WHERE id=?")
+        .bind(attemptId)
+        .first();
+    if (
+      !attempt ||
+      attempt.stripe_checkout_session_id !== session.id ||
+      String(session?.metadata?.trg_service_reference_id || "") !== attemptId ||
+      String(session?.metadata?.trg_checkout_attempt_id || "") !==
+        `preferred-annual-${attemptId}` ||
+      Number(session.amount_total) !== 20000 ||
+      normalizedCurrencyOrNull(session.currency) !== "USD"
+    )
+      return fail("preferred_annual_attempt_mismatch", 400, null);
+    try {
+      let processingResult = "preferred_annual_payment_pending";
+      if (
+        ["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(eventType) &&
+        session.payment_status === "paid"
+      ) {
+        const settled = await settleAnnualPreferredStripe(database, {
+          attemptId,
+          stripeCheckoutSessionId: session.id,
+          stripePaymentIntentId: paymentIntentId,
+          providerEventId: eventId,
+          amountCents: session.amount_total,
+          currency: session.currency,
+          paymentStatus: session.payment_status,
+          nowMs: options.nowMs,
+        });
+        processingResult = settled.idempotent
+          ? "preferred_annual_already_settled"
+          : "preferred_annual_settled";
+      } else if (eventType === "checkout.session.expired") {
+        await database.prepare("UPDATE preferred_external_billing_attempts SET status='expired' WHERE id=? AND status='pending'").bind(attemptId).run();
+        processingResult = "preferred_annual_expired";
+      } else if (eventType === "checkout.session.async_payment_failed") {
+        await database.prepare("UPDATE preferred_external_billing_attempts SET status='failed' WHERE id=? AND status='pending'").bind(attemptId).run();
+        processingResult = "preferred_annual_failed";
+      }
+      const result = await finalizeWebhookEvent(database, eventRecord.event, processingToken, {
+        processingResult,
+        processingStatus: "processed",
+        processedAt: receivedAt,
+      });
+      return { ...result, duplicate: false };
+    } catch {
+      return fail("preferred_annual_settlement_failed", 500, null);
     }
   }
 

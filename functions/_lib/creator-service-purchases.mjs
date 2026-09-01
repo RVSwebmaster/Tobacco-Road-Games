@@ -1,4 +1,5 @@
 import { getCreatorBalance } from "./creator-balance.mjs";
+import { preparePreferredBalanceSettlement } from "./preferred-billing.mjs";
 export const SERVICE_PRICING = Object.freeze({
   preferred_monthly: {
     serviceType: "preferred_creator_fee",
@@ -176,7 +177,7 @@ export async function settleStripeAdCreditPurchase(
 
 export async function purchaseServiceWithCreatorBalance(
   db,
-  { creatorId, userId, sku, idempotencyKey, nowMs = Date.now() } = {},
+  { creatorId, userId, sku, idempotencyKey, nowMs = Date.now(), graceDays } = {},
 ) {
   if (
     !creatorId ||
@@ -202,18 +203,6 @@ export async function purchaseServiceWithCreatorBalance(
       amountCents: existing.amount_cents,
       idempotent: true,
     };
-  if (price.serviceType === "preferred_creator_fee") {
-    const covered = await db
-      .prepare(
-        "SELECT pc.coverage_ends_at FROM preferred_service_charges pc JOIN marketplace_service_purchases p ON p.id=pc.service_purchase_id WHERE p.creator_id=? AND p.status='settled' AND pc.payment_cadence=? AND pc.coverage_ends_at>? ORDER BY pc.coverage_ends_at DESC LIMIT 1",
-      )
-      .bind(creatorId, price.cadence, new Date(nowMs).toISOString())
-      .first();
-    if (covered)
-      throw new Error(
-        `This Preferred charge is already covered through ${covered.coverage_ends_at}.`,
-      );
-  }
   if (price.serviceType === "additional_creator_identity_fee") {
     const identity = await db
       .prepare(
@@ -336,59 +325,16 @@ export async function purchaseServiceWithCreatorBalance(
     );
     result = { ...result, creditsIssued: 5 };
   } else if (price.serviceType === "preferred_creator_fee") {
-    const active = await db
-        .prepare(
-          "SELECT * FROM creator_preferred_terms WHERE creator_id=? AND status='active' AND term_ends_at>? ORDER BY term_ends_at DESC LIMIT 1",
-        )
-        .bind(creatorId, now)
-        .first(),
-      termId = active?.id || crypto.randomUUID(),
-      termStart = active ? new Date(active.term_started_at) : new Date(nowMs),
-      termEnd = active ? new Date(active.term_ends_at) : addYear(termStart),
-      coverageStart = active
-        ? nextCoverageStart(active, price.cadence, nowMs)
-        : termStart,
-      coverageEnd =
-        price.cadence === "annual_prepaid"
-          ? addYear(coverageStart)
-          : addMonth(coverageStart);
-    if (!active)
-      statements.push(
-        db
-          .prepare(
-            "INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at) VALUES(?,?,?,?,?,?,'renews','active',?,?)",
-          )
-          .bind(
-            termId,
-            creatorId,
-            price.cadence,
-            price.amountCents,
-            termStart.toISOString(),
-            termEnd.toISOString(),
-            now,
-            now,
-          ),
-      );
-    statements.push(
-      db
-        .prepare(
-          "INSERT INTO preferred_service_charges(service_purchase_id,preferred_term_id,payment_cadence,coverage_starts_at,coverage_ends_at) VALUES(?,?,?,?,?)",
-        )
-        .bind(
-          purchaseId,
-          termId,
-          price.cadence,
-          coverageStart.toISOString(),
-          coverageEnd.toISOString(),
-        ),
-    );
-    result = {
-      ...result,
-      preferredTermId: termId,
-      paymentCadence: price.cadence,
-      termEndsAt: termEnd.toISOString(),
-      coverageEndsAt: coverageEnd.toISOString(),
-    };
+    const prepared = await preparePreferredBalanceSettlement(db, {
+      creatorId,
+      userId,
+      cadence: price.cadence,
+      servicePurchaseId: purchaseId,
+      nowMs,
+      graceDays,
+    });
+    statements.push(...prepared.statements);
+    result = { ...result, ...prepared.result };
   } else {
     const latest = await db
         .prepare(
@@ -457,16 +403,6 @@ export async function purchaseServiceWithCreatorBalance(
   await db.batch(statements);
   return result;
 }
-function addMonth(date) {
-  const x = new Date(date);
-  x.setUTCMonth(x.getUTCMonth() + 1);
-  return x;
-}
-function addYear(date) {
-  const x = new Date(date);
-  x.setUTCFullYear(x.getUTCFullYear() + 1);
-  return x;
-}
 function addCoverageMonths(date, months) {
   const source = new Date(date),
     day = source.getUTCDate();
@@ -477,9 +413,4 @@ function addCoverageMonths(date, months) {
   ).getUTCDate();
   source.setUTCDate(Math.min(day, last));
   return source;
-}
-function nextCoverageStart(term, cadence, nowMs) {
-  if (cadence === "annual_prepaid")
-    return new Date(Math.max(nowMs, Date.parse(term.term_ends_at)));
-  return new Date(nowMs);
 }

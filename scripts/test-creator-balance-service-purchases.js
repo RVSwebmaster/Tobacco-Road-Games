@@ -54,7 +54,7 @@ async function main() {
         idempotencyKey: "svc_00000000-0000-4000-8000-000000000004",
         nowMs: NOW,
       }),
-    /already covered/,
+    /does not cover/,
   );
   const credits = await service.purchaseServiceWithCreatorBalance(db, {
     creatorId: "creator",

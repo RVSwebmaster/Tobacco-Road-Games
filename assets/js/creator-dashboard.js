@@ -74,8 +74,16 @@
         ? "Payment method — Complete"
         : "Payment method — Needs attention. Stripe-hosted collection is not available yet.";
     document.querySelector("#creator-preferred").hidden = false;
-    document.querySelector("#creator-preferred-summary").textContent =
-      `Creator Balance ${money(preferred.balance.availableCents)} available · ${preferred.term ? `Preferred active through ${formatDate(preferred.term.term_ends_at)}` : "Standard tier"}. Automatic Creator Balance billing is not enabled.`;
+    const preferredBilling = preferred.billing || {},
+      commitment = preferredBilling.commitment,
+      currentInstallment = preferredBilling.currentInstallment;
+    document.querySelector("#creator-preferred-summary").textContent = commitment
+      ? `${preferredBilling.active ? "Preferred active" : "Preferred billing needs attention"} · ${commitment.plan_type === "monthly_commitment" ? `installment ${Math.min((preferredBilling.paidCount || 0) + 1, 12)} of 12${currentInstallment ? ` · next $20 due ${formatDate(currentInstallment.due_at)}` : ""}` : "annual prepaid"} · paid through ${commitment.paid_through_at ? formatDate(commitment.paid_through_at) : "payment pending"} · billing ${commitment.billing_state} · renewal ${commitment.renewal_state.replaceAll("_", " ")} · Creator Balance ${money(preferred.balance.availableCents)} available. Creator Balance is never spent automatically.`
+      : `Standard tier · Creator Balance ${money(preferred.balance.availableCents)} available. Choose a 12-month monthly commitment or annual prepaid coverage.`;
+    document.querySelector("#creator-preferred-monthly-stripe").hidden = Boolean(commitment);
+    document.querySelector("#creator-preferred-annual-stripe").hidden = Boolean(commitment);
+    document.querySelector("#creator-preferred-do-not-renew").hidden =
+      !commitment || commitment.renewal_state === "do_not_renew";
     for (const button of document.querySelectorAll(
       "[data-preferred-balance-plan]",
     ))
@@ -440,6 +448,31 @@
         output.textContent = error.message;
       }
     });
+  document
+    .querySelector("#creator-preferred-monthly-stripe")
+    .addEventListener("click", () => preferredAction("start_monthly_commitment"));
+  document
+    .querySelector("#creator-preferred-annual-stripe")
+    .addEventListener("click", () => preferredAction("start_annual_stripe"));
+  document
+    .querySelector("#creator-preferred-do-not-renew")
+    .addEventListener("click", () => preferredAction("do_not_renew"));
+  async function preferredAction(action) {
+    const output = document.querySelector("#creator-preferred-status");
+    try {
+      output.textContent = "Updating Preferred billing…";
+      const result = await api("preferred", { action });
+      if (result.checkoutUrl) window.location.assign(result.checkoutUrl);
+      else {
+        output.textContent = action === "do_not_renew"
+          ? "Renewal disabled. Existing commitment obligations remain due."
+          : "Preferred billing updated.";
+        await load();
+      }
+    } catch (error) {
+      output.textContent = error.message;
+    }
+  }
   document
     .querySelector("#creator-buy-ad-credits-balance")
     .addEventListener("click", async () => {

@@ -1,5 +1,6 @@
 import { runDueCreatorAudits } from "./creator-account-audits.mjs";
 import { recordManualPayout } from "./creator-finance.mjs";
+import { runPreferredBillingScheduler } from "./preferred-billing.mjs";
 
 const iso = (n = Date.now()) => new Date(n).toISOString();
 const rows = async (s) => (await s.all()).results || [];
@@ -768,8 +769,18 @@ export async function runMarketplaceOperations(
         nowMs,
         actorId,
       }),
-      audits = await runDueCreatorAudits(db, { env, nowMs, actorId, limit });
-    const result = { remediation, audits, nextRunAt: iso(nowMs + 3600000) };
+      audits = await runDueCreatorAudits(db, { env, nowMs, actorId, limit }),
+      preferredBilling = await runPreferredBillingScheduler(db, {
+        env,
+        nowMs,
+        limit,
+      });
+    const result = {
+      remediation,
+      audits,
+      preferredBilling,
+      nextRunAt: iso(nowMs + 3600000),
+    };
     await db
       .prepare(
         "UPDATE marketplace_scheduler_runs SET status='completed',completed_at=?,result_json=? WHERE id=?",
