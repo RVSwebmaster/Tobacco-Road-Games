@@ -43,13 +43,14 @@
       credentials: "same-origin",
     }).then((r) => r.json());
     csrf = account.csrfToken || "";
-    const [summary, profileData, finance, operations, preferred] =
+    const [summary, profileData, finance, operations, preferred, closure] =
       await Promise.all([
         api("overview"),
         api("profile"),
         api("finance"),
         api("operations"),
         api("preferred"),
+        api("closure"),
       ]);
     document.querySelector("#creator-name").textContent =
       summary.creator.displayName;
@@ -65,7 +66,7 @@
     const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
     document.querySelector("#creator-finance-summary").textContent =
       `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · Creator Balance available ${money(finance.creatorBalance.availableCents)} · pending ${money(finance.creatorBalance.pendingCents)} · held ${money(finance.creatorBalance.heldCents)} · payout reserved ${money(finance.creatorBalance.payoutReservedCents)} · purchase reserved ${money(finance.creatorBalance.purchaseReservedCents)} · paid ${money(finance.summary.paidBalanceCents)}`;
-    renderOwnerFinancials(finance.ownerFinancials, money);
+    renderOwnerFinancials(finance.ownerFinancials, finance.payout, money);
     const payoutInput = document.querySelector(
       '#creator-payout-request-form input[name="amount"]',
     );
@@ -99,6 +100,7 @@
           ? 20000
           : 2000);
     renderOperations(operations);
+    renderClosure(closure, money);
     fillProfile(profileData.creator);
     overview.hidden =
       profilePanel.hidden =
@@ -131,18 +133,26 @@
       );
     document.querySelector("#creator-advertising").hidden = false;
   }
-  function renderOwnerFinancials(data, money) {
+  function renderClosure(closure, money) {
+    const panel = document.querySelector("#creator-closure");
+    panel.hidden = false;
+    const labels = { active: "Creator account is active.", closing: "Closure requested. Listings are closed to new sales.", closed: "Creator account closed." };
+    document.querySelector("#creator-closure-status").textContent = labels[closure.state] || closure.state;
+    document.querySelector("#creator-closure-blockers").replaceChildren(...(closure.blockers || []).map((x) => { const p=document.createElement("p"); p.textContent=`${x.message}${x.amountCents ? ` ${money(x.amountCents)}` : ""}`; return p; }));
+    document.querySelector("#creator-closure-form").hidden = closure.state !== "active";
+  }
+  function renderOwnerFinancials(data, payout, money) {
     const panel = document.querySelector("#owner-financial-controls");
     if (!data) return;
     panel.hidden = false;
     document.querySelector("#owner-financial-summary").textContent =
-      `Creator funds ${money(data.liability.currentNetLiabilityCents)} · available ${money(data.liability.availableBalanceCents)} · held ${money(data.liability.heldBalanceCents)} · payout reserved ${money(data.liability.payoutReservedCents)} · purchase reserved ${money(data.liability.purchaseReservedCents)} · TRG earned ${money(data.revenue.netRetainedRevenueCents)}.`;
+      `Creator funds ${money(data.liability.currentNetLiabilityCents)} · available ${money(data.liability.availableBalanceCents)} · pending ${money(data.liability.pendingBalanceCents)} · held ${money(data.liability.heldBalanceCents)} · dispute-held ${money(data.liability.disputeHeldCents)} · payout reserved ${money(data.liability.payoutReservedCents)} · purchase reserved ${money(data.liability.purchaseReservedCents)} · payout eligible ${money(data.liability.payoutEligibleCents)} · retained ordinary-payout remainder ${money(payout.ordinaryPayoutRemainderCents)}. TRG earned ${money(data.revenue.netRetainedRevenueCents)}: product commissions ${money(data.revenue.productCommission.netCents)}, Preferred ${money(data.revenue.serviceRevenue.preferredStripeNetCents + data.revenue.serviceRevenue.preferredCreatorBalanceNetCents)}, additional identities ${money(data.revenue.serviceRevenue.additionalIdentityStripeNetCents + data.revenue.serviceRevenue.additionalIdentityCreatorBalanceNetCents)}, Ad Credits ${money(data.revenue.serviceRevenue.adCreditsStripeNetCents + data.revenue.serviceRevenue.adCreditsCreatorBalanceNetCents)}, all services ${money(data.revenue.serviceRevenue.netCents)}, reversals ${money(data.revenue.productCommission.reversalsCents + data.revenue.serviceRevenue.reversalsCents)}, provider/processor costs ${money(data.revenue.costs.totalCents)}, owner adjustments ${money(data.revenue.ownerRevenueAdjustmentsCents)}.`;
     const history = [...data.creatorAdjustments.map((x) => ({ ...x, account: "Creator funds" })), ...data.revenueAdjustments.map((x) => ({ ...x, account: "TRG earned" }))].sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
     document.querySelector("#owner-financial-history").replaceChildren(...history.map((x) => {
       const p = document.createElement("p");
       p.textContent = `${x.created_at} · ${x.account}: ${money(x.previous_total_cents)} → ${money(x.new_total_cents)} (${money(x.delta_cents)}) · ${x.reason}`;
       return p;
-    }));
+    }), ...data.payoutHistory.map((x) => { const p=document.createElement("p"); p.textContent=`${x.paid_at} · Creator payout ${money(x.amount_cents)} · ${x.status} · ${x.reference}`; return p; }));
   }
   function renderCreatorAnalytics(analytics) {
     const root = document.querySelector("#creator-analytics");
@@ -667,6 +677,13 @@
         output.textContent = error.message;
       }
     });
+  document.querySelector("#creator-closure-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form=event.currentTarget,output=document.querySelector("#creator-closure-result");
+    try { output.textContent="Requesting closure…"; await api("closure",{confirmation:form.elements.confirmation.value,reason:form.elements.reason.value}); output.textContent="Closure request recorded."; await load(); } catch(error){ output.textContent=error.message; }
+  });
+  document.querySelector("#creator-closure-refresh").addEventListener("click", async () => {
+    const output=document.querySelector("#creator-closure-result"); try{output.textContent="Refreshing closure status…";await api("closure/refresh",{});await load();}catch(error){output.textContent=error.message;}
+  });
   async function loadAudit() {
     const summary = await api("overview"),
       audit = document.querySelector("#creator-audit-status"),

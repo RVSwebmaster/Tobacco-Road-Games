@@ -27,6 +27,11 @@ import {
   ownerProfileFinancials,
 } from "./owner-profile-finance.mjs";
 import {
+  creatorClosureStatus,
+  refreshCreatorClosure,
+  requestCreatorClosure,
+} from "./creator-closure.mjs";
+import {
   getPreferredBillingState,
   markPreferredDoNotRenew,
   preferredGraceDays,
@@ -98,6 +103,42 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
   }
   if (request.method === "GET" && route === "overview")
     return overview(database, creator, readiness);
+  if (request.method === "GET" && route === "closure") {
+    try {
+      return json(
+        await creatorClosureStatus(database, {
+          creatorId: creator.id,
+          userId: session.user.id,
+          nowMs: options.nowMs,
+        }),
+      );
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
+  if (request.method === "POST" && route === "closure") {
+    try {
+      const body = await request.json();
+      return json(
+        await requestCreatorClosure(database, {
+          creatorId: creator.id,
+          userId: session.user.id,
+          confirmation: body.confirmation,
+          reason: body.reason,
+          nowMs: options.nowMs,
+        }),
+      );
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
+  if (request.method === "POST" && route === "closure/refresh") {
+    try {
+      return json(await refreshCreatorClosure(database, { creatorId: creator.id, userId: session.user.id, nowMs: options.nowMs, requireOwner: true }));
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
   if (request.method === "GET" && route === "listings")
     return listings(database, creator);
   if (request.method === "GET" && route === "profile")
@@ -898,6 +939,7 @@ export function requiresCurrentEligibility(method, route) {
   if (method === "GET") return false;
   if (
     route === "profile" ||
+    route.startsWith("closure") ||
     route.startsWith("remediations/") ||
     /^listings\/[^/]+\/pause$/.test(route)
   )

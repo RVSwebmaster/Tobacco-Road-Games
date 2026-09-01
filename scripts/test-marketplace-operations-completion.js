@@ -287,7 +287,7 @@ async function main() {
       accountClosure: true,
       nowMs: NOW,
     }),
-    /durable Creator closure lifecycle/,
+    /durable Creator closing state/,
   );
   const listed = await ops.listOperations(db, { creatorId: "creator" });
   assert.equal(listed.remediations.length, 2);

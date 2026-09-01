@@ -3,7 +3,7 @@ import { getCreatorLiability, getTrgRevenueReport } from "./creator-liability.mj
 export async function ownerProfileFinancials(db, creatorId, userId, nowMs=Date.now()) {
   await assertOwnerIdentity(db, creatorId, userId);
   const liability=await getCreatorLiability(db,creatorId,{nowMs}), revenue=await getTrgRevenueReport(db);
-  return {liability,revenue,creatorAdjustments:await rows(db.prepare("SELECT * FROM creator_fund_target_adjustments WHERE creator_id=? ORDER BY created_at DESC").bind(creatorId)),revenueAdjustments:await rows(db.prepare("SELECT * FROM trg_revenue_adjustments ORDER BY created_at DESC"))};
+  return {liability,revenue,payoutHistory:await rows(db.prepare("SELECT amount_cents,currency,reference,status,paid_at FROM creator_payouts WHERE creator_id=? ORDER BY paid_at DESC LIMIT 100").bind(creatorId)),creatorAdjustments:await rows(db.prepare("SELECT * FROM creator_fund_target_adjustments WHERE creator_id=? ORDER BY created_at DESC").bind(creatorId)),revenueAdjustments:await rows(db.prepare("SELECT * FROM trg_revenue_adjustments ORDER BY created_at DESC"))};
 }
 export async function adjustOwnerCreatorFunds(db,{creatorId,userId,newTotalCents,reason,nowMs=Date.now()}={}){
   await assertOwnerIdentity(db,creatorId,userId); const desired=integer(newTotalCents),detail=required(reason),before=(await getCreatorLiability(db,creatorId,{nowMs})).currentNetLiabilityCents,delta=desired-before,id=crypto.randomUUID(),now=new Date(nowMs).toISOString(),key=`owner-target-adjustment:${id}`;

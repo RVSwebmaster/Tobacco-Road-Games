@@ -65,6 +65,7 @@
       );
     document.querySelector("#bank").textContent =
       `Creator Money Required: ${money(d.bankReconciliation.creatorMoneyRequiredCents)}. TRG-earned ledger amount: ${money(d.bankReconciliation.trgEarnedLedgerAmountCents)}. ${d.bankReconciliation.warning}`;
+    document.querySelector("#closures").replaceChildren(...(d.closures.length ? d.closures : [{state:"none"}]).map((x)=>{const p=document.createElement("p");p.textContent=x.state==="none"?"No Creator closures requested.":`${x.state.toUpperCase()} · requested ${x.requestedAt || "—"} · ${x.blockers.length ? x.blockers.map(b=>b.message).join(" ") : "No financial blockers"} · closed ${x.closedAt || "—"}`;return p;}));
     document
       .querySelector("#creators")
       .replaceChildren(

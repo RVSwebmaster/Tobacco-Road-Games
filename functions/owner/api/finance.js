@@ -16,6 +16,7 @@ import {
   reconcileProviderFinance,
 } from "../../_lib/creator-payout-readiness.mjs";
 import { reconcileCreatorFinance } from "../../_lib/creator-finance.mjs";
+import { listCreatorClosures } from "../../_lib/creator-closure.mjs";
 
 export async function onRequestGet({ request, env }) {
   const auth = await verifySessionToken(
@@ -34,12 +35,14 @@ export async function onRequestGet({ request, env }) {
     transactions,
     ledgerExceptions,
     providerExceptions,
+    closures,
   ] = await Promise.all([
     getMarketplaceCreatorLiability(env.TRG_ORDERS),
     getTrgRevenueReport(env.TRG_ORDERS),
     listFinanceTransactions(env.TRG_ORDERS),
     reconcileCreatorFinance(env.TRG_ORDERS),
     reconcileProviderFinance(env.TRG_ORDERS),
+    listCreatorClosures(env.TRG_ORDERS),
   ]);
   for (const item of liability.items) {
     const status = await getCreatorPayoutStatus(env.TRG_ORDERS, item.id, {
@@ -100,6 +103,7 @@ export async function onRequestGet({ request, env }) {
     transactions,
     exceptions,
     filters,
+    closures,
     bankReconciliation: {
       creatorMoneyRequiredCents: liability.totals.totalCreatorLiabilityCents,
       trgEarnedLedgerAmountCents: revenue.netRetainedRevenueCents,

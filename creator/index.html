@@ -178,6 +178,20 @@
           </button>
           <p id="creator-preferred-status" role="status"></p>
         </section>
+        <section class="account-card" id="creator-closure" hidden>
+          <h2>Close Creator Account</h2>
+          <p>Closing stops selling and pauses listings without deleting marketplace history. Existing customers keep their purchases and downloads. Your ordinary customer account, My Library, and order history remain available.</p>
+          <p>Legitimate Creator earnings remain owed. Pending, held, disputed, reserved, or negative balances can delay completion. Annual prepaid Creator services are not refunded or credited, and existing monthly commitment obligations are not forgiven. No new renewal commitment will begin.</p>
+          <p id="creator-closure-status"></p>
+          <div id="creator-closure-blockers"></div>
+          <form class="account-form" id="creator-closure-form">
+            <label>Optional reason <textarea name="reason"></textarea></label>
+            <label>Type CLOSE to confirm <input name="confirmation" autocomplete="off" required /></label>
+            <button class="button button--secondary">Close Creator Account</button>
+          </form>
+          <button class="button button--secondary" id="creator-closure-refresh" type="button">Refresh closure status</button>
+          <p id="creator-closure-result" role="status"></p>
+        </section>
         <section class="account-card" id="creator-remediations" hidden>
           <h2>Product Remediation</h2>
           <p>

@@ -198,10 +198,25 @@ export async function reserveCreatorPayout(
       : Number(amountCents),
     now = new Date(nowMs).toISOString();
   if (accountClosure)
-    throw new Error(
-      "Final closure payout is unavailable until a durable Creator closure lifecycle is implemented.",
-    );
-  assertOrdinaryPayoutAmount(amount, liability.payoutEligibleCents);
+    {
+      const closing = await db
+        .prepare(
+          "SELECT 1 ok FROM marketplace_creators c JOIN creator_closure_requests r ON r.creator_id=c.id WHERE c.id=? AND c.closure_state='closing' AND r.state='closing'",
+        )
+        .bind(creatorId)
+        .first()
+        .catch((error) => {
+          if (/no such table|no such column/i.test(String(error))) return null;
+          throw error;
+        });
+      if (!closing)
+        throw new Error(
+          "Final closure payout requires a durable Creator closing state.",
+        );
+      if (amount <= 0)
+        throw new Error("No positive Creator balance requires settlement.");
+    }
+  else assertOrdinaryPayoutAmount(amount, liability.payoutEligibleCents);
   const reservationsAvailable = await payoutReservationSchemaAvailable(db);
   try {
     const statements = [
