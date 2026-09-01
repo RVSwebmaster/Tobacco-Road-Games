@@ -1,5 +1,11 @@
 # Full site-wide policy and systems audit
 
+## Emergency finance-integrity remediation — 2026-09-01
+
+A targeted owner-finance inspection found that payout readiness used `getCreatorFinance()` without Creator Balance transactions or active purchase reservations. That overstated payout eligibility after internal spending. The manual payout path also lacked a durable shared reservation step, and the owner had neither a non-netted marketplace Creator-liability total nor a complete human-readable finance view.
+
+**RESOLVED.** `creator-liability.mjs` is now the canonical authorization calculation for Creator Balance spending, payout readiness, Creator-requested payout reservation, and manual payout reservation/completion. Migration 039 adds reciprocal database race guards for payout and purchase reservations, including dispute holds. The owner-only `/owner/finance.html` report shows positive Creator obligations without cross-Creator negative netting, TRG product/service revenue, Stripe versus internal activity, costs, transaction traces, audit history, and reconciliation exceptions. The dedicated finance suite verifies the $100 earned / $40 spent / $60 maximum payout case, both reservation directions, service correction, and aggregate negative-balance handling. Full `npm test` and the store kill-switch suite pass. Live provider payout execution and exact bank-statement/Stripe settlement reconciliation remain production operations, not application-ledger defects.
+
 Audit date: 2026-08-31  
 Original audited commit: `027d29533963a1f86e0a926bab8192075ffbdda5`  
 Post-remediation reread: 2026-09-01 at `588e75b23ff9571ef2f0a0665bfa466c94e435eb`  

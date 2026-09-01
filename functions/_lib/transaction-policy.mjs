@@ -84,7 +84,7 @@ export async function openProductRemediation(
   await database.batch([
     database
       .prepare(
-          "UPDATE creator_listings SET publication_state='paused',lifecycle_state='paused',updated_at=? WHERE id=?",
+        "UPDATE creator_listings SET publication_state='paused',lifecycle_state='paused',updated_at=? WHERE id=?",
       )
       .bind(opened.toISOString(), listingId),
     database
@@ -113,13 +113,11 @@ export async function requestCreatorPayout(
   } = {},
 ) {
   const amount = Number(amountCents),
-    balance = await database
-      .prepare(
-        "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_earnings_ledger WHERE creator_id=? AND payout_state<>'held' AND available_at<=?",
-      )
-      .bind(creatorId, new Date(nowMs).toISOString())
-      .first();
-  if (Number(balance?.amount) <= 0)
+    liability = await getCreatorLiability(database, creatorId, {
+      currency,
+      nowMs,
+    });
+  if (liability.payoutEligibleCents <= 0)
     throw policyError(
       "negative_balance",
       "A payout cannot be requested while the Creator balance is zero or negative.",
@@ -132,37 +130,36 @@ export async function requestCreatorPayout(
   if (
     !Number.isInteger(amount) ||
     amount <= 0 ||
-    amount > Number(balance.amount)
+    amount > liability.payoutEligibleCents
   )
     throw policyError(
       "invalid_payout",
       "The requested payout exceeds the eligible balance.",
     );
-  const id = crypto.randomUUID();
   try {
-    await database
-      .prepare(
-        "INSERT INTO creator_payout_requests(id,creator_id,amount_cents,currency,request_kind,status,requested_at) VALUES(?,?,?,?,?,'pending',?)",
-      )
-      .bind(
-        id,
-        creatorId,
-        amount,
-        String(currency).toUpperCase(),
-        accountClosure ? "account_closure" : "normal",
-        new Date(nowMs).toISOString(),
-      )
-      .run();
-  } catch {
+    const reserved = await reserveCreatorPayout(database, {
+      creatorId,
+      amountCents: amount,
+      currency,
+      accountClosure,
+      nowMs,
+    });
+    return { id: reserved.requestId, amountCents: reserved.amountCents };
+  } catch (error) {
     throw policyError(
       "payout_pending",
-      "Only one payout request may be pending at a time.",
+      String(
+        error?.message || "Only one payout request may be pending at a time.",
+      ),
     );
   }
-  return { id, amountCents: amount };
 }
 function policyError(code, message) {
   const error = new Error(message);
   error.code = code;
   return error;
 }
+import {
+  getCreatorLiability,
+  reserveCreatorPayout,
+} from "./creator-liability.mjs";

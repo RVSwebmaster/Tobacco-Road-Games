@@ -1,6 +1,7 @@
 import { runDueCreatorAudits } from "./creator-account-audits.mjs";
 import { recordManualPayout } from "./creator-finance.mjs";
 import { runPreferredBillingScheduler } from "./preferred-billing.mjs";
+import { reserveCreatorPayout } from "./creator-liability.mjs";
 
 const iso = (n = Date.now()) => new Date(n).toISOString();
 const rows = async (s) => (await s.all()).results || [];
@@ -611,64 +612,21 @@ export async function requestPayout(
     nowMs = Date.now(),
   } = {},
 ) {
-  const now = iso(nowMs),
-    balance = await db
-      .prepare(
-        "SELECT COALESCE(SUM(CASE WHEN payout_state<>'held' AND available_at<=? THEN amount_cents ELSE 0 END),0) amount FROM creator_earnings_ledger WHERE creator_id=?",
-      )
-      .bind(now, creatorId)
-      .first(),
-    reserved = await db
-      .prepare(
-        "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_payout_reservations WHERE creator_id=? AND status='reserved'",
-      )
-      .bind(creatorId)
-      .first(),
-    held = await db
-      .prepare("SELECT COALESCE(SUM(allocated_gross_cents),0) amount FROM creator_dispute_allocations WHERE creator_id=? AND status='held'")
-      .bind(creatorId)
-      .first(),
-    available = Number(balance?.amount || 0) - Number(reserved?.amount || 0) - Number(held?.amount || 0),
-    amount = accountClosure ? available : Number(amountCents);
-  if (available <= 0)
-    throw fail(
-      "negative_balance",
-      "No positive eligible balance is available.",
-    );
-  if (!accountClosure && amount < 1000)
-    throw fail("minimum_payout", "Normal withdrawals require at least $10.");
-  if (!Number.isInteger(amount) || amount <= 0 || amount > available)
-    throw fail(
-      "invalid_payout",
-      "The requested payout exceeds the eligible balance.",
-    );
-  const id = crypto.randomUUID();
+  const now = iso(nowMs);
+  let reservation;
   try {
-    await db.batch([
-      db
-        .prepare(
-          "INSERT INTO creator_payout_requests(id,creator_id,amount_cents,currency,request_kind,status,requested_at) VALUES(?,?,?,?,?,'pending',?)",
-        )
-        .bind(
-          id,
-          creatorId,
-          amount,
-          String(currency).toUpperCase(),
-          accountClosure ? "account_closure" : "normal",
-          now,
-        ),
-      db
-        .prepare(
-          "INSERT INTO creator_payout_reservations(payout_request_id,creator_id,amount_cents,status,created_at) VALUES(?,?,?,'reserved',?)",
-        )
-        .bind(id, creatorId, amount, now),
-    ]);
-  } catch {
-    throw fail(
-      "payout_pending",
-      "Only one payout request may be pending at a time.",
-    );
+    reservation = await reserveCreatorPayout(db, {
+      creatorId,
+      amountCents,
+      currency,
+      accountClosure,
+      nowMs,
+    });
+  } catch (error) {
+    throw fail("payout_unavailable", error.message);
   }
+  const id = reservation.requestId,
+    amount = reservation.amountCents;
   await notice(db, {
     audience: "creator",
     creatorId,
@@ -729,16 +687,61 @@ export async function failPayout(
   return { failed: true, balancePreserved: true };
 }
 
-export async function completePayout(db,{requestId,reference,actorId,externalTransferConfirmed=false,nowMs=Date.now()}={}) {
-  if (!externalTransferConfirmed) throw fail('transfer_unconfirmed','Record completion only after the external transfer is confirmed.');
-  const request=await db.prepare("SELECT * FROM creator_payout_requests WHERE id=? AND status IN ('pending','processing')").bind(requestId).first();
-  if(!request)throw fail('payout_unavailable','Payout request is not pending.');
-  await recordManualPayout(db,{creatorId:request.creator_id,amountCents:Number(request.amount_cents),currency:request.currency,reference:String(reference),note:`Confirmed request ${requestId}`,idempotencyKey:`payout-request:${requestId}`,operatorActor:actorId,nowMs});
-  const now=iso(nowMs);
-  await db.batch([db.prepare("UPDATE creator_payout_requests SET status='paid',resolved_at=? WHERE id=?").bind(now,requestId),db.prepare("UPDATE creator_payout_reservations SET status='consumed',resolved_at=? WHERE payout_request_id=? AND status='reserved'").bind(now,requestId)]);
-  await notice(db,{audience:'creator',creatorId:request.creator_id,payoutRequestId:requestId,type:'payout_completed',subject:'Payout completed',message:'The operator confirmed the external payout transfer.',key:`payout:${requestId}:completed`,now});
-  await audit(db,actorId,'payout_completed','payout_request',requestId,{reference:String(reference)},now);
-  return{paid:true,externalTransferConfirmed:true};
+export async function completePayout(
+  db,
+  {
+    requestId,
+    reference,
+    actorId,
+    externalTransferConfirmed = false,
+    nowMs = Date.now(),
+  } = {},
+) {
+  if (!externalTransferConfirmed)
+    throw fail(
+      "transfer_unconfirmed",
+      "Record completion only after the external transfer is confirmed.",
+    );
+  const request = await db
+    .prepare(
+      "SELECT * FROM creator_payout_requests WHERE id=? AND status IN ('pending','processing')",
+    )
+    .bind(requestId)
+    .first();
+  if (!request)
+    throw fail("payout_unavailable", "Payout request is not pending.");
+  await recordManualPayout(db, {
+    creatorId: request.creator_id,
+    amountCents: Number(request.amount_cents),
+    currency: request.currency,
+    reference: String(reference),
+    note: `Confirmed request ${requestId}`,
+    idempotencyKey: `payout-request:${requestId}`,
+    operatorActor: actorId,
+    payoutRequestId: requestId,
+    paidAt: iso(nowMs),
+  });
+  const now = iso(nowMs);
+  await notice(db, {
+    audience: "creator",
+    creatorId: request.creator_id,
+    payoutRequestId: requestId,
+    type: "payout_completed",
+    subject: "Payout completed",
+    message: "The operator confirmed the external payout transfer.",
+    key: `payout:${requestId}:completed`,
+    now,
+  });
+  await audit(
+    db,
+    actorId,
+    "payout_completed",
+    "payout_request",
+    requestId,
+    { reference: String(reference) },
+    now,
+  );
+  return { paid: true, externalTransferConfirmed: true };
 }
 
 export async function runMarketplaceOperations(

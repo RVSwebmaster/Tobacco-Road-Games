@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Marketplace Finance | Tobacco Road Games</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .finance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 1rem;
+      }
+      .finance-card,
+      .finance-table-wrap {
+        padding: 1rem;
+        border: 1px solid rgba(242, 216, 170, 0.18);
+        border-radius: 12px;
+      }
+      .finance-card strong {
+        display: block;
+        font-size: 1.45rem;
+      }
+      .finance-table-wrap {
+        overflow: auto;
+        margin: 1rem 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 0.65rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(242, 216, 170, 0.14);
+        white-space: nowrap;
+      }
+      details {
+        margin: 0.5rem 0;
+      }
+    </style>
+  </head>
+  <body class="view-section">
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/owner/"
+          ><span class="brand__name">Marketplace Finance</span></a
+        >
+        <nav class="site-nav">
+          <a href="/owner/">Owner Dashboard</a
+          ><a href="/owner/creator-finance.html">Payout Operations</a>
+        </nav>
+      </header>
+      <main class="store-section">
+        <div class="section-heading">
+          <p class="section-heading__kicker">Operator only</p>
+          <h1>Creator Money &amp; TRG Revenue</h1>
+          <p>
+            Ledger support for marketplace liabilities and earned revenue. Bank
+            timing and unsettled Stripe transfers must still be reconciled
+            separately.
+          </p>
+        </div>
+        <p id="status" role="status">Loading…</p>
+        <form method="get" class="owner-filter">
+          <label>Creator ID <input name="creator" /></label>
+          <label>Order reference <input name="reference" /></label>
+          <button type="submit">Filter transaction detail</button>
+          <a href="/owner/finance.html">Clear</a>
+        </form>
+        <section>
+          <h2>Top summary</h2>
+          <div class="finance-grid" id="summary"></div>
+        </section>
+        <section>
+          <h2>Dedicated Creator Money account support</h2>
+          <p id="bank"></p>
+        </section>
+        <section>
+          <h2>Creator liability by identity</h2>
+          <div class="finance-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Creator</th>
+                  <th>Liability</th>
+                  <th>Available</th>
+                  <th>Pending</th>
+                  <th>Held</th>
+                  <th>Dispute held</th>
+                  <th>Payout reserved</th>
+                  <th>Purchase reserved</th>
+                  <th>Negative</th>
+                  <th>Payout eligible</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="creators"></tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>TRG revenue by category and source</h2>
+          <div class="finance-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Stripe/external</th>
+                  <th>Creator Balance/internal</th>
+                  <th>Reversals</th>
+                  <th>Net/gross</th>
+                </tr>
+              </thead>
+              <tbody id="revenue"></tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>Reconciliation exceptions</h2>
+          <div id="exceptions"></div>
+        </section>
+        <section>
+          <h2>Product transaction trace</h2>
+          <div class="finance-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th>Creator/product</th>
+                  <th>Source</th>
+                  <th>Gross</th>
+                  <th>Creator</th>
+                  <th>TRG</th>
+                  <th>Processor</th>
+                  <th>Payout state</th>
+                  <th>Entitlement</th>
+                  <th>Reversals</th>
+                </tr>
+              </thead>
+              <tbody id="products"></tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>Service transaction trace</h2>
+          <div class="finance-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Purchase</th>
+                  <th>Date</th>
+                  <th>Creator/service</th>
+                  <th>Source</th>
+                  <th>Amount</th>
+                  <th>TRG revenue</th>
+                  <th>Processor</th>
+                  <th>Entitlement</th>
+                  <th>Corrections</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="services"></tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>Financial audit history</h2>
+          <div class="finance-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Event</th>
+                  <th>Actor</th>
+                  <th>Creator</th>
+                  <th>Amount</th>
+                  <th>Reason/context</th>
+                </tr>
+              </thead>
+              <tbody id="audit"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/assets/js/owner-finance.js"></script>
+  </body>
+</html>

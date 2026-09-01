@@ -1,5 +1,6 @@
 import { getEffectiveFeePolicy } from "./creator-finance.mjs";
 import { resolveSalePolicy } from "./marketplace-policy.mjs";
+import { getCreatorLiability } from "./creator-liability.mjs";
 export async function getCreatorBalance(
   db,
   { creatorId, userId, currency = "USD", nowMs = Date.now() } = {},
@@ -11,46 +12,21 @@ export async function getCreatorBalance(
     .bind(creatorId, userId)
     .first();
   if (!owned) throw new Error("Creator ownership is required.");
-  const now = new Date(nowMs).toISOString(),
-    ledger = await db
-      .prepare(
-        "SELECT COALESCE(SUM(CASE WHEN payout_state<>'held' AND available_at<=? THEN amount_cents ELSE 0 END),0) available,COALESCE(SUM(CASE WHEN payout_state='held' THEN amount_cents ELSE 0 END),0) held,COALESCE(SUM(CASE WHEN payout_state<>'held' AND available_at>? THEN amount_cents ELSE 0 END),0) pending FROM creator_earnings_ledger WHERE creator_id=? AND currency=?",
-      )
-      .bind(now, now, creatorId, currency)
-      .first(),
-    internal = await db
-      .prepare(
-        "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_balance_transactions WHERE creator_id=? AND currency=?",
-      )
-      .bind(creatorId, currency)
-      .first(),
-    payout = await db
-      .prepare(
-        "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_payout_reservations WHERE creator_id=? AND status='reserved'",
-      )
-      .bind(creatorId)
-      .first(),
-    purchase = await db
-      .prepare(
-        "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_balance_reservations WHERE creator_id=? AND currency=? AND state='reserved'",
-      )
-      .bind(creatorId, currency)
-      .first(),
-    raw =
-      Number(ledger?.available || 0) +
-      Number(internal?.amount || 0) -
-      Number(payout?.amount || 0) -
-      Number(purchase?.amount || 0);
+  const liability = await getCreatorLiability(db, creatorId, {
+    currency,
+    nowMs,
+  });
   return {
     creatorId,
     currency,
-    availableCents: Math.max(0, raw),
-    pendingCents: Math.max(0, Number(ledger?.pending || 0)),
-    heldCents: Math.max(0, Number(ledger?.held || 0)),
-    payoutReservedCents: Number(payout?.amount || 0),
-    purchaseReservedCents: Number(purchase?.amount || 0),
-    negativeCents: Math.max(0, -raw),
-    spendable: raw > 0,
+    availableCents: liability.payoutEligibleCents,
+    pendingCents: liability.pendingBalanceCents,
+    heldCents: liability.heldBalanceCents + liability.disputeHeldCents,
+    payoutReservedCents: liability.payoutReservedCents,
+    purchaseReservedCents: liability.purchaseReservedCents,
+    negativeCents: liability.negativeBalanceCents,
+    spendable: liability.payoutEligibleCents > 0,
+    liability,
   };
 }
 
