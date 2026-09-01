@@ -252,7 +252,7 @@ export async function recordOrderReversal(
     if (remaining <= 0) break;
     const prior = await database
         .prepare(
-          "SELECT COALESCE(SUM(gross_reversed_cents),0) gross FROM creator_reversal_snapshots WHERE order_item_id=?",
+          "SELECT COALESCE(SUM(gross_reversed_cents),0) gross,COALESCE(SUM(creator_net_reversed_cents),0) creator_net FROM creator_reversal_snapshots WHERE order_item_id=?",
         )
         .bind(Number(sale.order_item_id))
         .first(),
@@ -262,14 +262,21 @@ export async function recordOrderReversal(
       ),
       reversedGross = Math.min(remaining, refundable);
     if (!reversedGross) continue;
-    const reversedNet = Math.min(
+    const cumulativeGross = Number(prior?.gross || 0) + reversedGross,
+      cumulativeCreatorTarget = cumulativeAllocation(
         Number(sale.creator_net_cents),
-        Math.round(
-          (Number(sale.creator_net_cents) * reversedGross) /
-            Number(sale.gross_cents || 1),
-        ),
+        Number(sale.gross_cents),
+        cumulativeGross,
       ),
+      reversedNet = cumulativeCreatorTarget - Number(prior?.creator_net || 0),
       key = `${type}:${eventId}:${sale.order_item_id}`;
+    if (
+      reversedNet < 0 ||
+      reversedNet > reversedGross ||
+      reversedNet >
+        Number(sale.creator_net_cents) - Number(prior?.creator_net || 0)
+    )
+      throw new Error("Reversal exceeds the remaining Creator allocation.");
     statements.push(
       database
         .prepare(
@@ -307,8 +314,25 @@ export async function recordOrderReversal(
     entries.push({ creatorId: sale.creator_id, amountCents: -reversedNet });
     remaining -= reversedGross;
   }
+  if (remaining > 0)
+    throw new Error("Reversal exceeds the remaining original transaction.");
   if (statements.length) await database.batch(statements);
   return entries;
+}
+
+function cumulativeAllocation(originalAmount, originalGross, cumulativeGross) {
+  if (
+    !Number.isInteger(originalAmount) ||
+    !Number.isInteger(originalGross) ||
+    !Number.isInteger(cumulativeGross) ||
+    originalAmount < 0 ||
+    originalGross <= 0 ||
+    cumulativeGross < 0 ||
+    cumulativeGross > originalGross
+  )
+    throw new Error("Cumulative reversal allocation is invalid.");
+  if (cumulativeGross === originalGross) return originalAmount;
+  return Math.round((originalAmount * cumulativeGross) / originalGross);
 }
 
 export async function getCreatorFinance(
