@@ -143,6 +143,7 @@ export async function handleCreatorFinanceOwnerRequest(
         ...(await recordManualPayout(db, {
           ...body,
           operatorActor: auth.username,
+          nowMs: options.nowMs,
         })),
       });
     }
@@ -353,7 +354,7 @@ export async function handleCreatorFinanceOwnerRequest(
           nowMs: options.nowMs,
         }),
       });
-  if (body.action === "fail_payout")
+    if (body.action === "fail_payout")
       return json({
         ok: true,
         result: await failPayout(db, {
@@ -361,9 +362,19 @@ export async function handleCreatorFinanceOwnerRequest(
           reason: body.reason,
           actorId: auth.username,
           nowMs: options.nowMs,
-      }),
-    });
-  if (body.action === "complete_payout") return json({ok:true,result:await completePayout(db,{requestId:body.requestId,reference:body.reference,externalTransferConfirmed:body.externalTransferConfirmed===true,actorId:auth.username,nowMs:options.nowMs})});
+        }),
+      });
+    if (body.action === "complete_payout")
+      return json({
+        ok: true,
+        result: await completePayout(db, {
+          requestId: body.requestId,
+          reference: body.reference,
+          externalTransferConfirmed: body.externalTransferConfirmed === true,
+          actorId: auth.username,
+          nowMs: options.nowMs,
+        }),
+      });
     if (body.action === "run_marketplace_operations")
       return json({
         ok: true,

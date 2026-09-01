@@ -10,6 +10,8 @@ Marketplace liability is the sum of positive per-Creator obligations. A negative
 
 Migration `039_creator_liability_reservation_integrity.sql` makes purchase and payout reservations mutually exclusive at the database boundary and excludes active dispute holds from both reservation paths. Application prechecks remain useful for clear errors; the triggers are the final race-condition guard.
 
+A payout reservation prevents competing use and preserves payout intent, but it is not irrevocable authority to pay. Later holds, disputes, reversals, or other financial restrictions can block completion. Completion revalidates the reservation against unclamped current capacity, excluding its own reservation exactly once. Migration `040_payout_completion_financial_guard.sql` enforces the same invariant atomically when the completed payout row is inserted.
+
 ## TRG revenue
 
 The report separates product commissions from service revenue (Preferred Creator fees, Ad Credits, and additional Creator identities), and separates Stripe-funded activity from Creator Balance-funded activity. Refund/reversal entries reduce recognized revenue. Authoritative processor fees and marketplace-responsible provider costs are shown separately. Unknown fees remain exceptions rather than estimates.

@@ -80,7 +80,13 @@
             money(x.purchaseReservedCents),
             money(x.negativeBalanceCents),
             money(x.payoutEligibleCents),
-            x.payoutReady ? "Ready" : x.payoutBlockedReasons.join(" "),
+            x.reservedPayoutCompletionState === "blocked"
+              ? "Reserved — completion blocked by current hold or financial obligation"
+              : x.reservedPayoutCompletionState === "completable"
+                ? "Reserved — currently completable"
+                : x.payoutReady
+                  ? "Ready"
+                  : x.payoutBlockedReasons.join(" "),
           ]),
         ),
       );

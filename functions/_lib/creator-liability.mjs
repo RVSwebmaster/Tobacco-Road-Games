@@ -104,7 +104,36 @@ export async function getCreatorLiability(
       Number(ledger?.completed_payouts || 0),
     ),
     currentNetLiabilityCents: Math.max(0, signedNet),
+    rawPayoutReservationCapacityCents: eligible,
     payoutEligibleCents: Math.max(0, eligible),
+  };
+}
+
+export async function getPayoutCompletionCapacity(
+  db,
+  { payoutRequestId, creatorId, nowMs = Date.now() } = {},
+) {
+  const reservation = await db
+    .prepare(
+      "SELECT r.*,q.currency,q.status request_status FROM creator_payout_reservations r JOIN creator_payout_requests q ON q.id=r.payout_request_id WHERE r.payout_request_id=? AND r.creator_id=? AND r.status='reserved' AND q.status IN ('pending','processing')",
+    )
+    .bind(String(payoutRequestId || ""), String(creatorId || ""))
+    .first();
+  if (!reservation)
+    throw new Error("A matching active payout reservation is required.");
+  const liability = await getCreatorLiability(db, reservation.creator_id, {
+      currency: reservation.currency,
+      nowMs,
+    }),
+    reservedAmountCents = Number(reservation.amount_cents),
+    rawCompletionCapacityCents =
+      liability.rawPayoutReservationCapacityCents + reservedAmountCents;
+  return {
+    reservation,
+    liability,
+    reservedAmountCents,
+    rawCompletionCapacityCents,
+    completionSafe: rawCompletionCapacityCents >= reservedAmountCents,
   };
 }
 

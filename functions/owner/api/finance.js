@@ -7,6 +7,7 @@ import {
 } from "../../_lib/owner-auth.mjs";
 import {
   getMarketplaceCreatorLiability,
+  getPayoutCompletionCapacity,
   getTrgRevenueReport,
   listFinanceTransactions,
 } from "../../_lib/creator-liability.mjs";
@@ -46,6 +47,22 @@ export async function onRequestGet({ request, env }) {
     });
     item.payoutReady = status.eligible;
     item.payoutBlockedReasons = status.blockedReasons;
+    const reservation = await env.TRG_ORDERS.prepare(
+      "SELECT r.payout_request_id FROM creator_payout_reservations r JOIN creator_payout_requests q ON q.id=r.payout_request_id WHERE r.creator_id=? AND r.status='reserved' AND q.status IN ('pending','processing') LIMIT 1",
+    )
+      .bind(item.id)
+      .first();
+    if (reservation) {
+      const completion = await getPayoutCompletionCapacity(env.TRG_ORDERS, {
+        payoutRequestId: reservation.payout_request_id,
+        creatorId: item.id,
+      });
+      item.reservedPayoutCompletionState = completion.completionSafe
+        ? "completable"
+        : "blocked";
+      item.reservedPayoutCompletionCapacityCents =
+        completion.rawCompletionCapacityCents;
+    }
   }
   const filters = {
     creatorId: String(creatorId || ""),

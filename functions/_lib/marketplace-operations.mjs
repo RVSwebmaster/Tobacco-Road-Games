@@ -720,6 +720,7 @@ export async function completePayout(
     operatorActor: actorId,
     payoutRequestId: requestId,
     paidAt: iso(nowMs),
+    nowMs,
   });
   const now = iso(nowMs);
   await notice(db, {

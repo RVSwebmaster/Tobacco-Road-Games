@@ -4,6 +4,7 @@ import {
 } from "./marketplace-policy.mjs";
 import {
   getCreatorLiability,
+  getPayoutCompletionCapacity,
   payoutReservationSchemaAvailable,
   reserveCreatorPayout,
 } from "./creator-liability.mjs";
@@ -405,6 +406,9 @@ export async function recordManualPayout(database, input) {
     currency = String(input.currency || "USD").toUpperCase(),
     amount = Number(input.amountCents),
     now = String(input.paidAt || new Date().toISOString()),
+    authorizationNowMs = Number.isFinite(input.nowMs)
+      ? Number(input.nowMs)
+      : Date.now(),
     key = String(input.idempotencyKey || "").trim(),
     actor = String(input.operatorActor || "");
   if (
@@ -419,14 +423,14 @@ export async function recordManualPayout(database, input) {
   let requestId = String(input.payoutRequestId || "");
   const reservationsAvailable =
     await payoutReservationSchemaAvailable(database);
+  let completion;
   if (requestId && reservationsAvailable) {
-    const reservation = await database
-      .prepare(
-        "SELECT r.*,q.status request_status FROM creator_payout_reservations r JOIN creator_payout_requests q ON q.id=r.payout_request_id WHERE r.payout_request_id=? AND r.creator_id=? AND r.status='reserved' AND q.status IN ('pending','processing')",
-      )
-      .bind(requestId, creatorId)
-      .first();
-    if (!reservation || Number(reservation.amount_cents) !== amount)
+    completion = await getPayoutCompletionCapacity(database, {
+      payoutRequestId: requestId,
+      creatorId,
+      nowMs: authorizationNowMs,
+    });
+    if (completion.reservedAmountCents !== amount)
       throw new Error("A matching active payout reservation is required.");
   } else if (reservationsAvailable) {
     const reserved = await reserveCreatorPayout(database, {
@@ -435,16 +439,27 @@ export async function recordManualPayout(database, input) {
       currency,
       requestId: crypto.randomUUID(),
       enforceMinimum: false,
-      nowMs: Date.parse(now),
+      nowMs: authorizationNowMs,
     });
     requestId = reserved.requestId;
+    completion = await getPayoutCompletionCapacity(database, {
+      payoutRequestId: requestId,
+      creatorId,
+      nowMs: authorizationNowMs,
+    });
   }
-  const liability = await getCreatorLiability(database, creatorId, {
-    currency,
-    nowMs: Date.parse(now),
-  });
-  if (liability.currentNetLiabilityCents < amount)
-    throw new Error("Payout exceeds current canonical Creator liability.");
+  if (reservationsAvailable && !completion.completionSafe)
+    throw new Error(
+      "Reserved payout completion is blocked by current holds or financial obligations.",
+    );
+  if (!reservationsAvailable) {
+    const liability = await getCreatorLiability(database, creatorId, {
+      currency,
+      nowMs: authorizationNowMs,
+    });
+    if (liability.rawPayoutReservationCapacityCents < amount)
+      throw new Error("Payout exceeds current canonical Creator liability.");
+  }
   const payoutId = crypto.randomUUID(),
     reason = String(input.reference || "").slice(0, 200),
     note = String(input.note || "").slice(0, 1000);
