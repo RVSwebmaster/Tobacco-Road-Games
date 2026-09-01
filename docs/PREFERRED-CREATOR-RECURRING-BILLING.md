@@ -12,7 +12,9 @@ Creator Balance is never consumed silently. A Creator may explicitly pay the nex
 
 ## Failure, grace, and renewal
 
-A failed installment records its attempt, failure state, retry time, outstanding obligation, and a durable Creator notice. Previously paid Preferred coverage receives a configurable remediation grace. `PREFERRED_BILLING_GRACE_DAYS` accepts 1–30 days; staging/default is **7 days pending owner confirmation**. A failed first installment does not activate Preferred. After grace, unpaid coverage no longer supplies Preferred benefits, but the commitment and history remain.
+A failed installment records its attempt, failure state, retry time, outstanding obligation, and a durable Creator notice. Settled marketplace policy provides exactly **7 calendar days after a missed monthly installment** for remediation. Preferred benefits remain provisionally active during those seven days while Stripe retry or an explicit full Creator Balance cure may occur. A failed first installment does not activate Preferred.
+
+`PREFERRED_BILLING_GRACE_DAYS` may be omitted or set to `7`. Any other configured value fails closed; staging or production configuration cannot silently redefine the policy. If the installment remains unpaid at the end of day seven, Preferred benefits suspend, future transactions use Standard rules, and the unpaid installment and 12-month commitment remain in force. Historical records and immutable sale-time commission snapshots are unchanged.
 
 Creators may correct the stored payment method, allow an idempotent scheduler retry, or explicitly cure the full installment with Creator Balance. They may mark a commitment do-not-renew; this does not erase its remaining installments. A new legally binding commitment is not created automatically at month 12. Annual renewal also requires explicit purchase authorization.
 

@@ -9,10 +9,12 @@ export const PREFERRED_BILLING = Object.freeze({
 });
 
 export function preferredGraceDays(env = {}) {
-  const value = Number(env.PREFERRED_BILLING_GRACE_DAYS);
-  return Number.isInteger(value) && value >= 1 && value <= 30
-    ? value
-    : PREFERRED_BILLING.defaultGraceDays;
+  const configured = String(env.PREFERRED_BILLING_GRACE_DAYS || "").trim();
+  if (configured && configured !== String(PREFERRED_BILLING.defaultGraceDays))
+    throw new Error(
+      "Preferred billing grace is settled marketplace policy at 7 calendar days.",
+    );
+  return PREFERRED_BILLING.defaultGraceDays;
 }
 
 export async function getPreferredBillingState(db, creatorId, nowMs = Date.now()) {
@@ -38,7 +40,14 @@ export async function getPreferredBillingState(db, creatorId, nowMs = Date.now()
 export async function preparePreferredBalanceSettlement(db, {
   creatorId, userId, cadence, servicePurchaseId, nowMs = Date.now(), graceDays = PREFERRED_BILLING.defaultGraceDays,
 } = {}) {
-  graceDays = Number.isInteger(Number(graceDays)) && Number(graceDays) >= 1 && Number(graceDays) <= 30 ? Number(graceDays) : PREFERRED_BILLING.defaultGraceDays;
+  if (
+    graceDays !== undefined &&
+    Number(graceDays) !== PREFERRED_BILLING.defaultGraceDays
+  )
+    throw new Error(
+      "Preferred billing grace is settled marketplace policy at 7 calendar days.",
+    );
+  graceDays = PREFERRED_BILLING.defaultGraceDays;
   await assertOwner(db, creatorId, userId);
   const now = new Date(nowMs).toISOString();
   if (cadence === "annual_prepaid") {
@@ -121,7 +130,7 @@ export async function settleAnnualPreferredStripe(db, input = {}) {
   const current = await latestCommitment(db, attempt.creator_id), start = new Date(Math.max(input.nowMs || Date.now(), Date.parse(current?.commitment_ends_at || "") || 0)), end = addMonthsClamped(start, 12), now = new Date(input.nowMs || Date.now()).toISOString(), termId = crypto.randomUUID(), commitmentId = crypto.randomUUID(), purchaseId = crypto.randomUUID(), key = `stripe-preferred-annual:${attempt.id}`;
   await db.batch([
     db.prepare("INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at) VALUES(?,?,'annual_prepaid',20000,?,?,'cancelled','active',?,?)").bind(termId, attempt.creator_id, start.toISOString(), end.toISOString(), now, now),
-    db.prepare("INSERT INTO preferred_billing_commitments(id,preferred_term_id,creator_id,owner_user_id,plan_type,commitment_starts_at,commitment_ends_at,paid_through_at,normal_payment_source,billing_state,renewal_state,grace_days,created_at,updated_at) VALUES(?,?,?,?,'annual_prepaid',?,?,?,'stripe','current','renewal_decision_required',7,?,?)").bind(commitmentId, termId, attempt.creator_id, attempt.owner_user_id, start.toISOString(), end.toISOString(), end.toISOString(), now, now),
+    db.prepare("INSERT INTO preferred_billing_commitments(id,preferred_term_id,creator_id,owner_user_id,plan_type,commitment_starts_at,commitment_ends_at,paid_through_at,normal_payment_source,billing_state,renewal_state,grace_days,created_at,updated_at) VALUES(?,?,?,?,'annual_prepaid',?,?,?,'stripe','current','renewal_decision_required',?, ?,?)").bind(commitmentId, termId, attempt.creator_id, attempt.owner_user_id, start.toISOString(), end.toISOString(), end.toISOString(), PREFERRED_BILLING.defaultGraceDays, now, now),
     servicePurchase(db, purchaseId, attempt.creator_id, attempt.owner_user_id, "preferred_annual", 20000, "stripe", key, now, input),
     revenue(db, purchaseId, 20000, key, now),
     db.prepare("INSERT INTO preferred_service_charges(service_purchase_id,preferred_term_id,payment_cadence,coverage_starts_at,coverage_ends_at,commitment_id,external_attempt_id) VALUES(?,?,'annual_prepaid',?,?,?,?)").bind(purchaseId, termId, start.toISOString(), end.toISOString(), commitmentId, attempt.id),

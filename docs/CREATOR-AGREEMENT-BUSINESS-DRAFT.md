@@ -57,7 +57,7 @@ Every sale records the split and policy reason in effect at sale time. Historica
 
 ## 9. Preferred Creator
 
-Preferred Creator is a paid service tier, not an award, merit badge, or endorsement. It costs $20 per month under a 12-month commitment or $200 prepaid for one year. Cancellation stops renewal but does not retroactively terminate the current paid or committed term. When Preferred status ends, future eligible transactions and capacity return to Standard terms; historical transactions are not recalculated.
+Preferred Creator is a paid service tier, not an award, merit badge, or endorsement. It costs $20 per month under a 12-month commitment or $200 prepaid for one year. A missed monthly installment has a seven-calendar-day grace period during which the commitment remains in force and benefits remain provisionally active while payment is retried or cured. Continued nonpayment after day seven suspends Preferred benefits without canceling the installment obligation or commitment. Cancellation stops renewal but does not retroactively terminate the current paid or committed term. When Preferred status ends, future eligible transactions and capacity return to Standard terms; historical transactions are not recalculated.
 
 Settled Preferred benefits include the 90/10 split, 22 active catalog slots, five active product-ad slots, no outside-vendor dashboard advertising, Creator Notices, and appropriate promotional consideration. No benefit guarantees sales or exposure.
 

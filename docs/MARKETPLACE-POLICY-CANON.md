@@ -39,6 +39,8 @@ Preferred Creator is a paid service tier, not a merit or performance status. It 
 
 The monthly choice is payment cadence for the annual commitment, not a seasonal month-to-month subscription. Cancellation stops renewal; benefits last through the paid or committed term.
 
+A missed monthly installment has a settled grace period of seven calendar days. The commitment remains in force and Preferred benefits remain provisionally active during grace while Stripe retry/remediation or an explicit full Creator Balance cure may occur. After day seven, continued nonpayment suspends Preferred benefits and future activity uses Standard benefits and commission rules; the installment obligation and 12-month commitment remain outstanding, and prior sale snapshots and historical records remain unchanged.
+
 Preferred benefits are a 90/10 creator/TRG split while active, 22 active listings, five active public product ads, no outside-vendor creator-dashboard ad, and additional promotional consideration where applicable. Marketplace-wide holiday and special promotions remain available to all creators.
 
 One seller registration includes one primary Creator account/profile free. Additional Creator accounts are available for genuinely separate public identities or brands at $10 per month or $100 per year prepaid per additional account. Each is a separate marketplace identity with its own profile and ordinary account-level entitlements. Preferred fees apply in addition when an additional account is Preferred. Additional identities are an account-management option and anti-gaming control, not a promoted growth product; aliases must not multiply free catalog, ad, PWYW, promotional, or other account-level benefits.
