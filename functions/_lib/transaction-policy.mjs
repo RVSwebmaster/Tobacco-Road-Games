@@ -122,20 +122,15 @@ export async function requestCreatorPayout(
       "negative_balance",
       "A payout cannot be requested while the Creator balance is zero or negative.",
     );
-  if (!accountClosure && amount < 1000)
-    throw policyError(
-      "minimum_payout",
-      "Normal withdrawals require at least $10.",
-    );
-  if (
-    !Number.isInteger(amount) ||
-    amount <= 0 ||
-    amount > liability.payoutEligibleCents
-  )
-    throw policyError(
-      "invalid_payout",
-      "The requested payout exceeds the eligible balance.",
-    );
+  if (!accountClosure)
+    try {
+      assertOrdinaryPayoutAmount(amount, liability.payoutEligibleCents);
+    } catch (error) {
+      throw policyError(
+        amount < 1000 ? "minimum_payout" : "invalid_payout",
+        error.message,
+      );
+    }
   try {
     const reserved = await reserveCreatorPayout(database, {
       creatorId,
@@ -163,3 +158,4 @@ import {
   getCreatorLiability,
   reserveCreatorPayout,
 } from "./creator-liability.mjs";
+import { assertOrdinaryPayoutAmount } from "./creator-payout-amount-policy.mjs";

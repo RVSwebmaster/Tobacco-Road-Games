@@ -115,7 +115,7 @@
         const form = document.createElement("form");
         form.className = "account-form";
         form.innerHTML =
-          '<label>Amount in cents <input name="amount" type="number" min="1" required></label><label>External transfer reference <input name="reference" required maxlength="200"></label><label>Non-sensitive note <input name="note" maxlength="1000" autocomplete="off"></label><button class="button button--secondary">Record Completed Manual Payout</button>';
+          '<label>Amount in cents <input name="amount" type="number" min="1000" step="1000" required></label><label>External transfer reference <input name="reference" required maxlength="200"></label><label>Non-sensitive note <input name="note" maxlength="1000" autocomplete="off"></label><button class="button button--secondary">Record Completed Manual Payout</button>';
         form.onsubmit = async (event) => {
           event.preventDefault();
           const data = new FormData(form);

@@ -9,6 +9,8 @@ const firstOrZero = async (statement) => {
   }
 };
 
+import { assertOrdinaryPayoutAmount } from "./creator-payout-amount-policy.mjs";
+
 export async function getCreatorLiability(
   db,
   creatorId,
@@ -183,7 +185,6 @@ export async function reserveCreatorPayout(
     amountCents,
     currency = "USD",
     accountClosure = false,
-    enforceMinimum = true,
     requestId = crypto.randomUUID(),
     nowMs = Date.now(),
   } = {},
@@ -196,14 +197,11 @@ export async function reserveCreatorPayout(
       ? liability.payoutEligibleCents
       : Number(amountCents),
     now = new Date(nowMs).toISOString();
-  if (
-    !Number.isInteger(amount) ||
-    amount <= 0 ||
-    amount > liability.payoutEligibleCents
-  )
-    throw new Error("Payout exceeds canonical eligible Creator liability.");
-  if (enforceMinimum && !accountClosure && amount < 1000)
-    throw new Error("Normal withdrawals require at least $10.");
+  if (accountClosure)
+    throw new Error(
+      "Final closure payout is unavailable until a durable Creator closure lifecycle is implemented.",
+    );
+  assertOrdinaryPayoutAmount(amount, liability.payoutEligibleCents);
   const reservationsAvailable = await payoutReservationSchemaAvailable(db);
   try {
     const statements = [

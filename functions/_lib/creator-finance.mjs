@@ -9,6 +9,7 @@ import {
   payoutReservationSchemaAvailable,
   reserveCreatorPayout,
 } from "./creator-liability.mjs";
+import { assertOrdinaryPayoutAmount } from "./creator-payout-amount-policy.mjs";
 const DEFAULT_RESERVE_DAYS = 14;
 
 export function resolveFeePolicy(env = {}, nowMs = Date.now()) {
@@ -472,6 +473,17 @@ export async function recordManualPayout(database, input) {
       idempotent: true,
     };
   }
+  if (!requestId) {
+    const amountPolicyLiability = await getCreatorLiability(
+      database,
+      creatorId,
+      { currency, nowMs: authorizationNowMs },
+    );
+    assertOrdinaryPayoutAmount(
+      amount,
+      amountPolicyLiability.payoutEligibleCents,
+    );
+  }
   const reservationsAvailable =
     await payoutReservationSchemaAvailable(database);
   let completion;
@@ -489,7 +501,6 @@ export async function recordManualPayout(database, input) {
       amountCents: amount,
       currency,
       requestId: crypto.randomUUID(),
-      enforceMinimum: false,
       nowMs: authorizationNowMs,
     });
     requestId = reserved.requestId;

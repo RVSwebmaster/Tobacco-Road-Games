@@ -281,13 +281,14 @@ async function main() {
       .get(p.id).status,
     "released",
   );
-  let close = await ops.requestPayout(db, {
-    creatorId: "creator",
-    accountClosure: true,
-    nowMs: NOW,
-  });
-  assert.ok(close.amountCents > 0);
-  assert.equal(close.externalTransferExecuted, false);
+  await assert.rejects(
+    ops.requestPayout(db, {
+      creatorId: "creator",
+      accountClosure: true,
+      nowMs: NOW,
+    }),
+    /durable Creator closure lifecycle/,
+  );
   const listed = await ops.listOperations(db, { creatorId: "creator" });
   assert.equal(listed.remediations.length, 2);
   assert.ok(

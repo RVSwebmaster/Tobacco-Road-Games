@@ -1,10 +1,14 @@
 import { getCreatorFinance } from "./creator-finance.mjs";
 import { getCreatorLiability } from "./creator-liability.mjs";
+import {
+  maximumOrdinaryPayoutCents,
+  ORDINARY_PAYOUT_INCREMENT_CENTS,
+} from "./creator-payout-amount-policy.mjs";
 
 export function resolvePayoutPolicy(env = {}) {
-  const value = Number(env.CREATOR_MINIMUM_PAYOUT_CENTS);
   return {
-    minimumPayoutCents: Number.isInteger(value) && value >= 0 ? value : 1000,
+    minimumPayoutCents: ORDINARY_PAYOUT_INCREMENT_CENTS,
+    incrementCents: ORDINARY_PAYOUT_INCREMENT_CENTS,
   };
 }
 export async function getCreatorPayoutStatus(
@@ -45,6 +49,7 @@ export async function getCreatorPayoutStatus(
     policy = resolvePayoutPolicy(env),
     providerHeld = liability.disputeHeldCents,
     eligibleAmount = liability.payoutEligibleCents,
+    maximumOrdinaryAmount = maximumOrdinaryPayoutCents(eligibleAmount),
     reasons = [];
   const providerReady = Boolean(
     profile &&
@@ -75,6 +80,8 @@ export async function getCreatorPayoutStatus(
     providerReady,
     blockedReasons: reasons,
     eligibleAmountCents: eligibleAmount,
+    maximumOrdinaryPayoutCents: maximumOrdinaryAmount,
+    ordinaryPayoutRemainderCents: eligibleAmount - maximumOrdinaryAmount,
     providerHeldCents: providerHeld,
     policy,
     profile: profile || {

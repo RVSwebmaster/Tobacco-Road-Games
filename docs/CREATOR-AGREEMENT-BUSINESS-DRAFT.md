@@ -133,7 +133,7 @@ Creator-responsible refunds, disputes, chargebacks, or legitimate adjustments ma
 
 ## 23. Creator-requested payouts
 
-Payouts are requested by Creator and are not forced monthly. The ordinary minimum withdrawal is $10. A positive eligible balance below $10 remains in the account. At $10 or more, Creator may request withdrawal at Creator’s discretion. Only one payout request may be pending per Creator identity.
+Payouts are requested by Creator and are not forced monthly. Ordinary withdrawals have a $10 minimum and must be requested in exact $10 increments. Any remaining eligible amount stays in Creator Balance. Only one payout request may be pending per Creator identity.
 
 Tobacco Road Games absorbs ordinary Stripe payout or transfer fees. A failed payout does not forfeit Creator’s money; the eligible balance is preserved or restored for retry. Disputed or held funds, negative balances, reconciliation exceptions, legal restrictions, and provider limitations are not withdrawable.
 

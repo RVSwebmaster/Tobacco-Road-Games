@@ -65,9 +65,14 @@
     const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
     document.querySelector("#creator-finance-summary").textContent =
       `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · Creator Balance available ${money(finance.creatorBalance.availableCents)} · pending ${money(finance.creatorBalance.pendingCents)} · held ${money(finance.creatorBalance.heldCents)} · payout reserved ${money(finance.creatorBalance.payoutReservedCents)} · purchase reserved ${money(finance.creatorBalance.purchaseReservedCents)} · paid ${money(finance.summary.paidBalanceCents)}`;
+    const payoutInput = document.querySelector(
+      '#creator-payout-request-form input[name="amount"]',
+    );
+    payoutInput.max = String(finance.payout.maximumOrdinaryPayoutCents / 100);
+    payoutInput.disabled = finance.payout.maximumOrdinaryPayoutCents < 1000;
     document.querySelector("#creator-payout-status").textContent = finance
       .payout.eligible
-      ? `Payout ready: ${money(finance.payout.eligibleAmountCents)} is eligible.`
+      ? `Payout ready: up to ${money(finance.payout.maximumOrdinaryPayoutCents)} in $10 increments. ${money(finance.payout.ordinaryPayoutRemainderCents)} remains in Creator Balance.`
       : `Payout blocked: ${finance.payout.blockedReasons.join(" ")}`;
     document.querySelector("#creator-payment-method-status").textContent =
       summary.registrationChecks?.paymentMethodReady
