@@ -72,6 +72,21 @@
             displays only safe readiness information.
           </p>
           <p id="creator-finance-summary"></p>
+          <div id="owner-financial-controls" hidden>
+            <h3>Owner Financial Controls</h3>
+            <p id="owner-financial-summary"></p>
+            <p>These private controls set a desired total by appending a fully audited adjustment. Creator funds and TRG earned remain separate.</p>
+            <form class="account-form" id="owner-financial-adjustment-form">
+              <label>Account
+                <select name="kind"><option value="creator_funds">Creator funds</option><option value="trg_revenue">TRG earned</option></select>
+              </label>
+              <label>Desired total in dollars <input name="total" type="number" step="0.01" required /></label>
+              <label>Reason <textarea name="reason" minlength="3" required></textarea></label>
+              <button class="button button--secondary">Record audited adjustment</button>
+            </form>
+            <p id="owner-financial-result" role="status"></p>
+            <div id="owner-financial-history"></div>
+          </div>
           <p id="creator-payout-status"></p>
           <form class="account-form" id="creator-payout-request-form">
             <label

@@ -65,6 +65,7 @@
     const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
     document.querySelector("#creator-finance-summary").textContent =
       `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · Creator Balance available ${money(finance.creatorBalance.availableCents)} · pending ${money(finance.creatorBalance.pendingCents)} · held ${money(finance.creatorBalance.heldCents)} · payout reserved ${money(finance.creatorBalance.payoutReservedCents)} · purchase reserved ${money(finance.creatorBalance.purchaseReservedCents)} · paid ${money(finance.summary.paidBalanceCents)}`;
+    renderOwnerFinancials(finance.ownerFinancials, money);
     const payoutInput = document.querySelector(
       '#creator-payout-request-form input[name="amount"]',
     );
@@ -129,6 +130,19 @@
         ...listingData.listings.map((item) => new Option(item.title, item.id)),
       );
     document.querySelector("#creator-advertising").hidden = false;
+  }
+  function renderOwnerFinancials(data, money) {
+    const panel = document.querySelector("#owner-financial-controls");
+    if (!data) return;
+    panel.hidden = false;
+    document.querySelector("#owner-financial-summary").textContent =
+      `Creator funds ${money(data.liability.currentNetLiabilityCents)} · available ${money(data.liability.availableBalanceCents)} · held ${money(data.liability.heldBalanceCents)} · payout reserved ${money(data.liability.payoutReservedCents)} · purchase reserved ${money(data.liability.purchaseReservedCents)} · TRG earned ${money(data.revenue.netRetainedRevenueCents)}.`;
+    const history = [...data.creatorAdjustments.map((x) => ({ ...x, account: "Creator funds" })), ...data.revenueAdjustments.map((x) => ({ ...x, account: "TRG earned" }))].sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
+    document.querySelector("#owner-financial-history").replaceChildren(...history.map((x) => {
+      const p = document.createElement("p");
+      p.textContent = `${x.created_at} · ${x.account}: ${money(x.previous_total_cents)} → ${money(x.new_total_cents)} (${money(x.delta_cents)}) · ${x.reason}`;
+      return p;
+    }));
   }
   function renderCreatorAnalytics(analytics) {
     const root = document.querySelector("#creator-analytics");
@@ -628,6 +642,26 @@
             currency: "USD",
           });
         output.textContent = `Payout request ${result.id} recorded. External transfer has not been executed.`;
+        await load();
+      } catch (error) {
+        output.textContent = error.message;
+      }
+    });
+  document
+    .querySelector("#owner-financial-adjustment-form")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget,
+        output = document.querySelector("#owner-financial-result"),
+        cents = Math.round(Number(form.elements.total.value) * 100);
+      try {
+        output.textContent = "Recording audited adjustment…";
+        await api("owner-financial-adjustment", {
+          kind: form.elements.kind.value,
+          newTotalCents: cents,
+          reason: form.elements.reason.value,
+        });
+        output.textContent = "Adjustment recorded.";
         await load();
       } catch (error) {
         output.textContent = error.message;

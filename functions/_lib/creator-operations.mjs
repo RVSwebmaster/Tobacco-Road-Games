@@ -22,6 +22,11 @@ import {
 import { getCreatorRatingSummary } from "./creator-reputation.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
 import {
+  adjustOwnerCreatorFunds,
+  adjustTrgRevenue,
+  ownerProfileFinancials,
+} from "./owner-profile-finance.mjs";
+import {
   getPreferredBillingState,
   markPreferredDoNotRenew,
   preferredGraceDays,
@@ -140,7 +145,34 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
   if (request.method === "GET" && route === "analytics")
     return analytics(database, creator);
   if (request.method === "GET" && route === "finance")
-    return creatorFinance(request, database, creator, { ...options, env });
+    return creatorFinance(request, database, creator, {
+      ...options,
+      env,
+      userId: session.user.id,
+    });
+  if (request.method === "POST" && route === "owner-financial-adjustment") {
+    try {
+      const body = await request.json();
+      const input = {
+        creatorId: creator.id,
+        userId: session.user.id,
+        newTotalCents: body.newTotalCents,
+        reason: body.reason,
+        nowMs: options.nowMs,
+      };
+      const adjustment =
+        body.kind === "creator_funds"
+          ? await adjustOwnerCreatorFunds(database, input)
+          : body.kind === "trg_revenue"
+            ? await adjustTrgRevenue(database, input)
+            : (() => {
+                throw new Error("Choose Creator funds or TRG earned.");
+              })();
+      return json({ ok: true, adjustment });
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
   if (request.method === "GET" && route === "operations")
     return json(await listOperations(database, { creatorId: creator.id }));
   if (request.method === "GET" && route === "preferred") {
@@ -658,12 +690,19 @@ async function creatorFinance(request, db, creator, options) {
         "SELECT p.id,p.service_type,p.service_sku,p.quantity,p.amount_cents,p.currency,p.payment_source,p.settlement_method,CASE WHEN p.processor_fee_authoritative=1 THEN p.processor_fee_cents ELSE NULL END processor_fee_cents,p.status,p.created_at,p.completed_at,p.reversed_at,cp.billing_plan,cp.coverage_starts_at,cp.coverage_ends_at FROM marketplace_service_purchases p LEFT JOIN creator_identity_coverage_periods cp ON cp.service_purchase_id=p.id WHERE p.creator_id=? ORDER BY p.created_at DESC LIMIT 100",
       )
       .bind(creator.id)
-      .all();
+      .all(),
+    ownerFinancials = await ownerProfileFinancials(
+      db,
+      creator.id,
+      options.userId,
+      options.nowMs,
+    ).catch(() => null);
   return json({
     creator: publicCreator(creator),
     ...finance,
     payout,
     creatorBalance,
+    ownerFinancials,
     servicePurchases: serviceResult.results || [],
   });
 }

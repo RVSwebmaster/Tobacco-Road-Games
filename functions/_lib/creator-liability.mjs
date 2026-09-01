@@ -269,6 +269,7 @@ export async function getTrgRevenueReport(db) {
     service,
     providerCosts,
     orders,
+    ownerAdjustments,
   ] = await Promise.all([
     db
       .prepare(
@@ -318,6 +319,12 @@ export async function getTrgRevenueReport(db) {
    COALESCE(SUM(CASE WHEN payment_source='stripe' THEN processor_fee_cents ELSE 0 END),0) processor_fees FROM orders`,
       )
       .first(),
+    db
+      .prepare(
+        "SELECT COALESCE(SUM(delta_cents),0) amount FROM trg_revenue_adjustments",
+      )
+      .first()
+      .catch(() => ({ amount: 0 })),
   ]);
   const productGross =
       amount(externalProduct) + Number(internalProduct?.gross || 0),
@@ -371,7 +378,12 @@ export async function getTrgRevenueReport(db) {
         Number(service?.balance_net || 0),
       ),
     },
-    netRetainedRevenueCents: productNet + Number(service?.net || 0) - costs,
+    ownerRevenueAdjustmentsCents: amount(ownerAdjustments),
+    netRetainedRevenueCents:
+      productNet +
+      Number(service?.net || 0) -
+      costs +
+      amount(ownerAdjustments),
     timingWarning:
       "Stripe settlement timing and bank transfers are not represented; this is ledger activity, not a bank-statement reconciliation.",
   };
