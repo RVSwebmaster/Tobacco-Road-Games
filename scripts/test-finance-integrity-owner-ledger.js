@@ -171,11 +171,62 @@ async function main() {
     amountCents: 8000,
     nowMs: NOW,
   });
+  assert.throws(
+    () =>
+      raw
+        .prepare("UPDATE creator_payout_requests SET status='paid' WHERE id=?")
+        .run(directA.requestId),
+    /exact completed payout/i,
+  );
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "UPDATE creator_payout_reservations SET status='consumed' WHERE payout_request_id=?",
+        )
+        .run(directA.requestId),
+    /exact completed payout/i,
+  );
   directPayout(raw, "direct", directA.requestId, 8000, "direct-a");
   assert.equal(payoutCount(raw, "direct"), 1);
   assert.equal(payoutLedgerCount(raw, "direct"), 1);
   assert.equal(reservationState(raw, directA.requestId), "consumed");
   assert.equal(requestState(raw, directA.requestId), "paid");
+  assert.equal(
+    raw
+      .prepare(
+        "SELECT COUNT(*) n FROM creator_financial_audit WHERE action='payout_recorded' AND json_extract(context_json,'$.requestId')=?",
+      )
+      .get(directA.requestId).n,
+    1,
+  );
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "UPDATE creator_payout_reservations SET status='reserved',resolved_at=NULL WHERE payout_request_id=?",
+        )
+        .run(directA.requestId),
+    /immutable/i,
+  );
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "DELETE FROM creator_payout_reservations WHERE payout_request_id=?",
+        )
+        .run(directA.requestId),
+    /immutable/i,
+  );
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "UPDATE creator_payout_requests SET amount_cents=amount_cents+1 WHERE id=?",
+        )
+        .run(directA.requestId),
+    /immutable/i,
+  );
   assert.throws(
     () =>
       directPayout(
@@ -200,6 +251,55 @@ async function main() {
   assert.notEqual(directA.requestId, directB.requestId);
   assert.equal(reservationState(raw, directB.requestId), "consumed");
   assert.equal(requestState(raw, directB.requestId), "paid");
+
+  creator(raw, "mismatch", "creator-mismatch");
+  earn(raw, "mismatch", 8000);
+  const mismatch = await liability.reserveCreatorPayout(db, {
+    creatorId: "mismatch",
+    amountCents: 8000,
+    nowMs: NOW,
+  });
+  assert.throws(
+    () =>
+      raw
+        .prepare("UPDATE creator_payout_requests SET status='paid' WHERE id=?")
+        .run(mismatch.requestId),
+    /exact completed payout/i,
+  );
+
+  creator(raw, "state-insert", "creator-state-insert");
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "INSERT INTO creator_payout_requests(id,creator_id,amount_cents,currency,request_kind,status,requested_at)VALUES('forged-paid','state-insert',8000,'USD','normal','paid',?)",
+        )
+        .run(ISO),
+    /canonical payout completion/i,
+  );
+  raw
+    .prepare(
+      "INSERT INTO creator_payout_requests(id,creator_id,amount_cents,currency,request_kind,status,requested_at)VALUES('forged-consumed','state-insert',8000,'USD','normal','pending',?)",
+    )
+    .run(ISO);
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "INSERT INTO creator_payout_reservations(payout_request_id,creator_id,amount_cents,status,created_at)VALUES('forged-consumed','state-insert',8000,'consumed',?)",
+        )
+        .run(ISO),
+    /canonical payout completion/i,
+  );
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "UPDATE creator_payout_reservations SET status='consumed' WHERE payout_request_id=?",
+        )
+        .run(mismatch.requestId),
+    /exact completed payout/i,
+  );
 
   assert.throws(
     () =>
