@@ -99,6 +99,10 @@ Refunds are not available merely because a customer dislikes a product, consider
 
 Refunds are appropriate for objectively demonstrable problems such as a corrupt or unusable file, delivery of the wrong file, material misrepresentation, a material mismatch between the listing and delivered product, marketplace or technical failure preventing proper delivery, or another objectively demonstrable defect.
 
+Creator service purchases, including Preferred fees, additional-identity fees, and Ad Credit packages, are non-refundable once service begins except for a genuine Tobacco Road Games billing mistake or service failure. Change of mind, non-use, voluntary inactivity, and unused benefits are not refund grounds. Approved corrections return funds to the original payment source, reverse the corrected service revenue, preserve the original purchase and audit history, and adjust an entitlement only as needed to correct the Tobacco Road Games error. Ordinary proration is unavailable.
+
+Unused Ad Credits do not expire and remain available until redeemed. They are not cash-equivalent and are not refundable merely for non-use. A redeemed credit starts its 30-day slot; ad removal, creative swaps, or failure to receive impressions, clicks, or sales do not create refund rights or guaranteed advertising results.
+
 ## 18. Creator-caused defect and 30-day repair process
 
 Once Tobacco Road Games confirms a Creator-caused defect or material misrepresentation, Tobacco Road Games will immediately delist the product and notify Creator. Creator has 30 days to submit an acceptable correction. Each affected customer may choose an immediate refund or wait for the repaired product.

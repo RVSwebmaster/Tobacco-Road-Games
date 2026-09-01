@@ -16,10 +16,10 @@ Current eligibility reads dated coverage for each additional identity independen
 
 Owners retain account billing controls, Creator Balance visibility, Stripe payment access, profile/account correction, and historical reporting. Staff membership does not grant ownership billing authority. The account view shows every owned identity, included versus additional status, current plan, paid-through date, Preferred status separately, and monthly/annual payment choices.
 
-## Reporting and unresolved refunds
+## Reporting and service corrections
 
 Creator reporting identifies the service type, plan, coverage dates, amount, payment source, and settlement state. Operator reporting includes owner, identity type, plan, coverage, provider references, processor-fee authority, payment source, and separate monthly versus annual revenue totals. Identity fees remain outside product GMV, Creator earnings, Preferred revenue, and Ad Credit revenue.
 
-No automatic proration, mid-period refund, coverage unwind, or used-service refund policy is introduced. Future authorized reversals can use the canonical reversed service state, but service-refund eligibility remains an owner policy decision.
+Additional-identity coverage is non-refundable once begun except for a genuine TRG billing mistake or failed service delivery. There is no ordinary proration, change-of-mind refund, or refund for ceasing to use the identity. An operator-approved TRG-error correction restores the original payment source, reverses the corrected canonical service revenue, and reverses coverage only when necessary to correct the error while preserving the identity and history.
 
 No additional Creator identities existed in staging when migration 036 was prepared, so no billing charges, coverage, or revenue were backfilled.

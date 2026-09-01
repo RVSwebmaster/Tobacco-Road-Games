@@ -7,6 +7,7 @@ import {
   verifySessionToken,
 } from "../../_lib/owner-auth.mjs";
 import { refundCreatorBalancePurchase } from "../../_lib/creator-balance.mjs";
+import { correctCreatorServicePurchase } from "../../_lib/creator-service-refunds.mjs";
 export async function onRequestGet({ request, env }) {
   const auth = await verifySessionToken(
     readCookie(request, SESSION_COOKIE_NAME),
@@ -33,7 +34,27 @@ export async function onRequestGet({ request, env }) {
   const preferredProviderAttempts = await env.TRG_ORDERS.prepare(
     "SELECT a.*,i.commitment_id,i.installment_number,b.creator_id FROM preferred_billing_provider_attempts a JOIN preferred_billing_installments i ON i.id=a.installment_id JOIN preferred_billing_commitments b ON b.id=i.commitment_id ORDER BY a.created_at DESC LIMIT 300",
   ).all();
-  const servicePurchases = services.results || [],
+  const serviceCorrections = await env.TRG_ORDERS.prepare(
+    "SELECT r.*,p.service_type,p.service_sku,p.amount_cents original_amount_cents,p.provider_payment_reference FROM creator_service_refund_corrections r JOIN marketplace_service_purchases p ON p.id=r.service_purchase_id ORDER BY r.created_at DESC LIMIT 300",
+  ).all();
+  const correctionRows = serviceCorrections.results || [];
+  const servicePurchases = (services.results || []).map((purchase) => {
+      const corrections = correctionRows.filter(
+        (correction) => correction.service_purchase_id === purchase.id,
+      );
+      return {
+        ...purchase,
+        correction_count: corrections.length,
+        corrected_amount_cents: corrections
+          .filter((correction) =>
+            ["processing", "provider_pending", "completed"].includes(
+              correction.status,
+            ),
+          )
+          .reduce((sum, correction) => sum + Number(correction.amount_cents), 0),
+        latest_correction: corrections[0] || null,
+      };
+    }),
     settled = servicePurchases.filter((item) => item.status === "settled"),
     serviceRevenue = {
       grossCents: settled.reduce(
@@ -83,6 +104,7 @@ export async function onRequestGet({ request, env }) {
     preferredCommitments: preferredCommitments.results || [],
     preferredInstallments: preferredInstallments.results || [],
     preferredProviderAttempts: preferredProviderAttempts.results || [],
+    serviceCorrections: correctionRows,
     servicePurchases,
     serviceRevenue,
   });
@@ -95,6 +117,26 @@ export async function onRequestPost({ request, env }) {
   try {
     body = await request.json();
   } catch {}
+  if (body.action === "correct_service_purchase") {
+    try {
+      return jsonResponse({
+        ok: true,
+        ...(await correctCreatorServicePurchase(env.TRG_ORDERS, {
+          servicePurchaseId: String(body.servicePurchaseId || ""),
+          operatorId: auth.username,
+          reasonCategory: String(body.reasonCategory || ""),
+          reasonDetail: String(body.reasonDetail || ""),
+          refundAmountCents: body.refundAmountCents,
+          entitlementAction: String(body.entitlementAction || "none"),
+          entitlementAdjustment: body.entitlementAdjustment || {},
+          idempotencyKey: String(body.idempotencyKey || ""),
+          env,
+        })),
+      });
+    } catch (error) {
+      return jsonResponse({ error: error.message }, 409);
+    }
+  }
   if (body.action !== "refund" || !body.orderPublicId)
     return jsonResponse(
       {

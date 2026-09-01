@@ -36,3 +36,5 @@ Cross-Creator internal purchases use normal paid orders and therefore qualify fo
 ## Operational verification
 
 Run `node scripts/test-creator-balance-internal-purchases.js` for the complete purchase/idempotency/insufficient-balance/refund lifecycle and static safety assertions. Run `npm test` and `npm run test:store-kill-switch` before deployment. Apply migration `033_creator_balance_internal_purchases.sql` before deploying Functions.
+
+Creator service corrections are separate from product-order refunds. Under the settled narrow correction policy, an operator-approved TRG billing error or service failure restores Creator Balance through a positive `operator_correction`, records a negative canonical service-revenue reversal, preserves the original purchase and audit history, and applies only an explicitly necessary entitlement adjustment. Ordinary change-of-mind, non-use, proration, expiration, or cash-out refunds are not supported. See `CREATOR-SERVICE-REFUNDS.md`.

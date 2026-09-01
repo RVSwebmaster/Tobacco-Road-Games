@@ -14,4 +14,4 @@ An impression is conservatively recorded at most once per ad per five-minute ser
 
 Operator-managed sponsor categories are intended for relevant, reputable creator services such as printing, POD/manufacturing, dice, conventions, fulfillment, publishing/layout software, editing, licensed stock art, crowdfunding, bookkeeping, shipping, and packaging. Predatory or deceptive advertising is unacceptable. Operator approval remains authoritative rather than hard-coding future business categories.
 
-Deferred: advertiser self-service, promised impression delivery, detailed campaign analytics, image dimension decoding/enforcement, automated malware/image moderation, refunds for service-credit packs, and coupons.
+Deferred: advertiser self-service, promised impression delivery, detailed campaign analytics, image dimension decoding/enforcement, automated malware/image moderation, and coupons. Ad Credit service corrections are operator-only and limited to genuine TRG billing or slot-delivery failures; unused credits remain non-refundable and do not expire.

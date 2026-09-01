@@ -184,6 +184,10 @@ Subjective dislike, perceived poor quality, changed expectations, and buyer’s 
 
 Refunds reverse the original sale-time Creator and Tobacco Road Games shares. Actual provider refund/dispute costs follow responsibility without markup. Tobacco Road Games absorbs ordinary customer payment fraud and costs, except Creator-caused fraud, unauthorized material, or material misrepresentation is allocated to the Creator; Tobacco Road Games-caused losses remain with Tobacco Road Games. Open disputed funds are held.
 
+Creator-facing service purchases—including Preferred fees, additional-identity fees, and Ad Credit packages—are non-refundable once service or entitlement begins, except to correct a genuine Tobacco Road Games billing mistake or service-delivery failure. Change of mind, non-use, voluntary inactivity, unused benefits, and lack of advertising results are not refund grounds. Approved TRG-caused corrections restore the original payment source, reverse only the corrected canonical service revenue, preserve the original purchase and audit history, and adjust coverage or service capacity only as necessary to correct the error. There is no ordinary proration.
+
+Unused Ad Credits do not expire, are not cash-equivalent, cannot be transferred or redeemed for money, and are not refundable merely because they remain unused. Redeemed credits begin the settled 30-day slot period; removing or swapping an ad and receiving no clicks or sales do not create refund rights. A genuine TRG-caused slot-delivery failure may be corrected through restored service time/capacity or, when appropriate, an operator-approved refund.
+
 Confirmed fraudulent customers may have accounts suspended and verified-email purchase access blocked. Guest fraud blocks use the verified email. IP, session, device, network, and provider signals are supporting evidence rather than permanent identity by themselves. Blocks are internal, auditable, and reversible by an operator.
 
 ## 18. Creator balances and requested payouts

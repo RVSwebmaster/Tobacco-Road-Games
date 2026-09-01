@@ -20,4 +20,4 @@ Creators may correct the stored payment method, allow an idempotent scheduler re
 
 Loss of Preferred changes only future behavior to Standard. Sale-time commission snapshots remain immutable, products are not deleted or automatically delisted for a 22-to-20 cap reduction, and additional activations remain subject to current capacity. Additional-Creator-identity coverage stays separate and additive.
 
-Service refunds, proration, early termination penalties, debt collection, and automatic coverage unwind remain unresolved and are not implemented. Production scheduling and production Stripe activation remain disabled.
+Preferred coverage is non-refundable once begun except for a genuine TRG billing mistake or failed service delivery. Operator-approved corrections restore the original payment source and reverse corrected service revenue; coverage changes only when necessary to correct that error. Ordinary proration, change-of-mind refunds, early-termination penalties, debt collection, and automatic coverage unwind are not implemented. Production scheduling and production Stripe/refund activation remain disabled.
