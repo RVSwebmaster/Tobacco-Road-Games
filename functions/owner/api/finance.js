@@ -100,6 +100,7 @@ export async function onRequestGet({ request, env }) {
     generatedAt: new Date().toISOString(),
     liability,
     revenue,
+    revenueAdjustments: (await env.TRG_ORDERS.prepare("SELECT a.*,COALESCE(c.display_name,u.email_normalized,'Owner') actor_display FROM trg_revenue_adjustments a JOIN users u ON u.id=a.actor_user_id LEFT JOIN creator_identity_ownership own ON own.owner_user_id=u.id AND own.identity_type='primary' LEFT JOIN marketplace_creators c ON c.id=own.creator_id ORDER BY a.created_at DESC").all()).results || [],
     transactions,
     exceptions,
     filters,

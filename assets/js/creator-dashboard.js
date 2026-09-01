@@ -4,6 +4,8 @@
     listingsPanel = document.querySelector("#creator-listings"),
     profilePanel = document.querySelector("#creator-profile");
   let csrf = "";
+  let ownerAdjustmentKey = "";
+  let ownerFinancialSnapshot = null;
   async function api(path, body) {
     if (
       body &&
@@ -144,13 +146,14 @@
   function renderOwnerFinancials(data, payout, money) {
     const panel = document.querySelector("#owner-financial-controls");
     if (!data) return;
+    ownerFinancialSnapshot = data;
     panel.hidden = false;
     document.querySelector("#owner-financial-summary").textContent =
       `Creator funds ${money(data.liability.currentNetLiabilityCents)} · available ${money(data.liability.availableBalanceCents)} · pending ${money(data.liability.pendingBalanceCents)} · held ${money(data.liability.heldBalanceCents)} · dispute-held ${money(data.liability.disputeHeldCents)} · payout reserved ${money(data.liability.payoutReservedCents)} · purchase reserved ${money(data.liability.purchaseReservedCents)} · payout eligible ${money(data.liability.payoutEligibleCents)} · retained ordinary-payout remainder ${money(payout.ordinaryPayoutRemainderCents)}. TRG earned ${money(data.revenue.netRetainedRevenueCents)}: product commissions ${money(data.revenue.productCommission.netCents)}, Preferred ${money(data.revenue.serviceRevenue.preferredStripeNetCents + data.revenue.serviceRevenue.preferredCreatorBalanceNetCents)}, additional identities ${money(data.revenue.serviceRevenue.additionalIdentityStripeNetCents + data.revenue.serviceRevenue.additionalIdentityCreatorBalanceNetCents)}, Ad Credits ${money(data.revenue.serviceRevenue.adCreditsStripeNetCents + data.revenue.serviceRevenue.adCreditsCreatorBalanceNetCents)}, all services ${money(data.revenue.serviceRevenue.netCents)}, reversals ${money(data.revenue.productCommission.reversalsCents + data.revenue.serviceRevenue.reversalsCents)}, provider/processor costs ${money(data.revenue.costs.totalCents)}, owner adjustments ${money(data.revenue.ownerRevenueAdjustmentsCents)}.`;
     const history = [...data.creatorAdjustments.map((x) => ({ ...x, account: "Creator funds" })), ...data.revenueAdjustments.map((x) => ({ ...x, account: "TRG earned" }))].sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
     document.querySelector("#owner-financial-history").replaceChildren(...history.map((x) => {
       const p = document.createElement("p");
-      p.textContent = `${x.created_at} · ${x.account}: ${money(x.previous_total_cents)} → ${money(x.new_total_cents)} (${money(x.delta_cents)}) · ${x.reason}`;
+      p.textContent = `${x.created_at} · ${x.account}: ${money(x.previous_total_cents)} → ${money(x.new_total_cents)} (${money(x.delta_cents)}) · ${x.reason} · ${x.actor_display}`;
       return p;
     }), ...data.payoutHistory.map((x) => { const p=document.createElement("p"); p.textContent=`${x.paid_at} · Creator payout ${money(x.amount_cents)} · ${x.status} · ${x.reference}`; return p; }));
   }
@@ -666,17 +669,23 @@
         cents = Math.round(Number(form.elements.total.value) * 100);
       try {
         output.textContent = "Recording audited adjustment…";
+        ownerAdjustmentKey ||= crypto.randomUUID();
+        const kind = form.elements.kind.value;
         await api("owner-financial-adjustment", {
-          kind: form.elements.kind.value,
+          kind,
           newTotalCents: cents,
+          expectedTotalCents: kind === "creator_funds" ? ownerFinancialSnapshot.liability.signedNetBalanceCents : ownerFinancialSnapshot.revenue.netRetainedRevenueCents,
+          idempotencyKey: ownerAdjustmentKey,
           reason: form.elements.reason.value,
         });
+        ownerAdjustmentKey = "";
         output.textContent = "Adjustment recorded.";
         await load();
       } catch (error) {
         output.textContent = error.message;
       }
     });
+  document.querySelector("#owner-financial-adjustment-form").addEventListener("input", () => { ownerAdjustmentKey = ""; });
   document.querySelector("#creator-closure-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const form=event.currentTarget,output=document.querySelector("#creator-closure-result");
     try { output.textContent="Requesting closure…"; await api("closure",{confirmation:form.elements.confirmation.value,reason:form.elements.reason.value}); output.textContent="Closure request recorded."; await load(); } catch(error){ output.textContent=error.message; }

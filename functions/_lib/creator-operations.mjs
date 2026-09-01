@@ -198,6 +198,8 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
         creatorId: creator.id,
         userId: session.user.id,
         newTotalCents: body.newTotalCents,
+        expectedTotalCents: body.expectedTotalCents,
+        idempotencyKey: body.idempotencyKey,
         reason: body.reason,
         nowMs: options.nowMs,
       };

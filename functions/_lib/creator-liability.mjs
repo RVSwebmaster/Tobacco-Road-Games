@@ -106,6 +106,7 @@ export async function getCreatorLiability(
     negativeBalanceCents: Math.max(0, -signedNet),
     completedPayoutsCents: amount(completed),
     currentNetLiabilityCents: Math.max(0, signedNet),
+    signedNetBalanceCents: signedNet,
     rawPayoutReservationCapacityCents: eligible,
     payoutEligibleCents: Math.max(0, eligible),
   };
@@ -394,6 +395,8 @@ export async function getTrgRevenueReport(db) {
       ),
     },
     ownerRevenueAdjustmentsCents: amount(ownerAdjustments),
+    netBeforeOwnerAdjustmentsCents:
+      productNet + Number(service?.net || 0) - costs,
     netRetainedRevenueCents:
       productNet +
       Number(service?.net || 0) -
