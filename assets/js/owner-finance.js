@@ -154,7 +154,12 @@
         p.textContent =
           x.code === "none"
             ? "No reconciliation exceptions detected."
-            : `${x.source}: ${x.code}${x.count ? ` (${x.count})` : ""}`;
+            : [
+                  "completed_payout_integrity_mismatch",
+                  "payout_ledger_integrity_mismatch",
+                ].includes(x.code)
+              ? `FINANCIAL INTEGRITY EXCEPTION — payout records and payout ledger disagree (${x.code})`
+              : `${x.source}: ${x.code}${x.count ? ` (${x.count})` : ""}`;
         return p;
       }),
     );

@@ -5,6 +5,7 @@ import {
 import {
   getCreatorLiability,
   getPayoutCompletionCapacity,
+  payoutCompletionLinkageAvailable,
   payoutReservationSchemaAvailable,
   reserveCreatorPayout,
 } from "./creator-liability.mjs";
@@ -421,6 +422,32 @@ export async function recordManualPayout(database, input) {
   )
     throw new Error("Payout fields are invalid.");
   let requestId = String(input.payoutRequestId || "");
+  const exactLinkage = await payoutCompletionLinkageAvailable(database);
+  const existingPayout = await database
+    .prepare(
+      exactLinkage
+        ? "SELECT id,creator_id,amount_cents,currency,payout_request_id FROM creator_payouts WHERE idempotency_key=?"
+        : "SELECT id,creator_id,amount_cents,currency FROM creator_payouts WHERE idempotency_key=?",
+    )
+    .bind(key)
+    .first();
+  if (existingPayout) {
+    if (
+      existingPayout.creator_id !== creatorId ||
+      Number(existingPayout.amount_cents) !== amount ||
+      existingPayout.currency !== currency ||
+      (exactLinkage &&
+        requestId &&
+        existingPayout.payout_request_id !== requestId)
+    )
+      throw new Error("Payout idempotency key conflicts with another payout.");
+    return {
+      payoutId: existingPayout.id,
+      payoutRequestId: existingPayout.payout_request_id || requestId,
+      amountCents: amount,
+      idempotent: true,
+    };
+  }
   const reservationsAvailable =
     await payoutReservationSchemaAvailable(database);
   let completion;
@@ -466,7 +493,9 @@ export async function recordManualPayout(database, input) {
   const statements = [
     database
       .prepare(
-        "INSERT INTO creator_payouts(id,creator_id,amount_cents,currency,reference,note,idempotency_key,operator_actor,paid_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+        exactLinkage
+          ? "INSERT INTO creator_payouts(id,creator_id,amount_cents,currency,reference,note,idempotency_key,operator_actor,paid_at,created_at,payout_request_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
+          : "INSERT INTO creator_payouts(id,creator_id,amount_cents,currency,reference,note,idempotency_key,operator_actor,paid_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
       )
       .bind(
         payoutId,
@@ -479,49 +508,55 @@ export async function recordManualPayout(database, input) {
         actor,
         now,
         now,
-      ),
-    database
-      .prepare(
-        `INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,operator_actor,idempotency_key,created_at) VALUES(?,'payout',?,?,?,'paid',?,?,?,?)`,
-      )
-      .bind(
-        creatorId,
-        -amount,
-        currency,
-        now,
-        `Payout: ${reason}`,
-        actor,
-        `payout:${key}`,
-        now,
+        ...(exactLinkage ? [requestId] : []),
       ),
   ];
-  if (reservationsAvailable)
+  if (!exactLinkage)
     statements.push(
       database
         .prepare(
-          "UPDATE creator_payout_requests SET status='paid',resolved_at=? WHERE id=? AND status IN ('pending','processing')",
+          `INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,operator_actor,idempotency_key,created_at) VALUES(?,'payout',?,?,?,'paid',?,?,?,?)`,
         )
-        .bind(now, requestId),
+        .bind(
+          creatorId,
+          -amount,
+          currency,
+          now,
+          `Payout: ${reason}`,
+          actor,
+          `payout:${key}`,
+          now,
+        ),
+    );
+  if (reservationsAvailable)
+    if (!exactLinkage)
+      statements.push(
+        database
+          .prepare(
+            "UPDATE creator_payout_requests SET status='paid',resolved_at=? WHERE id=? AND status IN ('pending','processing')",
+          )
+          .bind(now, requestId),
+        database
+          .prepare(
+            "UPDATE creator_payout_reservations SET status='consumed',resolved_at=? WHERE payout_request_id=? AND status='reserved'",
+          )
+          .bind(now, requestId),
+      );
+  if (!exactLinkage)
+    statements.push(
       database
         .prepare(
-          "UPDATE creator_payout_reservations SET status='consumed',resolved_at=? WHERE payout_request_id=? AND status='reserved'",
+          "INSERT INTO creator_financial_audit(creator_id,actor_type,actor_id,action,amount_cents,currency,context_json,created_at) VALUES(?,'operator',?,'payout_recorded',?,?,?,?)",
         )
-        .bind(now, requestId),
+        .bind(
+          creatorId,
+          actor,
+          amount,
+          currency,
+          JSON.stringify({ payoutId, requestId, reference: reason }),
+          now,
+        ),
     );
-  statements.push(
-    database
-      .prepare(
-        "INSERT INTO creator_financial_audit(creator_id,actor_type,actor_id,action,amount_cents,currency,context_json,created_at) VALUES(?,'operator',?,'payout_recorded',?,?,?,?)",
-      )
-      .bind(
-        creatorId,
-        actor,
-        amount,
-        currency,
-        JSON.stringify({ payoutId, requestId, reference: reason }),
-        now,
-      ),
-  );
   await database.batch(statements);
   return { payoutId, payoutRequestId: requestId, amountCents: amount };
 }
@@ -655,6 +690,24 @@ export async function reconcileCreatorFinance(database) {
   );
   for (const row of orphans)
     exceptions.push({ code: "ledger_missing_order", ...row });
+  try {
+    const unpairedPayouts = await rows(
+      database.prepare(
+        "SELECT p.id payout_id,p.payout_request_id FROM creator_payouts p LEFT JOIN creator_payout_requests q ON q.id=p.payout_request_id LEFT JOIN creator_payout_reservations r ON r.payout_request_id=p.payout_request_id LEFT JOIN creator_earnings_ledger l ON l.payout_id=p.id AND l.payout_request_id=p.payout_request_id AND l.entry_type='payout' WHERE p.status='paid' AND (p.payout_request_id IS NULL OR COALESCE(q.status,'')<>'paid' OR COALESCE(r.status,'')<>'consumed' OR l.id IS NULL OR l.amount_cents<>-p.amount_cents)",
+      ),
+    );
+    for (const row of unpairedPayouts)
+      exceptions.push({ code: "completed_payout_integrity_mismatch", ...row });
+    const orphanPayoutLedger = await rows(
+      database.prepare(
+        "SELECT l.id ledger_id,l.payout_id,l.payout_request_id FROM creator_earnings_ledger l LEFT JOIN creator_payouts p ON p.id=l.payout_id AND p.payout_request_id=l.payout_request_id WHERE l.entry_type='payout' AND (l.payout_id IS NULL OR l.payout_request_id IS NULL OR p.id IS NULL)",
+      ),
+    );
+    for (const row of orphanPayoutLedger)
+      exceptions.push({ code: "payout_ledger_integrity_mismatch", ...row });
+  } catch (error) {
+    if (!/no such column|no such table/i.test(String(error))) throw error;
+  }
   return exceptions;
 }
 export function statementCsv(creator, period, finance) {

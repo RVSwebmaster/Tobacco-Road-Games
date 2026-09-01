@@ -160,8 +160,69 @@ async function main() {
   assert.equal(payoutLedgerCount(raw, "hold50"), 0);
   assert.equal(reservationState(raw, hold50.requestId), "reserved");
   assert.throws(
-    () => directPayout(raw, "hold50", 8000, "db-hold50"),
+    () => directPayout(raw, "hold50", hold50.requestId, 8000, "db-hold50"),
     /blocked by current financial state/i,
+  );
+
+  creator(raw, "direct", "creator-direct");
+  earn(raw, "direct", 16000);
+  const directA = await liability.reserveCreatorPayout(db, {
+    creatorId: "direct",
+    amountCents: 8000,
+    nowMs: NOW,
+  });
+  directPayout(raw, "direct", directA.requestId, 8000, "direct-a");
+  assert.equal(payoutCount(raw, "direct"), 1);
+  assert.equal(payoutLedgerCount(raw, "direct"), 1);
+  assert.equal(reservationState(raw, directA.requestId), "consumed");
+  assert.equal(requestState(raw, directA.requestId), "paid");
+  assert.throws(
+    () =>
+      directPayout(
+        raw,
+        "direct",
+        directA.requestId,
+        8000,
+        "different-idempotency",
+      ),
+    /reservation|required|UNIQUE/i,
+  );
+  assert.equal(payoutCount(raw, "direct"), 1);
+  assert.equal(payoutLedgerCount(raw, "direct"), 1);
+  const directB = await liability.reserveCreatorPayout(db, {
+    creatorId: "direct",
+    amountCents: 8000,
+    nowMs: NOW,
+  });
+  directPayout(raw, "direct", directB.requestId, 8000, "direct-b");
+  assert.equal(payoutCount(raw, "direct"), 2);
+  assert.equal(payoutLedgerCount(raw, "direct"), 2);
+  assert.notEqual(directA.requestId, directB.requestId);
+  assert.equal(reservationState(raw, directB.requestId), "consumed");
+  assert.equal(requestState(raw, directB.requestId), "paid");
+
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,idempotency_key,created_at)VALUES('direct','payout',-1,'USD',?,'paid','forged','forged-ledger',?)",
+        )
+        .run(ISO, ISO),
+    /exact completed payout/i,
+  );
+  raw
+    .prepare(
+      "INSERT INTO creator_payouts(id,creator_id,amount_cents,currency,reference,status,idempotency_key,operator_actor,paid_at,created_at)VALUES('scheduled','direct',1,'USD','scheduled','scheduled','scheduled','owner',?,?)",
+    )
+    .run(ISO, ISO);
+  assert.throws(
+    () =>
+      raw
+        .prepare(
+          "UPDATE creator_payouts SET status='paid' WHERE id='scheduled'",
+        )
+        .run(),
+    /canonical atomic insertion/i,
   );
 
   raw
@@ -180,6 +241,13 @@ async function main() {
   assert.equal(payoutCount(raw, "hold50"), 1);
   assert.equal(payoutLedgerCount(raw, "hold50"), 1);
   assert.equal(reservationState(raw, hold50.requestId), "consumed");
+  assert.equal(
+    (await complete(finance, db, "hold50", hold50.requestId, "hold50"))
+      .idempotent,
+    true,
+  );
+  assert.equal(payoutCount(raw, "hold50"), 1);
+  assert.equal(payoutLedgerCount(raw, "hold50"), 1);
   assert.throws(
     () =>
       raw
@@ -254,7 +322,7 @@ async function main() {
   );
   dispute(raw, "db-race", "dispute-race", 5000);
   assert.throws(
-    () => directPayout(raw, "db-race", 8000, "db-race"),
+    () => directPayout(raw, "db-race", dbRace.requestId, 8000, "db-race"),
     /blocked by current financial state/i,
   );
 
@@ -290,7 +358,15 @@ async function main() {
     )
     .run(future);
   assert.throws(
-    () => directPayout(raw, "future", 8000, "future-direct", future),
+    () =>
+      directPayout(
+        raw,
+        "future",
+        "future-request",
+        8000,
+        "future-direct",
+        future,
+      ),
     /blocked by current financial state/i,
   );
   const html = fs.readFileSync(path.join(ROOT, "owner/finance.html"), "utf8"),
@@ -302,6 +378,7 @@ async function main() {
   assert.match(html, /Total Creator Liability|Creator Money/i);
   assert.match(js, /owner\/api\/finance/);
   assert.match(js, /completion blocked by current hold/);
+  assert.match(js, /FINANCIAL INTEGRITY EXCEPTION/);
   assert.match(api, /verifySessionToken/);
   console.log("Finance integrity and owner ledger tests passed.");
 }
@@ -325,12 +402,19 @@ function complete(finance, db, creatorId, requestId, key) {
     nowMs: NOW,
   });
 }
-function directPayout(raw, creatorId, amount, key, paidAt = ISO) {
+function directPayout(
+  raw,
+  creatorId,
+  payoutRequestId,
+  amount,
+  key,
+  paidAt = ISO,
+) {
   return raw
     .prepare(
-      "INSERT INTO creator_payouts(id,creator_id,amount_cents,currency,reference,idempotency_key,operator_actor,paid_at,created_at)VALUES(?,?,?,'USD',?,?,'owner',?,?)",
+      "INSERT INTO creator_payouts(id,creator_id,amount_cents,currency,reference,idempotency_key,operator_actor,paid_at,created_at,payout_request_id)VALUES(?,?,?,'USD',?,?,'owner',?,?,?)",
     )
-    .run(key, creatorId, amount, key, key, paidAt, ISO);
+    .run(key, creatorId, amount, key, key, paidAt, ISO, payoutRequestId);
 }
 function payoutCount(raw, creatorId) {
   return raw
@@ -349,6 +433,11 @@ function reservationState(raw, requestId) {
     .prepare(
       "SELECT status FROM creator_payout_reservations WHERE payout_request_id=?",
     )
+    .get(requestId).status;
+}
+function requestState(raw, requestId) {
+  return raw
+    .prepare("SELECT status FROM creator_payout_requests WHERE id=?")
     .get(requestId).status;
 }
 function creator(raw, id, slug) {

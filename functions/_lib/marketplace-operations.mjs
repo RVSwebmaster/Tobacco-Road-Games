@@ -708,8 +708,17 @@ export async function completePayout(
     )
     .bind(requestId)
     .first();
-  if (!request)
+  if (!request) {
+    const completed = await db
+      .prepare(
+        "SELECT p.id FROM creator_payouts p JOIN creator_payout_requests q ON q.id=p.payout_request_id WHERE p.payout_request_id=? AND p.status='paid' AND q.status='paid'",
+      )
+      .bind(requestId)
+      .first();
+    if (completed)
+      return { paid: true, externalTransferConfirmed: true, idempotent: true };
     throw fail("payout_unavailable", "Payout request is not pending.");
+  }
   await recordManualPayout(db, {
     creatorId: request.creator_id,
     amountCents: Number(request.amount_cents),

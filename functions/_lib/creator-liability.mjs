@@ -16,6 +16,7 @@ export async function getCreatorLiability(
 ) {
   const now = new Date(nowMs).toISOString(),
     code = String(currency).toUpperCase();
+  const exactPayoutLinkage = await payoutCompletionLinkageAvailable(db);
   const [
     ledger,
     internal,
@@ -72,7 +73,9 @@ export async function getCreatorLiability(
     firstOrZero(
       db
         .prepare(
-          "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_payouts WHERE creator_id=? AND currency=? AND status='paid'",
+          exactPayoutLinkage
+            ? "SELECT COALESCE(SUM(p.amount_cents),0) amount FROM creator_payouts p JOIN creator_payout_requests q ON q.id=p.payout_request_id AND q.status='paid' JOIN creator_payout_reservations r ON r.payout_request_id=p.payout_request_id AND r.status='consumed' JOIN creator_earnings_ledger l ON l.payout_id=p.id AND l.payout_request_id=p.payout_request_id AND l.entry_type='payout' AND l.amount_cents=-p.amount_cents WHERE p.creator_id=? AND p.currency=? AND p.status='paid'"
+            : "SELECT COALESCE(SUM(amount_cents),0) amount FROM creator_payouts WHERE creator_id=? AND currency=? AND status='paid'",
         )
         .bind(creatorId, code),
     ),
@@ -99,10 +102,7 @@ export async function getCreatorLiability(
     correctionRestorationCreditsCents: Number(internal?.credits || 0),
     ledgerAdjustmentsCents: Number(ledger?.adjustments || 0),
     negativeBalanceCents: Math.max(0, -signedNet),
-    completedPayoutsCents: Math.max(
-      amount(completed),
-      Number(ledger?.completed_payouts || 0),
-    ),
+    completedPayoutsCents: amount(completed),
     currentNetLiabilityCents: Math.max(0, signedNet),
     rawPayoutReservationCapacityCents: eligible,
     payoutEligibleCents: Math.max(0, eligible),
@@ -247,6 +247,18 @@ export async function payoutReservationSchemaAvailable(db) {
     return true;
   } catch (error) {
     if (/no such table/i.test(String(error))) return false;
+    throw error;
+  }
+}
+
+export async function payoutCompletionLinkageAvailable(db) {
+  try {
+    await db
+      .prepare("SELECT payout_request_id FROM creator_payouts LIMIT 1")
+      .first();
+    return true;
+  } catch (error) {
+    if (/no such column|no such table/i.test(String(error))) return false;
     throw error;
   }
 }

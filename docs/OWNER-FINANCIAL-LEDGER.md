@@ -12,6 +12,8 @@ Migration `039_creator_liability_reservation_integrity.sql` makes purchase and p
 
 A payout reservation prevents competing use and preserves payout intent, but it is not irrevocable authority to pay. Later holds, disputes, reversals, or other financial restrictions can block completion. Completion revalidates the reservation against unclamped current capacity, excluding its own reservation exactly once. Migration `040_payout_completion_financial_guard.sql` enforces the same invariant atomically when the completed payout row is inserted.
 
+Migration `041_exact_payout_completion_linkage.sql` makes the payout request ID the durable completion identity. A new paid payout is authoritative only when it is linked to one exact request, has one trigger-created payout-ledger debit, marks that request paid, consumes that reservation, and creates its immutable audit record in the same database statement. Unique indexes prevent reuse. Owner reconciliation reports mismatched legacy or corrupted payout/ledger state as a financial-integrity exception instead of choosing whichever total is larger.
+
 ## TRG revenue
 
 The report separates product commissions from service revenue (Preferred Creator fees, Ad Credits, and additional Creator identities), and separates Stripe-funded activity from Creator Balance-funded activity. Refund/reversal entries reduce recognized revenue. Authoritative processor fees and marketplace-responsible provider costs are shown separately. Unknown fees remain exceptions rather than estimates.
