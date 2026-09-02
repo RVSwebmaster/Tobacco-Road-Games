@@ -186,6 +186,8 @@ export async function reserveCreatorPayout(
     amountCents,
     currency = "USD",
     accountClosure = false,
+    closureRequestId = null,
+    closureActorId = null,
     requestId = crypto.randomUUID(),
     nowMs = Date.now(),
   } = {},
@@ -216,6 +218,8 @@ export async function reserveCreatorPayout(
         );
       if (amount <= 0)
         throw new Error("No positive Creator balance requires settlement.");
+      const request = await db.prepare("SELECT id FROM creator_closure_requests WHERE id=? AND creator_id=? AND state='closing' AND final_payout_request_id IS NULL").bind(String(closureRequestId || ""),creatorId).first();
+      if (!request) throw new Error("A matching unsettled Creator closure request is required.");
     }
   else assertOrdinaryPayoutAmount(amount, liability.payoutEligibleCents);
   const reservationsAvailable = await payoutReservationSchemaAvailable(db);
@@ -242,6 +246,12 @@ export async function reserveCreatorPayout(
           )
           .bind(requestId, creatorId, amount, now),
       );
+    if (accountClosure) {
+      statements.push(
+        db.prepare("UPDATE creator_closure_requests SET final_payout_request_id=?,updated_at=? WHERE id=? AND creator_id=? AND final_payout_request_id IS NULL").bind(requestId,now,closureRequestId,creatorId),
+        db.prepare("INSERT INTO creator_closure_audit(id,closure_request_id,creator_id,actor_user_id,action,context_json,created_at,payout_request_id) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),closureRequestId,creatorId,closureActorId||null,"final_settlement_requested",JSON.stringify({amountCents:amount}),now,requestId),
+      );
+    }
     await db.batch(statements);
   } catch (error) {
     throw new Error(
