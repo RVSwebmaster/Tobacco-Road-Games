@@ -15,16 +15,48 @@ async function main() {
   const auth = await importModule("functions/_lib/office-mutation-auth.mjs");
   const api = await importModule("functions/_lib/office-api.mjs");
   const access = await importModule("functions/_lib/office-access.mjs");
+  const middleware = await importModule("functions/_lib/office-middleware.mjs");
 
   await testSchemaAndRecovery(d1);
   await testChecksumAndImmutability(storageModule);
   testAccessFallback(access);
+  await testNormalEntryRedirect(middleware);
   await testAuthorizationAndApi(api, auth);
   assertNoDeleteAuthority();
   assertStorageBoundary();
   assertBrowserHashing();
+  assertOfficeNavigationLinks();
   assertProjectTrashUi();
   console.log("TRG Office tests passed.");
+}
+
+async function testNormalEntryRedirect(middleware) {
+  for (const hostname of ["tobaccoroadgames.com", "www.tobaccoroadgames.com"]) {
+    const response = await middleware.handleOfficeMiddleware({
+      env: {},
+      next: () => { throw new Error("The normal Office entry must redirect before application routing."); },
+      request: new Request(`https://${hostname}/office/folder/example?view=details`)
+    });
+    assert.equal(response.status, 307);
+    assert.equal(response.headers.get("location"), "https://office-staging.tobaccoroadgames.com/office/folder/example?view=details");
+    assert.equal(response.headers.get("cache-control"), "private, no-store");
+  }
+
+  const secureResponse = await middleware.handleOfficeMiddleware({
+    env: {},
+    next: () => { throw new Error("An unauthenticated secure Office request must not reach the archive."); },
+    request: new Request("https://office-staging.tobaccoroadgames.com/office/")
+  });
+  assert.equal(secureResponse.status, 403);
+  assert.doesNotMatch(await secureResponse.text(), /tobacco-road-games-staging\.pages\.dev/);
+
+  const mutationResponse = await middleware.handleOfficeMiddleware({
+    env: {},
+    next: () => { throw new Error("An unconfigured normal-host mutation must fail closed."); },
+    request: new Request("https://tobaccoroadgames.com/office/api/projects", { method: "POST" })
+  });
+  assert.equal(mutationResponse.status, 503);
+  assert.equal(mutationResponse.headers.get("location"), null);
 }
 
 function testAccessFallback(access) {
@@ -351,6 +383,15 @@ function assertBrowserHashing() {
   assert.match(source, /\.\.\.item\.uploadHeaders/);
   assert.match(source, /"x-csrf-token": cookie\("trg_office_csrf"\)/);
   assert.match(source, /\/complete/);
+}
+
+function assertOfficeNavigationLinks() {
+  for (const relative of ["owner/index.html", "scripts/trg-remote.cs"]) {
+    const source = fs.readFileSync(path.join(ROOT, relative), "utf8");
+    assert.match(source, /https:\/\/office-staging\.tobaccoroadgames\.com\/office\//);
+    assert.doesNotMatch(source, /https:\/\/tobacco-road-games-staging\.pages\.dev\/office\//);
+    assert.doesNotMatch(source, /https:\/\/(?:www\.)?tobaccoroadgames\.com\/office\//);
+  }
 }
 
 function assertProjectTrashUi() {

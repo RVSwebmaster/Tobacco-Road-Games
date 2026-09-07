@@ -98,7 +98,9 @@ Games Pages project.
 
 After an approved staging deployment:
 
-1. Verify `/office/` redirects through Access when signed out.
+1. Verify `https://tobaccoroadgames.com/office/` redirects to
+   `https://office-staging.tobaccoroadgames.com/office/`, then through Access
+   when signed out.
 2. Verify a non-owner Access identity is denied.
 3. Create a project and nested folder.
 4. Batch-upload two files through the Worker.
