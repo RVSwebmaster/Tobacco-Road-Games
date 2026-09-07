@@ -119,11 +119,12 @@ export async function handleCreatorBalanceRequest(
       { error: "Use the verified email address on your signed-in account." },
       403,
     );
-  const resolution = resolvePendingOrderItems(
-    parsed.body.items,
-    options.catalogMap || getRuntimeCatalogMap(),
-    { now: options.nowMs || Date.now() },
-  );
+  const catalogMap = options.catalogMap || getRuntimeCatalogMap(),
+    resolution = resolvePendingOrderItems(
+      parsed.body.items,
+      catalogMap,
+      { now: options.nowMs || Date.now() },
+    );
   if (
     resolution.unavailableItems.length ||
     !resolution.items.length ||
@@ -197,6 +198,9 @@ export async function handleCreatorBalanceRequest(
       currency: resolution.currency,
       items: resolution.itemSnapshots,
       deliveryMappings: mappings,
+      catalogProducts: resolution.items.map((item) =>
+        catalogMap.get(item.productSlug),
+      ),
       nowMs: options.nowMs || Date.now(),
       env,
     });

@@ -1,5 +1,9 @@
 import { getCreatorBalance } from "./creator-balance.mjs";
 import { preparePreferredBalanceSettlement } from "./preferred-billing.mjs";
+import {
+  assertCreatorInternalPurchasePrivilege,
+  assertPreferredRenewalPrivilege,
+} from "./creator-internal-purchase-policy.mjs";
 export const SERVICE_PRICING = Object.freeze({
   preferred_monthly: {
     serviceType: "preferred_creator_fee",
@@ -203,6 +207,14 @@ export async function purchaseServiceWithCreatorBalance(
       amountCents: existing.amount_cents,
       idempotent: true,
     };
+  const privilege =
+    price.serviceType === "preferred_creator_fee"
+      ? await assertPreferredRenewalPrivilege(db, { creatorId, nowMs })
+      : await assertCreatorInternalPurchasePrivilege(db, {
+          creatorId,
+          userId,
+          nowMs,
+        });
   if (price.serviceType === "additional_creator_identity_fee") {
     const identity = await db
       .prepare(
@@ -396,7 +408,13 @@ export async function purchaseServiceWithCreatorBalance(
         userId,
         creatorId,
         price.amountCents,
-        JSON.stringify({ purchaseId, serviceType: price.serviceType, sku }),
+        JSON.stringify({
+          purchaseId,
+          serviceType: price.serviceType,
+          sku,
+          preferred: Boolean(privilege.preferred),
+          ownerException: Boolean(privilege.ownerException),
+        }),
         now,
       ),
   );

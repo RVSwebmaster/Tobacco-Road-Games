@@ -19,6 +19,7 @@ async function main() {
   for (const [id, email] of [
     ["buyer", "buyer@test.invalid"],
     ["seller", "seller@test.invalid"],
+    ["standard", "standard@test.invalid"],
   ])
     raw
       .prepare(
@@ -28,6 +29,7 @@ async function main() {
   for (const [id, slug, user] of [
     ["buyer-c", "buyer-creator", "buyer"],
     ["seller-c", "seller-creator", "seller"],
+    ["standard-c", "standard-creator", "standard"],
   ]) {
     raw
       .prepare(
@@ -42,9 +44,19 @@ async function main() {
   }
   raw
     .prepare(
-      "INSERT INTO creator_listings(id,creator_id,slug,source_product_slug,title,publication_state,first_published_at,created_at,updated_at)VALUES('listing','seller-c','product','product','Product','published',?,?,?)",
+      "INSERT INTO creator_listings(id,creator_id,slug,source_product_slug,title,lifecycle_state,publication_state,first_published_at,created_at,updated_at)VALUES('listing','seller-c','product','product','Product','active','published',?,?,?)",
     )
     .run("2025-01-01T00:00:00.000Z", ISO, ISO);
+  raw
+    .prepare(
+      "INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at)VALUES('buyer-preferred','buyer-c','annual_prepaid',20000,'2026-01-01T00:00:00.000Z','2027-01-01T00:00:00.000Z','renews','active',?,?)",
+    )
+    .run(ISO, ISO);
+  raw
+    .prepare(
+      "INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,idempotency_key,created_at)VALUES('standard-c','manual_adjustment',2000,'USD',?,'available','test','standard-opening',?)",
+    )
+    .run(ISO, ISO);
   raw
     .prepare(
       "INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,idempotency_key,created_at)VALUES('buyer-c','manual_adjustment',2000,'USD',?,'available','test','opening',?)",
@@ -69,6 +81,12 @@ async function main() {
       customerFilename: "Product.pdf",
       contentType: "application/pdf",
       objectSize: 100,
+    },
+    catalogProduct = {
+      slug: "product",
+      creatorId: "seller-c",
+      mediaType: "digital",
+      fulfillmentEligible: true,
     };
   let b = await mod.getCreatorBalance(db, {
     creatorId: "buyer-c",
@@ -76,6 +94,27 @@ async function main() {
     nowMs: NOW,
   });
   assert.equal(b.availableCents, 2000);
+  await assert.rejects(
+    () =>
+      mod.settleCreatorBalancePurchase(db, {
+        buyerCreatorId: "standard-c",
+        buyerUserId: "standard",
+        checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000000",
+        orderPublicId: "TRG-CB-STANDARD",
+        email: "standard@test.invalid",
+        emailHash: "standard-hash",
+        items: [item],
+        deliveryMappings: [map],
+        catalogProducts: [catalogProduct],
+        nowMs: NOW,
+      }),
+    /active Preferred Creator account is required/,
+  );
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM orders").get().n, 0);
+  assert.equal(
+    raw.prepare("SELECT COUNT(*) n FROM creator_balance_reservations").get().n,
+    0,
+  );
   const sale = await mod.settleCreatorBalancePurchase(db, {
     buyerCreatorId: "buyer-c",
     buyerUserId: "buyer",
@@ -85,6 +124,7 @@ async function main() {
     emailHash: "hash",
     items: [item],
     deliveryMappings: [map],
+    catalogProducts: [catalogProduct],
     nowMs: NOW,
     env: { CREATOR_PAYOUT_RESERVE_DAYS: "30" },
   });
@@ -133,6 +173,7 @@ async function main() {
     emailHash: "hash",
     items: [item],
     deliveryMappings: [map],
+    catalogProducts: [catalogProduct],
     nowMs: NOW,
   });
   assert.equal(again.idempotent, true);
@@ -147,6 +188,7 @@ async function main() {
         emailHash: "hash",
         items: [{ ...item, lineTotalCents: 1001 }],
         deliveryMappings: [map],
+        catalogProducts: [catalogProduct],
         nowMs: NOW,
       }),
     /does not cover/,

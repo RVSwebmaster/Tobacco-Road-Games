@@ -16,7 +16,7 @@ async function main() {
     ads = await load("functions/_lib/creator-advertising.mjs");
   seed(raw);
   let state = await ads.getAdvertising(db, "creator", { nowMs: NOW });
-  assert.equal(state.includedEntitlement, 1);
+  assert.equal(state.includedEntitlement, 5);
   assert.equal(state.unusedCredits, 0);
   const monthly = await service.purchaseServiceWithCreatorBalance(db, {
     creatorId: "creator",
@@ -166,6 +166,11 @@ function seed(raw) {
   raw
     .prepare(
       "INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,available_at,payout_state,reason,idempotency_key,created_at)VALUES('creator','manual_adjustment',2500,'USD',?,'available','fixture','balance',?)",
+    )
+    .run(ISO, ISO);
+  raw
+    .prepare(
+      "INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at)VALUES('existing-preferred','creator','annual_prepaid',20000,'2026-01-01T00:00:00.000Z','2027-01-01T00:00:00.000Z','renews','active',?,?)",
     )
     .run(ISO, ISO);
   for (const [id, slug] of [
