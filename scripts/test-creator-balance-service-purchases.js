@@ -170,9 +170,32 @@ function seed(raw) {
     .run(ISO, ISO);
   raw
     .prepare(
-      "INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at)VALUES('existing-preferred','creator','annual_prepaid',20000,'2026-01-01T00:00:00.000Z','2027-01-01T00:00:00.000Z','renews','active',?,?)",
+      "INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at)VALUES('existing-preferred','creator','monthly_commitment',2000,'2026-08-31T12:00:00.000Z','2027-08-31T12:00:00.000Z','renews','active',?,?)",
     )
     .run(ISO, ISO);
+  raw
+    .prepare(
+      "INSERT INTO preferred_billing_commitments(id,preferred_term_id,creator_id,owner_user_id,plan_type,commitment_starts_at,commitment_ends_at,paid_through_at,normal_payment_source,billing_state,renewal_state,grace_days,created_at,updated_at)VALUES('monthly-commitment','existing-preferred','creator','user','monthly_commitment','2026-08-31T12:00:00.000Z','2027-08-31T12:00:00.000Z','2026-09-30T12:00:00.000Z','stripe','current','renewal_decision_required',7,?,?)",
+    )
+    .run(ISO, ISO);
+  for (const [number, dueAt, coverageEnd] of [
+    [1, "2026-08-31T12:00:00.000Z", "2026-09-30T12:00:00.000Z"],
+    [2, "2026-09-30T12:00:00.000Z", "2026-10-31T12:00:00.000Z"],
+  ])
+    raw
+      .prepare(
+        "INSERT INTO preferred_billing_installments(id,commitment_id,installment_number,amount_cents,due_at,coverage_starts_at,coverage_ends_at,status,grace_ends_at,created_at,updated_at)VALUES(?, 'monthly-commitment',?,2000,?,?,?,'scheduled',?,?,?)",
+      )
+      .run(
+        `monthly-installment-${number}`,
+        number,
+        dueAt,
+        dueAt,
+        coverageEnd,
+        new Date(Date.parse(dueAt) + 7 * 86400000).toISOString(),
+        ISO,
+        ISO,
+      );
   for (const [id, slug] of [
     ["listing-1", "one"],
     ["listing-2", "two"],

@@ -1,5 +1,6 @@
 import { createStripeHostedCheckoutSession } from "./stripe-checkout.mjs";
 import { validateStripeKey } from "./stripe-checkout.mjs";
+import { getCreatorTier } from "./marketplace-policy.mjs";
 
 export const PREFERRED_BILLING = Object.freeze({
   monthlyInstallmentCents: 2000,
@@ -35,6 +36,59 @@ export async function getPreferredBillingState(db, creatorId, nowMs = Date.now()
     paidCount: installments.filter((x) => x.status === "paid").length,
     outstandingCount: installments.filter((x) => x.status !== "paid" && x.status !== "cancelled").length,
   };
+}
+
+export async function getPreferredBalancePaymentEligibility(
+  db,
+  { creatorId, creatorEligible = true, nowMs = Date.now() } = {},
+) {
+  const [tier, billing] = await Promise.all([
+    getCreatorTier(db, creatorId, nowMs),
+    getPreferredBillingState(db, creatorId, nowMs),
+  ]);
+  const preferred = Boolean(tier.preferred),
+    currentlyEligible = Boolean(creatorEligible),
+    monthlyEligible = Boolean(
+      preferred &&
+        currentlyEligible &&
+        billing.commitment?.plan_type === "monthly_commitment" &&
+        billing.currentInstallment,
+    ),
+    annualRenewalEligible = Boolean(preferred && currentlyEligible);
+  return {
+    canUseBalance: monthlyEligible || annualRenewalEligible,
+    preferred,
+    monthlyEligible,
+    annualRenewalEligible,
+    billing,
+  };
+}
+
+export async function assertPreferredBalancePaymentEligibility(
+  db,
+  { creatorId, cadence, creatorEligible = true, nowMs = Date.now() } = {},
+) {
+  const eligibility = await getPreferredBalancePaymentEligibility(db, {
+    creatorId,
+    creatorEligible,
+    nowMs,
+  });
+  const allowed =
+    cadence === "monthly_commitment"
+      ? eligibility.monthlyEligible
+      : cadence === "annual_prepaid"
+        ? eligibility.annualRenewalEligible
+        : false;
+  if (!allowed) {
+    if (!eligibility.preferred)
+      throw new Error(
+        "Initial Preferred activation requires external payment. Creator Balance is available only for an active Preferred renewal.",
+      );
+    throw new Error(
+      "That Preferred plan is not eligible for Creator Balance in the current billing state.",
+    );
+  }
+  return eligibility;
 }
 
 export async function preparePreferredBalanceSettlement(db, {

@@ -4,9 +4,14 @@
   const status = root.querySelector("[data-creator-balance-status]"),
     button = root.querySelector("[data-creator-balance-submit]"),
     feedback = root.querySelector("[data-creator-balance-feedback]"),
-    externalFeedback = document.querySelector("[data-cart-checkout-feedback]");
+    externalFeedback = document.querySelector("[data-cart-checkout-feedback]"),
+    identityControl = document.querySelector("[data-creator-payment-identity]"),
+    identitySelect = document.querySelector(
+      "[data-creator-payment-identity-select]",
+    );
   let csrf = "",
     email = "",
+    selectedCreatorId = "",
     currentTotalCents = 0,
     currentCheckoutReady = false,
     refreshNumber = 0;
@@ -22,9 +27,28 @@
       currentCheckoutReady = detail.checkoutReady;
     try {
       const me = await fetch("/api/account/me", { credentials: "same-origin", cache: "no-store" }).then((response) => response.json());
-      if (!me.authenticated) { root.hidden = true; return; }
+      if (!me.authenticated) {
+        root.hidden = true;
+        identityControl.hidden = true;
+        return;
+      }
       csrf = me.csrfToken || ""; email = me.user?.email || "";
+      const registrationResponse = await fetch("/api/creator-registration", {
+          credentials: "same-origin",
+          cache: "no-store",
+        }),
+        registration = registrationResponse.ok
+          ? await registrationResponse.json()
+          : { ownedCreators: [] },
+        identities = registration.ownedCreators || [];
+      selectCreatorIdentity(identities);
+      if (!selectedCreatorId) {
+        root.hidden = true;
+        identityControl.hidden = true;
+        return;
+      }
       const params = new URLSearchParams();
+      params.set("creator", selectedCreatorId);
       for (const item of cart.items) params.append("product", item.slug);
       const response = await fetch(`/api/creator-balance?${params}`, { credentials: "same-origin", cache: "no-store" });
       if (requestNumber !== refreshNumber) return;
@@ -56,7 +80,7 @@
       if (!cart?.items?.length) throw new Error("Add an item before checkout.");
       const entered = document.querySelector("[data-cart-email]")?.value.trim() || email,
         confirmation = document.querySelector("[data-cart-email-confirmation]")?.value.trim() || entered,
-        response = await fetch("/api/creator-balance", {
+        response = await fetch(`/api/creator-balance?creator=${encodeURIComponent(selectedCreatorId)}`, {
           method: "POST", credentials: "same-origin",
           headers: { "content-type": "application/json", "x-csrf-token": csrf },
           body: JSON.stringify({ items: cart.items.map(({ slug, quantity, amountCents }) => ({ slug, quantity, amountCents })), email: entered, emailConfirmation: confirmation, checkoutAttemptId: `trgca_${crypto.randomUUID()}`, paymentSource: "creator_balance" }),
@@ -76,5 +100,45 @@
       if (externalFeedback) externalFeedback.textContent = `${message} Review the refreshed payment options below.`;
     }
   });
+  identitySelect.addEventListener("change", () => {
+    selectedCreatorId = identitySelect.value;
+    rememberCreatorIdentity(selectedCreatorId);
+    void refresh({
+      checkoutReady: currentCheckoutReady,
+      totalCents: currentTotalCents,
+    });
+  });
+  function selectCreatorIdentity(identities) {
+    const stored = readCreatorIdentity(),
+      selected =
+        identities.find((creator) => creator.id === selectedCreatorId) ||
+        identities.find((creator) => creator.id === stored) ||
+        identities[0] ||
+        null;
+    selectedCreatorId = selected?.id || "";
+    identitySelect.replaceChildren(
+      ...identities.map((creator) => {
+        const option = document.createElement("option");
+        option.value = creator.id;
+        option.textContent = creator.displayName;
+        option.selected = creator.id === selectedCreatorId;
+        return option;
+      }),
+    );
+    identityControl.hidden = identities.length < 2;
+    if (selectedCreatorId) rememberCreatorIdentity(selectedCreatorId);
+  }
+  function readCreatorIdentity() {
+    try {
+      return localStorage.getItem("trg_current_creator_identity") || "";
+    } catch {
+      return "";
+    }
+  }
+  function rememberCreatorIdentity(creatorId) {
+    try {
+      localStorage.setItem("trg_current_creator_identity", creatorId);
+    } catch {}
+  }
   void refresh();
 })();

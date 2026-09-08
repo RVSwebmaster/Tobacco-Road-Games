@@ -4,8 +4,14 @@
     listingsPanel = document.querySelector("#creator-listings"),
     profilePanel = document.querySelector("#creator-profile");
   let csrf = "";
+  let currentCreatorId = "";
   let ownerAdjustmentKey = "";
   let ownerFinancialSnapshot = null;
+  function creatorApiUrl(path) {
+    const url = new URL(`/api/creator/${path}`, location.origin);
+    if (currentCreatorId) url.searchParams.set("creator", currentCreatorId);
+    return `${url.pathname}${url.search}`;
+  }
   async function api(path, body) {
     if (
       body &&
@@ -25,7 +31,7 @@
         licensesConfirmed: true,
       };
     }
-    const response = await fetch(`/api/creator/${path}`, {
+    const response = await fetch(creatorApiUrl(path), {
       method: body ? "POST" : "GET",
       credentials: "same-origin",
       headers: body
@@ -45,9 +51,21 @@
       credentials: "same-origin",
     }).then((r) => r.json());
     csrf = account.csrfToken || "";
-    const [summary, profileData, finance, operations, preferred, closure] =
+    const identityOptions = await api("identity-options"),
+      identities = identityOptions.creators || [],
+      requested = new URL(location.href).searchParams.get("creator") || "",
+      stored = readSelectedCreator();
+    currentCreatorId =
+      identities.find((creator) => creator.id === requested)?.id ||
+      identities.find((creator) => creator.id === stored)?.id ||
+      identities[0]?.id ||
+      "";
+    if (!currentCreatorId)
+      throw new Error("No authorized Creator identity is available.");
+    renderCreatorSelector(identities);
+    const summary = await api("overview"),
+      [profileData, finance, operations, preferred, closure] =
       await Promise.all([
-        api("overview"),
         api("profile"),
         api("finance"),
         api("operations"),
@@ -139,6 +157,42 @@
       );
     document.querySelector("#creator-advertising").hidden = false;
   }
+  function readSelectedCreator() {
+    try {
+      return localStorage.getItem("trg_current_creator_identity") || "";
+    } catch {
+      return "";
+    }
+  }
+  function rememberSelectedCreator(creatorId) {
+    try {
+      localStorage.setItem("trg_current_creator_identity", creatorId);
+    } catch {}
+  }
+  function renderCreatorSelector(identities) {
+    const control = document.querySelector("#creator-identity-control"),
+      selector = document.querySelector("#creator-identity-selector");
+    selector.replaceChildren(
+      ...identities.map((creator) => {
+        const option = document.createElement("option");
+        option.value = creator.id;
+        option.textContent = creator.displayName;
+        option.selected = creator.id === currentCreatorId;
+        return option;
+      }),
+    );
+    control.hidden = identities.length < 2;
+    rememberSelectedCreator(currentCreatorId);
+  }
+  document
+    .querySelector("#creator-identity-selector")
+    .addEventListener("change", (event) => {
+      const creatorId = event.currentTarget.value;
+      rememberSelectedCreator(creatorId);
+      const url = new URL(location.href);
+      url.searchParams.set("creator", creatorId);
+      location.assign(url.toString());
+    });
   function renderClosure(closure, money) {
     const panel = document.querySelector("#creator-closure");
     panel.hidden = false;
@@ -588,7 +642,7 @@
       event.preventDefault();
       const form = event.currentTarget;
       try {
-        const response = await fetch("/api/creator/advertising", {
+        const response = await fetch(creatorApiUrl("advertising"), {
             method: "POST",
             credentials: "same-origin",
             headers: { "x-csrf-token": csrf },
@@ -623,7 +677,10 @@
       const output = document.querySelector("#creator-connect-status");
       try {
         output.textContent = "Opening secure payout setup…";
-        const result = await api("connect", { action: "start" });
+        const result = await api("connect", {
+          action: "start",
+          creatorId: currentCreatorId,
+        });
         location.assign(result.onboardingUrl);
       } catch (error) {
         output.textContent = error.message;
@@ -634,7 +691,10 @@
     .addEventListener("click", async () => {
       const output = document.querySelector("#creator-connect-status");
       try {
-        const result = await api("connect", { action: "sync" });
+        const result = await api("connect", {
+          action: "sync",
+          creatorId: currentCreatorId,
+        });
         output.textContent =
           result.state === "ready"
             ? "Payout setup is ready."

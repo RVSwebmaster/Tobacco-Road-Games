@@ -82,7 +82,7 @@ async function main() {
       .length,
     2,
   );
-  assert.match(preferredRoute, /getCreatorTier/);
+  assert.match(preferredRoute, /getPreferredBalancePaymentEligibility/);
   assert.match(preferredRoute, /monthlyEligible/);
   assert.match(preferredRoute, /annualRenewalEligible/);
   assert.match(dashboard, /currentPreferred = Boolean\(balancePrivilege\.preferred\)/);
@@ -120,7 +120,7 @@ async function main() {
   // in presentation code.
   assert.match(balanceSettlement, /assertCreatorInternalPurchasePrivilege/);
   assert.match(balanceSettlement, /assertDigitalCreatorProduct/);
-  assert.match(serviceSettlement, /assertPreferredRenewalPrivilege/);
+  assert.match(serviceSettlement, /assertPreferredBalancePaymentEligibility/);
   assert.match(serviceSettlement, /assertCreatorInternalPurchasePrivilege/);
   assert.doesNotMatch(cart, /getCreatorTier|term_ends_at|creator-rv-sawyer/);
   assert.doesNotMatch(dashboard, /term_ends_at\s*[<>]=?|creator-rv-sawyer/);

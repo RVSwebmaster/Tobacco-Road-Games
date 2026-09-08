@@ -33,6 +33,7 @@ import {
 } from "./creator-closure.mjs";
 import {
   getPreferredBillingState,
+  getPreferredBalancePaymentEligibility,
   markPreferredDoNotRenew,
   preferredGraceDays,
   startAnnualPreferredCheckout,
@@ -42,7 +43,10 @@ import {
   purchaseServiceWithCreatorBalance,
   SERVICE_PRICING,
 } from "./creator-service-purchases.mjs";
-import { getCreatorTier } from "./marketplace-policy.mjs";
+import {
+  listCreatorMembershipIdentities,
+  selectCreatorIdentity,
+} from "./creator-identity-selection.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -65,6 +69,21 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       },
       401,
     );
+  const route = routePath(request);
+  if (request.method === "GET" && route === "identity-options") {
+    const identities = await listCreatorMembershipIdentities(
+      database,
+      session.user.id,
+    );
+    return json({
+      creators: identities.map((creator) => ({
+        id: creator.id,
+        slug: creator.slug,
+        displayName: creator.display_name,
+        permission: creator.permission,
+      })),
+    });
+  }
   const creator = await resolveCreator(database, session.user.id, request);
   if (!creator)
     return json(
@@ -76,7 +95,6 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       },
       403,
     );
-  const route = routePath(request);
   const readiness = await getCreatorOperationalEligibility(
     database,
     creator.id,
@@ -231,16 +249,15 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       userId: session.user.id,
       nowMs: options.nowMs,
     });
-    const billing = await getPreferredBillingState(
+    const internalPurchase = await getPreferredBalancePaymentEligibility(
         database,
-        creator.id,
-        options.nowMs || Date.now(),
+        {
+          creatorId: creator.id,
+          creatorEligible: readiness.eligible,
+          nowMs: options.nowMs || Date.now(),
+        },
       ),
-      tier = await getCreatorTier(
-        database,
-        creator.id,
-        options.nowMs || Date.now(),
-      );
+      billing = internalPurchase.billing;
     return json({
       term,
       billing,
@@ -255,15 +272,10 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
         ready: Boolean(readiness.paymentMethodReady),
       },
       internalPurchase: {
-        canUseBalance: Boolean(tier.preferred && readiness.eligible),
-        preferred: tier.preferred,
-        monthlyEligible: Boolean(
-          tier.preferred &&
-            readiness.eligible &&
-            billing.commitment?.plan_type === "monthly_commitment" &&
-            billing.currentInstallment,
-        ),
-        annualRenewalEligible: Boolean(tier.preferred && readiness.eligible),
+        canUseBalance: internalPurchase.canUseBalance,
+        preferred: internalPurchase.preferred,
+        monthlyEligible: internalPurchase.monthlyEligible,
+        annualRenewalEligible: internalPurchase.annualRenewalEligible,
       },
     });
   }
@@ -385,13 +397,7 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
 
 async function resolveCreator(db, userId, request) {
   const requested = new URL(request.url).searchParams.get("creator") || "";
-  const rows = await all(
-    db
-      .prepare(
-        `SELECT c.*, cm.permission, cm.user_id FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id WHERE cm.user_id=? ORDER BY c.display_name`,
-      )
-      .bind(userId),
-  );
+  const rows = await listCreatorMembershipIdentities(db, userId);
   for (const row of rows)
     row.marketplace_status =
       row.registration_status ||
@@ -400,10 +406,7 @@ async function resolveCreator(db, userId, request) {
       ] ||
       "incomplete";
   if (!rows.length) return null;
-  if (!requested) return rows[0];
-  return (
-    rows.find((row) => row.id === requested || row.slug === requested) || null
-  );
+  return selectCreatorIdentity(rows, requested);
 }
 async function overview(db, creator, readiness) {
   const counts = await db

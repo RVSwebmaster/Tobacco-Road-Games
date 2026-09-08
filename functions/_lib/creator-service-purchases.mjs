@@ -1,8 +1,10 @@
 import { getCreatorBalance } from "./creator-balance.mjs";
-import { preparePreferredBalanceSettlement } from "./preferred-billing.mjs";
+import {
+  assertPreferredBalancePaymentEligibility,
+  preparePreferredBalanceSettlement,
+} from "./preferred-billing.mjs";
 import {
   assertCreatorInternalPurchasePrivilege,
-  assertPreferredRenewalPrivilege,
 } from "./creator-internal-purchase-policy.mjs";
 export const SERVICE_PRICING = Object.freeze({
   preferred_monthly: {
@@ -209,7 +211,11 @@ export async function purchaseServiceWithCreatorBalance(
     };
   const privilege =
     price.serviceType === "preferred_creator_fee"
-      ? await assertPreferredRenewalPrivilege(db, { creatorId, nowMs })
+      ? await assertPreferredBalancePaymentEligibility(db, {
+          creatorId,
+          cadence: price.cadence,
+          nowMs,
+        })
       : await assertCreatorInternalPurchasePrivilege(db, {
           creatorId,
           userId,

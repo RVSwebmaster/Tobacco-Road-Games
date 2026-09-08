@@ -28,6 +28,7 @@ import {
   getCreatorInternalPurchasePrivilege,
   getEligibleCreatorProductListing,
 } from "./creator-internal-purchase-policy.mjs";
+import { resolveOwnedCreatorIdentity } from "./creator-identity-selection.mjs";
 
 export async function handleCreatorBalanceRequest(
   request,
@@ -45,19 +46,23 @@ export async function handleCreatorBalanceRequest(
       { error: "Sign in to use Creator Balance.", code: "not_authenticated" },
       401,
     );
-  const creator = await db
-    .prepare(
-      "SELECT c.* FROM marketplace_creators c JOIN creator_identity_ownership o ON o.creator_id=c.id WHERE o.owner_user_id=? ORDER BY c.created_at LIMIT 1",
-    )
-    .bind(session.user.id)
-    .first();
+  const requestedCreator = new URL(request.url).searchParams.get("creator"),
+    selection = await resolveOwnedCreatorIdentity(db, {
+      userId: session.user.id,
+      requestedCreator,
+    }),
+    creator = selection.creator;
   if (!creator)
     return json(
       {
-        error: "A registered Creator account is required.",
-        code: "creator_required",
+        error: selection.ambiguous
+          ? "Choose the Creator identity whose Balance you want to use."
+          : "That Creator identity is unavailable or is not owned by this account.",
+        code: selection.ambiguous
+          ? "creator_identity_required"
+          : "creator_access_denied",
       },
-      403,
+      selection.ambiguous ? 409 : 403,
     );
   const ready = await getCreatorOperationalEligibility(db, creator.id, {
     markInitialCompletion: false,
@@ -120,6 +125,11 @@ export async function handleCreatorBalanceRequest(
       ok: true,
       balance,
       internalPurchase: {
+        creator: {
+          id: creator.id,
+          slug: creator.slug,
+          displayName: creator.display_name,
+        },
         canUseBalance: Boolean(privilege.allowed && ready.eligible),
         products,
         allProductsEligible:
