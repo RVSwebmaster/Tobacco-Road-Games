@@ -109,7 +109,7 @@ function main() {
     }));
   }
 
-  writeFile("store/index.html", renderStoreHome(products, indexes));
+  writeFile("store/index.html", renderShelfStoreHome(products, indexes));
   writeFile("store/catalog/index.html", renderCatalogPage(products, indexes));
   writeFile("store/cart/index.html", renderCartPage(products));
 
@@ -853,11 +853,12 @@ function renderLayout({
   structuredData,
   extraScripts = [],
   metaRobots = "",
+  navItems = PUBLIC_NAV_ITEMS,
   content
 }) {
   const canonicalUrl = `${BASE_URL}${canonicalPath}`;
   const resolvedOgImage = `${BASE_URL}${ogImage || "/assets/logo.png"}`;
-  const nav = renderStoreNav(currentNav);
+  const nav = renderStoreNav(currentNav, navItems);
   const structuredDataBlocks = Array.isArray(structuredData)
     ? structuredData.filter(Boolean)
     : structuredData
@@ -918,8 +919,58 @@ function renderLayout({
 </html>`;
 }
 
-function renderStoreNav(currentNav) {
-  return renderSharedPublicNav(currentNav, "Store navigation");
+function renderStoreNav(currentNav, navItems = PUBLIC_NAV_ITEMS) {
+  return renderSharedPublicNav(currentNav, "Store navigation", navItems);
+}
+
+function renderShelfStoreHome(products, indexes) {
+  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
+  const openRules = products.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 12);
+  const newArrivals = chooseNewReleases(eligible).slice(0, 12);
+  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
+  return renderLayout({
+    pageTitle: `${STORE_TITLE} | Independent Tabletop Marketplace`,
+    description: "Browse independent tabletop games on the Tobacco Road Games shelf storefront.",
+    canonicalPath: "/store/",
+    ogImage: openRules[0]?.assetSet.cover || "/assets/logo.png",
+    currentNav: "store",
+    navItems: [
+      { key: "store", href: "/store/", label: "Browse" },
+      { key: "creators", href: "/authors.html", label: "Creators" },
+      { key: "search", href: "/store/#search-results-heading", label: "Search" },
+      { key: "account", href: "/account.html", label: "Account / My Library" },
+      { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
+    ],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST, "/assets/js/discovery-labels.js?v=" + CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + CACHE_BUST],
+    structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
+    content: `
+      <main id="top" class="shelf-storefront">
+        <section class="store-welcome" aria-labelledby="store-home-heading">
+          <p class="section-heading__kicker">Independent tabletop marketplace</p>
+          <h1 id="store-home-heading">Books worth pulling from the shelf.</h1>
+          <p>Browse by spine, turn a book toward you, and open its product page when you are ready for the full details.</p>
+        </section>
+        ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "TOBACCO ROAD GAMES: OPEN RULES", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules })}
+        <aside class="sponsor-marquee" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
+          <span class="sponsor-marquee__label">Paid Sponsors</span><div class="sponsor-marquee__viewport"><div class="sponsor-marquee__track" data-sponsor-track></div></div>
+        </aside>
+        ${renderBookshelfSection({ id: "new-releases-bookshelf-heading", kicker: "Just unpacked", title: "New Arrivals", description: "Recently released, currently eligible books in canonical marketplace order.", products: newArrivals })}
+        <section class="store-section discovery-bookshelf" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Customer demand</p><h2 id="best-sellers-shelf-heading">Best Sellers</h2><p>Shown only when current marketplace discovery data awards the Best Selling label.</p></div>
+          <div class="bookshelf-grid" style="--shelf-items: ${Math.max(1, eligible.length)}">${eligible.map((product) => renderBookshelfBook(product, { withDataset: true })).join("")}</div>
+          <p class="shelf-empty" data-discovery-empty hidden>No current title meets the public Best Seller threshold.</p>
+        </section>
+        ${renderBookshelfSection({ id: "pwyw-free-shelf-heading", kicker: "Choose your price", title: "PWYW & Free", description: "Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.", products: pwywFree })}
+        <section class="store-section search-shelves" data-search-results-section aria-labelledby="search-results-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Find a book</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
+          ${renderStoreBrowser(products, indexes, { browserId: "store-search-browser", showShelf: true, defaultSort: "title", countLabel: "matching titles", shelfHeading: "Search shelf", shelfDescription: "Matching books continue onto additional shelf rows.", gridHeading: "Accessible catalog view", gridDescription: "The same canonical results in a compact list." }).replace('data-store-browser="store-search-browser"', 'data-store-browser="store-search-browser" data-search-results="true"')}
+        </section>
+        <section class="store-lower" aria-labelledby="store-information-heading">
+          <div><p class="section-heading__kicker">Around the shop</p><h2 id="store-information-heading">Information, help, and community</h2><p>A quieter lower floor for marketplace notices, Creator resources, policies, and the roads beyond the shelves.</p></div>
+          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html">Creators</a><a href="/forum">Community</a><a href="/support.html">Customer Help</a><a href="/#about">About TRG</a><a href="/creator/">Creator Resources</a><a href="/account.html">Account &amp; Library</a><a href="/store/cart/">Cart</a><a href="/#commitment">Marketplace Principles</a></nav>
+        </section>
+      </main>`
+  }).replace(/[ \t]+$/gm, "");
 }
 
 function validateMarketplaceMetadata(product) {
@@ -1079,6 +1130,7 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
       </div>
       <div class="bookshelf-grid${compact ? " bookshelf-grid--compact" : ""}">
         ${products.map((product) => renderBookshelfBook(product, {
+          withDataset: true,
           forceOpenRight: forceOpenRightSlugSet.has(product.slug)
         })).join("")}
       </div>
@@ -1268,8 +1320,9 @@ function renderBookshelfBook(product, options = {}) {
           <span class="bookshelf-book__author">${escapeHtml(authorName)}</span>
         </span>
         <span class="bookshelf-book__cover-frame">
-          <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover">
+          <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover" loading="lazy" decoding="async">
         </span>
+        <span class="bookshelf-book__details"><strong>${escapeHtml(product.title)}</strong><span>${escapeHtml(authorName)}</span><span>${escapeHtml(renderCardPrice(product))}</span><span>${escapeHtml(renderCatalogMeta(product))}</span><small>${escapeHtml(product.shortDescription)}</small><em>Open product page</em></span>
         <span class="bookshelf-book__mobile">
           <span class="bookshelf-book__mobile-media">
             <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="">
@@ -1660,11 +1713,11 @@ function renderCreatorProfileAlias(creator) {
   });
 }
 
-function renderSharedPublicNav(currentNav, ariaLabel) {
+function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEMS) {
   const normalizedCurrent = currentNav === "authors" ? "creators" : currentNav === "catalog" ? "sales" : currentNav;
   return `
     <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}">
-      ${PUBLIC_NAV_ITEMS.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
+      ${navItems.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
     </nav>`;
 }
 

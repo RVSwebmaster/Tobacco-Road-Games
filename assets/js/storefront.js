@@ -109,7 +109,7 @@
   };
 
   const syncReviewHolds = async () => {
-    const targets = Array.from(document.querySelectorAll("[data-product-card][data-slug], [data-cart-add]"));
+    const targets = Array.from(document.querySelectorAll("[data-product-card][data-slug], .bookshelf-book[data-slug], [data-cart-add]"));
     const slugs = [...new Set(targets.map((item) => item.dataset.slug || item.dataset.cartAdd).filter(Boolean))];
     if (!slugs.length) return;
     try {
@@ -118,7 +118,7 @@
       const unavailable = new Set((await response.json()).unavailable || []);
       targets.forEach((item) => {
         const held = unavailable.has(item.dataset.slug || item.dataset.cartAdd);
-        if (item.matches("[data-product-card]")) item.dataset.ownerReviewHold = held ? "true" : "false";
+        if (item.matches("[data-product-card], .bookshelf-book")) { item.dataset.ownerReviewHold = held ? "true" : "false"; item.hidden = held; }
         if (item.matches("[data-cart-add]")) {
           item.disabled = held;
           item.title = held ? "This product is not currently available for sale." : "";
@@ -218,13 +218,14 @@
 
   const applyBrowser = (root) => {
     const state = collectState(root);
+    const searchOnly = root.dataset.searchResults === "true";
     const shelf = root.querySelector("[data-store-shelf]");
     const grid = root.querySelector("[data-store-grid]");
     const count = root.querySelector("[data-store-count]");
     const empty = root.querySelector("[data-store-empty]");
     const shelfItems = shelf ? Array.from(shelf.querySelectorAll("[data-product-card]")) : [];
     const gridItems = grid ? Array.from(grid.querySelectorAll("[data-product-card]")) : [];
-    const sortedGridItems = sortItems(gridItems.filter((item) => matchesFilters(item, state)), state.sortMode);
+    const sortedGridItems = sortItems(gridItems.filter((item) => (!searchOnly || state.query) && matchesFilters(item, state)), state.sortMode);
     const visibleSlugs = new Set(sortedGridItems.map((item) => item.dataset.slug));
 
     if (shelf) {
@@ -265,7 +266,14 @@
     }
 
     if (empty) {
-      empty.hidden = sortedGridItems.length !== 0;
+      empty.hidden = searchOnly && !state.query ? true : sortedGridItems.length !== 0;
+    }
+
+    if (searchOnly) {
+      const heading = document.querySelector("[data-search-results-heading]");
+      const prompt = document.querySelector("[data-search-results-prompt]");
+      if (heading) heading.textContent = state.query ? `Search Results — “${state.query}”` : "Search Results";
+      if (prompt) prompt.textContent = state.query ? `${sortedGridItems.length} canonical catalog match${sortedGridItems.length === 1 ? "" : "es"}.` : "Search the catalog by title, Creator, system, series, or tag.";
     }
 
     scheduleShelfEdgeRefresh();
@@ -290,6 +298,35 @@
   }
 
   syncReviewHolds();
+
+  const discoveryShelf = document.querySelector("[data-canonical-discovery-shelf]");
+  if (discoveryShelf) {
+    const label = discoveryShelf.dataset.canonicalDiscoveryShelf;
+    const books = Array.from(discoveryShelf.querySelectorAll(".bookshelf-book[data-slug]"));
+    Promise.all(books.map(async (book) => {
+      try {
+        const response = await fetch(`/api/discovery-labels?type=product&subject=${encodeURIComponent(book.dataset.slug)}`);
+        const payload = response.ok ? await response.json() : { labels: [] };
+        book.hidden = !(payload.labels || []).some((item) => item.id === label);
+      } catch { book.hidden = true; }
+    })).then(() => {
+      discoveryShelf.querySelector("[data-discovery-empty]").hidden = books.some((book) => !book.hidden);
+      scheduleShelfEdgeRefresh();
+    });
+  }
+
+  if (matchMedia("(hover: none), (pointer: coarse)").matches) {
+    document.querySelectorAll(".shelf-storefront .bookshelf-book").forEach((book) => book.addEventListener("click", (event) => {
+      if (!book.classList.contains("is-open")) {
+        event.preventDefault();
+        document.querySelectorAll(".bookshelf-book.is-open").forEach((other) => other.classList.remove("is-open"));
+        book.classList.add("is-open");
+      }
+    }));
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".bookshelf-book")) document.querySelectorAll(".bookshelf-book.is-open").forEach((book) => book.classList.remove("is-open"));
+    });
+  }
 
   window.addEventListener("resize", () => {
     syncResponsiveBrowserViews();
