@@ -42,6 +42,7 @@ import {
   purchaseServiceWithCreatorBalance,
   SERVICE_PRICING,
 } from "./creator-service-purchases.mjs";
+import { getCreatorTier } from "./marketplace-policy.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -231,10 +232,15 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       nowMs: options.nowMs,
     });
     const billing = await getPreferredBillingState(
-      database,
-      creator.id,
-      options.nowMs || Date.now(),
-    );
+        database,
+        creator.id,
+        options.nowMs || Date.now(),
+      ),
+      tier = await getCreatorTier(
+        database,
+        creator.id,
+        options.nowMs || Date.now(),
+      );
     return json({
       term,
       billing,
@@ -247,6 +253,17 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       automaticStripeInstallments: true,
       paymentMethod: {
         ready: Boolean(readiness.paymentMethodReady),
+      },
+      internalPurchase: {
+        canUseBalance: Boolean(tier.preferred && readiness.eligible),
+        preferred: tier.preferred,
+        monthlyEligible: Boolean(
+          tier.preferred &&
+            readiness.eligible &&
+            billing.commitment?.plan_type === "monthly_commitment" &&
+            billing.currentInstallment,
+        ),
+        annualRenewalEligible: Boolean(tier.preferred && readiness.eligible),
       },
     });
   }

@@ -15,6 +15,7 @@ import {
 import { purchaseServiceWithCreatorBalance } from "./creator-service-purchases.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
 import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
+import { getCreatorInternalPurchasePrivilege } from "./creator-internal-purchase-policy.mjs";
 export async function handleCreatorAdvertisingRequest(
   request,
   env = {},
@@ -55,7 +56,12 @@ export async function handleCreatorAdvertisingRequest(
       },
       403,
     );
-  if (request.method === "GET")
+  if (request.method === "GET") {
+    const privilege = await getCreatorInternalPurchasePrivilege(db, {
+      creatorId: creator.id,
+      userId: session.user.id,
+      nowMs: options.nowMs,
+    });
     return json({
       ...(await getAdvertising(db, creator.id, { nowMs: options.nowMs })),
       creatorBalance: await getCreatorBalance(db, {
@@ -63,7 +69,9 @@ export async function handleCreatorAdvertisingRequest(
         userId: session.user.id,
         nowMs: options.nowMs,
       }),
+      internalPurchase: { canUseBalance: Boolean(privilege.allowed && readiness.eligible) },
     });
+  }
   if (
     !validateSameOriginRequest(request) ||
     !(await validateSessionCsrf(request, session)).valid

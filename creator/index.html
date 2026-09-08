@@ -158,12 +158,14 @@
           <button
             class="button button--secondary"
             data-preferred-balance-plan="monthly_commitment"
+            hidden
           >
             Pay $20 Monthly Charge with Creator Balance
           </button>
           <button
             class="button button--secondary"
             data-preferred-balance-plan="annual_prepaid"
+            hidden
           >
             Pay $200 Annual Charge with Creator Balance
           </button>
@@ -176,6 +178,7 @@
           <button class="button button--secondary" id="creator-preferred-do-not-renew" hidden>
             Do Not Renew After Current Commitment
           </button>
+          <p class="account-help" id="creator-preferred-balance-guidance"></p>
           <p id="creator-preferred-status" role="status"></p>
         </section>
         <section class="account-card" id="creator-closure" hidden>
@@ -290,9 +293,11 @@
           <button
             class="button button--secondary"
             id="creator-buy-ad-credits-balance"
+            hidden
           >
             Pay $5 with Creator Balance
           </button>
+          <p class="account-help" id="creator-ad-balance-guidance"></p>
           <p class="account-help">Unused Ad Credits do not expire and remain until redeemed. Credits are not cash-equivalent or refundable merely for non-use. Advertising does not guarantee impressions, clicks, or sales.</p>
           <p id="creator-ad-status" role="status"></p>
         </section>

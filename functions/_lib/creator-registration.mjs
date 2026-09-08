@@ -10,6 +10,7 @@ import {
 import { getCreatorBalance } from "./creator-balance.mjs";
 import { purchaseServiceWithCreatorBalance } from "./creator-service-purchases.mjs";
 import { getCreatorTier } from "./marketplace-policy.mjs";
+import { getCreatorInternalPurchasePrivilege } from "./creator-internal-purchase-policy.mjs";
 export const CREATOR_AGREEMENT = Object.freeze({
   id: "trg-creator-marketplace-agreement",
   version: "2026-08-27",
@@ -627,6 +628,11 @@ async function registrationState(
         nowMs,
       }),
       tier = await getCreatorTier(db, creator.creator_id, nowMs);
+    const internalPurchase = await getCreatorInternalPurchasePrivilege(db, {
+      creatorId: creator.creator_id,
+      userId,
+      nowMs,
+    });
     ownedCreators.push({
       id: creator.creator_id,
       slug: creator.slug,
@@ -646,6 +652,9 @@ async function registrationState(
       preferred: {
         active: tier.preferred,
         termEndsAt: tier.term?.term_ends_at || null,
+      },
+      internalPurchase: {
+        canUseBalance: Boolean(internalPurchase.allowed && readiness.eligible),
       },
     });
   }

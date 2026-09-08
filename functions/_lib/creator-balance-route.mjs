@@ -24,6 +24,10 @@ import {
   assertNotFraudBlocked,
   findDuplicateDigitalOwnership,
 } from "./transaction-policy.mjs";
+import {
+  getCreatorInternalPurchasePrivilege,
+  getEligibleCreatorProductListing,
+} from "./creator-internal-purchase-policy.mjs";
 
 export async function handleCreatorBalanceRequest(
   request,
@@ -69,15 +73,61 @@ export async function handleCreatorBalanceRequest(
       },
       403,
     );
-  if (request.method === "GET")
-    return json({
-      ok: true,
-      balance: await getCreatorBalance(db, {
+  if (request.method === "GET") {
+    const balance = await getCreatorBalance(db, {
         creatorId: creator.id,
         userId: session.user.id,
         nowMs: options.nowMs,
       }),
+      privilege = await getCreatorInternalPurchasePrivilege(db, {
+        creatorId: creator.id,
+        userId: session.user.id,
+        nowMs: options.nowMs,
+      }),
+      catalogMap = options.catalogMap || getRuntimeCatalogMap(),
+      productSlugs = [
+        ...new Set(
+          new URL(request.url).searchParams
+            .getAll("product")
+            .map((value) => String(value).trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      ],
+      products = [];
+    for (const slug of productSlugs) {
+      const product = catalogMap.get(slug),
+        delivery = options.deliveryProducts?.[slug] || getDeliveryProduct(slug);
+      let eligible = false,
+        reason = "This product requires external checkout.";
+      try {
+        await getEligibleCreatorProductListing(db, {
+          product,
+          deliveryMapping: delivery,
+        });
+        const head =
+          delivery &&
+          (options.deliveryHeads?.[slug] ||
+            (await env.TRG_PRODUCTS?.head(delivery.r2ObjectKey)));
+        eligible = Boolean(head);
+        if (!head)
+          reason = "This product is not ready for secure internal delivery.";
+      } catch (error) {
+        reason = error.message;
+      }
+      products.push({ slug, eligible, reason });
+    }
+    return json({
+      ok: true,
+      balance,
+      internalPurchase: {
+        canUseBalance: Boolean(privilege.allowed && ready.eligible),
+        products,
+        allProductsEligible:
+          productSlugs.length > 0 &&
+          products.every((product) => product.eligible),
+      },
     });
+  }
   if (request.method !== "POST")
     return json({ error: "Method not allowed." }, 405);
   if (

@@ -71,3 +71,19 @@ export function assertDigitalCreatorProduct(product, deliveryMapping) {
       "Creator Balance is limited to internally fulfilled digital Creator products.",
     );
 }
+
+export async function getEligibleCreatorProductListing(
+  db,
+  { product, deliveryMapping } = {},
+) {
+  assertDigitalCreatorProduct(product, deliveryMapping);
+  const listing = await db
+    .prepare(
+      "SELECT id,creator_id,first_published_at FROM creator_listings WHERE creator_id=? AND lifecycle_state='active' AND publication_state='published' AND (source_product_slug=? OR public_product_slug=?) LIMIT 1",
+    )
+    .bind(product.creatorId, product.slug, product.slug)
+    .first();
+  if (!listing)
+    throw new Error("A cart product is not mapped to an active published Creator listing.");
+  return listing;
+}

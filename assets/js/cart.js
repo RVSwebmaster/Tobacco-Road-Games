@@ -586,6 +586,18 @@
     }
 
     updateCheckoutControls(nodes, state);
+    const view = nodes.pageRoot.ownerDocument?.defaultView || globalThis;
+    if (typeof view.CustomEvent === "function")
+      nodes.pageRoot.dispatchEvent(
+        new view.CustomEvent("trg:cart-rendered", {
+          bubbles: true,
+          detail: {
+            checkoutReady: model.checkoutReady,
+            productSlugs: model.items.map((item) => item.slug),
+            totalCents: model.totalCents,
+          },
+        }),
+      );
   }
 
   async function renderCartPage(documentRef, storage = getStorage(), options = {}) {

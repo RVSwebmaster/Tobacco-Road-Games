@@ -89,18 +89,22 @@
     document.querySelector("#creator-preferred-summary").textContent = commitment
       ? `${preferredBilling.active ? "Preferred active" : "Preferred billing needs attention"} · ${commitment.plan_type === "monthly_commitment" ? `installment ${Math.min((preferredBilling.paidCount || 0) + 1, 12)} of 12${currentInstallment ? ` · next $20 due ${formatDate(currentInstallment.due_at)}` : ""}` : "annual prepaid"} · paid through ${commitment.paid_through_at ? formatDate(commitment.paid_through_at) : "payment pending"} · billing ${commitment.billing_state} · renewal ${commitment.renewal_state.replaceAll("_", " ")} · Creator Balance ${money(preferred.balance.availableCents)} available. Creator Balance is never spent automatically.`
       : `Standard tier · Creator Balance ${money(preferred.balance.availableCents)} available. Choose a 12-month monthly commitment or annual prepaid coverage.`;
-    document.querySelector("#creator-preferred-monthly-stripe").hidden = Boolean(commitment);
-    document.querySelector("#creator-preferred-annual-stripe").hidden = Boolean(commitment);
+    const balancePrivilege = preferred.internalPurchase || {},
+      currentPreferred = Boolean(balancePrivilege.preferred);
+    document.querySelector("#creator-preferred-monthly-stripe").hidden = currentPreferred || Boolean(commitment);
+    document.querySelector("#creator-preferred-annual-stripe").hidden = currentPreferred || Boolean(commitment);
     document.querySelector("#creator-preferred-do-not-renew").hidden =
       !commitment || commitment.renewal_state === "do_not_renew";
-    for (const button of document.querySelectorAll(
-      "[data-preferred-balance-plan]",
-    ))
-      button.disabled =
-        preferred.balance.availableCents <
-        (button.dataset.preferredBalancePlan === "annual_prepaid"
-          ? 20000
-          : 2000);
+    for (const button of document.querySelectorAll("[data-preferred-balance-plan]")) {
+      const annual = button.dataset.preferredBalancePlan === "annual_prepaid",
+        eligible = annual ? balancePrivilege.annualRenewalEligible : balancePrivilege.monthlyEligible,
+        required = annual ? preferred.pricing.annualPrepaidCents : preferred.pricing.monthlyCommitmentCents;
+      button.hidden = !eligible;
+      button.disabled = !eligible || preferred.balance.availableCents < required;
+    }
+    document.querySelector("#creator-preferred-balance-guidance").textContent = currentPreferred
+      ? `Creator Balance: ${money(preferred.balance.availableCents)}. Eligible charges require full coverage; external payment is required when Balance is insufficient. Balance and card payment cannot be combined.`
+      : "Initial Preferred activation requires external payment.";
     renderOperations(operations);
     renderClosure(closure, money);
     fillProfile(profileData.creator);
@@ -344,8 +348,15 @@
   function renderAdvertising(data) {
     document.querySelector("#creator-ad-summary").textContent =
       `${data.tier} tier · ${data.includedEntitlement} included active slot${data.includedEntitlement === 1 ? "" : "s"} · ${data.slots.filter((x) => x.slot_type === "purchased").length} active credit-funded slots · ${data.unusedCredits} unused Ad Credits · Creator Balance $${(data.creatorBalance.availableCents / 100).toFixed(2)} available.`;
-    document.querySelector("#creator-buy-ad-credits-balance").disabled =
-      data.creatorBalance.availableCents < 500;
+    const balanceButton = document.querySelector("#creator-buy-ad-credits-balance"),
+      balanceAllowed = Boolean(data.internalPurchase?.canUseBalance);
+    balanceButton.hidden = !balanceAllowed;
+    balanceButton.disabled = !balanceAllowed || data.creatorBalance.availableCents < 500;
+    document.querySelector("#creator-ad-balance-guidance").textContent = balanceAllowed
+      ? data.creatorBalance.availableCents >= 500
+        ? "Use $5.00 from Creator Balance with no external card charge."
+        : `Creator Balance: $${(data.creatorBalance.availableCents / 100).toFixed(2)}. The full $5.00 is required, so use external payment.`
+      : "Ad Credits remain available through external payment.";
     const slots = document.querySelector("#creator-ad-slots");
     slots.replaceChildren(
       ...data.slots.map((slot) => {
@@ -478,6 +489,7 @@
         await load();
       } catch (error) {
         output.textContent = error.message;
+        await load();
       }
     });
   document
@@ -520,6 +532,7 @@
         await load();
       } catch (error) {
         output.textContent = error.message;
+        await load();
       }
     });
   document

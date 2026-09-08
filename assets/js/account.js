@@ -690,6 +690,8 @@
         details.textContent = billing.included
           ? `Primary identity · Included · No additional identity fee · ${preferred}`
           : `${billing.status === "current" ? "Current" : "Billing required"} · ${billing.billingPlan === "annual_prepaid" ? "Annual prepaid" : billing.billingPlan === "monthly" ? "Monthly" : "No plan"}${billing.coverageEndsAt ? ` · paid through ${new Date(billing.coverageEndsAt).toLocaleDateString()}` : ""} · ${preferred} (billed separately)`;
+        if (!billing.included && creator.internalPurchase?.canUseBalance)
+          details.textContent += ` · Creator Balance: $${(Number(creator.creatorBalanceAvailableCents || 0) / 100).toFixed(2)}`;
         card.append(title, details);
         if (!billing.included) {
           const actions = document.createElement("div");
@@ -709,8 +711,14 @@
             balance.dataset.identityBilling = "creator_balance";
             stripe.dataset.creatorId = balance.dataset.creatorId = creator.id;
             stripe.dataset.plan = balance.dataset.plan = plan;
-            balance.disabled = Number(creator.creatorBalanceAvailableCents) < cents;
-            actions.append(stripe, balance);
+            actions.append(stripe);
+            if (creator.internalPurchase?.canUseBalance) {
+              balance.disabled = Number(creator.creatorBalanceAvailableCents) < cents;
+              balance.title = balance.disabled
+                ? `The full ${(cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })} must be available. Split tender is not offered.`
+                : "No external card charge will be made.";
+              actions.append(balance);
+            }
           }
           card.append(actions);
         }
@@ -736,7 +744,9 @@
       if (payload.checkoutUrl) window.location.assign(payload.checkoutUrl);
       else await refreshRegistrationPanels();
     } catch (error) {
-      creatorRegistrationStatus.textContent = error.message;
+      const message = error.message;
+      await refreshRegistrationPanels();
+      creatorRegistrationStatus.textContent = message;
       button.disabled = false;
     }
   });
