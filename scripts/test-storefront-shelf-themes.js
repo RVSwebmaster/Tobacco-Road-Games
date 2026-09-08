@@ -20,28 +20,58 @@ assert.equal(themes.selectActiveTheme(new Date("2026-02-02T17:00:00Z"), [{ id: "
 
 const normal = themes.resolveShelfDressing({ shelfIndex: 2, shelfKey: "new-arrivals", theme: themes.DEFAULT_THEME });
 assert.equal(normal.eventSide, null);
-assert.equal(normal.left.kind, "default");
-assert.equal(normal.right.kind, "default");
-assert.notEqual(normal.left.asset, normal.right.asset, "Normal shelf edges should use an orderly mix.");
+assert.equal(normal.left.plant.asset, "plant");
+assert.equal(normal.right.plant.asset, "plant");
+assert.equal(normal.left.secondary.kind, "default");
+assert.equal(normal.right.secondary.kind, "default");
+assert.notEqual(normal.left.secondary.asset, normal.right.secondary.asset, "Normal shelf edges should use an orderly RPG mix.");
 
 const openRulesNormal = themes.resolveShelfDressing({ shelfIndex: 0, shelfKey: "open-rules", theme: themes.DEFAULT_THEME });
-assert.equal(openRulesNormal.left.asset, "best-seller-trophy");
-assert.equal([openRulesNormal.left, openRulesNormal.right].filter((item) => item.asset === "best-seller-trophy").length, 1);
+assert.equal(openRulesNormal.left.plant.asset, "plant");
+assert.equal(openRulesNormal.right.plant.asset, "plant");
+assert.equal(openRulesNormal.left.secondary.asset, "best-seller-trophy");
+assert.equal(openRulesNormal.right.secondary.asset, "best-seller-trophy");
+assert.equal(openRulesNormal.left.secondary.kind, "house");
+assert.equal(openRulesNormal.right.secondary.kind, "house");
 
 const fixtureEvent = { id: "fixture-event", name: "Fixture", priority: 50, enabled: true, schedule: { type: "always" }, decorations: ["pumpkin"] };
 const firstEventShelf = themes.resolveShelfDressing({ shelfIndex: 0, shelfKey: "new-arrivals", theme: fixtureEvent });
 const secondEventShelf = themes.resolveShelfDressing({ shelfIndex: 1, shelfKey: "best-sellers", theme: fixtureEvent });
 assert.equal(firstEventShelf.eventSide, "right");
-assert.equal(firstEventShelf.right.kind, "event");
-assert.equal(firstEventShelf.left.kind, "default");
+assert.equal(firstEventShelf.left.plant.asset, "plant");
+assert.equal(firstEventShelf.right.plant.asset, "plant");
+assert.equal(firstEventShelf.right.secondary.kind, "event");
+assert.equal(firstEventShelf.right.secondary.asset, "pumpkin");
+assert.equal(firstEventShelf.left.secondary.kind, "default");
 assert.equal(secondEventShelf.eventSide, "left");
-assert.equal(secondEventShelf.left.kind, "event");
-assert.equal(secondEventShelf.right.kind, "default");
+assert.equal(secondEventShelf.left.plant.asset, "plant");
+assert.equal(secondEventShelf.right.plant.asset, "plant");
+assert.equal(secondEventShelf.left.secondary.kind, "event");
+assert.equal(secondEventShelf.left.secondary.asset, "pumpkin");
+assert.equal(secondEventShelf.right.secondary.kind, "default");
 
 const openRulesEvent = themes.resolveShelfDressing({ shelfIndex: 0, shelfKey: "open-rules", theme: fixtureEvent });
-assert.equal(openRulesEvent.left.asset, "best-seller-trophy");
-assert.equal(openRulesEvent.right.kind, "event");
-assert.equal([openRulesEvent.left, openRulesEvent.right].filter((item) => item.asset === "best-seller-trophy").length, 1);
+assert.equal(openRulesEvent.eventSide, null);
+assert.equal(openRulesEvent.left.plant.asset, "plant");
+assert.equal(openRulesEvent.right.plant.asset, "plant");
+assert.equal(openRulesEvent.left.secondary.asset, "best-seller-trophy");
+assert.equal(openRulesEvent.right.secondary.asset, "best-seller-trophy");
+assert.notEqual(openRulesEvent.left.secondary.asset, "pumpkin");
+assert.notEqual(openRulesEvent.right.secondary.asset, "pumpkin");
+
+for (const theme of themes.THEMES) {
+  const ordinary = themes.resolveShelfDressing({ shelfIndex: 3, shelfKey: "search-results", theme });
+  assert.equal(ordinary.left.plant.asset, "plant", `${theme.id} must preserve the left plant.`);
+  assert.equal(ordinary.right.plant.asset, "plant", `${theme.id} must preserve the right plant.`);
+  assert.notEqual(ordinary.left.secondary.asset, "plant", `${theme.id} must not reuse the plant as secondary dressing.`);
+  assert.notEqual(ordinary.right.secondary.asset, "plant", `${theme.id} must not reuse the plant as secondary dressing.`);
+
+  const house = themes.resolveShelfDressing({ shelfIndex: 0, shelfKey: "open-rules", theme });
+  assert.equal(house.left.plant.asset, "plant", `${theme.id} must preserve the Open Rules left plant.`);
+  assert.equal(house.right.plant.asset, "plant", `${theme.id} must preserve the Open Rules right plant.`);
+  assert.equal(house.left.secondary.asset, "best-seller-trophy", `${theme.id} must preserve the Open Rules left trophy.`);
+  assert.equal(house.right.secondary.asset, "best-seller-trophy", `${theme.id} must preserve the Open Rules right trophy.`);
+}
 
 const overlap = themes.selectActiveTheme(new Date("2026-02-02T17:00:00Z"), [
   themes.DEFAULT_THEME,
@@ -68,24 +98,33 @@ for (const id of [
 
 const configuredAssets = new Set(themes.THEMES.flatMap((theme) => theme.decorations || []));
 configuredAssets.add("best-seller-trophy");
+configuredAssets.add("plant");
 for (const asset of configuredAssets) assert.match(sprite, new RegExp(`<symbol id="${asset}"`), `Missing sprite symbol: ${asset}`);
 
-assert.match(page, /storefront-shelf-themes\.js\?v=20260908-mockup-alignment1/);
-assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-mockup-alignment1/);
-assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-mockup-alignment1"/);
+assert.match(page, /storefront-shelf-themes\.js\?v=20260908-dressing-rules2/);
+assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-dressing-rules2/);
+assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-dressing-rules2"/);
 assert.match(build, /storefront-shelf-themes\.js/);
 assert.match(build, /storefront-shelf-dressing\.js/);
 assert.match(runtime, /aria-hidden/);
 assert.match(runtime, /MutationObserver/);
 assert.match(runtime, /resolveShelfDressing/);
+assert.match(runtime, /createIcon\(descriptor\.plant, "plant"\)/);
+assert.match(runtime, /createIcon\(descriptor\.secondary, "secondary"\)/);
+assert.match(runtime, /descriptor\.plant/);
+assert.match(runtime, /descriptor\.secondary/);
 assert.doesNotMatch(runtime, /addEventListener\(["']click|data-ad-pool|impression/);
 assert.match(css, /\.shelf-dressing\{[^}]*pointer-events:none/);
+assert.match(css, /\.shelf-dressing__object--plant\{width:29px;height:44px\}/);
+assert.match(css, /\.shelf-dressing__object--secondary\{width:34px;height:49px\}/);
 assert.match(css, /padding:18px 74px 26px/);
 assert.match(css, /@media\(max-width:900px\)[^{]*\{[\s\S]*?\.shelf-dressing\{display:none\}/);
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /bookshelf-book__placeholder/);
 assert.match(sponsor, /data-sponsor-track/);
 assert.match(sprite, /<symbol id="best-seller-trophy"/);
+assert.match(sprite, /<title>Tobacco Road Games trophy<\/title>/);
+assert.doesNotMatch(sprite, /<title>\s*TRG\b/i);
 assert.match(sprite, /<symbol id="sumo"/);
 assert.match(sprite, /<symbol id="basketball"/);
 assert.match(sprite, /<symbol id="easter-eggs"/);

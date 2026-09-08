@@ -11,22 +11,26 @@
     return headingId.replace(/-shelf-heading$|-heading$/, "");
   };
 
-  const createDecoration = (side, descriptor) => {
-    const slot = document.createElement("span");
-    slot.className = `shelf-dressing shelf-dressing--${side} shelf-dressing--${descriptor.kind}`;
-    slot.dataset.shelfDressingSide = side;
-    slot.dataset.shelfDressingAsset = descriptor.asset;
-    slot.setAttribute("aria-hidden", "true");
-
+  const createIcon = (descriptor, role) => {
     const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    icon.setAttribute("class", "shelf-dressing__object");
+    icon.setAttribute("class", `shelf-dressing__object shelf-dressing__object--${role} shelf-dressing__object--${descriptor.kind}`);
     icon.setAttribute("viewBox", "0 0 64 64");
     icon.setAttribute("focusable", "false");
     icon.setAttribute("aria-hidden", "true");
     const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
     use.setAttribute("href", descriptor.sprite);
     icon.appendChild(use);
-    slot.appendChild(icon);
+    return icon;
+  };
+
+  const createDecoration = (side, descriptor) => {
+    const slot = document.createElement("span");
+    slot.className = `shelf-dressing shelf-dressing--${side} shelf-dressing--${descriptor.secondary.kind}`;
+    slot.dataset.shelfDressingSide = side;
+    slot.dataset.shelfDressingPlant = descriptor.plant.asset;
+    slot.dataset.shelfDressingSecondary = descriptor.secondary.asset;
+    slot.setAttribute("aria-hidden", "true");
+    slot.append(createIcon(descriptor.plant, "plant"), createIcon(descriptor.secondary, "secondary"));
     return slot;
   };
 
@@ -38,7 +42,7 @@
     shelves.forEach((shelf, shelfIndex) => {
       const key = shelfKey(shelf);
       const dressing = themes.resolveShelfDressing({ shelfIndex, shelfKey: key, theme: activeTheme });
-      const signature = `${dressing.themeId}:${shelfIndex}:${key}:${dressing.left.asset}:${dressing.right.asset}`;
+      const signature = `${dressing.themeId}:${shelfIndex}:${key}:${dressing.left.plant.asset}:${dressing.left.secondary.asset}:${dressing.right.plant.asset}:${dressing.right.secondary.asset}`;
       if (shelf.dataset.shelfDressingSignature === signature && shelf.querySelectorAll(":scope > .shelf-dressing").length === 2) return;
 
       shelf.querySelectorAll(":scope > .shelf-dressing").forEach((decoration) => decoration.remove());

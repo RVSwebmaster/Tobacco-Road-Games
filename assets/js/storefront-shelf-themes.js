@@ -13,7 +13,7 @@
     priority: 0,
     enabled: true,
     schedule: { type: "always" },
-    decorations: ["dice", "knight", "dragon", "chest", "map-tube", "potion", "gm-screen", "game-books", "sci-fi", "plant", "bookend"]
+    decorations: ["dice", "knight", "dragon", "chest", "map-tube", "potion", "gm-screen", "game-books", "sci-fi", "bookend"]
   });
 
   // Variable-date events remain explicit configuration. Add approved date ranges here;
@@ -58,7 +58,7 @@
     ["dice", "dragon"],
     ["knight", "potion"],
     ["map-tube", "chest"],
-    ["plant", "gm-screen"],
+    ["potion", "gm-screen"],
     ["game-books", "sci-fi"],
     ["bookend", "dice"]
   ]);
@@ -126,25 +126,37 @@
     return Object.freeze({ asset, kind, sprite: `${SPRITE_PATH}#${asset}` });
   }
 
+  function sideDescriptor(secondaryAsset, secondaryKind = "default") {
+    return Object.freeze({
+      plant: objectDescriptor("plant", "plant"),
+      secondary: objectDescriptor(secondaryAsset, secondaryKind)
+    });
+  }
+
   function resolveShelfDressing({ shelfIndex = 0, shelfKey = "", theme = DEFAULT_THEME } = {}) {
     const isOpenRules = shelfKey === "open-rules";
     const isEvent = theme.id !== DEFAULT_THEME.id;
-    const eventSide = isEvent ? (shelfIndex % 2 === 0 ? "right" : "left") : null;
-    let left = objectDescriptor(defaultDecoration(shelfIndex, "left"));
-    let right = objectDescriptor(defaultDecoration(shelfIndex, "right"));
+    const eventSide = isEvent && !isOpenRules ? (shelfIndex % 2 === 0 ? "right" : "left") : null;
+    let leftSecondary = objectDescriptor(defaultDecoration(shelfIndex, "left"));
+    let rightSecondary = objectDescriptor(defaultDecoration(shelfIndex, "right"));
 
-    if (isEvent) {
+    if (eventSide) {
       const eventObject = objectDescriptor(eventDecoration(theme, shelfIndex, shelfKey), "event");
-      if (eventSide === "left") left = eventObject;
-      else right = eventObject;
+      if (eventSide === "left") leftSecondary = eventObject;
+      else rightSecondary = eventObject;
     }
 
     if (isOpenRules) {
-      left = objectDescriptor("best-seller-trophy", "house");
-      if (!isEvent) right = objectDescriptor(defaultDecoration(shelfIndex, "right"));
+      leftSecondary = objectDescriptor("best-seller-trophy", "house");
+      rightSecondary = objectDescriptor("best-seller-trophy", "house");
     }
 
-    return Object.freeze({ themeId: theme.id, eventSide, left, right });
+    return Object.freeze({
+      themeId: theme.id,
+      eventSide,
+      left: sideDescriptor(leftSecondary.asset, leftSecondary.kind),
+      right: sideDescriptor(rightSecondary.asset, rightSecondary.kind)
+    });
   }
 
   return Object.freeze({
