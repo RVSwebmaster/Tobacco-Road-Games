@@ -31,14 +31,14 @@
     const targets = Array.from(document.querySelectorAll(".bookshelf-grid"));
 
     targets.forEach((shelf) => {
-      const consistentLeftPopout = Boolean(shelf.closest(".shelf-storefront"));
+      const usesCenteredExamination = Boolean(shelf.closest(".shelf-storefront"));
       const rows = getBooksByRow(shelf);
 
       shelf.querySelectorAll(".bookshelf-book").forEach((item) => {
         item.classList.remove("bookshelf-book--edge-right");
       });
 
-      if (consistentLeftPopout) return;
+      if (usesCenteredExamination) return;
       rows.forEach((rowItems) => {
         const autoEdgeCandidates = rowItems.filter((item) => item.dataset.bookshelfForceRight !== "true");
 
@@ -317,20 +317,114 @@
     });
   }
 
-  if (matchMedia("(hover: none), (pointer: coarse)").matches) {
-    document.querySelectorAll(".shelf-storefront .bookshelf-book").forEach((book) => book.addEventListener("click", (event) => {
-      if (!book.classList.contains("is-open")) {
-        event.preventDefault();
-        document.querySelectorAll(".bookshelf-book.is-open").forEach((other) => other.classList.remove("is-open"));
-        book.classList.add("is-open");
-      }
-    }));
-    document.addEventListener("click", (event) => {
-      if (!event.target.closest(".bookshelf-book")) document.querySelectorAll(".bookshelf-book.is-open").forEach((book) => book.classList.remove("is-open"));
+  const examinationBooks = Array.from(document.querySelectorAll(".shelf-storefront .bookshelf-book"));
+  const touchLayoutQuery = matchMedia("(hover: none), (pointer: coarse)");
+  const reducedMotionQuery = matchMedia("(prefers-reduced-motion: reduce)");
+  let activeExamination = null;
+
+  const presentationRect = (book) => {
+    const parts = [book.querySelector(".bookshelf-book__cover-frame"), book.querySelector(".bookshelf-book__details")].filter(Boolean).map((part) => part.getBoundingClientRect());
+    return parts.reduce((box, part) => ({ left: Math.min(box.left, part.left), top: Math.min(box.top, part.top), right: Math.max(box.right, part.right), bottom: Math.max(box.bottom, part.bottom) }), parts[0] || book.getBoundingClientRect());
+  };
+  const contains = (rect, x, y, padding = 0) => x >= rect.left - padding && x <= rect.right + padding && y >= rect.top - padding && y <= rect.bottom + padding;
+  const inTransitZone = (origin, foreground, x, y) => {
+    if (contains(origin, x, y, 20) || contains(foreground, x, y, 20)) return true;
+    const start = { x: origin.left + origin.width / 2, y: origin.top + origin.height / 2 };
+    const end = { x: (foreground.left + foreground.right) / 2, y: (foreground.top + foreground.bottom) / 2 };
+    const delta = { x: end.x - start.x, y: end.y - start.y };
+    const lengthSquared = delta.x * delta.x + delta.y * delta.y;
+    const progress = lengthSquared ? Math.max(0, Math.min(1, ((x - start.x) * delta.x + (y - start.y) * delta.y) / lengthSquared)) : 0;
+    const center = { x: start.x + delta.x * progress, y: start.y + delta.y * progress };
+    const halfWidth = (origin.width / 2) * (1 - progress) + ((foreground.right - foreground.left) / 2) * progress + 28;
+    const halfHeight = (origin.height / 2) * (1 - progress) + ((foreground.bottom - foreground.top) / 2) * progress + 28;
+    return ((x - center.x) / halfWidth) ** 2 + ((y - center.y) / halfHeight) ** 2 <= 1;
+  };
+  const examinationCenter = (origin) => {
+    const header = document.querySelector(".site-header")?.getBoundingClientRect();
+    const marquee = document.querySelector("[data-sponsor-marquee]:not([hidden])")?.getBoundingClientRect();
+    let usableTop = Math.max(0, header?.bottom || 0);
+    if (marquee && marquee.top <= usableTop + 4) usableTop = Math.max(usableTop, marquee.bottom);
+    const mobileBias = touchLayoutQuery.matches ? Math.min(90, window.innerHeight * 0.1) : 0;
+    return { x: window.innerWidth / 2 - (origin.left + origin.width / 2), y: usableTop + (window.innerHeight - usableTop) / 2 - mobileBias - (origin.top + origin.height / 2) };
+  };
+  const finishExamination = (state = activeExamination) => {
+    if (!state) return;
+    state.book.classList.remove("is-examining", "is-returning");
+    state.book.removeAttribute("aria-expanded");
+    ["left", "top", "width", "height", "min-height", "--examination-x", "--examination-y", "--return-x", "--return-y"].forEach((property) => state.book.style.removeProperty(property));
+    state.placeholder.remove();
+    document.body.classList.remove("book-examination-active");
+    if (activeExamination === state) activeExamination = null;
+  };
+  const closeExamination = ({ immediate = false } = {}) => {
+    if (!activeExamination || activeExamination.returning) return;
+    const state = activeExamination;
+    const destination = state.placeholder.getBoundingClientRect();
+    state.book.style.setProperty("--return-x", `${destination.left - state.origin.left}px`);
+    state.book.style.setProperty("--return-y", `${destination.top - state.origin.top}px`);
+    state.book.removeAttribute("aria-expanded");
+    state.book.classList.add("is-returning");
+    state.phase = "returning";
+    state.returning = true;
+    if (immediate || reducedMotionQuery.matches) finishExamination(state);
+  };
+  const openExamination = (book, mode) => {
+    if (activeExamination?.book === book && !activeExamination.returning) return;
+    if (activeExamination) finishExamination(activeExamination);
+    const origin = book.getBoundingClientRect();
+    const placeholder = document.createElement("span");
+    placeholder.className = "bookshelf-book__placeholder";
+    placeholder.setAttribute("aria-hidden", "true");
+    placeholder.style.setProperty("--placeholder-width", `${origin.width}px`);
+    placeholder.style.setProperty("--placeholder-height", `${origin.height}px`);
+    book.before(placeholder);
+    book.style.left = `${origin.left}px`;
+    book.style.top = `${origin.top}px`;
+    book.style.width = `${origin.width}px`;
+    book.style.height = `${origin.height}px`;
+    book.style.minHeight = `${origin.height}px`;
+    const center = examinationCenter(origin);
+    book.style.setProperty("--examination-x", `${center.x}px`);
+    book.style.setProperty("--examination-y", `${center.y}px`);
+    book.classList.add("is-examining"); book.setAttribute("aria-expanded", "true");
+    document.body.classList.add("book-examination-active");
+    activeExamination = { book, mode, origin, placeholder, returning: false, phase: reducedMotionQuery.matches ? "foreground-ready" : "traveling" };
+  };
+
+  examinationBooks.forEach((book) => {
+    book.addEventListener("pointerenter", (event) => { if (!activeExamination && !touchLayoutQuery.matches && event.pointerType !== "touch") openExamination(book, "pointer"); });
+    book.addEventListener("focus", () => {
+      if (touchLayoutQuery.matches && !book.matches(":focus-visible")) return;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (document.activeElement === book) openExamination(book, "keyboard");
+      }));
     });
-  }
+    book.addEventListener("blur", () => { if (activeExamination?.mode === "keyboard") closeExamination(); });
+    book.addEventListener("click", (event) => {
+      if (touchLayoutQuery.matches && !book.classList.contains("is-examining")) { event.preventDefault(); openExamination(book, "touch"); }
+    });
+    book.addEventListener("transitionend", (event) => {
+      if (event.target !== book || event.propertyName !== "transform" || activeExamination?.book !== book) return;
+      if (activeExamination.returning) finishExamination(activeExamination);
+      else if (activeExamination.phase === "traveling") activeExamination.phase = "foreground-ready";
+    });
+  });
+  document.addEventListener("pointermove", (event) => {
+    if (!activeExamination || activeExamination.mode !== "pointer") return;
+    const foreground = presentationRect(activeExamination.book);
+    if (activeExamination.phase !== "traveling" && contains(foreground, event.clientX, event.clientY, 12)) { activeExamination.phase = "foreground"; return; }
+    if (activeExamination.phase === "foreground") { closeExamination(); return; }
+    if (!inTransitZone(activeExamination.origin, foreground, event.clientX, event.clientY)) closeExamination();
+  });
+  document.addEventListener("click", (event) => { if (activeExamination?.mode === "touch" && !event.target.closest(".bookshelf-book.is-examining")) closeExamination(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeExamination(); event.preventDefault(); } });
+  window.addEventListener("scroll", () => {
+    if (activeExamination?.mode === "keyboard" && activeExamination.phase === "traveling") return;
+    closeExamination();
+  }, { passive: true });
 
   window.addEventListener("resize", () => {
+    closeExamination({ immediate: true });
     syncResponsiveBrowserViews();
     scheduleShelfEdgeRefresh();
   });

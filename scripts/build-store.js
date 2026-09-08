@@ -14,6 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
+const STOREFRONT_CACHE_BUST = "20260908-center-pull4";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -852,6 +853,7 @@ function renderLayout({
   currentNav,
   structuredData,
   extraScripts = [],
+  assetVersion = CACHE_BUST,
   metaRobots = "",
   navItems = PUBLIC_NAV_ITEMS,
   content
@@ -865,8 +867,8 @@ function renderLayout({
       ? [structuredData]
       : [];
   const scriptSources = Array.from(new Set([
-    `/assets/js/store-status.js?v=${CACHE_BUST}`,
-    `/assets/js/cart.js?v=${CACHE_BUST}`,
+    `/assets/js/store-status.js?v=${assetVersion}`,
+    `/assets/js/cart.js?v=${assetVersion}`,
     ...extraScripts
   ]));
 
@@ -886,8 +888,8 @@ function renderLayout({
   <meta property="og:image" content="${escapeAttribute(resolvedOgImage)}">
   <meta name="theme-color" content="#120c08">
   ${metaRobots ? `<meta name="robots" content="${escapeAttribute(metaRobots)}">` : ""}
-  <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
-  <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
+  <link rel="icon" type="image/png" href="/assets/logo.png?v=${assetVersion}">
+  <link rel="stylesheet" href="/styles.css?v=${assetVersion}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
   ${scriptSources.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
@@ -895,7 +897,7 @@ function renderLayout({
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="/" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="/assets/logo.png?v=${assetVersion}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
           <span class="brand__tag">Publisher-owned store and workshop catalog</span>
@@ -909,7 +911,7 @@ function renderLayout({
 
     <footer class="site-footer">
       <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="/assets/logo.png?v=${CACHE_BUST}" alt="">
+        <img src="/assets/logo.png?v=${assetVersion}" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
@@ -934,6 +936,7 @@ function renderShelfStoreHome(products, indexes) {
     canonicalPath: "/store/",
     ogImage: openRules[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
+    assetVersion: STOREFRONT_CACHE_BUST,
     navItems: [
       { key: "store", href: "/store/", label: "Browse" },
       { key: "creators", href: "/authors.html", label: "Creators" },
@@ -941,7 +944,7 @@ function renderShelfStoreHome(products, indexes) {
       { key: "account", href: "/account.html", label: "Account / My Library" },
       { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
     ],
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST, "/assets/js/discovery-labels.js?v=" + CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST],
     structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
     content: `
       <main id="top" class="shelf-storefront">
@@ -950,20 +953,20 @@ function renderShelfStoreHome(products, indexes) {
           <h1 id="store-home-heading">Books worth pulling from the shelf.</h1>
           <p>Browse by spine, turn a book toward you, and open its product page when you are ready for the full details.</p>
         </section>
-        ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "TOBACCO ROAD GAMES: OPEN RULES", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules })}
+        ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "TOBACCO ROAD GAMES: OPEN RULES", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules, centerExamination: true })}
         <aside class="sponsor-marquee" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
           <span class="sponsor-marquee__label">Paid Sponsors</span><div class="sponsor-marquee__viewport"><div class="sponsor-marquee__track" data-sponsor-track></div></div>
         </aside>
-        ${renderBookshelfSection({ id: "new-releases-bookshelf-heading", kicker: "Just unpacked", title: "New Arrivals", description: "Recently released, currently eligible books in canonical marketplace order.", products: newArrivals })}
+        ${renderBookshelfSection({ id: "new-releases-bookshelf-heading", kicker: "Just unpacked", title: "New Arrivals", description: "Recently released, currently eligible books in canonical marketplace order.", products: newArrivals, centerExamination: true })}
         <section class="store-section discovery-bookshelf" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
           <div class="section-heading"><p class="section-heading__kicker">Customer demand</p><h2 id="best-sellers-shelf-heading">Best Sellers</h2><p>Shown only when current marketplace discovery data awards the Best Selling label.</p></div>
-          <div class="bookshelf-grid" style="--shelf-items: ${Math.max(1, eligible.length)}">${eligible.map((product) => renderBookshelfBook(product, { withDataset: true })).join("")}</div>
+          <div class="bookshelf-grid" style="--shelf-items: ${Math.max(1, eligible.length)}">${eligible.map((product) => renderBookshelfBook(product, { withDataset: true, centerExamination: true })).join("")}</div>
           <p class="shelf-empty" data-discovery-empty hidden>No current title meets the public Best Seller threshold.</p>
         </section>
-        ${renderBookshelfSection({ id: "pwyw-free-shelf-heading", kicker: "Choose your price", title: "PWYW & Free", description: "Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.", products: pwywFree })}
+        ${renderBookshelfSection({ id: "pwyw-free-shelf-heading", kicker: "Choose your price", title: "PWYW & Free", description: "Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.", products: pwywFree, centerExamination: true })}
         <section class="store-section search-shelves" data-search-results-section aria-labelledby="search-results-heading">
           <div class="section-heading"><p class="section-heading__kicker">Find a book</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
-          ${renderStoreBrowser(products, indexes, { browserId: "store-search-browser", showShelf: true, defaultSort: "title", countLabel: "matching titles", shelfHeading: "Search shelf", shelfDescription: "Matching books continue onto additional shelf rows.", gridHeading: "Accessible catalog view", gridDescription: "The same canonical results in a compact list." }).replace('data-store-browser="store-search-browser"', 'data-store-browser="store-search-browser" data-search-results="true"')}
+          ${renderStoreBrowser(products, indexes, { browserId: "store-search-browser", showShelf: true, centerExamination: true, defaultSort: "title", countLabel: "matching titles", shelfHeading: "Search shelf", shelfDescription: "Matching books continue onto additional shelf rows.", gridHeading: "Accessible catalog view", gridDescription: "The same canonical results in a compact list." }).replace('data-store-browser="store-search-browser"', 'data-store-browser="store-search-browser" data-search-results="true"')}
         </section>
         <section class="store-lower" aria-labelledby="store-information-heading">
           <div><p class="section-heading__kicker">Around the shop</p><h2 id="store-information-heading">Information, help, and community</h2><p>A quieter lower floor for marketplace notices, Creator resources, policies, and the roads beyond the shelves.</p></div>
@@ -1114,7 +1117,7 @@ function renderFeatureSpotlight(product) {
   `;
 }
 
-function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false }) {
+function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false, centerExamination = false }) {
   if (!products.length) {
     return "";
   }
@@ -1131,7 +1134,8 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
       <div class="bookshelf-grid${compact ? " bookshelf-grid--compact" : ""}">
         ${products.map((product) => renderBookshelfBook(product, {
           withDataset: true,
-          forceOpenRight: forceOpenRightSlugSet.has(product.slug)
+          forceOpenRight: forceOpenRightSlugSet.has(product.slug),
+          centerExamination
         })).join("")}
       </div>
     </section>
@@ -1148,6 +1152,7 @@ function renderStoreBrowser(products, indexes, options = {}) {
     shelfHeading = "",
     shelfDescription = "",
     forceOpenRightSlugs = [],
+    centerExamination = false,
     gridHeading = "",
     gridDescription = ""
   } = options;
@@ -1184,7 +1189,8 @@ function renderStoreBrowser(products, indexes, options = {}) {
             ${renderBookshelfRows(products, (product, shelfIndex) => renderBookshelfBook(product, {
               withDataset: true,
               forceOpenRight: forceOpenRightSlugSet.has(product.slug),
-              edgeRight: shelfIndex >= 10
+              edgeRight: shelfIndex >= 10,
+              centerExamination
             }))}
           </div>
         </section>
@@ -1305,11 +1311,23 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
 }
 
 function renderBookshelfBook(product, options = {}) {
-  const { withDataset = false, forceOpenRight = false, edgeRight = false } = options;
+  const { withDataset = false, forceOpenRight = false, edgeRight = false, centerExamination = false } = options;
   const dataset = withDataset ? renderProductDatasetAttributes(product) : "";
   const forceOpenRightAttribute = forceOpenRight ? ' data-bookshelf-force-right="true"' : "";
   const edgeClass = edgeRight ? " bookshelf-book--edge-right" : "";
   const authorName = product.authors.join(", ") || product.publisher;
+  const publisherLine = product.publisher && product.publisher !== authorName
+    ? `<span class="bookshelf-book__publisher">${escapeHtml(product.publisher)}</span>`
+    : "";
+  const saleBadge = product.saleActive
+    ? `<span class="status-badge status-badge--sale">${escapeHtml(product.saleLabel || "Sale")}</span>`
+    : "";
+  const examinationMeta = [
+    renderCatalogMeta(product),
+    product.genre ? humanizeMetadata(product.genre) : "",
+    product.mediaType ? humanizeMetadata(product.mediaType) : "",
+    product.format.join(" / ")
+  ].filter(Boolean).join(" | ");
   const dimensions = bookshelfDimensions(product);
 
   return `
@@ -1323,7 +1341,9 @@ function renderBookshelfBook(product, options = {}) {
         <span class="bookshelf-book__cover-frame">
           <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover" loading="lazy" decoding="async">
         </span>
-        <span class="bookshelf-book__details"><strong>${escapeHtml(product.title)}</strong><span>${escapeHtml(authorName)}</span><span>${escapeHtml(renderCardPrice(product))}</span><span>${escapeHtml(renderCatalogMeta(product))}</span><small>${escapeHtml(product.shortDescription)}</small><em>Open product page</em></span>
+        ${centerExamination
+          ? `<span class="bookshelf-book__details"><span class="bookshelf-book__badges"><span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(product.statusLabel)}</span>${saleBadge}</span><strong>${escapeHtml(product.title)}</strong><span class="bookshelf-book__creator">${escapeHtml(authorName)}</span>${publisherLine}<span class="bookshelf-book__price">${escapeHtml(renderCardPrice(product))}</span><span>${escapeHtml(examinationMeta)}</span><small>${escapeHtml(product.shortDescription)}</small><em>Open product page</em></span>`
+          : `<span class="bookshelf-book__details"><strong>${escapeHtml(product.title)}</strong><span>${escapeHtml(authorName)}</span><span>${escapeHtml(renderCardPrice(product))}</span><span>${escapeHtml(renderCatalogMeta(product))}</span><small>${escapeHtml(product.shortDescription)}</small><em>Open product page</em></span>`}
         <span class="bookshelf-book__mobile">
           <span class="bookshelf-book__mobile-media">
             <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="">
