@@ -14,7 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
-const STOREFRONT_CACHE_BUST = "20260908-center-pull4";
+const STOREFRONT_CACHE_BUST = "20260908-shelf-dressing1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -944,7 +944,7 @@ function renderShelfStoreHome(products, indexes) {
       { key: "account", href: "/account.html", label: "Account / My Library" },
       { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
     ],
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
     structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
     content: `
       <main id="top" class="shelf-storefront">
