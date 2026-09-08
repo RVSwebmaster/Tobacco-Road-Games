@@ -10,6 +10,7 @@ import {
 } from "./owner-access.mjs";
 import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
 import { prepareCreatorListingFile } from "./creator-files.mjs";
+import { placeListingReviewHold, restoreListingReviewHold } from "./listing-review-hold.mjs";
 
 export async function handleOwnerListingFiles(request, env = {}, options = {}) {
   const db = options.database || env.TRG_ORDERS;
@@ -24,6 +25,15 @@ export async function handleOwnerListingFiles(request, env = {}, options = {}) {
   if (request.method !== "POST") return json({ error: "Use GET or POST." }, 405);
   const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, { nowMs: options.nowMs });
   if (!auth.valid) return json({ error: auth.userMessage }, auth.status);
+  if (request.headers.get("content-type")?.includes("application/json")) {
+    let body = {};
+    try { body = await request.json(); } catch {}
+    try {
+      if (body.action === "place_review_hold") return json({ ok: true, hold: await placeListingReviewHold(db, { listingId: body.listingId, actorId: auth.username, reason: body.reason, correctiveActionExpected: body.correctiveActionExpected === true, nowMs: options.nowMs }) });
+      if (body.action === "restore_review_hold") return json({ ok: true, hold: await restoreListingReviewHold(db, { listingId: body.listingId, actorId: auth.username, nowMs: options.nowMs }) });
+      return json({ error: "Listing control action is invalid." }, 400);
+    } catch (error) { return json({ error: error.message }, 409); }
+  }
   return replaceFile(request, db, env.TRG_PRODUCTS, auth.username, options.nowMs);
 }
 
@@ -32,7 +42,7 @@ async function lookup(db, bucket, params) {
     listingId = String(params.get("listingId") || "").trim(),
     state = String(params.get("state") || "").trim(),
     like = `%${query}%`;
-  const result = await db.prepare(`SELECT l.id,l.creator_id,l.slug,l.source_product_slug,l.public_product_slug,l.title,l.lifecycle_state,l.publication_state,l.inactivity_state,l.media_type,l.updated_at,c.display_name creator_name,c.slug creator_slug
+  const result = await db.prepare(`SELECT l.id,l.creator_id,l.slug,l.source_product_slug,l.public_product_slug,l.title,l.lifecycle_state,l.publication_state,l.inactivity_state,l.media_type,l.owner_review_hold,l.owner_review_hold_reason,l.owner_review_hold_started_at,l.owner_review_hold_corrective_action_expected,l.updated_at,c.display_name creator_name,c.slug creator_slug
     FROM creator_listings l JOIN marketplace_creators c ON c.id=l.creator_id
     WHERE (?='' OR lower(l.id) LIKE ? OR lower(l.slug) LIKE ? OR lower(l.title) LIKE ? OR lower(c.id) LIKE ? OR lower(c.slug) LIKE ? OR lower(c.display_name) LIKE ?)
       AND (?='' OR l.lifecycle_state=? OR l.publication_state=? OR COALESCE(l.inactivity_state,'')=?)
@@ -40,7 +50,7 @@ async function lookup(db, bucket, params) {
   const listings = result.results || [];
   let files = [];
   if (listingId) {
-    const selected = listings.find((item) => item.id === listingId) || await db.prepare("SELECT l.id,l.creator_id,l.slug,l.source_product_slug,l.public_product_slug,l.title,l.lifecycle_state,l.publication_state,l.inactivity_state,l.media_type,l.updated_at,c.display_name creator_name,c.slug creator_slug FROM creator_listings l JOIN marketplace_creators c ON c.id=l.creator_id WHERE l.id=?").bind(listingId).first();
+    const selected = listings.find((item) => item.id === listingId) || await db.prepare("SELECT l.id,l.creator_id,l.slug,l.source_product_slug,l.public_product_slug,l.title,l.lifecycle_state,l.publication_state,l.inactivity_state,l.media_type,l.owner_review_hold,l.owner_review_hold_reason,l.owner_review_hold_started_at,l.owner_review_hold_corrective_action_expected,l.updated_at,c.display_name creator_name,c.slug creator_slug FROM creator_listings l JOIN marketplace_creators c ON c.id=l.creator_id WHERE l.id=?").bind(listingId).first();
     if (!selected) return json({ error: "Listing not found." }, 404);
     files = await rows(db.prepare("SELECT id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,validation_state,validation_message,delivery_object_key,uploaded_at,validated_at FROM creator_listing_files WHERE listing_id=? ORDER BY purpose,uploaded_at DESC").bind(selected.id));
     for (const file of files) {

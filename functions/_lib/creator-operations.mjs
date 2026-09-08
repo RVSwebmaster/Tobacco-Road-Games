@@ -577,7 +577,7 @@ async function updateListing(request, db, creator, id) {
     .bind(id, creator.id)
     .first();
   if (!current) return notFound();
-  if (!EDITABLE_STATES.has(current.lifecycle_state))
+  if (!EDITABLE_STATES.has(current.lifecycle_state) && Number(current.owner_review_hold) !== 1)
     return invalid(
       "Only drafts, paused listings, or listings needing changes can be edited.",
     );
@@ -642,6 +642,8 @@ async function changeListingState(request, db, creator, id, state) {
     .bind(id, creator.id)
     .first();
   if (!current) return notFound();
+  if (Number(current.owner_review_hold) === 1)
+    return invalid("TRG has placed this listing on Owner Review Hold. Corrective edits and file replacement remain available, but only TRG can restore saleability.");
   if (state === "submitted" && !EDITABLE_STATES.has(current.lifecycle_state))
     return invalid("This listing cannot be submitted from its current state.");
   if (state === "paused" && current.lifecycle_state !== "active")
@@ -945,6 +947,10 @@ function publicListing(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     inactivityState: row.inactivity_state || "active",
+    ownerReviewHold: Number(row.owner_review_hold) === 1,
+    ownerReviewHoldReason: Number(row.owner_review_hold) === 1 ? row.owner_review_hold_reason : "",
+    ownerReviewHoldStartedAt: Number(row.owner_review_hold) === 1 ? row.owner_review_hold_started_at : null,
+    ownerReviewHoldCorrectiveActionExpected: Number(row.owner_review_hold) === 1 && Number(row.owner_review_hold_corrective_action_expected) === 1,
     lastQualifyingActivityAt:
       row.last_qualifying_activity_at || row.first_published_at || null,
     inactivityWarningStartedAt: row.inactivity_warning_started_at || null,

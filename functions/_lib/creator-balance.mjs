@@ -109,7 +109,7 @@ export async function settleCreatorBalancePurchase(
     assertDigitalCreatorProduct(catalogProduct, deliveryMapping);
     const listing = await db
         .prepare(
-          "SELECT id,creator_id,first_published_at FROM creator_listings WHERE creator_id=? AND lifecycle_state='active' AND publication_state='published' AND (source_product_slug=? OR public_product_slug=?) LIMIT 1",
+          "SELECT id,creator_id,first_published_at FROM creator_listings WHERE creator_id=? AND lifecycle_state='active' AND publication_state='published' AND owner_review_hold=0 AND (source_product_slug=? OR public_product_slug=?) LIMIT 1",
         )
         .bind(catalogProduct.creatorId, item.productSlug, item.productSlug)
         .first();

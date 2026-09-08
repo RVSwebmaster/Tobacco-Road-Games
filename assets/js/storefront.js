@@ -83,6 +83,7 @@
     const matchesFormat = !state.format || formats.includes(state.format);
     const matchesPriceType = !state.priceType || item.dataset.priceType === state.priceType;
     const matchesSale = !state.saleOnly || item.dataset.saleActive === "true";
+    const matchesHold = item.dataset.ownerReviewHold !== "true";
     const matchesDiscovery = !window.TRGMarketplaceDiscovery || window.TRGMarketplaceDiscovery.matchesMarketplaceProduct({
       genre: item.dataset.genre,
       playerCountMin: item.dataset.playerCountMin,
@@ -103,7 +104,28 @@
       && matchesFormat
       && matchesPriceType
       && matchesSale
+      && matchesHold
       && matchesDiscovery;
+  };
+
+  const syncReviewHolds = async () => {
+    const targets = Array.from(document.querySelectorAll("[data-product-card][data-slug], [data-cart-add]"));
+    const slugs = [...new Set(targets.map((item) => item.dataset.slug || item.dataset.cartAdd).filter(Boolean))];
+    if (!slugs.length) return;
+    try {
+      const response = await fetch(`/api/listing-availability?slugs=${encodeURIComponent(slugs.join(","))}`, { credentials: "same-origin" });
+      if (!response.ok) return;
+      const unavailable = new Set((await response.json()).unavailable || []);
+      targets.forEach((item) => {
+        const held = unavailable.has(item.dataset.slug || item.dataset.cartAdd);
+        if (item.matches("[data-product-card]")) item.dataset.ownerReviewHold = held ? "true" : "false";
+        if (item.matches("[data-cart-add]")) {
+          item.disabled = held;
+          item.title = held ? "This product is not currently available for sale." : "";
+        }
+      });
+      browsers.forEach(applyBrowser);
+    } catch {}
   };
 
   const sortItems = (items, sortMode) => {
@@ -266,6 +288,8 @@
   if (!browsers.length) {
     scheduleShelfEdgeRefresh();
   }
+
+  syncReviewHolds();
 
   window.addEventListener("resize", () => {
     syncResponsiveBrowserViews();

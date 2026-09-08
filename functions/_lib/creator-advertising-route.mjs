@@ -114,6 +114,11 @@ export async function handleCreatorAdvertisingRequest(
         201,
       );
     const body = await request.json();
+    if (["activate_included", "redeem_credit", "reassign"].includes(body.action)) {
+      const held = await db.prepare("SELECT l.owner_review_hold FROM creator_ad_creatives c JOIN creator_listings l ON l.id=c.listing_id WHERE c.id=? AND c.creator_id=?").bind(String(body.creativeId || ""), creator.id).first();
+      if (Number(held?.owner_review_hold) === 1)
+        throw new Error("A listing on Owner Review Hold cannot be promoted.");
+    }
     if (body.action === "activate_included")
       return json({
         ok: true,

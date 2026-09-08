@@ -335,6 +335,12 @@
         const meta = document.createElement("p");
         meta.textContent = `${item.lifecycleState} · publication ${item.publicationState} · ${item.mediaType || "media unset"} · ${item.priceCents == null ? "price unset" : `$${(item.priceCents / 100).toFixed(2)}`}`;
         body.append(title, meta);
+        if (item.ownerReviewHold) {
+          const hold = document.createElement("p");
+          hold.className = "status-note";
+          hold.textContent = `Not currently for sale — Owner Review Hold began ${formatDate(item.ownerReviewHoldStartedAt)}. TRG reason: ${item.ownerReviewHoldReason}${item.ownerReviewHoldCorrectiveActionExpected ? " Corrective action is expected; listing metadata and permitted file work remain available." : " No Creator corrective action is currently requested."}`;
+          body.append(hold);
+        }
         if (item.inactivityState === "warning") {
           const warning = document.createElement("p");
           warning.className = "status-note";
@@ -368,7 +374,8 @@
         }
         if (
           ["draft", "needs_changes", "paused"].includes(item.lifecycleState) &&
-          item.inactivityState !== "inactive"
+          item.inactivityState !== "inactive" &&
+          !item.ownerReviewHold
         ) {
           const button = document.createElement("button");
           button.className = "button button--secondary";
@@ -379,7 +386,7 @@
           };
           body.append(button);
         }
-        if (item.inactivityState === "inactive") {
+        if (item.inactivityState === "inactive" && !item.ownerReviewHold) {
           const button = document.createElement("button");
           button.className = "button button--secondary";
           button.textContent = "Request Reactivation";

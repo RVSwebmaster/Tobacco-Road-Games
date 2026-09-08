@@ -24,10 +24,28 @@
   function listingCard(listing) {
     const card = node("article", "listing-row"), heading = node("h2", "", listing.title),
       details = node("p", "", `${listing.creator_name} (${listing.creator_slug}) · listing ${listing.id}`),
-      states = node("p", "", `Lifecycle ${listing.lifecycle_state} · publication ${listing.publication_state} · saleability ${listing.inactivity_state || "active"} · media ${listing.media_type || "unspecified"}`),
-      button = node("button", "button button--secondary", "Inspect Files");
+      states = node("p", "", `Lifecycle ${listing.lifecycle_state} · publication ${listing.publication_state} · saleability ${listing.owner_review_hold ? "OWNER REVIEW HOLD" : listing.inactivity_state || "active"} · media ${listing.media_type || "unspecified"}`),
+      button = node("button", "button button--secondary", "Inspect Files"),
+      control = node("button", "button button--secondary", listing.owner_review_hold ? "Restore Listing" : "Delist for Review");
     button.type = "button"; button.addEventListener("click", () => loadFiles(listing.id));
-    card.append(heading, details, states, button); return card;
+    control.type = "button"; control.addEventListener("click", () => listing.owner_review_hold ? restoreListing(listing) : holdListing(listing));
+    card.append(heading, details, states);
+    if (listing.owner_review_hold) card.append(node("p", "status-note", `Held ${formatDate(listing.owner_review_hold_started_at)} · ${listing.owner_review_hold_reason}${listing.owner_review_hold_corrective_action_expected ? " · corrective action expected" : ""}`));
+    card.append(button, control); return card;
+  }
+
+  async function holdListing(listing) {
+    const reason = prompt(`Creator-visible reason for delisting ${listing.title}:`, "");
+    if (!reason?.trim()) return;
+    const correctiveActionExpected = confirm("Is corrective action expected from the Creator?");
+    try { await request("/owner/api/listing-files", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": csrf() }, body: JSON.stringify({ action: "place_review_hold", listingId: listing.id, reason, correctiveActionExpected }) }); await loadListings(); status.textContent = "Listing placed on Owner Review Hold."; }
+    catch (error) { status.textContent = error.message; }
+  }
+
+  async function restoreListing(listing) {
+    if (!confirm(`Clear the Owner Review Hold for ${listing.title}? Other listing restrictions will remain in effect.`)) return;
+    try { await request("/owner/api/listing-files", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": csrf() }, body: JSON.stringify({ action: "restore_review_hold", listingId: listing.id }) }); await loadListings(); status.textContent = "Owner Review Hold cleared. Normal saleability rules still apply."; }
+    catch (error) { status.textContent = error.message; }
   }
 
   async function loadFiles(listingId) {
