@@ -16,5 +16,6 @@ assert.match(rotation, /pool === "sponsor-marquee"/); assert.match(rotation, /ve
 assert.ok(JSON.parse(read("_routes.json")).include.includes("/api/ad-rotation"));
 assert.match(css, /position:sticky;top:var\(--store-header-height\)/); assert.match(css, /scroll-snap-type:x proximity/); assert.match(css, /prefers-reduced-motion:reduce/); assert.match(storefront, /pointer: coarse/); assert.match(storefront, /event\.preventDefault\(\)/);
 assert.match(css, /--bookshelf-cover-right:calc\(100% - 2px\)/); assert.match(css, /right:calc\(var\(--bookshelf-cover-width\) \+ 16px\);left:auto/); assert.match(css, /--left-edge-compensation:270px/); assert.match(storefront, /consistentLeftPopout/);
+assert.match(css, /\.shelf-storefront \.bookshelf-grid\{display:flex;align-items:flex-end/); assert.doesNotMatch(css, /--book-lift|translateY\(calc\(\(var\(--book-lift/);
 assert.match(page, /href="\/store\/products\/[^"]+\/"/); assert.match(page, /data-cart-add=/); assert.doesNotMatch(page, /data-ad-pool="public"/);
 console.log("TRG shelf storefront design tests passed.");
