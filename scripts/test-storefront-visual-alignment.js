@@ -1,0 +1,58 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const ROOT = path.resolve(__dirname, "..");
+const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
+const page = read("store/index.html");
+const css = read("styles.css");
+const build = read("scripts/build-store.js");
+const storefront = read("assets/js/storefront.js");
+const sponsor = read("assets/js/sponsor-marquee.js");
+const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
+
+assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-mockup-alignment1/);
+assert.match(page, /<span class="brand__name">Tobacco Road Games<\/span>/);
+assert.match(page, /<span class="brand__tag">Great games\. Open roads\.<\/span>/);
+assert.match(page, /Search games, Creators, or keywords/);
+assert.doesNotMatch(page, />[^<]*\bTRG\b[^<]*</, "Customer-facing storefront copy must use the full Tobacco Road Games name.");
+assert.equal(fs.existsSync(logoPath), true, "The supplied Tobacco Road Games logo must be included locally.");
+const logo = fs.readFileSync(logoPath);
+assert.deepEqual([...logo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "Brand asset must be a valid PNG.");
+assert.ok(logo.length < 100_000, "The header logo should remain lightweight.");
+
+assert.match(build, /brandLogo: "\/assets\/tobacco-road-games-logo\.png"/);
+assert.match(build, /brandTag: "Great games\. Open roads\."/);
+assert.match(build, /About Tobacco Road Games/);
+assert.match(build, /Purchasing remains closed while this marketplace preview is prepared/);
+
+assert.match(css, /Approved storefront mockup alignment/);
+assert.match(css, /body:has\(\.shelf-storefront\) \.page-shell\{width:min\(1500px,100%\)/);
+assert.match(css, /\.shelf-storefront\{position:relative;display:grid;gap:0/);
+assert.match(css, /\.shelf-storefront>\[data-store-closed-notice\]\{display:block;min-height:0/);
+assert.match(css, /\.shelf-storefront \.bookshelf-grid\{position:relative;isolation:isolate;display:flex;align-items:flex-end/);
+assert.match(css, /min-height:calc\(var\(--book-height,296px\) - 68px\)/);
+assert.match(css, /\.sponsor-marquee\{grid-template-columns:170px minmax\(0,1fr\)/);
+assert.match(css, /\.shelf-storefront \.bookshelf-book__details\{top:2px/);
+assert.match(css, /\.store-lower\{display:grid;grid-template-columns:minmax\(250px,\.72fr\)/);
+assert.match(css, /@media\(max-width:900px\)/);
+assert.match(css, /@media\(max-width:520px\)/);
+
+assert.match(storefront, /openExamination/);
+assert.match(storefront, /--examination-x/);
+assert.match(storefront, /pointer: coarse/);
+assert.match(storefront, /event\.preventDefault\(\)/);
+assert.match(sponsor, /prefers-reduced-motion/);
+assert.match(sponsor, /mouseenter/);
+assert.match(sponsor, /focusin/);
+
+const requiredSections = [
+  "open-rules-shelf-heading",
+  "new-releases-bookshelf-heading",
+  "best-sellers-shelf-heading",
+  "pwyw-free-shelf-heading",
+  "search-results-heading"
+];
+for (const id of requiredSections) assert.match(page, new RegExp(`id="${id}"`), `Missing required storefront section: ${id}`);
+
+console.log("Tobacco Road Games storefront mockup-alignment tests passed.");

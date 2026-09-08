@@ -14,7 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
-const STOREFRONT_CACHE_BUST = "20260908-shelf-dressing1";
+const STOREFRONT_CACHE_BUST = "20260908-mockup-alignment1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -26,7 +26,7 @@ const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "sales", href: "/store/catalog/", label: "Sales & Bundles" },
   { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
   { key: "forum", href: "/forum", label: "Community" },
-  { key: "about", href: "/#about", label: "About TRG" },
+  { key: "about", href: "/#about", label: "About Tobacco Road Games" },
   { key: "account", href: "/account.html", label: "Account / My Library" },
   { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
 ]);
@@ -854,6 +854,8 @@ function renderLayout({
   structuredData,
   extraScripts = [],
   assetVersion = CACHE_BUST,
+  brandLogo = "/assets/logo.png",
+  brandTag = "Publisher-owned store and workshop catalog",
   metaRobots = "",
   navItems = PUBLIC_NAV_ITEMS,
   content
@@ -888,7 +890,7 @@ function renderLayout({
   <meta property="og:image" content="${escapeAttribute(resolvedOgImage)}">
   <meta name="theme-color" content="#120c08">
   ${metaRobots ? `<meta name="robots" content="${escapeAttribute(metaRobots)}">` : ""}
-  <link rel="icon" type="image/png" href="/assets/logo.png?v=${assetVersion}">
+  <link rel="icon" type="image/png" href="${escapeAttribute(brandLogo)}?v=${assetVersion}">
   <link rel="stylesheet" href="/styles.css?v=${assetVersion}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
   ${scriptSources.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
@@ -897,10 +899,10 @@ function renderLayout({
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="/" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="/assets/logo.png?v=${assetVersion}" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="${escapeAttribute(brandLogo)}?v=${assetVersion}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Publisher-owned store and workshop catalog</span>
+          <span class="brand__tag">${escapeHtml(brandTag)}</span>
         </div>
       </a>
 
@@ -911,7 +913,7 @@ function renderLayout({
 
     <footer class="site-footer">
       <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="/assets/logo.png?v=${assetVersion}" alt="">
+        <img src="${escapeAttribute(brandLogo)}?v=${assetVersion}" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
@@ -937,10 +939,12 @@ function renderShelfStoreHome(products, indexes) {
     ogImage: openRules[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
     assetVersion: STOREFRONT_CACHE_BUST,
+    brandLogo: "/assets/tobacco-road-games-logo.png",
+    brandTag: "Great games. Open roads.",
     navItems: [
       { key: "store", href: "/store/", label: "Browse" },
       { key: "creators", href: "/authors.html", label: "Creators" },
-      { key: "search", href: "/store/#search-results-heading", label: "Search" },
+      { key: "search", href: "/store/#search-results-heading", label: '<span class="nav-search__label">Search games, Creators, or keywords</span><span class="nav-search__icon" aria-hidden="true">⌕</span>' },
       { key: "account", href: "/account.html", label: "Account / My Library" },
       { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
     ],
@@ -951,7 +955,7 @@ function renderShelfStoreHome(products, indexes) {
         <section class="store-welcome" aria-labelledby="store-home-heading">
           <p class="section-heading__kicker">Independent tabletop marketplace</p>
           <h1 id="store-home-heading">Books worth pulling from the shelf.</h1>
-          <p>Browse by spine, turn a book toward you, and open its product page when you are ready for the full details.</p>
+          <p>Browse the shelves, pull a book forward, and meet the people who made it.</p>
         </section>
         ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "TOBACCO ROAD GAMES: OPEN RULES", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules, centerExamination: true })}
         <aside class="sponsor-marquee" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
@@ -969,8 +973,8 @@ function renderShelfStoreHome(products, indexes) {
           ${renderStoreBrowser(products, indexes, { browserId: "store-search-browser", showShelf: true, centerExamination: true, defaultSort: "title", countLabel: "matching titles", shelfHeading: "Search shelf", shelfDescription: "Matching books continue onto additional shelf rows.", gridHeading: "Accessible catalog view", gridDescription: "The same canonical results in a compact list." }).replace('data-store-browser="store-search-browser"', 'data-store-browser="store-search-browser" data-search-results="true"')}
         </section>
         <section class="store-lower" aria-labelledby="store-information-heading">
-          <div><p class="section-heading__kicker">Around the shop</p><h2 id="store-information-heading">Information, help, and community</h2><p>A quieter lower floor for marketplace notices, Creator resources, policies, and the roads beyond the shelves.</p></div>
-          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html">Creators</a><a href="/forum">Community</a><a href="/support.html">Customer Help</a><a href="/#about">About TRG</a><a href="/creator/">Creator Resources</a><a href="/account.html">Account &amp; Library</a><a href="/store/cart/">Cart</a><a href="/#commitment">Marketplace Principles</a></nav>
+          <div class="store-lower__intro"><p class="section-heading__kicker">Around the shop</p><h2 id="store-information-heading">Information, help, and community</h2><p>News, Creator resources, customer help, and the roads beyond the shelves.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
+          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a><a href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
         </section>
       </main>`
   }).replace(/[ \t]+$/gm, "");

@@ -70,9 +70,9 @@ const configuredAssets = new Set(themes.THEMES.flatMap((theme) => theme.decorati
 configuredAssets.add("best-seller-trophy");
 for (const asset of configuredAssets) assert.match(sprite, new RegExp(`<symbol id="${asset}"`), `Missing sprite symbol: ${asset}`);
 
-assert.match(page, /storefront-shelf-themes\.js\?v=20260908-shelf-dressing1/);
-assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-shelf-dressing1/);
-assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-shelf-dressing1"/);
+assert.match(page, /storefront-shelf-themes\.js\?v=20260908-mockup-alignment1/);
+assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-mockup-alignment1/);
+assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-mockup-alignment1"/);
 assert.match(build, /storefront-shelf-themes\.js/);
 assert.match(build, /storefront-shelf-dressing\.js/);
 assert.match(runtime, /aria-hidden/);

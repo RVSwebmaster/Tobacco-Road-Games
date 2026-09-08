@@ -112,7 +112,7 @@
       if (libraryPanel) libraryPanel.hidden = true;
       if (accountProfilePanel) accountProfilePanel.hidden = true;
       if (creatorRegistrationPanel) creatorRegistrationPanel.hidden = true;
-      setStatus("Choose Google, sign in, or create a TRG account.");
+      setStatus("Choose Google, sign in, or create a Tobacco Road Games account.");
       return;
     }
     summary.innerHTML = "";
@@ -788,8 +788,8 @@
     creatorPaymentGuidance.textContent = creator.paymentMethodReady
       ? "Your Stripe-hosted payment method is ready."
       : paymentCollection?.staging
-        ? "Stripe-hosted payment-method collection is intentionally unavailable in this staging build. TRG does not collect or store raw card numbers."
-        : "Stripe-hosted payment-method setup is not available yet. TRG does not collect or store raw card numbers.";
+        ? "Stripe-hosted payment-method collection is intentionally unavailable in this staging build. Tobacco Road Games does not collect or store raw card numbers."
+        : "Stripe-hosted payment-method setup is not available yet. Tobacco Road Games does not collect or store raw card numbers.";
   }
   accountProfileForm?.addEventListener("submit", async (event) => {
     event.preventDefault();

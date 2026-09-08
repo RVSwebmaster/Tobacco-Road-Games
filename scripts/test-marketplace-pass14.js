@@ -380,7 +380,7 @@ async function main() {
   );
   assert.match(csv, /Order reference/);
   assert.match(csv, /Sale policy\/split snapshot/);
-  assert.match(csv, /TRG fees cents,80/);
+  assert.match(csv, /Tobacco Road Games fees cents,80/);
   const ytd = await reports.getCreatorBusinessReport(
     db,
     primary.creatorId,

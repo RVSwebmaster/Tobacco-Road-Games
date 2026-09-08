@@ -5,7 +5,7 @@ export const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "sales", href: "/store/catalog/", label: "Sales &amp; Bundles" },
   { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
   { key: "forum", href: "/forum", label: "Community" },
-  { key: "about", href: "/#about", label: "About TRG" },
+  { key: "about", href: "/#about", label: "About Tobacco Road Games" },
   { key: "account", href: "/account.html", label: "Account / My Library" },
   { key: "cart", href: "/store/cart/", label: "Cart" }
 ]);

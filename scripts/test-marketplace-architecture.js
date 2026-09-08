@@ -16,7 +16,7 @@ function main() {
   const forumNavigation = read("functions/_lib/public-navigation.mjs");
 
   assert.match(build, /const PUBLIC_NAV_ITEMS = Object\.freeze/, "Static public pages must share one generator-owned navigation definition.");
-  for (const label of ["Marketplace", "Creators", "New Releases", "Sales & Bundles", "Physical Goods", "Community", "About TRG", "Account \/ My Library", "Cart"]) {
+  for (const label of ["Marketplace", "Creators", "New Releases", "Sales & Bundles", "Physical Goods", "Community", "About Tobacco Road Games", "Account \/ My Library", "Cart"]) {
     assert.match(build, new RegExp(label.replace(/[&/]/g, "\\$&")), `Static navigation must include ${label}.`);
     assert.match(forumNavigation, new RegExp(label.replace(/[&/]/g, "\\$&").replace("&", "&(?:amp;)?")), `Function navigation must include ${label}.`);
   }

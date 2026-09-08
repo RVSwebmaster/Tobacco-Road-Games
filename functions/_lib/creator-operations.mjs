@@ -228,7 +228,7 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
           : body.kind === "trg_revenue"
             ? await adjustTrgRevenue(database, input)
             : (() => {
-                throw new Error("Choose Creator funds or TRG earned.");
+                throw new Error("Choose Creator funds or Tobacco Road Games earnings.");
               })();
       return json({ ok: true, adjustment });
     } catch (error) {
@@ -643,7 +643,7 @@ async function changeListingState(request, db, creator, id, state) {
     .first();
   if (!current) return notFound();
   if (Number(current.owner_review_hold) === 1)
-    return invalid("TRG has placed this listing on Owner Review Hold. Corrective edits and file replacement remain available, but only TRG can restore saleability.");
+    return invalid("Tobacco Road Games has placed this listing on Owner Review Hold. Corrective edits and file replacement remain available, but only Tobacco Road Games can restore saleability.");
   if (state === "submitted" && !EDITABLE_STATES.has(current.lifecycle_state))
     return invalid("This listing cannot be submitted from its current state.");
   if (state === "paused" && current.lifecycle_state !== "active")

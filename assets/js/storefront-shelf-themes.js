@@ -21,11 +21,11 @@
   const THEMES = Object.freeze([
     Object.freeze({
       id: "trg-anniversary",
-      name: "TRG Birthday / Launch Anniversary",
+      name: "Tobacco Road Games Birthday / Launch Anniversary",
       priority: 100,
       enabled: false,
       schedule: { type: "annual-date", month: null, day: null },
-      configurationNote: "Enable only after the canonical TRG launch anniversary month and day are approved.",
+      configurationNote: "Enable only after the canonical Tobacco Road Games launch anniversary month and day are approved.",
       decorations: ["trg-cake", "ribbon", "medallion", "present", "party-hat"]
     }),
     Object.freeze({
