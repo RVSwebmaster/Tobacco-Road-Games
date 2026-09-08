@@ -31,12 +31,14 @@
     const targets = Array.from(document.querySelectorAll(".bookshelf-grid"));
 
     targets.forEach((shelf) => {
+      const consistentLeftPopout = Boolean(shelf.closest(".shelf-storefront"));
       const rows = getBooksByRow(shelf);
 
       shelf.querySelectorAll(".bookshelf-book").forEach((item) => {
         item.classList.remove("bookshelf-book--edge-right");
       });
 
+      if (consistentLeftPopout) return;
       rows.forEach((rowItems) => {
         const autoEdgeCandidates = rowItems.filter((item) => item.dataset.bookshelfForceRight !== "true");
 
@@ -241,7 +243,7 @@
         shelfRow.className = "bookshelf-grid";
         shelfRow.style.setProperty("--shelf-items", String(rowItems.length));
         rowItems.forEach((item, rowIndex) => {
-          item.classList.toggle("bookshelf-book--edge-right", rowItems.length >= 11 && rowIndex >= rowItems.length - 2);
+          item.classList.toggle("bookshelf-book--edge-right", !root.closest(".shelf-storefront") && rowItems.length >= 11 && rowIndex >= rowItems.length - 2);
           shelfRow.appendChild(item);
         });
         shelf.appendChild(shelfRow);

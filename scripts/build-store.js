@@ -1310,9 +1310,10 @@ function renderBookshelfBook(product, options = {}) {
   const forceOpenRightAttribute = forceOpenRight ? ' data-bookshelf-force-right="true"' : "";
   const edgeClass = edgeRight ? " bookshelf-book--edge-right" : "";
   const authorName = product.authors.join(", ") || product.publisher;
+  const dimensions = bookshelfDimensions(product);
 
   return `
-    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
+    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset} data-spine-width="${dimensions.width}" data-spine-source="${dimensions.source}" style="--book-spine-width:${dimensions.width}px;--book-height:${dimensions.height}px" aria-label="Open ${escapeAttribute(product.title)} product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">${escapeHtml(product.statusLabel)}</span>
@@ -1674,6 +1675,18 @@ function renderAliasPage({
 
 function renderPublicNav(currentNav) {
   return renderSharedPublicNav(currentNav, "Primary");
+}
+
+function bookshelfDimensions(product) {
+  const hash = [...String(product.slug || product.title || "book")].reduce((value, character) => ((value * 33) ^ character.charCodeAt(0)) >>> 0, 5381);
+  const pageCount = Number(product.pageCount);
+  const hasPageCount = Number.isFinite(pageCount) && pageCount > 0;
+  const pageSignal = hasPageCount ? Math.log1p(Math.min(pageCount, 600)) / Math.log1p(600) : 0.48;
+  const variation = ((hash % 1000) / 999 - 0.5) * (hasPageCount ? 5 : 10);
+  const width = Math.round(Math.max(46, Math.min(78, 46 + pageSignal * 31 + variation)) * 10) / 10;
+  const heightSignal = hasPageCount ? Math.min(18, Math.log1p(pageCount) * 3.2) : 9;
+  const height = Math.round(Math.max(270, Math.min(332, 286 + heightSignal + (hash % 19) - 9)));
+  return { width, height, source: hasPageCount ? "page-count" : "catalog-fallback" };
 }
 
 function renderCreatorProducts(creator) {
