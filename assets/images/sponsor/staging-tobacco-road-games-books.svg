@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="124" viewBox="0 0 1040 124" role="img" aria-labelledby="title description">
+  <title id="title">Tobacco Road Games</title>
+  <desc id="description">Books Worth Pulling From the Shelf</desc>
+  <rect width="1040" height="124" fill="#10251a"/>
+  <rect x="8" y="8" width="1024" height="108" rx="6" fill="none" stroke="#b99449" stroke-width="2"/>
+  <path d="M28 25h178M834 25h178M28 99h178M834 99h178" stroke="#6f4a2c" stroke-width="4"/>
+  <g transform="translate(238 20)" fill="none" stroke="#d0ad61" stroke-width="3">
+    <path d="M23 5v11M15 16h16l5 10v42H10V26z"/>
+    <path d="M15 33h16v25H15zM16 70h14"/>
+  </g>
+  <text x="564" y="54" fill="#eadcaf" font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="700" text-anchor="middle">Tobacco Road Games</text>
+  <text x="564" y="88" fill="#c9a75c" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-style="italic" text-anchor="middle">Books Worth Pulling From the Shelf</text>
+</svg>
