@@ -6,7 +6,49 @@
   "use strict";
 
   const HOUSE_TIME_ZONE = "America/New_York";
-  const SPRITE_PATH = "/assets/images/storefront-shelf-dressing.svg";
+  const ASSET_ROOT = "/assets/images/storefront-shelf-dressing";
+  const assetPath = (filename) => `${ASSET_ROOT}/${filename}`;
+  const ASSET_SOURCES = Object.freeze({
+    plant: assetPath("variegated_pothos_in_ornate_green_urn.webp"),
+    "best-seller-trophy": assetPath("antique_golden_book_trophy.webp"),
+    dice: assetPath("enchanted_books_and_emerald_dice.webp"),
+    knight: assetPath("antique_brass_globe_on_stacked_books.webp"),
+    dragon: assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    chest: assetPath("enchanted_books_and_emerald_dice.webp"),
+    "map-tube": assetPath("vintage_books_and_magnifying_glass.webp"),
+    potion: assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    "gm-screen": assetPath("vintage_books_and_magnifying_glass.webp"),
+    "game-books": assetPath("enchanted_books_and_emerald_dice.webp"),
+    "sci-fi": assetPath("antique_brass_globe_on_stacked_books.webp"),
+    bookend: assetPath("vintage_books_and_magnifying_glass.webp"),
+    "trg-cake": assetPath("antique_golden_book_trophy.webp"),
+    ribbon: assetPath("antique_golden_book_trophy.webp"),
+    medallion: assetPath("antique_golden_book_trophy.webp"),
+    present: assetPath("antique_golden_book_trophy.webp"),
+    "party-hat": assetPath("antique_golden_book_trophy.webp"),
+    "basketball-trophy": assetPath("basketball_trophy_on_walnut_stand.webp"),
+    basketball: assetPath("basketball_trophy_on_walnut_stand.webp"),
+    scoreboard: assetPath("basketball_trophy_on_walnut_stand.webp"),
+    "field-pack": assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    anchor: assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    "dress-cap": assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    aircraft: assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    cutter: assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    satellite: assetPath("antique_brass_lantern_with_candle_glow.webp"),
+    pumpkin: assetPath("glowing_autumn_jack_o_lantern_harvest_decor.webp"),
+    lantern: assetPath("glowing_autumn_jack_o_lantern_harvest_decor.webp"),
+    "harvest-pumpkin": assetPath("glowing_autumn_jack_o_lantern_harvest_decor.webp"),
+    "autumn-leaves": assetPath("glowing_autumn_jack_o_lantern_harvest_decor.webp"),
+    "easter-eggs": assetPath("enchanted_books_and_emerald_dice.webp"),
+    sumo: assetPath("cheerful_ceramic_sumo_figurine.webp"),
+    uchiwa: assetPath("cheerful_ceramic_sumo_figurine.webp"),
+    evergreen: assetPath("frosted_holiday_tree_with_velvet_bow.webp"),
+    gift: assetPath("frosted_holiday_tree_with_velvet_bow.webp"),
+    holly: assetPath("frosted_holiday_tree_with_velvet_bow.webp"),
+    bell: assetPath("frosted_holiday_tree_with_velvet_bow.webp"),
+    flowers: assetPath("antique_brass_globe_on_stacked_books.webp"),
+    "spring-plant": assetPath("vintage_books_and_magnifying_glass.webp")
+  });
   const DEFAULT_THEME = Object.freeze({
     id: "default",
     name: "Default RPG shelf dressing",
@@ -123,7 +165,7 @@
   }
 
   function objectDescriptor(asset, kind = "default") {
-    return Object.freeze({ asset, kind, sprite: `${SPRITE_PATH}#${asset}` });
+    return Object.freeze({ asset, kind, src: ASSET_SOURCES[asset] || ASSET_SOURCES["game-books"] });
   }
 
   function sideDescriptor(secondaryAsset, secondaryKind = "default") {
@@ -161,7 +203,8 @@
 
   return Object.freeze({
     HOUSE_TIME_ZONE,
-    SPRITE_PATH,
+    ASSET_ROOT,
+    ASSET_SOURCES,
     DEFAULT_THEME,
     THEMES,
     houseDateParts,

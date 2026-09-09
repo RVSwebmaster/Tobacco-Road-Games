@@ -11,16 +11,19 @@
     return headingId.replace(/-shelf-heading$|-heading$/, "");
   };
 
-  const createIcon = (descriptor, role) => {
-    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    icon.setAttribute("class", `shelf-dressing__object shelf-dressing__object--${role} shelf-dressing__object--${descriptor.kind}`);
-    icon.setAttribute("viewBox", "0 0 64 64");
-    icon.setAttribute("focusable", "false");
-    icon.setAttribute("aria-hidden", "true");
-    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-    use.setAttribute("href", descriptor.sprite);
-    icon.appendChild(use);
-    return icon;
+  const createArtwork = (descriptor, role) => {
+    const artwork = document.createElement("img");
+    const assetClass = descriptor.asset.replace(/[^a-z0-9-]/gi, "-");
+    artwork.className = `shelf-dressing__object shelf-dressing__object--${role} shelf-dressing__object--${descriptor.kind} shelf-dressing__object--asset-${assetClass}`;
+    artwork.src = descriptor.src;
+    artwork.alt = "";
+    artwork.width = 384;
+    artwork.height = 384;
+    artwork.loading = "lazy";
+    artwork.decoding = "async";
+    artwork.draggable = false;
+    artwork.setAttribute("aria-hidden", "true");
+    return artwork;
   };
 
   const createDecoration = (side, descriptor) => {
@@ -30,7 +33,7 @@
     slot.dataset.shelfDressingPlant = descriptor.plant.asset;
     slot.dataset.shelfDressingSecondary = descriptor.secondary.asset;
     slot.setAttribute("aria-hidden", "true");
-    slot.append(createIcon(descriptor.plant, "plant"), createIcon(descriptor.secondary, "secondary"));
+    slot.append(createArtwork(descriptor.plant, "plant"), createArtwork(descriptor.secondary, "secondary"));
     return slot;
   };
 

@@ -9,10 +9,23 @@ const themes = require(path.join(ROOT, "assets", "js", "storefront-shelf-themes.
 const page = read("store/index.html");
 const css = read("styles.css");
 const runtime = read("assets/js/storefront-shelf-dressing.js");
-const sprite = read("assets/images/storefront-shelf-dressing.svg");
 const storefront = read("assets/js/storefront.js");
 const sponsor = read("assets/js/sponsor-marquee.js");
 const build = read("scripts/build-store.js");
+const artworkRoot = path.join(ROOT, "assets", "images", "storefront-shelf-dressing");
+const masterRoot = path.join(artworkRoot, "masters");
+const suppliedArtwork = [
+  "antique_brass_globe_on_stacked_books",
+  "antique_brass_lantern_with_candle_glow",
+  "antique_golden_book_trophy",
+  "basketball_trophy_on_walnut_stand",
+  "cheerful_ceramic_sumo_figurine",
+  "enchanted_books_and_emerald_dice",
+  "frosted_holiday_tree_with_velvet_bow",
+  "glowing_autumn_jack_o_lantern_harvest_decor",
+  "variegated_pothos_in_ornate_green_urn",
+  "vintage_books_and_magnifying_glass"
+];
 
 assert.equal(themes.HOUSE_TIME_ZONE, "America/New_York");
 assert.equal(themes.selectActiveTheme(new Date("2026-02-02T17:00:00Z")).id, "default", "An ordinary day must use the canonical default theme.");
@@ -99,41 +112,80 @@ for (const id of [
 const configuredAssets = new Set(themes.THEMES.flatMap((theme) => theme.decorations || []));
 configuredAssets.add("best-seller-trophy");
 configuredAssets.add("plant");
-for (const asset of configuredAssets) assert.match(sprite, new RegExp(`<symbol id="${asset}"`), `Missing sprite symbol: ${asset}`);
+for (const asset of configuredAssets) {
+  assert.ok(themes.ASSET_SOURCES[asset], `Missing supplied-art mapping for theme asset: ${asset}`);
+  assert.match(themes.ASSET_SOURCES[asset], /^\/assets\/images\/storefront-shelf-dressing\/[a-z0-9_]+\.webp$/);
+}
 
-assert.match(page, /storefront-shelf-themes\.js\?v=20260908-dressing-scale3/);
-assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-dressing-scale3/);
-assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-dressing-scale3"/);
+assert.equal(themes.ASSET_ROOT, "/assets/images/storefront-shelf-dressing");
+assert.match(themes.ASSET_SOURCES.plant, /variegated_pothos_in_ornate_green_urn\.webp$/);
+assert.match(themes.ASSET_SOURCES["best-seller-trophy"], /antique_golden_book_trophy\.webp$/);
+assert.match(themes.ASSET_SOURCES.sumo, /cheerful_ceramic_sumo_figurine\.webp$/);
+assert.match(themes.ASSET_SOURCES.basketball, /basketball_trophy_on_walnut_stand\.webp$/);
+assert.match(themes.ASSET_SOURCES.pumpkin, /glowing_autumn_jack_o_lantern_harvest_decor\.webp$/);
+assert.match(themes.ASSET_SOURCES.evergreen, /frosted_holiday_tree_with_velvet_bow\.webp$/);
+assert.deepEqual(new Set([
+  themes.ASSET_SOURCES.dice,
+  themes.ASSET_SOURCES.knight,
+  themes.ASSET_SOURCES.dragon,
+  themes.ASSET_SOURCES["map-tube"]
+]), new Set([
+  `${themes.ASSET_ROOT}/enchanted_books_and_emerald_dice.webp`,
+  `${themes.ASSET_ROOT}/antique_brass_globe_on_stacked_books.webp`,
+  `${themes.ASSET_ROOT}/antique_brass_lantern_with_candle_glow.webp`,
+  `${themes.ASSET_ROOT}/vintage_books_and_magnifying_glass.webp`
+]), "The default RPG dressing must draw from all four supplied default companions.");
+
+for (const basename of suppliedArtwork) {
+  const master = path.join(masterRoot, `${basename}.png`);
+  const derivative = path.join(artworkRoot, `${basename}.webp`);
+  assert.ok(fs.existsSync(master), `Missing preserved PNG master: ${basename}`);
+  assert.ok(fs.existsSync(derivative), `Missing optimized WebP derivative: ${basename}`);
+  const bytes = fs.readFileSync(derivative);
+  assert.equal(bytes.subarray(0, 4).toString("ascii"), "RIFF", `${basename} must be a WebP RIFF file.`);
+  assert.equal(bytes.subarray(8, 12).toString("ascii"), "WEBP", `${basename} must be WebP artwork.`);
+  assert.ok(fs.statSync(derivative).size < fs.statSync(master).size, `${basename} derivative should be smaller than its 1254px master.`);
+}
+assert.equal(new Set(Object.values(themes.ASSET_SOURCES)).size, suppliedArtwork.length, "Every supplied artwork derivative should be active in the shelf theme map.");
+assert.equal(fs.existsSync(path.join(ROOT, "assets", "images", "storefront-shelf-dressing.svg")), false, "The obsolete simplified sprite must be retired.");
+
+assert.match(page, /storefront-shelf-themes\.js\?v=20260908-shelf-art4/);
+assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-shelf-art4/);
+assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-shelf-art4"/);
 assert.match(build, /storefront-shelf-themes\.js/);
 assert.match(build, /storefront-shelf-dressing\.js/);
 assert.match(runtime, /aria-hidden/);
 assert.match(runtime, /MutationObserver/);
 assert.match(runtime, /resolveShelfDressing/);
-assert.match(runtime, /createIcon\(descriptor\.plant, "plant"\)/);
-assert.match(runtime, /createIcon\(descriptor\.secondary, "secondary"\)/);
+assert.match(runtime, /createArtwork\(descriptor\.plant, "plant"\)/);
+assert.match(runtime, /createArtwork\(descriptor\.secondary, "secondary"\)/);
+assert.match(runtime, /document\.createElement\("img"\)/);
+assert.match(runtime, /artwork\.loading = "lazy"/);
+assert.match(runtime, /artwork\.decoding = "async"/);
+assert.match(runtime, /artwork\.src = descriptor\.src/);
+assert.doesNotMatch(runtime, /createElementNS|<use|descriptor\.sprite/);
 assert.match(runtime, /descriptor\.plant/);
 assert.match(runtime, /descriptor\.secondary/);
 assert.doesNotMatch(runtime, /addEventListener\(["']click|data-ad-pool|impression/);
 assert.match(css, /\.shelf-dressing\{[^}]*pointer-events:none/);
-assert.match(css, /\.shelf-dressing__object--plant\{z-index:1;width:41px;height:58px\}/);
-assert.match(css, /\.shelf-dressing__object--secondary\{z-index:2;width:52px;height:64px;margin-left:-20px/);
-assert.match(css, /\.shelf-dressing--right\{right:0;flex-direction:row-reverse\}/);
-assert.match(css, /\.shelf-dressing--right \.shelf-dressing__object--secondary\{margin-right:-20px;margin-left:0\}/);
-assert.match(css, /\.shelf-dressing__object--house\{width:58px;height:72px;margin-left:-26px\}/);
-assert.match(css, /\.shelf-dressing__object--event\{width:58px;height:70px;margin-left:-26px\}/);
-assert.match(css, /padding:18px 74px 26px/);
+assert.match(css, /--shelf-dressing-bottom:23px/);
+assert.match(css, /bottom:var\(--shelf-dressing-bottom\)/);
+assert.match(css, /\.shelf-dressing--left\{left:-16px\}/);
+assert.match(css, /\.shelf-dressing--right\{right:-16px;flex-direction:row-reverse\}/);
+assert.match(css, /\.shelf-dressing__object\{[^}]*object-fit:contain;object-position:center bottom/);
+assert.match(css, /\.shelf-dressing__object--plant\{z-index:1;width:76px;height:76px\}/);
+assert.match(css, /\.shelf-dressing__object--secondary\{z-index:2;width:84px;height:84px;margin-left:-68px\}/);
+assert.match(css, /\.shelf-dressing--right \.shelf-dressing__object--secondary\{margin-right:-68px;margin-left:0\}/);
+assert.match(css, /\.shelf-dressing__object--house\{width:90px;height:90px;margin-left:-74px\}/);
+assert.match(css, /\.shelf-dressing__object--event\{width:88px;height:88px;margin-left:-72px\}/);
+assert.doesNotMatch(css, /shelf-dressing__object[^}]*translateY/);
+assert.match(css, /padding:17px 76px 23px/);
 assert.match(css, /body\.book-examination-active \.shelf-dressing\{opacity:\.38\}/);
 assert.match(css, /\.bookshelf-book\.is-examining\{position:fixed;z-index:60/);
 assert.match(css, /@media\(max-width:900px\)[^{]*\{[\s\S]*?\.shelf-dressing\{display:none\}/);
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /bookshelf-book__placeholder/);
 assert.match(sponsor, /data-sponsor-track/);
-assert.match(sprite, /<symbol id="best-seller-trophy"/);
-assert.match(sprite, /<title>Tobacco Road Games trophy<\/title>/);
-assert.doesNotMatch(sprite, /<title>\s*TRG\b/i);
-assert.match(sprite, /<symbol id="sumo"/);
-assert.match(sprite, /<symbol id="basketball"/);
-assert.match(sprite, /<symbol id="easter-eggs"/);
-assert.ok(fs.statSync(path.join(ROOT, "assets", "images", "storefront-shelf-dressing.svg")).size < 50000, "Shelf-dressing sprite should remain lightweight.");
+assert.doesNotMatch(`${page}\n${runtime}\n${css}`, /storefront-shelf-dressing\.svg/);
 
 console.log("TRG storefront shelf-dressing theme tests passed.");

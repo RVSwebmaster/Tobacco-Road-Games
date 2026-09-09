@@ -11,7 +11,7 @@ const storefront = read("assets/js/storefront.js");
 const sponsor = read("assets/js/sponsor-marquee.js");
 const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
 
-assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-dressing-scale3/);
+assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-shelf-art4/);
 assert.match(page, /<span class="brand__name">Tobacco Road Games<\/span>/);
 assert.match(page, /<span class="brand__tag">Great games\. Open roads\.<\/span>/);
 assert.match(page, /Search games, Creators, or keywords/);
