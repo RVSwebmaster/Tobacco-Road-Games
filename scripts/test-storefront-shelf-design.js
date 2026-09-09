@@ -5,7 +5,7 @@ const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 
 const page = read("store/index.html"), css = read("styles.css"), storefront = read("assets/js/storefront.js"), sponsor = read("assets/js/sponsor-marquee.js"), rotation = read("functions/_lib/ad-rotation.mjs"), middleware = read("functions/_middleware.js"), build = read("scripts/build-store.js");
-assert.match(page, /styles\.css\?v=20260908-shelf-art4/); assert.match(page, /storefront\.js\?v=20260908-shelf-art4/);
+assert.match(page, /styles\.css\?v=20260908-shelf-baseline5/); assert.match(page, /storefront\.js\?v=20260908-shelf-baseline5/);
 const order = ["id=\"open-rules-shelf-heading\"", "class=\"sponsor-marquee\"", "id=\"new-releases-bookshelf-heading\"", "id=\"best-sellers-shelf-heading\"", "id=\"pwyw-free-shelf-heading\"", "id=\"search-results-heading\"", "class=\"store-lower\""];
 for (let index = 1; index < order.length; index += 1) assert.ok(page.indexOf(order[index - 1]) < page.indexOf(order[index]), `${order[index - 1]} must precede ${order[index]}.`);
 assert.match(page, /bookshelf-book__spine/); assert.match(page, /bookshelf-book__cover-frame/); assert.match(page, /bookshelf-book__details/); assert.match(page, /loading="lazy" decoding="async"/);

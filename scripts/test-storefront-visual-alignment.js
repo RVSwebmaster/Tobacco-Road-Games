@@ -11,7 +11,7 @@ const storefront = read("assets/js/storefront.js");
 const sponsor = read("assets/js/sponsor-marquee.js");
 const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
 
-assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-shelf-art4/);
+assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-shelf-baseline5/);
 assert.match(page, /<span class="brand__name">Tobacco Road Games<\/span>/);
 assert.match(page, /<span class="brand__tag">Great games\. Open roads\.<\/span>/);
 assert.match(page, /Search games, Creators, or keywords/);
@@ -30,7 +30,7 @@ assert.match(css, /Approved storefront mockup alignment/);
 assert.match(css, /body:has\(\.shelf-storefront\) \.page-shell\{width:min\(1500px,100%\)/);
 assert.match(css, /\.shelf-storefront\{position:relative;display:grid;gap:0/);
 assert.match(css, /\.shelf-storefront>\[data-store-closed-notice\]\{display:block;min-height:0/);
-assert.match(css, /\.shelf-storefront \.bookshelf-grid\{position:relative;isolation:isolate;display:flex;align-items:flex-end/);
+assert.match(css, /\.shelf-storefront \.bookshelf-grid\{--shelf-contact-shift:23px;position:relative;isolation:isolate;display:flex;align-items:flex-end/);
 assert.match(css, /min-height:calc\(var\(--book-height,296px\) - 68px\)/);
 assert.match(css, /\.sponsor-marquee\{grid-template-columns:170px minmax\(0,1fr\)/);
 assert.match(css, /\.shelf-storefront \.bookshelf-book__details\{top:2px/);
