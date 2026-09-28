@@ -7,6 +7,7 @@ $wranglerRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot ".wrangler"))
 $deploymentRoot = [System.IO.Path]::GetFullPath((Join-Path $wranglerRoot "staging-pages-output"))
 $publicRootFiles = @(
   "_routes.json",
+  "404.html",
   "account.html",
   "ad-depot.html",
   "authors.html",

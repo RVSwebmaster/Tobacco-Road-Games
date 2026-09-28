@@ -4,7 +4,16 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const AFFECTED = ["agency", "circle-of-cinder", "janni", "ringbound", "tablecraft-primer"];
+const HISTORICAL = ["agency", "circle-of-cinder", "janni", "ringbound", "tablecraft-primer"];
+const REMOVED = [
+  "sirrocans",
+  "spriggans",
+  "final-flame",
+  "mouthy-monsters",
+  "path-of-the-janky",
+  "yojimbo",
+  "silence-and-the-spotlight"
+];
 const SALEABLE_STATUSES = new Set(["available-direct", "free-download", "pay-what-you-want"]);
 const SALEABLE_BUY_MODES = new Set(["cart", "fixed-price", "free-download", "manual-invoice", "pay-what-you-want"]);
 
@@ -15,8 +24,8 @@ async function main() {
   const seededSlugs = [...migration.matchAll(/'listing-[^']+','creator-rv-sawyer','([^']+)','([^']+)'/g)]
     .map((match) => match[2]);
 
-  assert.equal(seededSlugs.length, 12, "The compatibility inventory should include every migration-seeded listing.");
-  for (const slug of seededSlugs) {
+  assert.equal(seededSlugs.length, 12, "The compatibility inventory should retain every migration-seeded D1 listing.");
+  for (const slug of HISTORICAL) {
     const product = productMap.get(slug);
     assert.ok(product, `${slug} should retain its historical static record.`);
     if (!product.productIdentityId) {
@@ -25,7 +34,7 @@ async function main() {
     }
   }
 
-  for (const slug of AFFECTED) {
+  for (const slug of HISTORICAL) {
     const product = productMap.get(slug);
     assert.equal(product.status, "legacy-not-for-sale");
     assert.equal(product.buyMode, "retired");
@@ -42,9 +51,27 @@ async function main() {
     }
   }
 
+  const activePages = [
+    "index.html",
+    "authors/rv-sawyer/index.html",
+    "store/index.html",
+    "store/catalog/index.html",
+    "store/cart/index.html",
+    "store/sitemap.xml",
+    "shared/runtime-catalog.mjs"
+  ];
+  for (const slug of REMOVED) {
+    assert.equal(seededSlugs.includes(slug), true, `${slug} should remain a dormant D1 compatibility seed.`);
+    assert.equal(productMap.has(slug), false, `${slug} must be absent from the static product source.`);
+    assert.equal(fs.existsSync(path.join(ROOT, "store", "products", slug, "index.html")), false, `${slug} must not have a generated product page.`);
+    for (const activePage of activePages) {
+      assert.doesNotMatch(read(activePage), new RegExp(slug), `${slug} must stay out of ${activePage}.`);
+    }
+  }
+
   const homepage = JSON.parse(read("data/homepage.json"));
-  assert.equal(AFFECTED.includes(homepage.featuredSlug), false);
-  assert.deepEqual(homepage.workInProgressSlugs.filter((slug) => AFFECTED.includes(slug)), []);
+  assert.equal([...HISTORICAL, ...REMOVED].includes(homepage.featuredSlug), false);
+  assert.deepEqual(homepage.workInProgressSlugs.filter((slug) => [...HISTORICAL, ...REMOVED].includes(slug)), []);
 
   assert.match(read("functions/_lib/cart-checkout.mjs"), /publication_state!=='published'/, "Checkout must continue rejecting unpublished Creator listings.");
 

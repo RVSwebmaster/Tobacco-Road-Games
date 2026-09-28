@@ -23,7 +23,8 @@ function main() {
 
   assert.equal(creators[0].profileTemplate, "bookshelf", "RV Sawyer must retain the bookshelf creator template.");
   assert.equal(creators[0].marketplaceStatus, "active", "RV Sawyer must be an active marketplace creator.");
-  assert.match(profile, /data-creator-template="bookshelf"/, "RV Sawyer's generated profile must render the bookshelf template.");
+  assert.match(profile, /0 titles in the public catalog/, "RV Sawyer's generated profile must render the empty public-catalog state.");
+  assert.match(profile, /Public catalog titles will appear here/, "The empty creator catalog must not render legacy preview products.");
   assert.match(build, /data-creator-template="catalog"/, "The catalog creator template must remain available.");
   assert.match(directory, /Explore creators publishing through the Tobacco Road Games marketplace/, "The creator directory must be marketplace-facing.");
   assert.match(alias, /compatibility alias/, "The creators URL must remain a safe compatibility alias.");

@@ -493,7 +493,7 @@ async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieH
 
   const formData = new FormData();
   addRequiredTextFields(formData, {
-    folder: "sirrocans",
+    folder: "Tablecraft Primer",
     gameSystem: "5E Compatible",
     gameSystemSlug: "5e-compatible",
     longDescription: "Metadata-only update for an existing listing.",
@@ -502,9 +502,9 @@ async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieH
     series: "",
     seriesSlug: "",
     shortDescription: "Metadata-only update for an existing listing.",
-    slug: "sirrocans",
+    slug: "tablecraft-primer",
     subtitle: "Updated existing product",
-    title: "Sirrocans"
+    title: "Tablecraft Primer"
   });
 
   const originalRandomUuid = crypto.randomUUID;
@@ -554,7 +554,7 @@ async function testOwnerPricingPublishAccepted(ownerPricing, env, cookieHeader) 
       salePrice: "3.99",
       salePriceCents: 399,
       saleStart: "2026-07-01",
-      slug: "sirrocans"
+      slug: "tablecraft-primer"
     }, cookieHeader), env, {
       dispatchOptions: {
         fetchImpl: async (url, options = {}) => {
@@ -587,7 +587,7 @@ async function testOwnerPricingPublishAccepted(ownerPricing, env, cookieHeader) 
     assert.ok(dispatchCall, "Pricing updates should dispatch the GitHub publish workflow.");
     const dispatchPayload = JSON.parse(dispatchCall.options.body);
     assert.equal(dispatchPayload.client_payload.operation, "pricing_update", "Pricing updates should use a dedicated workflow operation.");
-    assert.equal(dispatchPayload.client_payload.metadata.slug, "sirrocans", "Pricing updates should dispatch the target product slug.");
+    assert.equal(dispatchPayload.client_payload.metadata.slug, "tablecraft-primer", "Pricing updates should dispatch the target product slug.");
     assert.equal(dispatchPayload.client_payload.metadata.priceCents, 499, "Pricing updates should dispatch derived price cents.");
   } finally {
     Date.now = originalDateNow;
@@ -606,7 +606,7 @@ async function testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, env, c
     salePrice: "",
     salePriceCents: null,
     saleStart: "",
-    slug: "sirrocans"
+    slug: "tablecraft-primer"
   }, cookieHeader), env, {
     dispatchOptions: {
       fetchImpl: async () => new Response(null, { status: 204 })
@@ -749,7 +749,7 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
   const bucket = createMockBucket();
   const formData = new FormData();
   addRequiredTextFields(formData, {
-    folder: "sirrocans",
+    folder: "Tablecraft Primer",
     gameSystem: "5E Compatible",
     gameSystemSlug: "5e-compatible",
     longDescription: "Pending workflow metadata-only update.",
@@ -758,9 +758,9 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
     series: "",
     seriesSlug: "",
     shortDescription: "Pending workflow metadata-only update.",
-    slug: "sirrocans",
+    slug: "tablecraft-primer",
     subtitle: "Pending workflow subtitle",
-    title: "Sirrocans"
+    title: "Tablecraft Primer"
   });
 
   const originalRandomUuid = crypto.randomUUID;
@@ -886,9 +886,9 @@ async function testProductAdvisorSuggestions(productAdvisor) {
       {
         productLine: "Fifth Edition Fantasy Roleplaying",
         series: "",
-        slug: "sirrocans",
+        slug: "tablecraft-primer",
         tags: ["5E", "Ancestry"],
-        title: "Sirrocans"
+        title: "Tablecraft Primer"
       }
     ]
   });
@@ -913,7 +913,7 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
   fs.writeFileSync(tempProductsPath, `${JSON.stringify(tempProducts, null, 2)}\n`);
 
   await publishScript.applyPublishPayload(tempRoot, {
-    folder: "sirrocans",
+    folder: "Tablecraft Primer",
     metadata: {
       buyMode: "preview-only",
       gameSystem: "5E Compatible",
@@ -922,20 +922,20 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
       productLine: "Fifth Edition Fantasy Roleplaying",
       productLineSlug: "fifth-edition-fantasy-roleplaying",
       shortDescription: "Updated short copy.",
-      slug: "sirrocans",
+      slug: "tablecraft-primer",
       status: "preview-available",
       subtitle: "Updated subtitle",
-      title: "Sirrocans",
+      title: "Tablecraft Primer",
       version: "2026 release file"
     }
   });
 
   const updatedProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
-  const sirrocans = updatedProducts.find((product) => product.slug === "sirrocans");
-  assert.equal(sirrocans.saleEnabled, true, "Existing sale flags should survive publish.");
-  assert.equal(sirrocans.saleLabel, "Summer Sale", "Existing sale labels should survive publish.");
-  assert.equal(sirrocans.bundleEligible, true, "Existing bundle flags should survive publish.");
-  assert.equal(sirrocans.shortDescription, "Updated short copy.", "Explicit new copy should apply.");
+  const tablecraftPrimer = updatedProducts.find((product) => product.slug === "tablecraft-primer");
+  assert.equal(tablecraftPrimer.saleEnabled, true, "Existing sale flags should survive publish.");
+  assert.equal(tablecraftPrimer.saleLabel, "Summer Sale", "Existing sale labels should survive publish.");
+  assert.equal(tablecraftPrimer.bundleEligible, true, "Existing bundle flags should survive publish.");
+  assert.equal(tablecraftPrimer.shortDescription, "Updated short copy.", "Explicit new copy should apply.");
 }
 
 async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript) {
@@ -1134,7 +1134,7 @@ async function testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publish
         salePrice: "4.99",
         salePriceCents: 499,
         saleStart: "",
-        slug: "sirrocans"
+        slug: "tablecraft-primer"
       },
       operation: "pricing_update",
       pricingConfirmation: {
