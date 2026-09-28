@@ -74,9 +74,10 @@ function main() {
   const authors = loadAuthors();
   const authorLookup = buildAuthorLookup(authors);
   const products = loadProducts(authorLookup);
+  const publicCatalogProducts = products.filter(isCatalogBrowsable);
   const assetWarnings = collectAssetWarnings(products);
   const bundleRules = loadBundleRules();
-  const indexes = buildIndexes(products, authors.filter((creator) => creator.marketplaceStatus === "active"));
+  const indexes = buildIndexes(publicCatalogProducts, authors.filter((creator) => creator.marketplaceStatus === "active"));
 
   fs.rmSync(STORE_DIR, { recursive: true, force: true });
   fs.mkdirSync(STORE_DIR, { recursive: true });
@@ -110,15 +111,15 @@ function main() {
     }));
   }
 
-  writeFile("store/index.html", renderShelfStoreHome(products, indexes));
-  writeFile("store/catalog/index.html", renderCatalogPage(products, indexes));
-  writeFile("store/cart/index.html", renderCartPage(products));
+  writeFile("store/index.html", renderShelfStoreHome(publicCatalogProducts, indexes));
+  writeFile("store/catalog/index.html", renderCatalogPage(publicCatalogProducts, indexes));
+  writeFile("store/cart/index.html", renderCartPage(publicCatalogProducts));
 
   for (const product of products) {
-    writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, products));
+    writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, publicCatalogProducts));
   }
 
-  buildHomepage(products, indexes, bundleRules);
+  buildHomepage(publicCatalogProducts, indexes, bundleRules);
   buildAccountPage();
   buildStaticPublicPage("support.html", "");
 
@@ -188,12 +189,12 @@ function main() {
 
   writeFile(
     "store/bundles/bundle-what-you-want/index.html",
-    renderBundlePlanningPage(bundleRules, products)
+    renderBundlePlanningPage(bundleRules, publicCatalogProducts)
   );
-  writeFile("store/sitemap.xml", renderStoreSitemap(products, indexes, bundleRules));
+  writeFile("store/sitemap.xml", renderStoreSitemap(publicCatalogProducts, indexes, bundleRules));
   writeFile("sitemap.xml", renderRootSitemap(indexes.authors));
 
-  console.log(`Storefront generated for ${products.length} products.`);
+  console.log(`Storefront generated for ${publicCatalogProducts.length} active products; ${products.length - publicCatalogProducts.length} historical records retained as direct pages.`);
   if (assetWarnings.length) {
     console.log(`Asset cleanup needed for ${assetWarnings.length} product${assetWarnings.length === 1 ? "" : "s"}:`);
     for (const warning of assetWarnings) {
@@ -567,7 +568,7 @@ function renderCatalogPage(products, indexes) {
     canonicalPath: "/store/catalog/",
     ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST, "/assets/js/discovery-labels.js"],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
       description: "Search and browse Tobacco Road Games titles by creator, game system, product line, series, release status, and title.",
@@ -685,6 +686,7 @@ function renderProductPage(product, products) {
     canonicalPath: product.url,
     ogImage: product.assetSet.cover,
     currentNav: "store",
+    extraScripts: ["/assets/js/discovery-labels.js"],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Store", href: "/store/" },
@@ -710,7 +712,7 @@ function renderProductPage(product, products) {
             <p class="section-heading__kicker">${escapeHtml(product.gameSystem)}</p>
             <h1 id="product-title">${escapeHtml(product.title)}</h1>
             <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
-            ${authorByline ? `<p class="product-byline">${authorByline}</p>` : ""}
+            ${authorByline ? `<p class="product-byline">${authorByline}</p><div class="creator-reputation creator-reputation--listing" data-creator-reputation="${escapeAttribute(product.authorSlugs[0] || "")}" data-reputation-view="compact" aria-live="polite"></div>` : ""}
             <div class="product-hero__meta">
               ${heroMetaItems.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
             </div>
@@ -920,7 +922,7 @@ function renderLayout({
     </footer>
   </div>
 </body>
-</html>`;
+</html>`.replace(/[ \t]+$/gm, "");
 }
 
 function renderStoreNav(currentNav, navItems = PUBLIC_NAV_ITEMS) {
@@ -1468,6 +1470,7 @@ function renderAuthorsIndexPage(authors) {
     description: "Meet the creators publishing tabletop games, tools, adventures, and workshop material through Tobacco Road Games.",
     canonicalPath: "/authors.html",
     currentNav: "authors",
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js"],
     structuredData: renderBreadcrumbSchema([
       { label: "Home", href: "/" },
       { label: "Authors", href: "/authors.html" }
@@ -1499,6 +1502,7 @@ function renderAuthorProfilePage(author) {
     description: author.shortBio || `Meet ${author.name} at Tobacco Road Games.`,
     canonicalPath: author.url,
     currentNav: "authors",
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js"],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Home", href: "/" },
@@ -1519,6 +1523,7 @@ function renderAuthorProfilePage(author) {
           <div class="author-hero__copy">
             <p class="section-heading__kicker">Creator</p>
             <h1 id="${escapeAttribute(author.slug)}-heading">${escapeHtml(author.name)}</h1>
+            <div class="creator-reputation creator-reputation--profile" data-creator-reputation="${escapeAttribute(author.slug)}" data-reputation-view="profile" aria-live="polite"><p class="creator-rating">Creator reputation loading…</p></div>
             ${author.title ? `<p class="product-subtitle">${escapeHtml(author.title)}</p>` : ""}
             ${author.shortBio ? `<p class="hero__lead">${escapeHtml(author.shortBio)}</p>` : ""}
             ${author.links.length ? `<div class="author-link-list">${author.links.map(renderAuthorLink).join("")}</div>` : ""}
@@ -1603,6 +1608,7 @@ function renderPublicLayout({
   canonicalPath,
   currentNav,
   structuredData,
+  extraScripts = [],
   content
 }) {
   const canonicalUrl = `${BASE_URL}${canonicalPath}`;
@@ -1630,6 +1636,7 @@ function renderPublicLayout({
   <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
   <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
+  ${extraScripts.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -1656,7 +1663,7 @@ function renderPublicLayout({
     </footer>
   </div>
 </body>
-</html>`;
+</html>`.replace(/[ \t]+$/gm, "");
 }
 
 function renderAliasPage({
@@ -1764,6 +1771,7 @@ function renderAuthorCard(author) {
       ${author.profileImage ? `<img class="author-card__image" src="${escapeAttribute(author.profileImage)}" alt="${escapeAttribute(author.name)} profile image">` : ""}
       <p class="note-card__label">Creator</p>
       <h2>${escapeHtml(author.name)}</h2>
+      <div class="creator-reputation creator-reputation--directory" data-creator-reputation="${escapeAttribute(author.slug)}" data-reputation-view="directory" aria-live="polite"><p class="creator-rating">Creator reputation loading…</p></div>
       ${author.title ? `<p class="author-card__tagline">${escapeHtml(author.title)}</p>` : ""}
       ${author.shortBio ? `<p class="author-card__bio">${escapeHtml(author.shortBio)}</p>` : ""}
       <div class="author-card__meta">
@@ -2172,12 +2180,17 @@ function buildTitleIndex(products) {
 }
 
 function resolveProductAssets(product) {
-  const coverSource = pickExistingPath(product.coverImage, product.frontCoverImage, product.thumbnailImage);
-  const thumbSource = pickExistingPath(product.thumbnailImage, product.coverImage, product.frontCoverImage, coverSource);
-  const previewImages = product.previewImages.filter((sitePath) => sitePath && sitePathExists(sitePath));
-  const previewFeature = pickExistingPath(product.previewImage, previewImages[0]);
-  const previewPdf = sitePathExists(product.previewPdf) ? product.previewPdf : "";
-  const teaserVideo = sitePathExists(product.teaserVideo) ? product.teaserVideo : "";
+  const canUseProductStorage = isCatalogBrowsable(product);
+  const usable = (sitePath) => sitePath
+    && (canUseProductStorage || !isR2BackedProductAssetPath(sitePath))
+    && sitePathExists(sitePath);
+  const pickUsable = (...pathsToTry) => pathsToTry.find(usable) || "";
+  const coverSource = pickUsable(product.coverImage, product.frontCoverImage, product.thumbnailImage);
+  const thumbSource = pickUsable(product.thumbnailImage, product.coverImage, product.frontCoverImage, coverSource);
+  const previewImages = product.previewImages.filter(usable);
+  const previewFeature = pickUsable(product.previewImage, previewImages[0]);
+  const previewPdf = usable(product.previewPdf) ? product.previewPdf : "";
+  const teaserVideo = usable(product.teaserVideo) ? product.teaserVideo : "";
   const coverAudit = !coverSource
     ? (product.coverImage ? `coverImage missing file ${product.coverImage}` : "coverImage field missing")
     : "";
@@ -2281,6 +2294,9 @@ function formatPrice(product) {
 }
 
 function renderCardPrice(product) {
+  if (!isCatalogBrowsable(product)) {
+    return product.statusLabel;
+  }
   if (product.buyMode === "pay-what-you-want") {
     return "Pay What You Want";
   }
@@ -2294,6 +2310,9 @@ function renderCardPrice(product) {
 }
 
 function renderDisplayPrice(product) {
+  if (!isCatalogBrowsable(product)) {
+    return product.statusLabel;
+  }
   if (product.buyMode === "pay-what-you-want") {
     const minimum = product.minimumPriceCents !== null ? `Minimum ${formatCents(product.minimumPriceCents, product.currency)}` : "";
     const suggested = product.suggestedPriceCents !== null ? `Suggested ${formatCents(product.suggestedPriceCents, product.currency)}` : "";
@@ -2404,6 +2423,9 @@ function renderProductDatasetAttributes(product, searchText) {
 }
 
 function renderFileListSummary(product) {
+  if (!isCatalogBrowsable(product)) {
+    return "No files are currently offered from this historical catalog record.";
+  }
   if (product.buyMode === "preview-only") {
     const plannedFormat = product.format.length ? product.format.join(", ") : "digital file";
     return `No downloadable file is included on this preview page. Planned release format: ${plannedFormat}.`;
@@ -2418,6 +2440,9 @@ function renderFileListSummary(product) {
 }
 
 function renderPurchaseSummary(product) {
+  if (!isCatalogBrowsable(product)) {
+    return `${product.title} is retained as a historical catalog record and is not currently available for purchase.`;
+  }
   if (product.buyMode === "preview-only") {
     return `${product.title} is currently presented as a preview page with artwork, product details, and preview assets only.`;
   }
@@ -2446,6 +2471,7 @@ function renderCartPage(products) {
     description: "Review the Tobacco Road Games browser cart before checkout is enabled.",
     canonicalPath: "/store/cart/",
     currentNav: "cart",
+    extraScripts: ["/assets/js/creator-balance-checkout.js?v=20260907-identity-repair"],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Cart`,
       description: "Review the Tobacco Road Games browser cart before checkout is enabled.",
@@ -2481,9 +2507,22 @@ function renderCartPage(products) {
                   <span>Confirm Email</span>
                   <input type="email" name="emailConfirmation" autocomplete="email" inputmode="email" data-cart-email-confirmation>
                 </label>
-                <p class="cart-summary__copy">Checkout opens securely on a Stripe-hosted page.</p>
+                <div data-cart-email-verification><button type="button" class="button button--secondary" data-cart-email-send>Send Verification Code</button><label class="cart-checkout-form__field"><span>Verification Code</span><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" data-cart-email-code></label><button type="button" class="button button--secondary" data-cart-email-verify>Verify Email</button></div>
+                <p class="cart-summary__copy">Every acquisition requires a verified email. An account is optional. Paid checkout opens securely on a Stripe-hosted page.</p>
                 <p class="cart-checkout-form__feedback" data-cart-checkout-feedback aria-live="polite"></p>
                 <button type="submit" class="button button--primary cart-summary__button" data-cart-checkout-submit disabled aria-disabled="true">Continue to Secure Checkout</button>
+                <section class="creator-balance-checkout" data-creator-payment-identity hidden>
+                  <label>
+                    Creator identity for Creator Balance
+                    <select data-creator-payment-identity-select></select>
+                  </label>
+                </section>
+                <section class="creator-balance-checkout" data-creator-balance hidden>
+                  <p class="note-card__label">Creator Balance</p>
+                  <p data-creator-balance-status>Checking eligibility…</p>
+                  <button type="button" class="button button--secondary cart-summary__button" data-creator-balance-submit disabled>Pay Entire Total with Creator Balance</button>
+                  <p class="cart-checkout-form__feedback" data-creator-balance-feedback aria-live="polite"></p>
+                </section>
               </form>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-retry hidden>Retry Verified Quote</button>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
@@ -2577,6 +2616,12 @@ function resolvePriceType(product) {
 
 function isBuyModeActive(buyMode) {
   return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
+}
+
+function isCatalogBrowsable(product) {
+  return product.buyMode !== "retired"
+    && product.status !== "retired"
+    && product.status !== "legacy-not-for-sale";
 }
 
 function isCartReady(product) {
