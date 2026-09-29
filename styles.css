@@ -3053,9 +3053,8 @@ body:has(.homepage-shop-wall) .site-header {
   border-bottom: 4px solid #6d3f22;
   border-radius: 0;
   background:
-    linear-gradient(90deg, rgba(74, 42, 20, 0.32), transparent 15%, transparent 85%, rgba(74, 42, 20, 0.32)),
-    repeating-linear-gradient(90deg, rgba(99, 56, 26, 0.16) 0 3px, transparent 3px 18px),
-    linear-gradient(180deg, #e2b875 0%, #c78f4a 48%, #a96d34 100%);
+    linear-gradient(90deg, rgba(105, 59, 26, 0.18), transparent 18%, transparent 82%, rgba(105, 59, 26, 0.18)),
+    linear-gradient(180deg, #e7c181 0%, #d19a54 52%, #b8793b 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 238, 181, 0.74),
     inset 0 -7px 0 rgba(104, 58, 28, 0.26),
@@ -3068,31 +3067,41 @@ body:has(.homepage-shop-wall) .site-header .brand {
 
 body:has(.homepage-shop-wall) .site-nav {
   justify-content: center;
-  gap: clamp(5px, 0.9vw, 12px);
+  gap: clamp(14px, 1.7vw, 26px);
   width: min(1420px, 100%);
-  padding: 0 4px 3px;
+  padding: 0 4px;
   overflow-x: auto;
 }
 
-body:has(.homepage-shop-wall) .site-nav a {
-  min-height: 38px;
-  padding: 9px 11px;
-  border: 1px solid rgba(88, 47, 19, 0.24);
-  border-radius: 6px;
-  background: rgba(255, 229, 173, 0.16);
-  color: #2a160c;
+body:has(.homepage-shop-wall) .site-header .site-nav a {
+  min-height: auto;
+  padding: 6px 0 5px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #251309;
+  font-size: 0.84rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.025em;
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
 }
 
-body:has(.homepage-shop-wall) .site-nav a:hover,
-body:has(.homepage-shop-wall) .site-nav a:focus-visible,
-body:has(.homepage-shop-wall) .site-nav a[aria-current="page"] {
-  border-color: rgba(75, 37, 15, 0.58);
-  background: rgba(255, 237, 189, 0.36);
-  color: #1c0e07;
-  box-shadow: inset 0 -3px 0 rgba(92, 47, 19, 0.42);
+body:has(.homepage-shop-wall) .site-header .site-nav a:hover,
+body:has(.homepage-shop-wall) .site-header .site-nav a[aria-current="page"] {
+  border-bottom-color: #48603e;
+  background: transparent;
+  color: #140a05;
+  box-shadow: none;
+}
+
+body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
+  border-bottom-color: #48603e;
+  background: transparent;
+  color: #140a05;
+  outline: 3px solid #251309;
+  outline-offset: 3px;
+  box-shadow: none;
 }
 
 .homepage-shop-wall {
