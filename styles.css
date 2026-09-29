@@ -3047,8 +3047,8 @@ body:has(.homepage-shop-wall) .site-header {
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 66px;
-  padding: 10px clamp(12px, 3vw, 44px);
+  min-height: 50px;
+  padding: 6px clamp(12px, 3vw, 44px);
   border: 0;
   border-bottom: 4px solid #6d3f22;
   border-radius: 0;
