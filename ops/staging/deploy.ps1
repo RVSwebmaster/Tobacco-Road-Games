@@ -10,6 +10,7 @@ $publicRootFiles = @(
   "404.html",
   "account.html",
   "ad-depot.html",
+  "ai-policy.html",
   "authors.html",
   "index.html",
   "robots.txt",
