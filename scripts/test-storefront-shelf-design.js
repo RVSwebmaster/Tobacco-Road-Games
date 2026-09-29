@@ -18,6 +18,12 @@ assert.match(build, /bookshelf-book__spine/); assert.match(build, /bookshelf-boo
 assert.match(build, /bookshelf-book__badges/); assert.match(build, /bookshelf-book__creator/); assert.match(build, /bookshelf-book__publisher/); assert.match(build, /bookshelf-book__price/); assert.match(build, /const examinationMeta/);
 assert.match(build, /data-spine-width/); assert.match(build, /data-spine-source/); assert.match(build, /page-count/); assert.match(build, /catalog-fallback/); assert.match(build, /Math\.log1p/); assert.doesNotMatch(build, /file.*size.*spine|byte.*spine/i);
 assert.match(page, /data-search-results="true"/); assert.match(storefront, /Search Results —/); assert.match(storefront, /api\/discovery-labels/); assert.doesNotMatch(storefront, /best.?sell.*sort/i);
+for (const [key, href] of [["store", "/store/"], ["creators", "/authors.html"], ["search", "/store/#search-results-heading"], ["account", "/account.html"], ["cart", "/store/cart/"], ["forum", "/forum"], ["creator-resources", "/creator/"], ["support", "/support.html"]]) {
+  assert.match(page, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `Store header must preserve ${key} navigation.`);
+}
+assert.match(page, /Search games, Creators, or keywords/); assert.match(page, /data-cart-count/); assert.match(page, /Account \/ My Library/); assert.match(page, /Creator Resources/);
+assert.match(page, /Books Worth Pulling From the Shelf/); assert.match(page, /Independent tabletop games, supplements, adventures, and tools from Creators worth discovering/); assert.match(page, /storefront-empty-shelf/); assert.match(page, /No published marketplace books are currently on the front shelf/);
+assert.match(css, /Storefront remodel Phase 2/); assert.match(css, /--store-header-height:86px/); assert.match(css, /\.sponsor-marquee\{position:sticky;top:var\(--store-header-height\)/);
 assert.match(sponsor, /target = "_blank"/); assert.match(sponsor, /noopener noreferrer sponsored/); assert.match(sponsor, /mouseenter/); assert.match(sponsor, /focusin/); assert.match(sponsor, /prefers-reduced-motion/); assert.match(sponsor, /log\(item, "click"\)/);
 assert.match(rotation, /pool === "sponsor-marquee"/); assert.match(rotation, /vendor_sponsor','event/); assert.match(middleware, /pathname!==['"]\/store\/['"]/);
 assert.ok(JSON.parse(read("_routes.json")).include.includes("/api/ad-rotation"));

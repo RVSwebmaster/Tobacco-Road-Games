@@ -945,7 +945,10 @@ function renderShelfStoreHome(products, indexes) {
       { key: "creators", href: "/authors.html", label: "Creators" },
       { key: "search", href: "/store/#search-results-heading", label: '<span class="nav-search__label">Search games, Creators, or keywords</span><span class="nav-search__icon" aria-hidden="true">⌕</span>' },
       { key: "account", href: "/account.html", label: "Account / My Library" },
-      { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
+      { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' },
+      { key: "forum", href: "/forum", label: "Community" },
+      { key: "creator-resources", href: "/creator/", label: "Creator Resources" },
+      { key: "support", href: "/support.html", label: "Support" }
     ],
     extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
     structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
@@ -976,12 +979,33 @@ function buildStorefrontHomeModel(products, indexes) {
   return { products, indexes, eligible, openRules, newThisWeek, pwywFree, creatorFeature };
 }
 
-function renderStorefrontShopWindow() {
+function renderStorefrontShopWindow({ eligible }) {
+  const featured = eligible[0] || null;
   return `
         <header class="store-welcome storefront-shop-window" id="shop-window" aria-labelledby="store-home-heading">
-          <p class="section-heading__kicker">Independent tabletop marketplace</p>
-          <h1 id="store-home-heading">Books worth pulling from the shelf.</h1>
-          <p>Browse the shelves, pull a book forward, and meet the people who made it.</p>
+          <div class="storefront-shop-window__copy">
+            <p class="section-heading__kicker">Independent tabletop marketplace</p>
+            <h1 id="store-home-heading">Books Worth Pulling From the Shelf</h1>
+            <p>Independent tabletop games, supplements, adventures, and tools from Creators worth discovering.</p>
+            <div class="storefront-shop-window__actions" aria-label="Start browsing">
+              <a class="button button--primary" href="#browse-by-path">Browse the Shop</a>
+              <a class="button button--secondary" href="#search-results-heading">Find the Right Game</a>
+            </div>
+          </div>
+          <aside class="storefront-shop-window__display" aria-label="Featured shelf display">
+            ${featured ? `
+            <a class="storefront-feature-book" href="${escapeAttribute(featured.url)}">
+              <span class="storefront-feature-book__eyebrow">On the front shelf</span>
+              <strong>${escapeHtml(featured.title)}</strong>
+              <span>${escapeHtml(featured.authors.join(", ") || featured.publisher || "Tobacco Road Games")}</span>
+            </a>` : `
+            <div class="storefront-empty-shelf" aria-label="No published marketplace books are currently on the front shelf">
+              <span class="storefront-empty-shelf__book"></span>
+              <span class="storefront-empty-shelf__book"></span>
+              <span class="storefront-empty-shelf__book"></span>
+              <p>The front shelf is ready for the first published marketplace books.</p>
+            </div>`}
+          </aside>
         </header>`;
 }
 
