@@ -1108,23 +1108,93 @@ function buildHomepage(products, indexes, bundleRules) {
   if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
   const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
-  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>\s*(?=<footer class="site-footer">)/;
+  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>/;
+  const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=20260712-shelf12-hinges" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=20260908-shelf-baseline5" defer><\/script>\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
-  const next = html
+  let next = html
     .replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `)
-    .replace(mainPattern, `\n${renderHomepageClearDeckMain()}\n\n    `)
+    .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
+    .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  fs.writeFileSync(homepagePath, stripPublicBrandTag(next));
+  if (!homepageScriptsPattern.test(next)) {
+    next = next.replace("</body>", `  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n</body>`);
+  }
+  fs.writeFileSync(homepagePath, stripPublicBrandTag(next).replace(/^[ \t]+$/gm, ""));
 }
 
-function renderHomepageClearDeckMain() {
-  return `    <main id="top" class="homepage-clear-deck" aria-labelledby="homepage-clear-deck-heading">
-      <p class="homepage-clear-deck__marker" id="homepage-clear-deck-heading">Tobacco Road Games storefront redesign in progress.</p>
-      <span id="about" hidden></span>
-      <span id="physical-goods" hidden></span>
+function renderHomepageShopWallMain(products) {
+  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
+  const newThisWeek = chooseNewReleases(eligible).slice(0, 5);
+  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling")).slice(0, 5);
+  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0).slice(0, 5);
+  const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 8);
+
+  return `    <main id="top" class="homepage-shop-wall shelf-storefront" aria-labelledby="homepage-shop-wall-heading">
+      <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
+        ${renderHomepageLibraryBay()}
+        ${renderHomepageIdentityBay()}
+        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, emptyMessage: "Open Rules titles coming soon.", viewAllHref: "/store/catalog/" })}
+      </section>
+      <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, emptyMessage: "New titles will appear here.", viewAllHref: "/store/catalog/" })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, emptyMessage: "Best sellers will appear here.", viewAllHref: "/store/catalog/" })}
+        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, emptyMessage: "Free and PWYW titles will appear here.", viewAllHref: "/store/catalog/" })}
+      </section>
     </main>`;
+}
+
+function renderHomepageLibraryBay() {
+  return `
+        <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
+          ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
+          <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper"></div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              <div class="shop-wall-sign">
+                <p>Sign in to see your library.</p>
+                <a href="/account.html">Join / Sign In</a>
+              </div>
+            </div>
+          </div>
+        </section>`;
+}
+
+function renderHomepageIdentityBay() {
+  return `
+        <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
+          <a class="shop-wall-identity-sign" href="/" aria-label="Tobacco Road Games home">
+            <img src="/assets/tobacco-road-games-logo.png?v=${STOREFRONT_CACHE_BUST}" alt="" loading="eager" decoding="async">
+            <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
+          </a>
+        </section>`;
+}
+
+function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHref }) {
+  const visibleProducts = products.slice(0, 5);
+  return `
+        <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
+          ${renderShopWallPlaque(title, id)}
+          <div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : `<p class="shop-wall-empty">${escapeHtml(emptyMessage)}</p>`}
+              ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
+            </div>
+          </div>
+        </section>`;
+}
+
+function renderHomepageShelfBooks(products) {
+  return `<div class="bookshelf-grid shop-wall-books" style="--shelf-items: ${Math.max(1, products.length)}">${products.map((product) => renderBookshelfBook(product, { withDataset: true, centerExamination: true })).join("")}</div>`;
+}
+
+function renderShopWallPlaque(title, id) {
+  return `<div class="shop-wall-plaque"><h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2></div>`;
 }
 
 function renderAiPolicyPage() {

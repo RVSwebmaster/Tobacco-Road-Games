@@ -38,8 +38,14 @@ function main() {
   assert.match(account, /Account \/ My Library/, "The account page body must preserve current account behavior.");
   assert.doesNotMatch(account, />Authors<\/a>/, "Public navigation must not expose Author terminology.");
   assert.match(read("ai-policy.html"), /approved Tobacco Road Games AI Policy text is awaiting insertion/, "AI Policy placeholder must avoid fabricated policy copy.");
-  assert.match(homepage, /homepage-clear-deck/, "The homepage must render the Phase 0 clear-deck canvas.");
-  assert.match(homepage, /Tobacco Road Games storefront redesign in progress\./, "The cleared homepage must retain only the modest staging marker.");
+  assert.match(homepage, /homepage-shop-wall/, "The homepage must render the upper shop wall.");
+  assert.doesNotMatch(homepage, /homepage-clear-deck/, "The homepage must not render the temporary clear-deck marker.");
+  assert.doesNotMatch(homepage, /Tobacco Road Games storefront redesign in progress\./, "The homepage must remove the modest staging marker.");
+  assert.doesNotMatch(homepage, /<footer class="site-footer">/, "The homepage must not render the shared footer in the upper shop wall stage.");
+  for (const shelfLabel of ["YOUR LIBRARY", "Tobacco Road", "Games", "OPEN RULES LIBRARY", "NEW THIS WEEK", "BEST SELLERS", "FREE &amp; PWYW"]) {
+    assert.match(homepage, new RegExp(shelfLabel), `The homepage shop wall must render ${shelfLabel}.`);
+  }
+  assert.match(homepage, /\/assets\/js\/storefront\.js\?v=/, "The homepage shop wall must load the storefront interaction script.");
   for (const removedCopy of [
     "Find your next game",
     "Know who made the game",
