@@ -3227,10 +3227,10 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-row--merchandising .shop-wall-shelf-level::after {
-  height: 36px;
+  height: 52px;
   border-top: 2px solid rgba(246, 193, 112, 0.48);
   background:
-    linear-gradient(180deg, #bd7b43 0 18px, #7b3f1d 18px 32px, #46200f 32px 100%);
+    linear-gradient(180deg, #bd7b43 0 30px, #7b3f1d 30px 48px, #46200f 48px 100%);
   box-shadow:
     inset 0 -2px 0 rgba(25, 10, 4, 0.5),
     0 10px 14px rgba(18, 7, 3, 0.42),
