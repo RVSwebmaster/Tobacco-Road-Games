@@ -392,16 +392,19 @@
   };
 
   examinationBooks.forEach((book) => {
-    book.addEventListener("pointerenter", (event) => { if (!activeExamination && !touchLayoutQuery.matches && event.pointerType !== "touch") openExamination(book, "pointer"); });
-    book.addEventListener("focus", () => {
-      if (touchLayoutQuery.matches && !book.matches(":focus-visible")) return;
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (document.activeElement === book) openExamination(book, "keyboard");
-      }));
-    });
     book.addEventListener("blur", () => { if (activeExamination?.mode === "keyboard") closeExamination(); });
     book.addEventListener("click", (event) => {
-      if (touchLayoutQuery.matches && !book.classList.contains("is-examining")) { event.preventDefault(); openExamination(book, "touch"); }
+      if (!book.classList.contains("is-examining")) {
+        event.preventDefault();
+        openExamination(book, touchLayoutQuery.matches ? "touch" : "pointer");
+      }
+    });
+    book.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      if (!book.classList.contains("is-examining")) {
+        event.preventDefault();
+        openExamination(book, "keyboard");
+      }
     });
     book.addEventListener("transitionend", (event) => {
       if (event.target !== book || event.propertyName !== "transform" || activeExamination?.book !== book) return;
@@ -416,7 +419,7 @@
     if (activeExamination.phase === "foreground") { closeExamination(); return; }
     if (!inTransitZone(activeExamination.origin, foreground, event.clientX, event.clientY)) closeExamination();
   });
-  document.addEventListener("click", (event) => { if (activeExamination?.mode === "touch" && !event.target.closest(".bookshelf-book.is-examining")) closeExamination(); });
+  document.addEventListener("click", (event) => { if (activeExamination && !event.target.closest(".bookshelf-book.is-examining")) closeExamination(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeExamination(); event.preventDefault(); } });
   window.addEventListener("scroll", () => {
     if (activeExamination?.mode === "keyboard" && activeExamination.phase === "traveling") return;
