@@ -1582,7 +1582,8 @@ h4 {
 }
 
 .bookshelf-book:focus-visible {
-  outline: none;
+  outline: 2px solid rgba(242, 216, 170, 0.82);
+  outline-offset: 8px;
 }
 
 .bookshelf-book--edge-right {

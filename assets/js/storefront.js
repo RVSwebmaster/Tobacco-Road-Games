@@ -350,7 +350,7 @@
   const finishExamination = (state = activeExamination) => {
     if (!state) return;
     state.book.classList.remove("is-examining", "is-returning");
-    state.book.removeAttribute("aria-expanded");
+    state.book.setAttribute("aria-expanded", "false");
     ["left", "top", "width", "height", "min-height", "--examination-x", "--examination-y", "--return-x", "--return-y"].forEach((property) => state.book.style.removeProperty(property));
     state.placeholder.remove();
     document.body.classList.remove("book-examination-active");
@@ -362,7 +362,7 @@
     const destination = state.placeholder.getBoundingClientRect();
     state.book.style.setProperty("--return-x", `${destination.left - state.origin.left}px`);
     state.book.style.setProperty("--return-y", `${destination.top - state.origin.top}px`);
-    state.book.removeAttribute("aria-expanded");
+    state.book.setAttribute("aria-expanded", "false");
     state.book.classList.add("is-returning");
     state.phase = "returning";
     state.returning = true;
@@ -401,7 +401,12 @@
     });
     book.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
-      if (!book.classList.contains("is-examining")) {
+      if (book.classList.contains("is-examining")) {
+        if (event.key === " ") {
+          event.preventDefault();
+          book.click();
+        }
+      } else {
         event.preventDefault();
         openExamination(book, "keyboard");
       }
