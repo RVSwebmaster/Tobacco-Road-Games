@@ -4,6 +4,29 @@
   const compactCatalogQuery = window.matchMedia("(max-width: 980px), (hover: none)");
   let shelfRefreshTimer = 0;
 
+  document.querySelectorAll("body:has(.homepage-shop-wall) .site-nav").forEach((nav) => {
+    const moveBrackets = (link) => {
+      const navRect = nav.getBoundingClientRect();
+      const linkRect = link.getBoundingClientRect();
+
+      nav.style.setProperty("--nav-bracket-left", `${linkRect.left - navRect.left + nav.scrollLeft - 6}px`);
+      nav.style.setProperty("--nav-bracket-top", `${linkRect.top - navRect.top}px`);
+      nav.style.setProperty("--nav-bracket-width", `${linkRect.width + 12}px`);
+      nav.style.setProperty("--nav-bracket-height", `${linkRect.height}px`);
+      nav.classList.add("is-bracketing");
+    };
+
+    nav.addEventListener("pointerover", (event) => {
+      const link = event.target instanceof Element ? event.target.closest("a") : null;
+      if (!link || !nav.contains(link)) return;
+      moveBrackets(link);
+    });
+
+    nav.addEventListener("pointerleave", () => {
+      nav.classList.remove("is-bracketing");
+    });
+  });
+
   if (!browsers.length && !shelves.length) {
     return;
   }

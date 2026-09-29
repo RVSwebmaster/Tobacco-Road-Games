@@ -3066,6 +3066,11 @@ body:has(.homepage-shop-wall) .site-header .brand {
 }
 
 body:has(.homepage-shop-wall) .site-nav {
+  --nav-bracket-left: 0px;
+  --nav-bracket-top: 0px;
+  --nav-bracket-width: 0px;
+  --nav-bracket-height: 0px;
+  position: relative;
   justify-content: center;
   gap: clamp(14px, 1.7vw, 26px);
   width: min(1420px, 100%);
@@ -3073,11 +3078,47 @@ body:has(.homepage-shop-wall) .site-nav {
   overflow-x: auto;
 }
 
+body:has(.homepage-shop-wall) .site-nav::before,
+body:has(.homepage-shop-wall) .site-nav::after {
+  position: absolute;
+  top: var(--nav-bracket-top);
+  z-index: 1;
+  width: 7px;
+  height: var(--nav-bracket-height);
+  border-color: #48603e;
+  opacity: 0;
+  content: "";
+  pointer-events: none;
+  transition:
+    left 0.16s ease,
+    opacity 0.12s ease;
+}
+
+body:has(.homepage-shop-wall) .site-nav::before {
+  left: var(--nav-bracket-left);
+  border-top: 2px solid #48603e;
+  border-bottom: 2px solid #48603e;
+  border-left: 2px solid #48603e;
+}
+
+body:has(.homepage-shop-wall) .site-nav::after {
+  left: calc(var(--nav-bracket-left) + var(--nav-bracket-width) - 7px);
+  border-top: 2px solid #48603e;
+  border-right: 2px solid #48603e;
+  border-bottom: 2px solid #48603e;
+}
+
+body:has(.homepage-shop-wall) .site-nav.is-bracketing::before,
+body:has(.homepage-shop-wall) .site-nav.is-bracketing::after {
+  opacity: 1;
+}
+
 body:has(.homepage-shop-wall) .site-header .site-nav a {
+  position: relative;
+  z-index: 2;
   min-height: auto;
   padding: 6px 0 5px;
   border: 0;
-  border-bottom: 2px solid transparent;
   border-radius: 0;
   background: transparent;
   color: #251309;
@@ -3089,14 +3130,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a {
 
 body:has(.homepage-shop-wall) .site-header .site-nav a:hover,
 body:has(.homepage-shop-wall) .site-header .site-nav a[aria-current="page"] {
-  border-bottom-color: #48603e;
   background: transparent;
   color: #140a05;
   box-shadow: none;
 }
 
 body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
-  border-bottom-color: #48603e;
   background: transparent;
   color: #140a05;
   outline: 3px solid #251309;
@@ -3235,6 +3274,19 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     inset 0 -2px 0 rgba(25, 10, 4, 0.5),
     0 10px 14px rgba(18, 7, 3, 0.42),
     0 -4px 8px rgba(41, 17, 6, 0.25);
+}
+
+.storefront-ad-marquee {
+  display: block;
+  width: calc(100% - 48px);
+  height: 120px;
+  margin: 24px auto;
+  border: 8px solid #4a2412;
+  background: #2b160d;
+  box-shadow:
+    inset 0 0 0 2px rgba(190, 119, 55, 0.28),
+    inset 0 8px 16px rgba(15, 6, 2, 0.38),
+    0 8px 18px rgba(14, 7, 3, 0.3);
 }
 
 .shop-wall-shelf-level {
