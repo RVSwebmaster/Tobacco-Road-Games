@@ -1139,9 +1139,9 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, emptyMessage: "Open Rules titles coming soon.", viewAllHref: "/store/catalog/" })}
       </section>
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, emptyMessage: "New titles will appear here.", viewAllHref: "/store/catalog/", singleShelf: true })}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, emptyMessage: "Best sellers will appear here.", viewAllHref: "/store/catalog/", singleShelf: true })}
-        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, emptyMessage: "Free and PWYW titles will appear here.", viewAllHref: "/store/catalog/", singleShelf: true })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true })}
+        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true })}
       </section>
     </main>`;
 }
@@ -1177,8 +1177,7 @@ function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHr
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
-              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : `<p class="shop-wall-empty">${escapeHtml(emptyMessage)}</p>`}
-              ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
+              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
             </div>
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
