@@ -317,6 +317,20 @@ html.trg-intro-pending .page-shell {
   padding: 20px;
 }
 
+.homepage-clear-deck {
+  min-height: clamp(320px, 52vh, 620px);
+  display: grid;
+  place-items: center;
+}
+
+.homepage-clear-deck__marker {
+  margin: 0;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
 .note-card {
   padding: 18px;
 }

@@ -9,6 +9,7 @@ function main() {
   const build = read("scripts/build-store.js");
   const creators = require(path.join(ROOT, "data/authors.js"));
   const directory = read("authors.html");
+  const homepage = read("index.html");
   const profile = read("authors/rv-sawyer/index.html");
   const alias = read("creators/rv-sawyer/index.html");
   const product = read("store/products/agency/index.html");
@@ -32,6 +33,20 @@ function main() {
   assert.match(product, /<dt>Publisher \/ Imprint<\/dt>/, "Product pages must render Publisher / Imprint separately.");
   assert.match(account, /Account \/ My Library/, "The account page must expose the My Library destination without changing auth behavior.");
   assert.doesNotMatch(account, />Authors<\/a>/, "Public navigation must not expose Author terminology.");
+  assert.match(homepage, /homepage-clear-deck/, "The homepage must render the Phase 0 clear-deck canvas.");
+  assert.match(homepage, /Tobacco Road Games storefront redesign in progress\./, "The cleared homepage must retain only the modest staging marker.");
+  for (const removedCopy of [
+    "Find your next game",
+    "Know who made the game",
+    "Browse your way",
+    "Meet marketplace creators",
+    "Fresh from the creators",
+    "Every Book Must Have a Soul",
+    "Tobacco Road Games operates the road",
+    "The marketplace is growing"
+  ]) {
+    assert.equal(homepage.includes(removedCopy), false, `Cleared homepage must not render old marketing copy: ${removedCopy}`);
+  }
 
   console.log("Marketplace architecture tests passed.");
 }

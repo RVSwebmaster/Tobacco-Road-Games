@@ -1115,50 +1115,26 @@ function validateMarketplaceMetadata(product) {
 
 function buildHomepage(products, indexes, bundleRules) {
   const homepagePath = path.join(ROOT, "index.html");
-  const configPath = path.join(ROOT, "data", "homepage.json");
-  if (!fs.existsSync(homepagePath) || !fs.existsSync(configPath)) return;
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  const productMap = new Map(products.map((product) => [product.slug, product]));
-  const selected = (Array.isArray(config.workInProgressSlugs) ? config.workInProgressSlugs : [])
-    .map((slug) => productMap.get(slug))
-    .filter(Boolean);
-  const cards = selected.length
-    ? selected.map((product) => `        <article class="workshop-card">
-          <div class="workshop-card__media">
-            <img src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover">
-          </div>
-          <div class="workshop-card__copy">
-            <p class="workshop-card__label">${escapeHtml(product.statusLabel)}</p>
-            <h3>${escapeHtml(product.title)}</h3>
-            <p>${escapeHtml(product.shortDescription)}</p>
-            <p class="workshop-card__stage"><strong>Current stage:</strong> ${escapeHtml(product.statusLabel)}</p>
-            <a class="button button--secondary" href="${escapeAttribute(product.url)}">View Product</a>
-          </div>
-        </article>`).join("\n")
-    : "        <p>No work-in-progress titles are selected right now.</p>";
+  if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
-  const workshopPattern = /(      <section class="workshop" id="workshop"[\s\S]*?<\/div>\r?\n)([\s\S]*?)(\s*<\/section>\s*\n\s*<section class="commitment")/;
-  if (!workshopPattern.test(html)) {
-    throw new Error("Homepage work-in-progress section could not be found.");
-  }
-  const next = html.replace(
-    workshopPattern,
-    `$1${cards}$3`
-  );
-  const marketplaceSections = renderMarketplaceHomepageSections(products, indexes, bundleRules);
-  const generatedSectionPattern = /<!-- marketplace-home:start -->[\s\S]*?<!-- marketplace-home:end -->/;
-  const legacySectionPattern = /      <section class="latest" id="available"[\s\S]*?<\/section>\s*\n(?=\s*<section class="workshop")/;
-  const unmarkedGeneratedPattern = /<section class="latest" id="homepage-new-releases"[\s\S]*?<\/section>\s*\n(?=\s*<section class="workshop")/;
-  const withMarketplaceSections = generatedSectionPattern.test(next)
-    ? next.replace(generatedSectionPattern, marketplaceSections)
-    : legacySectionPattern.test(next)
-      ? next.replace(legacySectionPattern, `${marketplaceSections}\n`)
-      : unmarkedGeneratedPattern.test(next)
-        ? next.replace(unmarkedGeneratedPattern, `${marketplaceSections}\n`)
-        : (() => { throw new Error("Homepage marketplace entry section could not be found."); })();
   const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
-  const withSharedNav = withMarketplaceSections.replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `);
-  fs.writeFileSync(homepagePath, withSharedNav);
+  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>\s*(?=<footer class="site-footer">)/;
+  const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
+  if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
+  if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
+  const next = html
+    .replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `)
+    .replace(mainPattern, `\n${renderHomepageClearDeckMain()}\n\n    `)
+    .replace(scriptPattern, "\n");
+  fs.writeFileSync(homepagePath, next);
+}
+
+function renderHomepageClearDeckMain() {
+  return `    <main id="top" class="homepage-clear-deck" aria-labelledby="homepage-clear-deck-heading">
+      <p class="homepage-clear-deck__marker" id="homepage-clear-deck-heading">Tobacco Road Games storefront redesign in progress.</p>
+      <span id="about" hidden></span>
+      <span id="physical-goods" hidden></span>
+    </main>`;
 }
 
 function buildAccountPage() {
