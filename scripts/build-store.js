@@ -1139,9 +1139,9 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, emptyMessage: "Open Rules titles coming soon.", viewAllHref: "/store/catalog/" })}
       </section>
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, emptyMessage: "New titles will appear here.", viewAllHref: "/store/catalog/" })}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, emptyMessage: "Best sellers will appear here.", viewAllHref: "/store/catalog/" })}
-        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, emptyMessage: "Free and PWYW titles will appear here.", viewAllHref: "/store/catalog/" })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, emptyMessage: "New titles will appear here.", viewAllHref: "/store/catalog/", singleShelf: true })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, emptyMessage: "Best sellers will appear here.", viewAllHref: "/store/catalog/", singleShelf: true })}
+        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, emptyMessage: "Free and PWYW titles will appear here.", viewAllHref: "/store/catalog/", singleShelf: true })}
       </section>
     </main>`;
 }
@@ -1172,12 +1172,16 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHref }) {
+function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHref, singleShelf = false }) {
   const visibleProducts = products.slice(0, 5);
-  return `
-        <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
-          ${renderShopWallPlaque(title, id)}
-          <div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
+  const shelves = singleShelf
+    ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
+            <div class="shop-wall-shelf-level">
+              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : `<p class="shop-wall-empty">${escapeHtml(emptyMessage)}</p>`}
+              ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
+            </div>
+          </div>`
+    : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
             </div>
@@ -1185,7 +1189,11 @@ function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHr
               ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : `<p class="shop-wall-empty">${escapeHtml(emptyMessage)}</p>`}
               ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
             </div>
-          </div>
+          </div>`;
+  return `
+        <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
+          ${renderShopWallPlaque(title, id)}
+          ${shelves}
         </section>`;
 }
 

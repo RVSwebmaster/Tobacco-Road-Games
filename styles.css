@@ -3154,7 +3154,15 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-row--merchandising {
-  min-height: 330px;
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.shop-wall-row--merchandising .shop-wall-bay {
+  min-height: 378px;
+  border-right: 0;
+  border-bottom: 0;
+  border-image: none;
 }
 
 .shop-wall-bay {
@@ -3207,6 +3215,26 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   display: grid;
   grid-template-rows: repeat(2, minmax(0, 1fr));
   min-height: 0;
+}
+
+.shop-wall-shelves--single {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.shop-wall-row--merchandising .shop-wall-shelf-level {
+  min-height: 320px;
+  padding-bottom: 42px;
+}
+
+.shop-wall-row--merchandising .shop-wall-shelf-level::after {
+  height: 36px;
+  border-top: 2px solid rgba(246, 193, 112, 0.48);
+  background:
+    linear-gradient(180deg, #bd7b43 0 18px, #7b3f1d 18px 32px, #46200f 32px 100%);
+  box-shadow:
+    inset 0 -2px 0 rgba(25, 10, 4, 0.5),
+    0 10px 14px rgba(18, 7, 3, 0.42),
+    0 -4px 8px rgba(41, 17, 6, 0.25);
 }
 
 .shop-wall-shelf-level {
@@ -3371,9 +3399,9 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 
   .shop-wall-row--merchandising .shop-wall-bay:last-child {
-    grid-column: 1 / -1;
-    min-height: 300px;
-    border-top: 14px solid #3b2111;
+    grid-column: auto;
+    min-height: 378px;
+    border-top: 0;
   }
 }
 
@@ -3422,6 +3450,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 
   .shop-wall-row--merchandising .shop-wall-bay:last-child {
     border-top: 0;
+  }
+
+  .shop-wall-row--merchandising .shop-wall-bay,
+  .shop-wall-row--merchandising .shop-wall-bay:last-child {
+    min-height: 378px;
+    border-bottom: 0;
   }
 
   .shop-wall-shelf-level {
