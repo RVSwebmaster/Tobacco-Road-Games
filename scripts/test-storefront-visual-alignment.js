@@ -47,12 +47,21 @@ assert.match(sponsor, /mouseenter/);
 assert.match(sponsor, /focusin/);
 
 const requiredSections = [
+  "shop-window",
+  "browse-by-path",
+  "sponsor-marquee-band",
+  "new-this-week-heading",
+  "best-sellers",
   "open-rules-shelf-heading",
-  "new-releases-bookshelf-heading",
-  "best-sellers-shelf-heading",
   "pwyw-free-shelf-heading",
-  "search-results-heading"
+  "product-lines",
+  "creator-feature",
+  "find-the-right-game",
+  "back-room",
+  "lower-shop"
 ];
 for (const id of requiredSections) assert.match(page, new RegExp(`id="${id}"`), `Missing required storefront section: ${id}`);
+assert.doesNotMatch(page, /New Arrivals/);
+assert.match(page, /No eligible new releases are on the public shelf yet/);
 
 console.log("Tobacco Road Games storefront mockup-alignment tests passed.");

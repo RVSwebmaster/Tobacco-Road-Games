@@ -22,7 +22,7 @@ const CREATOR_TEMPLATES = new Set(["bookshelf", "catalog"]);
 const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "store", href: "/store/", label: "Marketplace" },
   { key: "creators", href: "/authors.html", label: "Creators" },
-  { key: "releases", href: "/store/#new-releases-bookshelf-heading", label: "New Releases" },
+  { key: "releases", href: "/store/#new-this-week-heading", label: "New This Week" },
   { key: "sales", href: "/store/catalog/", label: "Sales & Bundles" },
   { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
   { key: "forum", href: "/forum", label: "Community" },
@@ -930,15 +930,12 @@ function renderStoreNav(currentNav, navItems = PUBLIC_NAV_ITEMS) {
 }
 
 function renderShelfStoreHome(products, indexes) {
-  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
-  const openRules = products.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 12);
-  const newArrivals = chooseNewReleases(eligible).slice(0, 12);
-  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
+  const home = buildStorefrontHomeModel(products, indexes);
   return renderLayout({
     pageTitle: `${STORE_TITLE} | Independent Tabletop Marketplace`,
     description: "Browse independent tabletop games on the Tobacco Road Games shelf storefront.",
     canonicalPath: "/store/",
-    ogImage: openRules[0]?.assetSet.cover || "/assets/logo.png",
+    ogImage: home.openRules[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
     assetVersion: STOREFRONT_CACHE_BUST,
     brandLogo: "/assets/tobacco-road-games-logo.png",
@@ -954,32 +951,123 @@ function renderShelfStoreHome(products, indexes) {
     structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
     content: `
       <main id="top" class="shelf-storefront">
-        <section class="store-welcome" aria-labelledby="store-home-heading">
+        ${renderStorefrontShopWindow(home)}
+        ${renderStorefrontBrowseByPath(home)}
+        ${renderStorefrontSponsorMarquee()}
+        ${renderStorefrontNewThisWeek(home)}
+        ${renderStorefrontBestSellers(home)}
+        ${renderStorefrontOpenRulesAndPwyw(home)}
+        ${renderStorefrontProductLines(home)}
+        ${renderStorefrontCreatorFeature(home)}
+        ${renderStorefrontCatalogEntry(home)}
+        ${renderStorefrontBackRoom(home)}
+        ${renderStorefrontLowerShop()}
+      </main>`
+  }).replace(/[ \t]+$/gm, "");
+}
+
+function buildStorefrontHomeModel(products, indexes) {
+  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
+  const openRules = products.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 12);
+  const newThisWeek = chooseNewReleases(eligible).slice(0, 12);
+  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
+  const creatorFeature = indexes.authors.find((author) => author.products.length > 0) || null;
+
+  return { products, indexes, eligible, openRules, newThisWeek, pwywFree, creatorFeature };
+}
+
+function renderStorefrontShopWindow() {
+  return `
+        <header class="store-welcome storefront-shop-window" id="shop-window" aria-labelledby="store-home-heading">
           <p class="section-heading__kicker">Independent tabletop marketplace</p>
           <h1 id="store-home-heading">Books worth pulling from the shelf.</h1>
           <p>Browse the shelves, pull a book forward, and meet the people who made it.</p>
-        </section>
-        ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "TOBACCO ROAD GAMES: OPEN RULES", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules, centerExamination: true })}
-        <aside class="sponsor-marquee" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
+        </header>`;
+}
+
+function renderStorefrontBrowseByPath({ indexes }) {
+  const supportedPaths = [
+    { id: "free-pwyw", label: "Free / PWYW", note: "No-cost and pay-what-you-want listings when eligible.", href: "#pwyw-free-shelf-heading", active: true },
+    { id: "open-rules", label: "Open Rules", note: "Tobacco Road Games house rules and table tools.", href: "#open-rules-shelf-heading", active: true },
+    { id: "system-neutral", label: "System Neutral", note: "A catalog path reserved for matching metadata.", href: "#search-results-heading", active: indexes.systems.some((entry) => /system neutral/i.test(entry.name)) }
+  ];
+
+  return `
+        <section class="store-section storefront-browse-paths" id="browse-by-path" aria-labelledby="browse-by-path-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Guided discovery</p><h2 id="browse-by-path-heading">Browse by Your Path</h2><p>Start with safe, existing catalog signals. Inactive paths are structural placeholders until matching metadata exists.</p></div>
+          <nav class="browse-card-grid storefront-path-grid" aria-label="Browse by your path">
+            ${supportedPaths.map((path) => path.active ? `<a class="browse-card storefront-path-card" data-storefront-path="${escapeAttribute(path.id)}" href="${escapeAttribute(path.href)}"><strong>${escapeHtml(path.label)}</strong><span>${escapeHtml(path.note)}</span></a>` : `<span class="browse-card storefront-path-card is-inactive" data-storefront-path="${escapeAttribute(path.id)}" aria-disabled="true"><strong>${escapeHtml(path.label)}</strong><span>${escapeHtml(path.note)}</span></span>`).join("")}
+          </nav>
+        </section>`;
+}
+
+function renderStorefrontSponsorMarquee() {
+  return `
+        <aside class="sponsor-marquee storefront-sponsor-band" id="sponsor-marquee-band" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
           <span class="sponsor-marquee__label">Paid Sponsors</span><div class="sponsor-marquee__viewport"><div class="sponsor-marquee__track" data-sponsor-track></div></div>
-        </aside>
-        ${renderBookshelfSection({ id: "new-releases-bookshelf-heading", kicker: "Just unpacked", title: "New Arrivals", description: "Recently released, currently eligible books in canonical marketplace order.", products: newArrivals, centerExamination: true })}
-        <section class="store-section discovery-bookshelf" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
+        </aside>`;
+}
+
+function renderStorefrontNewThisWeek({ newThisWeek }) {
+  return renderBookshelfSection({ id: "new-this-week-heading", kicker: "Just unpacked", title: "New This Week", description: "Recently released, currently eligible books in canonical marketplace order.", products: newThisWeek, centerExamination: true, emptyMessage: "No eligible new releases are on the public shelf yet." });
+}
+
+function renderStorefrontBestSellers({ eligible }) {
+  return `
+        <section class="store-section discovery-bookshelf storefront-best-sellers" id="best-sellers" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
           <div class="section-heading"><p class="section-heading__kicker">Customer demand</p><h2 id="best-sellers-shelf-heading">Best Sellers</h2><p>Shown only when current marketplace discovery data awards the Best Selling label.</p></div>
           <div class="bookshelf-grid" style="--shelf-items: ${Math.max(1, eligible.length)}">${eligible.map((product) => renderBookshelfBook(product, { withDataset: true, centerExamination: true })).join("")}</div>
           <p class="shelf-empty" data-discovery-empty hidden>No current title meets the public Best Seller threshold.</p>
-        </section>
-        ${renderBookshelfSection({ id: "pwyw-free-shelf-heading", kicker: "Choose your price", title: "PWYW & Free", description: "Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.", products: pwywFree, centerExamination: true })}
-        <section class="store-section search-shelves" data-search-results-section aria-labelledby="search-results-heading">
-          <div class="section-heading"><p class="section-heading__kicker">Find a book</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
+        </section>`;
+}
+
+function renderStorefrontOpenRulesAndPwyw({ openRules, pwywFree }) {
+  return `
+        <section class="storefront-discovery-pair" id="open-rules-pwyw" aria-labelledby="open-rules-pwyw-heading">
+          <div class="section-heading storefront-discovery-pair__heading"><p class="section-heading__kicker">House tables</p><h2 id="open-rules-pwyw-heading">Open Rules + Pay What You Want</h2><p>Two independent discovery destinations, grouped for the later shop-table treatment.</p></div>
+          ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "Open Rules", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules, centerExamination: true, emptyMessage: "No Open Rules titles are currently eligible for public browsing." })}
+          ${renderBookshelfSection({ id: "pwyw-free-shelf-heading", kicker: "Choose your price", title: "Pay What You Want", description: "Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.", products: pwywFree, centerExamination: true, emptyMessage: "No pay-what-you-want or free titles are currently eligible for public browsing." })}
+        </section>`;
+}
+
+function renderStorefrontProductLines({ indexes }) {
+  return `
+        <section class="store-section storefront-product-lines" id="product-lines" aria-labelledby="product-lines-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Departments</p><h2 id="product-lines-heading">Product Lines</h2><p>Existing product-line routes remain the source of truth for miniature departments.</p></div>
+          ${indexes.lines.length ? `<div class="browse-card-grid">${indexes.lines.map((entry) => renderBrowseCard(entry.name, `${entry.products.length} title${entry.products.length === 1 ? "" : "s"}`, `/store/lines/${entry.slug}/`)).join("")}</div>` : `<p class="shelf-empty">No public product lines are available yet.</p>`}
+        </section>`;
+}
+
+function renderStorefrontCreatorFeature({ creatorFeature }) {
+  return `
+        <section class="store-section storefront-creator-feature" id="creator-feature" aria-labelledby="creator-feature-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Creator shelf</p><h2 id="creator-feature-heading">Featured Creator</h2><p>A generic feature slot for eligible marketplace Creators.</p></div>
+          ${creatorFeature ? `<a class="browse-card storefront-creator-card" href="${escapeAttribute(creatorFeature.url)}"><strong>${escapeHtml(creatorFeature.name)}</strong><span>${escapeHtml(creatorFeature.shortBio || creatorFeature.title || "Explore this Creator's public catalog.")}</span></a>` : `<p class="shelf-empty">No eligible Creator feature is selected yet.</p>`}
+        </section>`;
+}
+
+function renderStorefrontCatalogEntry({ products, indexes }) {
+  return `
+        <section class="store-section search-shelves storefront-catalog-entry" id="find-the-right-game" data-search-results-section aria-labelledby="search-results-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Find the right game</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
           ${renderStoreBrowser(products, indexes, { browserId: "store-search-browser", showShelf: true, centerExamination: true, defaultSort: "title", countLabel: "matching titles", shelfHeading: "Search shelf", shelfDescription: "Matching books continue onto additional shelf rows.", gridHeading: "Accessible catalog view", gridDescription: "The same canonical results in a compact list." }).replace('data-store-browser="store-search-browser"', 'data-store-browser="store-search-browser" data-search-results="true"')}
-        </section>
-        <section class="store-lower" aria-labelledby="store-information-heading">
-          <div class="store-lower__intro"><p class="section-heading__kicker">Around the shop</p><h2 id="store-information-heading">Information, help, and community</h2><p>News, Creator resources, customer help, and the roads beyond the shelves.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
-          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a><a href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
-        </section>
-      </main>`
-  }).replace(/[ \t]+$/gm, "");
+        </section>`;
+}
+
+function renderStorefrontBackRoom() {
+  return `
+        <section class="store-section storefront-back-room" id="back-room" aria-labelledby="back-room-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Back room</p><h2 id="back-room-heading">Community and Creator resources</h2><p>Current routes for discussion, Creator tools, announcements, and support.</p></div>
+          <nav class="browse-card-grid" aria-label="Back room links"><a class="browse-card" href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a class="browse-card" href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a class="browse-card" href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a class="browse-card" href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a></nav>
+        </section>`;
+}
+
+function renderStorefrontLowerShop() {
+  return `
+        <section class="store-lower storefront-lower-shop" id="lower-shop" aria-labelledby="store-information-heading">
+          <div class="store-lower__intro"><p class="section-heading__kicker">Lower shop</p><h2 id="store-information-heading">Information, help, and account links</h2><p>Legal, support, library, and cart destinations remain available below the discovery floor.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
+          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/store/catalog/"><strong>Full Catalog</strong><span>Open the serious search and filter view.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/support.html"><strong>Support</strong><span>Customer support and accessibility help.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
+        </section>`;
 }
 
 function validateMarketplaceMetadata(product) {
@@ -1123,9 +1211,19 @@ function renderFeatureSpotlight(product) {
   `;
 }
 
-function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false, centerExamination = false }) {
+function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false, centerExamination = false, emptyMessage = "" }) {
   if (!products.length) {
-    return "";
+    if (!emptyMessage) return "";
+    return `
+    <section class="store-section" aria-labelledby="${escapeAttribute(id)}">
+      <div class="section-heading">
+        <p class="section-heading__kicker">${escapeHtml(kicker)}</p>
+        <h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2>
+        <p>${escapeHtml(description)}</p>
+      </div>
+      <p class="shelf-empty">${escapeHtml(emptyMessage)}</p>
+    </section>
+  `;
   }
 
   const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);

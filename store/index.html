@@ -45,24 +45,76 @@
 
 
       <main id="top" class="shelf-storefront">
-        <section class="store-welcome" aria-labelledby="store-home-heading">
+
+        <header class="store-welcome storefront-shop-window" id="shop-window" aria-labelledby="store-home-heading">
           <p class="section-heading__kicker">Independent tabletop marketplace</p>
           <h1 id="store-home-heading">Books worth pulling from the shelf.</h1>
           <p>Browse the shelves, pull a book forward, and meet the people who made it.</p>
+        </header>
+
+        <section class="store-section storefront-browse-paths" id="browse-by-path" aria-labelledby="browse-by-path-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Guided discovery</p><h2 id="browse-by-path-heading">Browse by Your Path</h2><p>Start with safe, existing catalog signals. Inactive paths are structural placeholders until matching metadata exists.</p></div>
+          <nav class="browse-card-grid storefront-path-grid" aria-label="Browse by your path">
+            <a class="browse-card storefront-path-card" data-storefront-path="free-pwyw" href="#pwyw-free-shelf-heading"><strong>Free / PWYW</strong><span>No-cost and pay-what-you-want listings when eligible.</span></a><a class="browse-card storefront-path-card" data-storefront-path="open-rules" href="#open-rules-shelf-heading"><strong>Open Rules</strong><span>Tobacco Road Games house rules and table tools.</span></a><span class="browse-card storefront-path-card is-inactive" data-storefront-path="system-neutral" aria-disabled="true"><strong>System Neutral</strong><span>A catalog path reserved for matching metadata.</span></span>
+          </nav>
         </section>
 
-        <aside class="sponsor-marquee" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
+        <aside class="sponsor-marquee storefront-sponsor-band" id="sponsor-marquee-band" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
           <span class="sponsor-marquee__label">Paid Sponsors</span><div class="sponsor-marquee__viewport"><div class="sponsor-marquee__track" data-sponsor-track></div></div>
         </aside>
 
-        <section class="store-section discovery-bookshelf" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
+    <section class="store-section" aria-labelledby="new-this-week-heading">
+      <div class="section-heading">
+        <p class="section-heading__kicker">Just unpacked</p>
+        <h2 id="new-this-week-heading">New This Week</h2>
+        <p>Recently released, currently eligible books in canonical marketplace order.</p>
+      </div>
+      <p class="shelf-empty">No eligible new releases are on the public shelf yet.</p>
+    </section>
+
+
+        <section class="store-section discovery-bookshelf storefront-best-sellers" id="best-sellers" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
           <div class="section-heading"><p class="section-heading__kicker">Customer demand</p><h2 id="best-sellers-shelf-heading">Best Sellers</h2><p>Shown only when current marketplace discovery data awards the Best Selling label.</p></div>
           <div class="bookshelf-grid" style="--shelf-items: 1"></div>
           <p class="shelf-empty" data-discovery-empty hidden>No current title meets the public Best Seller threshold.</p>
         </section>
 
-        <section class="store-section search-shelves" data-search-results-section aria-labelledby="search-results-heading">
-          <div class="section-heading"><p class="section-heading__kicker">Find a book</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
+        <section class="storefront-discovery-pair" id="open-rules-pwyw" aria-labelledby="open-rules-pwyw-heading">
+          <div class="section-heading storefront-discovery-pair__heading"><p class="section-heading__kicker">House tables</p><h2 id="open-rules-pwyw-heading">Open Rules + Pay What You Want</h2><p>Two independent discovery destinations, grouped for the later shop-table treatment.</p></div>
+
+    <section class="store-section" aria-labelledby="open-rules-shelf-heading">
+      <div class="section-heading">
+        <p class="section-heading__kicker">The house shelf</p>
+        <h2 id="open-rules-shelf-heading">Open Rules</h2>
+        <p>Rules, settings, and table tools published by Tobacco Road Games.</p>
+      </div>
+      <p class="shelf-empty">No Open Rules titles are currently eligible for public browsing.</p>
+    </section>
+
+
+    <section class="store-section" aria-labelledby="pwyw-free-shelf-heading">
+      <div class="section-heading">
+        <p class="section-heading__kicker">Choose your price</p>
+        <h2 id="pwyw-free-shelf-heading">Pay What You Want</h2>
+        <p>Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.</p>
+      </div>
+      <p class="shelf-empty">No pay-what-you-want or free titles are currently eligible for public browsing.</p>
+    </section>
+
+        </section>
+
+        <section class="store-section storefront-product-lines" id="product-lines" aria-labelledby="product-lines-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Departments</p><h2 id="product-lines-heading">Product Lines</h2><p>Existing product-line routes remain the source of truth for miniature departments.</p></div>
+          <p class="shelf-empty">No public product lines are available yet.</p>
+        </section>
+
+        <section class="store-section storefront-creator-feature" id="creator-feature" aria-labelledby="creator-feature-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Creator shelf</p><h2 id="creator-feature-heading">Featured Creator</h2><p>A generic feature slot for eligible marketplace Creators.</p></div>
+          <p class="shelf-empty">No eligible Creator feature is selected yet.</p>
+        </section>
+
+        <section class="store-section search-shelves storefront-catalog-entry" id="find-the-right-game" data-search-results-section aria-labelledby="search-results-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Find the right game</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
 
     <div class="store-browser" data-store-browser="store-search-browser" data-search-results="true" data-store-view="shelf" data-store-has-views="true">
 
@@ -188,9 +240,15 @@
     </div>
 
         </section>
-        <section class="store-lower" aria-labelledby="store-information-heading">
-          <div class="store-lower__intro"><p class="section-heading__kicker">Around the shop</p><h2 id="store-information-heading">Information, help, and community</h2><p>News, Creator resources, customer help, and the roads beyond the shelves.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
-          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a><a href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
+
+        <section class="store-section storefront-back-room" id="back-room" aria-labelledby="back-room-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Back room</p><h2 id="back-room-heading">Community and Creator resources</h2><p>Current routes for discussion, Creator tools, announcements, and support.</p></div>
+          <nav class="browse-card-grid" aria-label="Back room links"><a class="browse-card" href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a class="browse-card" href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a class="browse-card" href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a class="browse-card" href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a></nav>
+        </section>
+
+        <section class="store-lower storefront-lower-shop" id="lower-shop" aria-labelledby="store-information-heading">
+          <div class="store-lower__intro"><p class="section-heading__kicker">Lower shop</p><h2 id="store-information-heading">Information, help, and account links</h2><p>Legal, support, library, and cart destinations remain available below the discovery floor.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
+          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/store/catalog/"><strong>Full Catalog</strong><span>Open the serious search and filter view.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/support.html"><strong>Support</strong><span>Customer support and accessibility help.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
         </section>
       </main>
 
