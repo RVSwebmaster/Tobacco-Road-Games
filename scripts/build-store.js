@@ -20,14 +20,13 @@ const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
 const CREATOR_TEMPLATES = new Set(["bookshelf", "catalog"]);
 const PUBLIC_NAV_ITEMS = Object.freeze([
-  { key: "store", href: "/store/", label: "Marketplace" },
+  { key: "explore", href: "/store/catalog/", label: "Explore" },
+  { key: "forum", href: "/forum", label: "Community Forum" },
   { key: "creators", href: "/authors.html", label: "Creators" },
-  { key: "releases", href: "/store/#new-this-week-heading", label: "New This Week" },
-  { key: "sales", href: "/store/catalog/", label: "Sales & Bundles" },
-  { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
-  { key: "forum", href: "/forum", label: "Community" },
-  { key: "about", href: "/#about", label: "About Tobacco Road Games" },
-  { key: "account", href: "/account.html", label: "Account / My Library" },
+  { key: "creator-login", href: "/creator/", label: "Creator Login / Sign Up" },
+  { key: "ai-policy", href: "/ai-policy.html", label: "AI Policy" },
+  { key: "support", href: SUPPORT_URL, label: "Support" },
+  { key: "account", href: "/account.html", label: "Join / Sign In" },
   { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
 ]);
 const MARKETPLACE_METADATA_ENUMS = Object.freeze({
@@ -114,6 +113,7 @@ function main() {
   writeFile("store/index.html", renderShelfStoreHome(publicCatalogProducts, indexes));
   writeFile("store/catalog/index.html", renderCatalogPage(publicCatalogProducts, indexes));
   writeFile("store/cart/index.html", renderCartPage(publicCatalogProducts));
+  writeFile("ai-policy.html", renderAiPolicyPage());
 
   for (const product of products) {
     writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, publicCatalogProducts));
@@ -857,7 +857,7 @@ function renderLayout({
   extraScripts = [],
   assetVersion = CACHE_BUST,
   brandLogo = "/assets/logo.png",
-  brandTag = "Publisher-owned store and workshop catalog",
+  brandTag = "",
   metaRobots = "",
   navItems = PUBLIC_NAV_ITEMS,
   content
@@ -904,7 +904,7 @@ function renderLayout({
         <img class="brand__logo" src="${escapeAttribute(brandLogo)}?v=${assetVersion}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">${escapeHtml(brandTag)}</span>
+          ${brandTag ? `<span class="brand__tag">${escapeHtml(brandTag)}</span>` : ""}
         </div>
       </a>
 
@@ -926,7 +926,7 @@ function renderLayout({
 }
 
 function renderStoreNav(currentNav, navItems = PUBLIC_NAV_ITEMS) {
-  return renderSharedPublicNav(currentNav, "Store navigation", navItems);
+  return renderSharedPublicNav(currentNav, "Primary", navItems);
 }
 
 function renderShelfStoreHome(products, indexes) {
@@ -939,17 +939,7 @@ function renderShelfStoreHome(products, indexes) {
     currentNav: "store",
     assetVersion: STOREFRONT_CACHE_BUST,
     brandLogo: "/assets/tobacco-road-games-logo.png",
-    brandTag: "Great games. Open roads.",
-    navItems: [
-      { key: "store", href: "/store/", label: "Browse" },
-      { key: "creators", href: "/authors.html", label: "Creators" },
-      { key: "search", href: "/store/#search-results-heading", label: '<span class="nav-search__label">Search games, Creators, or keywords</span><span class="nav-search__icon" aria-hidden="true">⌕</span>' },
-      { key: "account", href: "/account.html", label: "Account / My Library" },
-      { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' },
-      { key: "forum", href: "/forum", label: "Community" },
-      { key: "creator-resources", href: "/creator/", label: "Creator Resources" },
-      { key: "support", href: "/support.html", label: "Support" }
-    ],
+    brandTag: "",
     extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
     structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
     content: `
@@ -1126,7 +1116,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `)
     .replace(mainPattern, `\n${renderHomepageClearDeckMain()}\n\n    `)
     .replace(scriptPattern, "\n");
-  fs.writeFileSync(homepagePath, next);
+  fs.writeFileSync(homepagePath, stripPublicBrandTag(next));
 }
 
 function renderHomepageClearDeckMain() {
@@ -1137,6 +1127,25 @@ function renderHomepageClearDeckMain() {
     </main>`;
 }
 
+function renderAiPolicyPage() {
+  return renderLayout({
+    pageTitle: `AI Policy | ${SITE_NAME}`,
+    description: "Tobacco Road Games AI Policy.",
+    canonicalPath: "/ai-policy.html",
+    currentNav: "ai-policy",
+    content: `
+      <main id="top">
+        <section class="statement-page" aria-labelledby="ai-policy-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Policy</p>
+            <h1 id="ai-policy-heading">AI Policy</h1>
+            <p class="statement-intro">The approved Tobacco Road Games AI Policy text is awaiting insertion.</p>
+          </div>
+        </section>
+      </main>`
+  });
+}
+
 function buildAccountPage() {
   const accountPath = path.join(ROOT, "account.html");
   if (!fs.existsSync(accountPath)) return;
@@ -1145,10 +1154,9 @@ function buildAccountPage() {
   if (!navPattern.test(html)) throw new Error("Account navigation could not be found.");
   const next = html
     .replace(navPattern, `${renderSharedPublicNav("account", "Primary")}\n    `)
-    .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
     .replace("Your Tobacco Road Games Account", "Account / My Library")
     .replace("Shared account foundation", "Customer account");
-  fs.writeFileSync(accountPath, next);
+  fs.writeFileSync(accountPath, stripPublicBrandTag(next));
 }
 
 function buildStaticPublicPage(relativePath, currentNav) {
@@ -1159,9 +1167,12 @@ function buildStaticPublicPage(relativePath, currentNav) {
   if (!navPattern.test(html)) throw new Error(`${relativePath} navigation could not be found.`);
   const next = html
     .replace(navPattern, `${renderSharedPublicNav(currentNav, "Primary")}\n    `)
-    .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
     .replace("Published by RV Sawyer, built for tables that still surprise the person running them.", "A marketplace for independent creators, operated by Tobacco Road Games.");
-  fs.writeFileSync(pagePath, next);
+  fs.writeFileSync(pagePath, stripPublicBrandTag(next));
+}
+
+function stripPublicBrandTag(html) {
+  return html.replace(/\s*<span class="brand__tag">[\s\S]*?<\/span>/g, "");
 }
 
 function renderMarketplaceHomepageSections(products, indexes, bundleRules) {
@@ -1743,7 +1754,6 @@ function renderPublicLayout({
         <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Independent games, remarkable creators, and tools for the table</span>
         </div>
       </a>
 
@@ -1856,7 +1866,11 @@ function renderCreatorProfileAlias(creator) {
 }
 
 function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEMS) {
-  const normalizedCurrent = currentNav === "authors" ? "creators" : currentNav === "catalog" ? "sales" : currentNav;
+  const normalizedCurrent = ["authors", "author"].includes(currentNav)
+    ? "creators"
+    : ["store", "catalog", "sales", "product", "collection"].includes(currentNav)
+      ? "explore"
+      : currentNav;
   return `
     <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}">
       ${navItems.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}

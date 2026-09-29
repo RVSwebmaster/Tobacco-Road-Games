@@ -18,10 +18,14 @@ assert.match(build, /bookshelf-book__spine/); assert.match(build, /bookshelf-boo
 assert.match(build, /bookshelf-book__badges/); assert.match(build, /bookshelf-book__creator/); assert.match(build, /bookshelf-book__publisher/); assert.match(build, /bookshelf-book__price/); assert.match(build, /const examinationMeta/);
 assert.match(build, /data-spine-width/); assert.match(build, /data-spine-source/); assert.match(build, /page-count/); assert.match(build, /catalog-fallback/); assert.match(build, /Math\.log1p/); assert.doesNotMatch(build, /file.*size.*spine|byte.*spine/i);
 assert.match(page, /data-search-results="true"/); assert.match(storefront, /Search Results —/); assert.match(storefront, /api\/discovery-labels/); assert.doesNotMatch(storefront, /best.?sell.*sort/i);
-for (const [key, href] of [["store", "/store/"], ["creators", "/authors.html"], ["search", "/store/#search-results-heading"], ["account", "/account.html"], ["cart", "/store/cart/"], ["forum", "/forum"], ["creator-resources", "/creator/"], ["support", "/support.html"]]) {
-  assert.match(page, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `Store header must preserve ${key} navigation.`);
+const headerOrder = ["Explore", "Community Forum", "Creators", "Creator Login / Sign Up", "AI Policy", "Support", "Join / Sign In", "Cart"];
+const publicHeaderNav = page.match(/<nav class="site-nav"[\s\S]*?<\/nav>/)?.[0] || "";
+for (let index = 1; index < headerOrder.length; index += 1) assert.ok(publicHeaderNav.indexOf(`>${headerOrder[index - 1]}`) < publicHeaderNav.indexOf(`>${headerOrder[index]}`), `Public header must keep ${headerOrder[index - 1]} before ${headerOrder[index]}.`);
+for (const [key, href] of [["explore", "/store/catalog/"], ["forum", "/forum"], ["creators", "/authors.html"], ["creator-login", "/creator/"], ["ai-policy", "/ai-policy.html"], ["support", "/support.html"], ["account", "/account.html"], ["cart", "/store/cart/"]]) {
+  assert.match(publicHeaderNav, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `Store header must preserve ${key} navigation.`);
 }
-assert.match(page, /Search games, Creators, or keywords/); assert.match(page, /data-cart-count/); assert.match(page, /Account \/ My Library/); assert.match(page, /Creator Resources/);
+assert.doesNotMatch(publicHeaderNav, /Marketplace|New This Week|Sales & Bundles|Physical Goods|About Tobacco Road Games|Search games, Creators, or keywords/);
+assert.match(page, /Search the catalog by title, Creator, system, series, or tag/); assert.match(page, /data-cart-count/); assert.match(page, /Account &amp; Library/); assert.match(page, /Creator Resources/);
 assert.match(page, /Books Worth Pulling From the Shelf/); assert.match(page, /Independent tabletop games, supplements, adventures, and tools from Creators worth discovering/); assert.match(page, /storefront-empty-shelf/); assert.match(page, /No published marketplace books are currently on the front shelf/);
 assert.match(css, /Storefront remodel Phase 2/); assert.match(css, /--store-header-height:86px/); assert.match(css, /\.sponsor-marquee\{position:sticky;top:var\(--store-header-height\)/);
 assert.match(css, /storefront-browse-paths \.storefront-path-grid/); assert.match(css, /storefront-browse-paths \.storefront-path-card/);

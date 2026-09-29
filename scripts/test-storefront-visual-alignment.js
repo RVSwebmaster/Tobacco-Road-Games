@@ -13,8 +13,9 @@ const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
 
 assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-shelf-baseline5/);
 assert.match(page, /<span class="brand__name">Tobacco Road Games<\/span>/);
-assert.match(page, /<span class="brand__tag">Great games\. Open roads\.<\/span>/);
-assert.match(page, /Search games, Creators, or keywords/);
+assert.doesNotMatch(page, /brand__tag/);
+assert.match(page, />Explore<\/a><a href="\/forum">Community Forum<\/a><a href="\/authors\.html">Creators<\/a><a href="\/creator\/">Creator Login \/ Sign Up<\/a><a href="\/ai-policy\.html">AI Policy<\/a><a href="\/support\.html">Support<\/a><a href="\/account\.html">Join \/ Sign In<\/a><a href="\/store\/cart\/">Cart/);
+assert.doesNotMatch(page.match(/<nav class="site-nav"[\s\S]*?<\/nav>/)?.[0] || "", /Search games, Creators, or keywords|Marketplace|New This Week|Sales & Bundles|Physical Goods|About Tobacco Road Games/);
 assert.doesNotMatch(page, />[^<]*\bTRG\b[^<]*</, "Customer-facing storefront copy must use the full Tobacco Road Games name.");
 assert.equal(fs.existsSync(logoPath), true, "The supplied Tobacco Road Games logo must be included locally.");
 const logo = fs.readFileSync(logoPath);
@@ -22,8 +23,8 @@ assert.deepEqual([...logo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "B
 assert.ok(logo.length < 100_000, "The header logo should remain lightweight.");
 
 assert.match(build, /brandLogo: "\/assets\/tobacco-road-games-logo\.png"/);
-assert.match(build, /brandTag: "Great games\. Open roads\."/);
-assert.match(build, /About Tobacco Road Games/);
+assert.doesNotMatch(build, /brandTag: "Great games\. Open roads\."/);
+assert.match(build, /AI Policy/);
 assert.match(build, /Purchasing remains closed while this marketplace preview is prepared/);
 
 assert.match(css, /Approved storefront mockup alignment/);

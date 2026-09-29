@@ -17,9 +17,13 @@ function main() {
   const forumNavigation = read("functions/_lib/public-navigation.mjs");
 
   assert.match(build, /const PUBLIC_NAV_ITEMS = Object\.freeze/, "Static public pages must share one generator-owned navigation definition.");
-  for (const label of ["Marketplace", "Creators", "New Releases", "Sales & Bundles", "Physical Goods", "Community", "About Tobacco Road Games", "Account \/ My Library", "Cart"]) {
+  for (const label of ["Explore", "Community Forum", "Creators", "Creator Login / Sign Up", "AI Policy", "Support", "Join / Sign In", "Cart"]) {
     assert.match(build, new RegExp(label.replace(/[&/]/g, "\\$&")), `Static navigation must include ${label}.`);
     assert.match(forumNavigation, new RegExp(label.replace(/[&/]/g, "\\$&").replace("&", "&(?:amp;)?")), `Function navigation must include ${label}.`);
+  }
+  for (const legacyLabel of ["Marketplace", "New This Week", "Sales & Bundles", "Physical Goods", "About Tobacco Road Games", "Account / My Library"]) {
+    assert.equal(build.includes(`label: "${legacyLabel}"`), false, `Static navigation must not retain legacy label ${legacyLabel}.`);
+    assert.equal(forumNavigation.includes(`label: "${legacyLabel}"`), false, `Function navigation must not retain legacy label ${legacyLabel}.`);
   }
 
   assert.equal(creators[0].profileTemplate, "bookshelf", "RV Sawyer must retain the bookshelf creator template.");
@@ -31,8 +35,9 @@ function main() {
   assert.match(alias, /compatibility alias/, "The creators URL must remain a safe compatibility alias.");
   assert.match(product, /<dt>Creator<\/dt>/, "Product pages must render Creator separately.");
   assert.match(product, /<dt>Publisher \/ Imprint<\/dt>/, "Product pages must render Publisher / Imprint separately.");
-  assert.match(account, /Account \/ My Library/, "The account page must expose the My Library destination without changing auth behavior.");
+  assert.match(account, /Account \/ My Library/, "The account page body must preserve current account behavior.");
   assert.doesNotMatch(account, />Authors<\/a>/, "Public navigation must not expose Author terminology.");
+  assert.match(read("ai-policy.html"), /approved Tobacco Road Games AI Policy text is awaiting insertion/, "AI Policy placeholder must avoid fabricated policy copy.");
   assert.match(homepage, /homepage-clear-deck/, "The homepage must render the Phase 0 clear-deck canvas.");
   assert.match(homepage, /Tobacco Road Games storefront redesign in progress\./, "The cleared homepage must retain only the modest staging marker.");
   for (const removedCopy of [

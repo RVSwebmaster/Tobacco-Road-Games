@@ -109,12 +109,12 @@ function d1(raw) {
 
 function assertNavigationAndRoutes() {
   const build = fs.readFileSync(path.join(ROOT, "scripts", "build-store.js"), "utf8");
-  assert.match(build, /href: "\/forum", label: "Community"/, "Generated public and store navigation must include Community.");
+  assert.match(build, /href: "\/forum", label: "Community Forum"/, "Generated public and store navigation must include Community Forum.");
   const account = fs.readFileSync(path.join(ROOT, "account.html"), "utf8");
-  assert.match(account, /href="\/forum">Community<\/a>/, "Account navigation must include Community.");
+  assert.match(account, /href="\/forum">Community Forum<\/a>/, "Account navigation must include Community Forum.");
   for (const page of ["index.html", "support.html"]) {
     const source = fs.readFileSync(path.join(ROOT, page), "utf8");
-    assert.match(source, /href="\/forum">Community<\/a>/, `${page} navigation must include Community.`);
+    assert.match(source, /href="\/forum">Community Forum<\/a>/, `${page} navigation must include Community Forum.`);
   }
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/forum/member/*") && routes.include.includes("/api/forum/*"));
