@@ -3072,11 +3072,12 @@ body:has(.homepage-shop-wall) .site-nav {
   --nav-bracket-width: 0px;
   --nav-bracket-height: 0px;
   position: relative;
-  justify-content: center;
+  justify-content: safe center;
   gap: clamp(14px, 1.7vw, 26px);
   width: min(1420px, 100%);
   padding: 0 4px;
   overflow-x: auto;
+  scrollbar-width: none;
 }
 
 body:has(.homepage-shop-wall) .site-nav::before,
@@ -3123,7 +3124,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a {
   border-radius: 0;
   background: transparent;
   color: #251309;
-  font-size: 0.84rem;
+  font-size: 1.008rem;
   font-weight: 800;
   letter-spacing: 0.025em;
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
@@ -3361,15 +3362,40 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-plaque h2 {
+  position: relative;
+  isolation: isolate;
   margin: 0;
-  color: #2a160a;
+  color: #211507;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(0.92rem, 1.42vw, 1.28rem);
   line-height: 1;
   letter-spacing: 0.13em;
   text-align: center;
   text-transform: uppercase;
-  text-shadow: 0 1px 0 rgba(255, 230, 160, 0.7);
+  text-shadow: 0 1px 0 rgba(255, 241, 194, 0.7);
+}
+
+/* Brass signs surround the accepted label boxes without shifting the shelves
+   or the text. The wood header and existing downlighting stay behind them. */
+.shop-wall-plaque h2::before {
+  content: "";
+  position: absolute;
+  inset: -7px -18px;
+  z-index: -1;
+  border: 1px solid #705020;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle 1.5px at 6px 50%, #674a20 70%, rgba(255, 236, 168, 0.7) 100%, transparent 120%),
+    radial-gradient(circle 1.5px at calc(100% - 6px) 50%, #674a20 70%, rgba(255, 236, 168, 0.7) 100%, transparent 120%),
+    repeating-linear-gradient(0deg, rgba(255, 241, 191, 0.07) 0 1px, rgba(99, 69, 22, 0.05) 1px 2px, transparent 2px 4px),
+    linear-gradient(115deg, transparent 12%, rgba(255, 245, 195, 0.38) 32%, transparent 52%, rgba(100, 67, 20, 0.12) 76%, transparent 92%),
+    linear-gradient(180deg, #e4ce88 0%, #c9ac5b 42%, #b18b3b 74%, #d4b86d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 208, 0.8),
+    inset 0 -1px 0 rgba(84, 53, 16, 0.5),
+    inset 1px 0 0 rgba(255, 239, 181, 0.4),
+    0 2px 4px rgba(24, 10, 4, 0.45);
+  pointer-events: none;
 }
 
 .shop-wall-shelves {
@@ -3624,6 +3650,37 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   box-shadow: none;
 }
 
+/* Hang on the back wall within a shelf third, behind books and existing light.
+   Absolute positioning leaves the locked shelf dimensions untouched. */
+.shop-wall-back-wall-art {
+  position: absolute;
+  top: 4px;
+  left: 16.666%;
+  z-index: 0;
+  width: min(212px, calc(33.333% - 16px));
+  height: auto;
+  transform: translateX(-50%);
+  filter: drop-shadow(2px 4px 5px rgba(16, 7, 3, 0.55));
+  pointer-events: none;
+  user-select: none;
+}
+
+.shop-wall-back-wall-art--right {
+  left: 83.333%;
+}
+
+.shop-wall-back-wall-art--center {
+  left: 50%;
+}
+
+/* Match the jersey's frame footprint; contain narrower posters in dark matting. */
+.shop-wall-back-wall-art--right,
+.shop-wall-back-wall-art--center {
+  aspect-ratio: 1306 / 1600;
+  object-fit: contain;
+  background: #151515;
+}
+
 .homepage-shop-wall .bookshelf-book {
   min-height: clamp(116px, 13vw, 176px);
 }
@@ -3683,32 +3740,27 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     linear-gradient(180deg, #70411f 0%, #542711 100%);
 }
 
-.shop-wall-identity-sign {
+/* Preserve the accepted row height independently of the larger painted sign.
+   The unpainted heading names the main landmark for assistive technology. */
+.shop-wall-identity-space {
   display: grid;
   justify-items: center;
   gap: 14px;
   width: min(320px, 88%);
   padding: clamp(20px, 3vw, 34px);
-  border: 3px solid rgba(62, 32, 15, 0.78);
-  border-radius: 10px;
-  background:
-    linear-gradient(180deg, rgba(255, 234, 180, 0.82), rgba(186, 124, 61, 0.78)),
-    repeating-linear-gradient(90deg, rgba(92, 50, 24, 0.12) 0 3px, transparent 3px 18px);
-  color: #261208;
-  text-decoration: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 246, 207, 0.7),
-    0 12px 26px rgba(20, 9, 3, 0.32);
+  border: 3px solid transparent;
+  pointer-events: none;
+  user-select: none;
 }
 
-.shop-wall-identity-sign img {
+.shop-wall-identity-space::before {
+  content: "";
   width: clamp(112px, 11vw, 158px);
-  max-height: 158px;
-  object-fit: contain;
-  filter: drop-shadow(0 5px 7px rgba(52, 25, 10, 0.26));
+  height: clamp(112px, 11vw, 158px);
 }
 
-.shop-wall-identity-sign h1 {
+.shop-wall-identity-space h1 {
+  opacity: 0;
   display: grid;
   gap: 2px;
   margin: 0;
@@ -3720,7 +3772,76 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   text-transform: uppercase;
 }
 
+/* A physical wood sign beneath the existing downlight, not a cream UI card.
+   Absolute placement keeps the accepted bay/shelf/fixture geometry unchanged. */
+.shop-wall-row--identity > .shop-wall-bay--identity > .shop-wall-identity-sign {
+  position: absolute;
+  inset: 12px 12px 18px;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 3px solid #3b1d0e;
+  border-radius: 2px;
+  container-type: inline-size;
+  transform: scale(1.1);
+  transform-origin: center;
+  background:
+    radial-gradient(circle at 10px 10px, #e5b569 0 1px, #765026 1px 3px, #30190c 3px 4px, transparent 4.5px),
+    radial-gradient(circle at calc(100% - 10px) 10px, #e5b569 0 1px, #765026 1px 3px, #30190c 3px 4px, transparent 4.5px),
+    radial-gradient(circle at 10px calc(100% - 10px), #e5b569 0 1px, #765026 1px 3px, #30190c 3px 4px, transparent 4.5px),
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #e5b569 0 1px, #765026 1px 3px, #30190c 3px 4px, transparent 4.5px),
+    url("/assets/woodgrain-sign.svg"),
+    linear-gradient(105deg, rgba(44, 20, 8, 0.18), transparent 24%, rgba(224, 157, 79, 0.12) 52%, transparent 76%, rgba(44, 20, 8, 0.2)),
+    linear-gradient(180deg, #a16a35 0%, #8b542a 48%, #78441f 100%);
+  background-size: auto, auto, auto, auto, 100% 100%, auto, auto;
+  box-shadow:
+    inset 0 0 0 2px rgba(214, 144, 70, 0.38),
+    inset 0 3px 5px rgba(246, 189, 108, 0.18),
+    inset 0 -4px 8px rgba(37, 15, 5, 0.32),
+    0 8px 14px rgba(20, 8, 3, 0.4);
+  pointer-events: none;
+  user-select: none;
+}
+
+.shop-wall-identity-sign img {
+  align-self: center;
+  width: min(270px, 92%);
+  height: 100%;
+  max-height: 270px;
+  min-height: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 3px rgba(37, 17, 7, 0.38));
+}
+
+.shop-wall-identity-title {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  color: #1b1008;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.125rem, 10.8cqw, 2.6rem);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: 0.025em;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(234, 170, 87, 0.48), 0 -1px 1px rgba(39, 16, 5, 0.25);
+}
+
+.shop-wall-identity-title span {
+  white-space: nowrap;
+}
+
 @media (max-width: 1023px) {
+  /* The identity sign already fills the responsive wall; prevent overhang. */
+  .shop-wall-row--identity > .shop-wall-bay--identity > .shop-wall-identity-sign {
+    transform: none;
+  }
+
   .shop-wall-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3761,7 +3882,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   body:has(.homepage-shop-wall) .site-nav a {
     min-height: 34px;
     padding: 8px 9px;
-    font-size: 0.66rem;
+    font-size: 0.792rem;
   }
 
   .homepage-shop-wall {

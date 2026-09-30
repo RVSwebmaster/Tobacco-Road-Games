@@ -1137,16 +1137,16 @@ function renderHomepageShopWallMain(products) {
       <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
         ${renderHomepageLibraryBay()}
         ${renderHomepageIdentityBay()}
-        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, emptyMessage: "Open Rules titles coming soon.", viewAllHref: "/store/catalog/" })}
+        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, viewAllHref: "/store/catalog/" })}
         ${renderHomepageShelfFixtures()}
       </section>
       ${renderHomepageBricABracShelf()}
       <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true })}
-        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true })}
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, wallArt: { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" } })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" } })}
         ${renderHomepageBricABracShelf()}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: { src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" } })}
         ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true })}
       </section>
       <aside class="storefront-news-chiron" aria-label="TTRPG News Chiron"></aside>
@@ -1185,18 +1185,22 @@ function renderHomepageLibraryBay() {
 function renderHomepageIdentityBay() {
   return `
         <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
-          <a class="shop-wall-identity-sign" href="/" aria-label="Tobacco Road Games home">
-            <img src="/assets/tobacco-road-games-logo.png?v=${STOREFRONT_CACHE_BUST}" alt="" loading="eager" decoding="async">
+          <div class="shop-wall-identity-space">
             <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
-          </a>
+          </div>
+          <div class="shop-wall-identity-sign" aria-hidden="true">
+            <img src="/assets/tobacco-road-games-logo.png?v=20260908-shelf-baseline5" alt="" loading="eager" decoding="async">
+            <p class="shop-wall-identity-title"><span>Tobacco Road</span><span>Games</span></p>
+          </div>
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHref, singleShelf = false }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null }) {
   const visibleProducts = products.slice(0, 5);
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
+              ${wallArt ? `<img class="shop-wall-back-wall-art${["center", "right"].includes(wallArt.placement) ? ` shop-wall-back-wall-art--${wallArt.placement}` : ""}" src="${escapeAttribute(wallArt.src)}" alt="${escapeAttribute(wallArt.alt)}" loading="lazy" decoding="async">` : ""}
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
               ${renderHomepageShelfFixtures()}
             </div>
@@ -1206,7 +1210,7 @@ function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHr
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : `<p class="shop-wall-empty">${escapeHtml(emptyMessage)}</p>`}
+              ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : ""}
               ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
             </div>
           </div>`;
