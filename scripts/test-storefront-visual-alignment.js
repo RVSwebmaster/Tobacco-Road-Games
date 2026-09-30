@@ -63,16 +63,32 @@ assert.match(css, /--shop-wall-merch-shelf-construction:\s*52px;/);
 assert.match(css, /--shop-wall-merch-shelf-top:\s*30px;/);
 assert.match(css, /--shop-wall-merch-shelf-fascia:\s*18px;/);
 assert.match(css, /--shop-wall-fixture-height:\s*120px;/);
+assert.match(css, /--shop-wall-recessed-light-width:\s*14px;/);
+assert.match(css, /--shop-wall-recessed-light-height:\s*8px;/);
 assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-bay\s*\{[\s\S]*min-height:\s*var\(--shop-wall-merch-bay-height\);/);
 assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-shelf-level\s*\{[\s\S]*min-height:\s*var\(--shop-wall-merch-product-space\);/);
 assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-shelf-level::after\s*\{[\s\S]*height:\s*var\(--shop-wall-merch-shelf-construction\);/);
-assert.match(css, /#bd7b43 0 var\(--shop-wall-merch-shelf-top\)/);
+assert.match(css, /#8f5429 0 var\(--shop-wall-merch-shelf-top\)/);
 assert.match(css, /\.shop-wall-row--bric-a-brac\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*min-height:\s*var\(--shop-wall-bric-row-height\);/);
 assert.match(css, /\.shop-wall-bric-shelf\s*\{[\s\S]*width:\s*100%;[\s\S]*min-height:\s*var\(--shop-wall-bric-row-height\);/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac::before\s*\{[\s\S]*inset:\s*0 0 var\(--shop-wall-bric-surface-height\);/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface\s*\{[\s\S]*radial-gradient\(ellipse 8% 34% at 16\.666% 24%/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface\s*\{[\s\S]*radial-gradient\(ellipse 8% 34% at 50% 24%/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface\s*\{[\s\S]*radial-gradient\(ellipse 8% 34% at 83\.333% 24%/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface::before,[\s\S]*\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf::after\s*\{[\s\S]*top:\s*46px;[\s\S]*width:\s*var\(--shop-wall-recessed-light-width\);[\s\S]*height:\s*var\(--shop-wall-recessed-light-height\);/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface::before\s*\{[\s\S]*left:\s*16\.666%;/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf::after\s*\{[\s\S]*top:\s*calc\(var\(--shop-wall-bric-row-height\) - var\(--shop-wall-bric-surface-height\) \+ 46px\);[\s\S]*left:\s*50%;/);
+assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface::after\s*\{[\s\S]*left:\s*83\.333%;/);
 assert.match(css, /\.homepage-shop-wall > \.storefront-ad-marquee,\s*\.homepage-shop-wall > \.storefront-news-chiron\s*\{[\s\S]*width:\s*100%;/);
 assert.match(css, /\.storefront-ad-marquee,\s*\.storefront-news-chiron\s*\{[\s\S]*height:\s*var\(--shop-wall-fixture-height\);/);
-assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::before\s*\{[\s\S]*top:\s*-6px;[\s\S]*bottom:\s*22px;[\s\S]*radial-gradient\(ellipse 68% 54% at 50% 0%/);
-assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::after\s*\{[\s\S]*top:\s*-12px;[\s\S]*width:\s*14px;[\s\S]*height:\s*8px;/);
+assert.match(css, /\.shop-wall-row--identity::after\s*\{[\s\S]*radial-gradient\(ellipse 9% 78% at 16\.666% 0%/);
+assert.match(css, /\.shop-wall-row--identity::after\s*\{[\s\S]*radial-gradient\(ellipse 9% 78% at 50% 0%/);
+assert.match(css, /\.shop-wall-row--identity::after\s*\{[\s\S]*radial-gradient\(ellipse 9% 78% at 83\.333% 0%/);
+assert.match(css, /rgba\(255, 232, 163, 0\.58\) 0%, rgba\(247, 174, 74, 0\.32\) 34%/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::before\s*\{[\s\S]*top:\s*-6px;[\s\S]*bottom:\s*22px;[\s\S]*radial-gradient\(ellipse 8% 6% at 50% 0%, rgba\(255, 244, 201, 0\.96\)/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::before\s*\{[\s\S]*radial-gradient\(ellipse 18% 19% at 50% 11%/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::before\s*\{[\s\S]*radial-gradient\(ellipse 37% 76% at 50% 44%/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::after\s*\{[\s\S]*top:\s*-12px;[\s\S]*width:\s*var\(--shop-wall-recessed-light-width\);[\s\S]*height:\s*var\(--shop-wall-recessed-light-height\);/);
 
 assertInOrder(homepage, [
   'class="shop-wall-row shop-wall-row--identity"',
