@@ -3276,7 +3276,65 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     0 -4px 8px rgba(41, 17, 6, 0.25);
 }
 
-.storefront-ad-marquee {
+.shop-wall-row--bric-a-brac {
+  grid-template-columns: 1fr;
+  min-height: 148px;
+  padding: 0;
+  border-top: 2px solid rgba(231, 166, 91, 0.28);
+  border-bottom: 5px solid #35180c;
+  background:
+    linear-gradient(90deg, rgba(37, 17, 7, 0.34), transparent 5%, transparent 95%, rgba(37, 17, 7, 0.34)),
+    linear-gradient(180deg, #7d4524 0%, #633017 100%);
+  box-shadow:
+    inset 0 7px 12px rgba(35, 15, 6, 0.24),
+    inset 0 -4px 0 rgba(25, 10, 4, 0.38);
+}
+
+.shop-wall-bric-shelf {
+  position: relative;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 148px;
+  padding: 0 0 48px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 70px, rgba(63, 31, 14, 0.16) 70px 72px),
+    linear-gradient(180deg, rgba(255, 214, 145, 0.06), rgba(48, 21, 8, 0.12));
+  box-shadow:
+    inset 10px 0 13px rgba(31, 13, 5, 0.2),
+    inset -10px 0 13px rgba(31, 13, 5, 0.24);
+}
+
+.shop-wall-bric-shelf__back {
+  min-height: 100px;
+  background:
+    linear-gradient(90deg, rgba(32, 14, 6, 0.26), transparent 6%, transparent 94%, rgba(32, 14, 6, 0.26)),
+    repeating-linear-gradient(90deg, rgba(255, 221, 154, 0.035) 0 2px, transparent 2px 80px),
+    linear-gradient(180deg, #8b5530 0%, #6d3a1d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(246, 193, 112, 0.2),
+    inset 0 -12px 18px rgba(31, 13, 5, 0.24);
+}
+
+.shop-wall-bric-shelf__surface {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border-top: 2px solid rgba(246, 193, 112, 0.48);
+  background:
+    linear-gradient(180deg, #bd7b43 0 24px, #7b3f1d 24px 40px, #46200f 40px 100%);
+  box-shadow:
+    inset 0 -2px 0 rgba(25, 10, 4, 0.5),
+    0 10px 14px rgba(18, 7, 3, 0.42),
+    0 -4px 8px rgba(41, 17, 6, 0.25);
+}
+
+.storefront-ad-marquee,
+.storefront-news-chiron {
   display: block;
   width: calc(100% - 48px);
   height: 120px;
@@ -3287,6 +3345,11 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     inset 0 0 0 2px rgba(190, 119, 55, 0.28),
     inset 0 8px 16px rgba(15, 6, 2, 0.38),
     0 8px 18px rgba(14, 7, 3, 0.3);
+}
+
+.homepage-shop-wall > .storefront-ad-marquee,
+.homepage-shop-wall > .storefront-news-chiron {
+  width: 100%;
 }
 
 .shop-wall-shelf-level {

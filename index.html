@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Cache-bust version: 20260929-header-brackets. Bump this value when replacing CSS, JS, JSON, images, or media files that may be cached. -->
+  <!-- Cache-bust version: 20260929-marquee-placement. Bump this value when replacing CSS, JS, JSON, images, or media files that may be cached. -->
   <title>Tobacco Road Games</title>
   <meta
     name="description"
@@ -12,7 +12,7 @@
   <link rel="canonical" href="https://tobaccoroadgames.com/">
   <meta name="theme-color" content="#120c08">
   <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
-  <link rel="stylesheet" href="styles.css?v=20260929-header-brackets">
+  <link rel="stylesheet" href="styles.css?v=20260929-marquee-placement">
 </head>
 <body>
   <div class="page-shell">
@@ -63,7 +63,23 @@
           </div>
         </section>
       </section>
+      <section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
+        <div class="shop-wall-bric-shelf" aria-hidden="true">
+          <div class="shop-wall-bric-shelf__back"></div>
+          <div class="shop-wall-bric-shelf__surface"></div>
+        </div>
+      </section>
+      <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
+
+        <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="featured-creator-wall-heading">
+          <div class="shop-wall-plaque"><h2 id="featured-creator-wall-heading">FEATURED CREATOR</h2></div>
+          <div class="shop-wall-shelves shop-wall-shelves--single" aria-label="FEATURED CREATOR shelf">
+            <div class="shop-wall-shelf-level">
+
+            </div>
+          </div>
+        </section>
 
         <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="new-this-week-wall-heading">
           <div class="shop-wall-plaque"><h2 id="new-this-week-wall-heading">NEW THIS WEEK</h2></div>
@@ -71,6 +87,13 @@
             <div class="shop-wall-shelf-level">
 
             </div>
+          </div>
+        </section>
+
+        <section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
+          <div class="shop-wall-bric-shelf" aria-hidden="true">
+            <div class="shop-wall-bric-shelf__back"></div>
+            <div class="shop-wall-bric-shelf__surface"></div>
           </div>
         </section>
 
@@ -92,8 +115,8 @@
           </div>
         </section>
       </section>
+      <aside class="storefront-news-chiron" aria-label="TTRPG News Chiron"></aside>
     </main>
-    <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>
 
 
 
@@ -102,6 +125,6 @@
 
   </div>
   <script src="/assets/js/cart.js?v=20260712-shelf12-hinges" defer></script>
-  <script src="/assets/js/storefront.js?v=20260929-header-brackets" defer></script>
+  <script src="/assets/js/storefront.js?v=20260929-marquee-placement" defer></script>
 </body>
 </html>

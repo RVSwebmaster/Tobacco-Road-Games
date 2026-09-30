@@ -14,7 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
-const STOREFRONT_CACHE_BUST = "20260929-header-brackets";
+const STOREFRONT_CACHE_BUST = "20260929-marquee-placement";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1108,7 +1108,7 @@ function buildHomepage(products, indexes, bundleRules) {
   if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
   const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
-  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-ad-marquee"[^>]*><\/aside>)*/;
+  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
   const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>\s*(?=<\/body>)/;
@@ -1139,13 +1139,26 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageIdentityBay()}
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, emptyMessage: "Open Rules titles coming soon.", viewAllHref: "/store/catalog/" })}
       </section>
+      ${renderHomepageBricABracShelf()}
+      <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true })}
         ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true })}
+        ${renderHomepageBricABracShelf()}
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true })}
         ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true })}
       </section>
-    </main>
-    <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>`;
+      <aside class="storefront-news-chiron" aria-label="TTRPG News Chiron"></aside>
+    </main>`;
+}
+
+function renderHomepageBricABracShelf() {
+  return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
+        <div class="shop-wall-bric-shelf" aria-hidden="true">
+          <div class="shop-wall-bric-shelf__back"></div>
+          <div class="shop-wall-bric-shelf__surface"></div>
+        </div>
+      </section>`;
 }
 
 function renderHomepageLibraryBay() {
