@@ -1138,6 +1138,7 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageLibraryBay()}
         ${renderHomepageIdentityBay()}
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, emptyMessage: "Open Rules titles coming soon.", viewAllHref: "/store/catalog/" })}
+        ${renderHomepageShelfFixtures()}
       </section>
       ${renderHomepageBricABracShelf()}
       <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>
@@ -1159,6 +1160,10 @@ function renderHomepageBricABracShelf() {
           <div class="shop-wall-bric-shelf__surface"></div>
         </div>
       </section>`;
+}
+
+function renderHomepageShelfFixtures() {
+  return '<span class="shop-wall-shelf-fixtures" aria-hidden="true"><span></span><span></span><span></span></span>';
 }
 
 function renderHomepageLibraryBay() {
@@ -1193,6 +1198,7 @@ function renderHomepageProductBay({ title, id, products, emptyMessage, viewAllHr
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
+              ${renderHomepageShelfFixtures()}
             </div>
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
