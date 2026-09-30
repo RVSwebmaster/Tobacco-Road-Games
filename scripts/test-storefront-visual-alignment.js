@@ -5,11 +5,22 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 const page = read("store/index.html");
+const homepage = read("index.html");
 const css = read("styles.css");
 const build = read("scripts/build-store.js");
 const storefront = read("assets/js/storefront.js");
 const sponsor = read("assets/js/sponsor-marquee.js");
 const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
+
+const assertInOrder = (source, orderedNeedles, label) => {
+  let cursor = -1;
+  for (const needle of orderedNeedles) {
+    const next = source.indexOf(needle, cursor + 1);
+    assert.notEqual(next, -1, `${label} missing expected item: ${needle}`);
+    assert.ok(next > cursor, `${label} out of order near: ${needle}`);
+    cursor = next;
+  }
+};
 
 assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-shelf-baseline5/);
 assert.match(page, /<span class="brand__name">Tobacco Road Games<\/span>/);
@@ -38,6 +49,55 @@ assert.match(css, /\.shelf-storefront \.bookshelf-book__details\{top:2px/);
 assert.match(css, /\.store-lower\{display:grid;grid-template-columns:minmax\(250px,\.72fr\)/);
 assert.match(css, /@media\(max-width:900px\)/);
 assert.match(css, /@media\(max-width:520px\)/);
+
+assert.match(css, /Accepted storefront geometry lock/);
+assert.match(css, /--shop-wall-header-height:\s*50px;/);
+assert.match(css, /min-height:\s*var\(--shop-wall-header-height\);/);
+assert.match(css, /--shop-wall-bric-row-height:\s*148px;/);
+assert.match(css, /148px \+ 2px top border \+ 5px bottom border = 155px rendered Bric-a-Brac shelf/);
+assert.match(css, /--shop-wall-bric-surface-height:\s*48px;/);
+assert.match(css, /--shop-wall-bric-back-height:\s*100px;/);
+assert.match(css, /--shop-wall-merch-bay-height:\s*378px;/);
+assert.match(css, /--shop-wall-merch-product-space:\s*320px;/);
+assert.match(css, /--shop-wall-merch-shelf-construction:\s*52px;/);
+assert.match(css, /--shop-wall-merch-shelf-top:\s*30px;/);
+assert.match(css, /--shop-wall-merch-shelf-fascia:\s*18px;/);
+assert.match(css, /--shop-wall-fixture-height:\s*120px;/);
+assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-bay\s*\{[\s\S]*min-height:\s*var\(--shop-wall-merch-bay-height\);/);
+assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-shelf-level\s*\{[\s\S]*min-height:\s*var\(--shop-wall-merch-product-space\);/);
+assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-shelf-level::after\s*\{[\s\S]*height:\s*var\(--shop-wall-merch-shelf-construction\);/);
+assert.match(css, /#bd7b43 0 var\(--shop-wall-merch-shelf-top\)/);
+assert.match(css, /\.shop-wall-row--bric-a-brac\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*min-height:\s*var\(--shop-wall-bric-row-height\);/);
+assert.match(css, /\.shop-wall-bric-shelf\s*\{[\s\S]*width:\s*100%;[\s\S]*min-height:\s*var\(--shop-wall-bric-row-height\);/);
+assert.match(css, /\.homepage-shop-wall > \.storefront-ad-marquee,\s*\.homepage-shop-wall > \.storefront-news-chiron\s*\{[\s\S]*width:\s*100%;/);
+assert.match(css, /\.storefront-ad-marquee,\s*\.storefront-news-chiron\s*\{[\s\S]*height:\s*var\(--shop-wall-fixture-height\);/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::before\s*\{[\s\S]*top:\s*-6px;[\s\S]*bottom:\s*22px;[\s\S]*radial-gradient\(ellipse 68% 54% at 50% 0%/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay::after\s*\{[\s\S]*top:\s*-12px;[\s\S]*width:\s*14px;[\s\S]*height:\s*8px;/);
+
+assertInOrder(homepage, [
+  'class="shop-wall-row shop-wall-row--identity"',
+  'aria-label="Bric-a-Brac display shelf"',
+  'class="storefront-ad-marquee"',
+  'FEATURED CREATOR',
+  'NEW THIS WEEK',
+  'aria-label="Bric-a-Brac display shelf"',
+  'BEST SELLERS',
+  'FREE &amp; PWYW',
+  'class="storefront-news-chiron"'
+], "Homepage storefront sequence");
+
+assertInOrder(build, [
+  'renderHomepageLibraryBay()',
+  'renderHomepageIdentityBay()',
+  'renderHomepageBricABracShelf()',
+  'storefront-ad-marquee',
+  'FEATURED CREATOR',
+  'NEW THIS WEEK',
+  'renderHomepageBricABracShelf()',
+  'BEST SELLERS',
+  'FREE & PWYW',
+  'storefront-news-chiron'
+], "Generated storefront sequence");
 
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
