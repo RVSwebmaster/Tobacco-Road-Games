@@ -1143,11 +1143,11 @@ function renderHomepageShopWallMain(products) {
       ${renderHomepageBricABracShelf()}
       <aside class="storefront-ad-marquee" aria-label="Advertisement marquee"></aside>
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, wallArt: { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" } })}
-        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" } })}
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
         ${renderHomepageBricABracShelf()}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: { src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" } })}
-        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true, wallArt: [{ src: "/assets/justifiers-framed-cover.png", alt: "Framed Justifiers RPG cover on the shelf back wall" }, { src: "/assets/charlie-daniels-framed-art.png", alt: "Framed Charlie Daniels Band artwork on the shelf back wall", placement: "center" }, { src: "/assets/drolla-framed-cover.png", alt: "Framed Drolla Core Rulebook artwork on the shelf back wall", placement: "right" }] })}
       </section>
       <aside class="storefront-news-chiron" aria-label="TTRPG News Chiron"></aside>
     </main>`;
@@ -1197,10 +1197,12 @@ function renderHomepageIdentityBay() {
 
 function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null }) {
   const visibleProducts = products.slice(0, 5);
+  const wallArtItems = wallArt ? (Array.isArray(wallArt) ? wallArt : [wallArt]) : [];
+  const wallArtMarkup = wallArtItems.map((art) => `<img class="shop-wall-back-wall-art${["center", "right"].includes(art.placement) ? ` shop-wall-back-wall-art--${art.placement}` : ""}" src="${escapeAttribute(art.src)}" alt="${escapeAttribute(art.alt)}" loading="lazy" decoding="async">`).join("\n              ");
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
-              ${wallArt ? `<img class="shop-wall-back-wall-art${["center", "right"].includes(wallArt.placement) ? ` shop-wall-back-wall-art--${wallArt.placement}` : ""}" src="${escapeAttribute(wallArt.src)}" alt="${escapeAttribute(wallArt.alt)}" loading="lazy" decoding="async">` : ""}
+              ${wallArtMarkup}
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
               ${renderHomepageShelfFixtures()}
             </div>
