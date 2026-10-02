@@ -1231,9 +1231,9 @@ function renderHomepageLibraryBay() {
         <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
           <img class="shop-wall-top-dressing shop-wall-top-dressing--duke" src="/assets/images/storefront-shelf-dressing/duke-blue-devil-bobblehead.png" alt="Duke Blue Devil bobblehead beneath the Scuppernong vine" loading="eager" decoding="async" draggable="false">
+          <img class="shop-wall-top-dressing shop-wall-top-dressing--scuppernong" src="/assets/images/storefront-shelf-dressing/scuppernong-vine.png" alt="Scuppernong grapevine and fruit trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              <img class="shop-wall-top-dressing shop-wall-top-dressing--scuppernong" src="/assets/images/storefront-shelf-dressing/scuppernong-vine.png" alt="Scuppernong grapevine and fruit trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">
               ${productMockMarkup}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">

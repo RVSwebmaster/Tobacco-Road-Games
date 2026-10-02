@@ -4366,17 +4366,30 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .shop-wall-top-dressing--kudzu {
   bottom: 18px;
   z-index: 7;
-  width: min(130px, 25%);
-  height: auto;
+  width: 25%;
+  object-fit: cover;
 }
 
 .shop-wall-top-dressing--scuppernong {
-  right: 0;
+  right: -25%;
+  width: auto;
+  object-fit: contain;
+  clip-path: inset(0 26% 0 0);
   transform: translateY(58%);
 }
 
+.shop-wall-row--identity > .shop-wall-bay--library > .shop-wall-top-dressing--scuppernong {
+  position: absolute;
+  bottom: calc((100% - 58px) / 2 + 18px);
+  z-index: 6;
+  height: min(490px, calc(((100% - 58px) / 2 - 28px) * 2.8));
+}
+
 .shop-wall-top-dressing--kudzu {
-  left: 0;
+  left: -13%;
+  width: auto;
+  height: min(340px, calc((100% - 28px) * 1.8));
+  object-fit: contain;
   transform: translateY(44%) scaleX(-1);
 }
 
@@ -4393,12 +4406,39 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   z-index: 1;
   height: min(144px, calc((100% - 58px) / 2 - 28px));
   right: -8px;
-  /* Blend against the opaque bay, below the shelf/vine layer, without mirroring text. */
-  mix-blend-mode: lighten;
+  /* Clip only the supplied black backdrop, preserving blue color and readable text. */
+  clip-path: polygon(30.5% 5%, 33% 9%, 36% 10%, 39% 5%, 45% 3%, 52% 4%, 56% 6%, 56% 2%, 58% 1%, 60% 5%, 61% 10%, 63% 13%, 65% 16%, 69% 13%, 70% 15%, 69% 23%, 65% 28%, 64% 34%, 62% 38%, 59% 41%, 58% 44%, 64% 47%, 69% 54%, 70% 59%, 68% 64%, 71% 69%, 76% 74%, 77% 77%, 74% 79%, 66% 77%, 63% 79%, 64% 83%, 67% 85%, 70% 87%, 74% 89%, 74% 94%, 71% 97%, 60% 98%, 39% 98%, 28% 96%, 26% 94%, 26% 90%, 29% 87%, 32% 85%, 33% 81%, 31% 78%, 28% 77%, 28% 74%, 31% 67%, 32% 63%, 29% 57%, 29% 53%, 32% 48%, 37% 45%, 38% 42%, 33% 38%, 30% 34%, 29% 28%, 27% 24%, 27% 20%, 30% 22%, 29% 17%, 28% 13%, 29% 8%);
 }
 
 .shop-wall-top-dressing--lantern {
   left: 8px;
+}
+
+@media (max-width: 1023px) {
+  .shop-wall-top-dressing--scuppernong,
+  .shop-wall-top-dressing--kudzu {
+    width: calc(98px * 5 * 203 / 1774);
+  }
+
+  .shop-wall-top-dressing--scuppernong {
+    right: 0;
+    object-fit: cover;
+    object-position: 45% center;
+    clip-path: none;
+  }
+
+  .shop-wall-top-dressing--kudzu {
+    left: 0;
+    object-fit: cover;
+    object-position: 56% center;
+  }
+}
+
+@media (max-width: 699px) {
+  .shop-wall-top-dressing--scuppernong,
+  .shop-wall-top-dressing--kudzu {
+    width: calc(84px * 5 * 203 / 1774);
+  }
 }
 
 .shop-wall-product-mock--spine::before {
