@@ -4176,11 +4176,11 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 
 .shop-wall-bamboo-incense {
   position: absolute;
-  left: -22px;
+  left: -18px;
   bottom: 40px;
   z-index: 6;
-  width: min(182px, 15.5%);
-  aspect-ratio: 2 / 3;
+  width: min(200px, 16%);
+  aspect-ratio: 864 / 1821;
   margin: 0;
   pointer-events: none;
   user-select: none;
@@ -4530,7 +4530,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 @media (max-width: 1023px) {
   .shop-wall-bamboo-incense {
     left: -12px;
-    width: min(142px, 20%);
+    width: min(180px, 25%);
   }
 
   .shop-wall-top-dressing--scuppernong,
@@ -4561,7 +4561,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 @media (max-width: 699px) {
   .shop-wall-bamboo-incense {
     left: -8px;
-    width: min(118px, 27%);
+    width: min(158px, 42%);
   }
 
   .shop-wall-top-dressing--scuppernong,
