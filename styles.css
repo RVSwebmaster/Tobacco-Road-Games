@@ -4175,11 +4175,14 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-bamboo-incense {
+  /* Fit the visible pot between the wall and the existing left bookstop. */
+  --bamboo-render-width: min(200px, calc((16.666% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 8px) * 864 / 370));
   position: absolute;
-  left: -18px;
-  bottom: 24px;
+  left: calc(4px - var(--bamboo-render-width) * 251 / 864);
+  bottom: 16.4px;
   z-index: 6;
-  width: min(200px, 16%);
+  width: var(--bamboo-render-width);
+  height: calc(200px * 1821 / 864);
   aspect-ratio: 864 / 1821;
   margin: 0;
   pointer-events: none;
@@ -4196,7 +4199,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-bamboo-incense__plant {
-  object-fit: contain;
+  object-fit: fill;
   object-position: center bottom;
   filter: drop-shadow(4px 3px 3px rgba(15, 6, 2, 0.46));
 }
@@ -4525,6 +4528,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 
 .shop-wall-top-dressing--lantern {
   left: 8px;
+}
+
+@media (max-width: 1399px) {
+  .shop-wall-bamboo-incense {
+    height: auto;
+  }
 }
 
 @media (max-width: 1023px) {

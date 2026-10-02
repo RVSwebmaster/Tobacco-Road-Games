@@ -1269,12 +1269,12 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
   } : null);
   const productMockMarkup = shelfMock ? renderHomepageProductMock(shelfMock, { library: libraryBooks }) : "";
   const bambooIncenseMarkup = bambooIncense ? `<figure class="shop-wall-bamboo-incense" aria-hidden="true">
-                <img class="shop-wall-bamboo-incense__plant" src="/assets/images/storefront-shelf-dressing/bamboo-incense-planter-tall.png" alt="" loading="eager" decoding="async" draggable="false">
-                <svg class="shop-wall-bamboo-incense__smoke" viewBox="0 0 864 1821" aria-hidden="true">
-                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left-soft" d="M220 1045 C190 999 226 963 201 925 C179 890 201 853 238 825 C270 801 259 768 233 740"></path>
-                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left" d="M220 1045 C198 1006 228 972 209 936 C192 904 205 868 236 842 C262 819 254 790 232 761"></path>
-                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right-soft" d="M309 1085 C341 1042 305 1008 330 969 C353 933 331 894 294 866 C262 842 277 809 307 781"></path>
-                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right" d="M309 1085 C331 1047 306 1014 324 980 C341 947 329 911 298 885 C271 862 282 832 308 803"></path>
+                <img class="shop-wall-bamboo-incense__plant" src="/assets/images/storefront-shelf-dressing/bamboo-incense-planter-niche.png" alt="" loading="eager" decoding="async" draggable="false">
+                <svg class="shop-wall-bamboo-incense__smoke" viewBox="0 0 864 1821" preserveAspectRatio="none" aria-hidden="true">
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left-soft" d="M296 1133 C266 1087 302 1051 277 1013 C255 978 277 941 314 913 C346 889 335 856 309 828"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left" d="M296 1133 C274 1094 304 1060 285 1024 C268 992 281 956 312 930 C338 907 330 878 308 849"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right-soft" d="M349 1168 C381 1125 345 1091 370 1052 C393 1016 371 977 334 949 C302 925 317 892 347 864"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right" d="M349 1168 C371 1130 346 1097 364 1063 C381 1030 369 994 338 968 C311 945 322 915 348 886"></path>
                 </svg>
               </figure>` : "";
   const shelves = singleShelf
