@@ -3586,6 +3586,200 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   width: 100%;
 }
 
+.storefront-news-chiron__display {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.storefront-news-chiron__bug {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #967749;
+  border-right: 3px solid #be9856;
+  background:
+    linear-gradient(rgba(5, 10, 17, 0.56), rgba(5, 10, 17, 0.56)),
+    url("/assets/images/news/american-flag-header.png") center / cover no-repeat;
+  box-shadow: inset 0 1px 0 rgba(240, 207, 140, 0.2), inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+  color: #f4dfb1;
+  text-shadow: 0 1px 2px #000, 0 0 4px rgba(0, 0, 0, 0.7);
+}
+
+.storefront-news-chiron__bug > * {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.storefront-news-chiron__brand {
+  font: 700 11px/1.2 Arial, sans-serif;
+}
+
+.storefront-news-chiron__title {
+  font: 700 26px/1 Georgia, "Times New Roman", serif;
+}
+
+.storefront-news-chiron__edition {
+  color: #f4dfb1;
+  font: 700 8px/1.2 Arial, sans-serif;
+}
+
+.storefront-news-chiron__viewport {
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid #645239;
+  border-left: 0;
+  background: linear-gradient(180deg, #17221c, #0b1311);
+  box-shadow: inset 0 1px 0 rgba(214, 184, 111, 0.12), inset 0 -1px 0 rgba(214, 184, 111, 0.12);
+}
+
+.storefront-news-chiron__viewport:focus-visible {
+  outline: 2px solid #d1af6b;
+  outline-offset: -3px;
+}
+
+.storefront-news-chiron__track {
+  display: flex;
+  width: max-content;
+  height: 100%;
+}
+
+.storefront-news-chiron[data-news-ready] .storefront-news-chiron__track {
+  animation: storefront-news-right var(--news-duration) linear infinite;
+}
+
+.storefront-news-chiron__sequence {
+  display: flex;
+  flex: 0 0 auto;
+  width: max-content;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.storefront-news-chiron__item {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 28px;
+  white-space: nowrap;
+}
+
+.storefront-news-chiron__item::after {
+  position: absolute;
+  top: calc(50% - 14px);
+  right: 0;
+  width: 1px;
+  height: 28px;
+  background: #8d7448;
+  content: "";
+}
+
+.storefront-news-chiron__prefix {
+  color: #d2ad67;
+  font: 700 10px/1.2 Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.storefront-news-chiron__headline {
+  color: #f1eee2;
+  font: 600 20px/1.25 "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+@keyframes storefront-news-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@media (max-width: 699px) {
+  .storefront-news-chiron__display {
+    grid-template-columns: 72px minmax(0, 1fr);
+    padding: 5px;
+  }
+
+  .storefront-news-chiron__title {
+    font-size: 19px;
+  }
+
+  .storefront-news-chiron__brand {
+    font-size: 9px;
+  }
+
+  .storefront-news-chiron__edition {
+    font-size: 6px;
+  }
+
+  .storefront-news-chiron__item {
+    padding: 0 20px;
+  }
+
+  .storefront-news-chiron__headline {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-news-chiron[data-news-ready] .storefront-news-chiron__track {
+    animation: none;
+    transform: none;
+  }
+
+  .storefront-news-chiron__viewport {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .storefront-news-chiron__track {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .storefront-news-chiron__sequence {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 12px;
+    width: 100%;
+    height: auto;
+    padding: 12px;
+  }
+
+  .storefront-news-chiron__sequence[aria-hidden="true"] {
+    display: none;
+  }
+
+  .storefront-news-chiron__item {
+    height: auto;
+    padding: 0;
+    white-space: normal;
+  }
+
+  .storefront-news-chiron__item::after {
+    display: none;
+  }
+
+  .storefront-news-chiron__headline {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+}
+
 .storefront-ad-marquee__display {
   --storefront-ad-gap: 8px;
   box-sizing: border-box;

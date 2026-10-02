@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Stylesheet cache-bust version: 20261001-ad-marquee2. Bump this value when replacing cached CSS. -->
+  <!-- Stylesheet cache-bust version: 20261001-news-chyron3. Bump this value when replacing cached CSS. -->
   <title>Tobacco Road Games</title>
   <meta
     name="description"
@@ -12,7 +12,7 @@
   <link rel="canonical" href="https://tobaccoroadgames.com/">
   <meta name="theme-color" content="#120c08">
   <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
-  <link rel="stylesheet" href="styles.css?v=20261001-ad-marquee2">
+  <link rel="stylesheet" href="styles.css?v=20261001-news-chyron3">
 </head>
 <body>
   <div class="page-shell">
@@ -237,7 +237,35 @@
           </div>
         </section>
       </section>
-      <aside class="storefront-news-chiron" aria-label="TTRPG News Chiron"></aside>
+      <aside class="storefront-news-chiron" id="ttrpg-news-chyron" data-news-chyron aria-label="TTRPG News Chyron: fictional test headlines">
+        <div class="storefront-news-chiron__display">
+          <div class="storefront-news-chiron__bug">
+            <p class="storefront-news-chiron__brand">TTRPG</p>
+            <h2 class="storefront-news-chiron__title">NEWS</h2>
+            <p class="storefront-news-chiron__edition">TEST BULLETINS</p>
+          </div>
+          <div class="storefront-news-chiron__viewport" tabindex="0" role="region" aria-label="Fictional TTRPG headline stream">
+            <div class="storefront-news-chiron__track">
+              <ul class="storefront-news-chiron__sequence" data-news-sequence>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">TTRPG NEWS</span><span class="storefront-news-chiron__headline">Gen Con Event Registration Opens This Week</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">TRG UPDATE</span><span class="storefront-news-chiron__headline">New Creator Analytics Tools Enter Testing</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">INDUSTRY</span><span class="storefront-news-chiron__headline">Blackbriar Games Announces The Witch Road</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">CONVENTIONS</span><span class="storefront-news-chiron__headline">Carolina Game Days Adds New RPG Programming</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">TRG UPDATE</span><span class="storefront-news-chiron__headline">Open Rules Library Expands This Month</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">CREATOR CALL</span><span class="storefront-news-chiron__headline">Submissions Open for Featured Creator Rotation</span></li>
+              </ul>
+              <ul class="storefront-news-chiron__sequence" aria-hidden="true">
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">TTRPG NEWS</span><span class="storefront-news-chiron__headline">Gen Con Event Registration Opens This Week</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">TRG UPDATE</span><span class="storefront-news-chiron__headline">New Creator Analytics Tools Enter Testing</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">INDUSTRY</span><span class="storefront-news-chiron__headline">Blackbriar Games Announces The Witch Road</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">CONVENTIONS</span><span class="storefront-news-chiron__headline">Carolina Game Days Adds New RPG Programming</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">TRG UPDATE</span><span class="storefront-news-chiron__headline">Open Rules Library Expands This Month</span></li>
+                <li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">CREATOR CALL</span><span class="storefront-news-chiron__headline">Submissions Open for Featured Creator Rotation</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </aside>
     </main>
 
 
@@ -248,5 +276,6 @@
   </div>
   <script src="/assets/js/cart.js?v=20260712-shelf12-hinges" defer></script>
   <script src="/assets/js/storefront.js?v=20261001-library-fill1" defer></script>
+  <script src="/assets/js/news-chyron.js?v=20261001-news-chyron1" defer></script>
 </body>
 </html>

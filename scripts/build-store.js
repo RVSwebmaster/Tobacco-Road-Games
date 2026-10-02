@@ -16,6 +16,8 @@ const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
 const STOREFRONT_CACHE_BUST = "20261001-ad-marquee2";
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
+const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
+const NEWS_CHYRON_CACHE_BUST = "20261001-news-chyron1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1112,7 +1114,7 @@ function buildHomepage(products, indexes, bundleRules) {
   const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
-  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
   let next = html
@@ -1120,7 +1122,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>`;
+  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1150,7 +1152,7 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], productMock: { src: "/assets/products/spriggans/spine.png", alt: "Spriggans product spine mockup", label: "Spriggans product spine mockup", modifier: "spine" } })}
         ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true, wallArt: [{ src: "/assets/justifiers-framed-cover.png", alt: "Framed Justifiers RPG cover on the shelf back wall" }, { src: "/assets/charlie-daniels-framed-art.png", alt: "Framed Charlie Daniels Band artwork on the shelf back wall", placement: "center" }, { src: "/assets/drolla-framed-cover.png", alt: "Framed Drolla Core Rulebook artwork on the shelf back wall", placement: "right" }] })}
       </section>
-      <aside class="storefront-news-chiron" aria-label="TTRPG News Chiron"></aside>
+      ${renderHomepageNewsChyron()}
     </main>`;
 }
 
@@ -1161,6 +1163,27 @@ function renderHomepageBricABracShelf() {
           <div class="shop-wall-bric-shelf__surface"></div>
         </div>
       </section>`;
+}
+
+function renderHomepageNewsChyron(headlines = HOMEPAGE_NEWS_PREVIEW) {
+  const renderSequence = (repeat = false) => `<ul class="storefront-news-chiron__sequence"${repeat ? ' aria-hidden="true"' : " data-news-sequence"}>
+                ${headlines.map(item => `<li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">${escapeHtml(item.label)}</span><span class="storefront-news-chiron__headline">${escapeHtml(item.headline)}</span></li>`).join("\n                ")}
+              </ul>`;
+  return `<aside class="storefront-news-chiron" id="ttrpg-news-chyron" data-news-chyron aria-label="TTRPG News Chyron: fictional test headlines">
+        <div class="storefront-news-chiron__display">
+          <div class="storefront-news-chiron__bug">
+            <p class="storefront-news-chiron__brand">TTRPG</p>
+            <h2 class="storefront-news-chiron__title">NEWS</h2>
+            <p class="storefront-news-chiron__edition">TEST BULLETINS</p>
+          </div>
+          <div class="storefront-news-chiron__viewport" tabindex="0" role="region" aria-label="Fictional TTRPG headline stream">
+            <div class="storefront-news-chiron__track">
+              ${renderSequence()}
+              ${renderSequence(true)}
+            </div>
+          </div>
+        </div>
+      </aside>`;
 }
 
 function renderHomepageAdMarquee(ads = HOMEPAGE_AD_PREVIEW) {
