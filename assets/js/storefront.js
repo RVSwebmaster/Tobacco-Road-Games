@@ -27,6 +27,39 @@
     });
   });
 
+  const fillMockBooks = (row, count) => {
+    const reference = row.firstElementChild;
+    if (!reference) return;
+    if (!Number.isInteger(count) || count < 1) return;
+
+    while (row.children.length < count) {
+      const book = reference.cloneNode(true);
+      book.setAttribute('aria-hidden', 'true');
+      row.appendChild(book);
+    }
+    while (row.children.length > count) row.lastElementChild.remove();
+  };
+
+  document.querySelectorAll('.shop-wall-product-row[data-fill-spines]').forEach((row) => {
+    fillMockBooks(row, Number(row.dataset.bookCount));
+  });
+
+  document.querySelectorAll('[data-fill-library]').forEach((books) => {
+    const row = books.parentElement;
+    const refresh = () => {
+      const stopSide = row.classList.contains('shop-wall-product-row--right') ? '::before' : '::after';
+      const spineWidth = Number.parseFloat(getComputedStyle(row, stopSide).width);
+      if (!Number.isFinite(spineWidth) || spineWidth <= 0) return;
+      // Keep the five reference-book widths and the stop clear on the wall side.
+      const clearance = spineWidth * 6;
+      row.style.setProperty('--library-bookstop-clearance', `${clearance}px`);
+      const availableWidth = row.getBoundingClientRect().width - clearance;
+      fillMockBooks(books, Math.max(1, Math.floor(availableWidth / spineWidth)));
+    };
+    refresh();
+    new ResizeObserver(refresh).observe(row);
+  });
+
   if (!browsers.length && !shelves.length) {
     return;
   }

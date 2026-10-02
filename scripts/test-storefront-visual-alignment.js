@@ -10,6 +10,7 @@ const css = read("styles.css");
 const build = read("scripts/build-store.js");
 const storefront = read("assets/js/storefront.js");
 const sponsor = read("assets/js/sponsor-marquee.js");
+const previewAds = JSON.parse(read("data/homepage-ad-preview.json"));
 const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
 
 const assertInOrder = (source, orderedNeedles, label) => {
@@ -68,6 +69,33 @@ assert.match(css, /--shop-wall-recessed-light-height:\s*8px;/);
 assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-bay\s*\{[\s\S]*min-height:\s*var\(--shop-wall-merch-bay-height\);/);
 assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-shelf-level\s*\{[\s\S]*min-height:\s*var\(--shop-wall-merch-product-space\);/);
 assert.match(css, /\.shop-wall-row--merchandising \.shop-wall-shelf-level::after\s*\{[\s\S]*height:\s*var\(--shop-wall-merch-shelf-construction\);/);
+assert.match(css, /\.shelf-storefront \.shop-wall-books\s*\{[\s\S]*justify-content:\s*center;[\s\S]*background:\s*transparent;[\s\S]*overflow:\s*visible;/);
+assert.match(css, /\.shelf-storefront \.shop-wall-books::before,[\s\S]*\.shelf-storefront \.shop-wall-books::after\s*\{[\s\S]*content:\s*none;/);
+assert.match(css, /\.shop-wall-product-mock\s*\{[\s\S]*z-index:\s*5;[\s\S]*filter:\s*drop-shadow/);
+assert.match(css, /\.shop-wall-product-mock--spine\s*\{[\s\S]*--mock-product-width:\s*calc\(var\(--mock-product-height\) \* 203 \/ 1774\);/);
+assert.match(homepage, /\/assets\/products\/spriggans\/spine\.png/);
+const openRulesBay = homepage.match(/<section[^>]*aria-labelledby="open-rules-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
+assert.doesNotMatch(openRulesBay, /shop-wall-view-link|View All/, "Open Rules Library must not contain the View All sign or link.");
+assert.doesNotMatch(build, /title: "OPEN RULES LIBRARY"[^\n]*viewAllHref/, "The homepage generator must not restore the Open Rules Library View All link.");
+const yourLibraryBay = homepage.match(/<section[^>]*aria-labelledby="your-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
+assert.doesNotMatch(yourLibraryBay, /shop-wall-sign|Sign in to see your library|Join \/ Sign In|href="\/account\.html"/, "Your Library shelves must not contain the sign-in sign.");
+const generatedLibraryBay = build.match(/function renderHomepageLibraryBay\(\)[\s\S]*?function renderHomepageIdentityBay/)?.[0] || "";
+assert.doesNotMatch(generatedLibraryBay, /shop-wall-sign|Sign in to see your library|Join \/ Sign In|href="\/account\.html"/, "The homepage generator must not restore the library sign-in sign.");
+assert.equal((yourLibraryBay.match(/class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right"/g) || []).length, 2, "Each Your Library shelf must retain its right-side bookstop.");
+assert.match(css, /\.shop-wall-product-row--right\s*\{[^}]*justify-content:\s*flex-end;/);
+assert.equal((openRulesBay.match(/class="shop-wall-product-row shop-wall-product-row--library"/g) || []).length, 2, "Each Open Rules Library shelf must retain its left-side bookstop.");
+assert.equal((yourLibraryBay.match(/data-fill-library/g) || []).length, 2, "Both Your Library shelves must fill the space opposite their bookstops.");
+assert.equal((openRulesBay.match(/data-fill-library/g) || []).length, 2, "Both Open Rules Library shelves must fill the space opposite their bookstops.");
+assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");
+assert.doesNotMatch(openRulesBay, /data-overhang-spine/, "Library books must not use the full-width frame positioning.");
+assert.match(css, /\.shop-wall-product-row--library\s*\{[^}]*left:\s*0;[^}]*right:\s*0;/);
+assert.match(css, /\.shop-wall-library-books\s*\{[^}]*left:\s*var\(--library-bookstop-clearance, 0px\);[^}]*right:\s*0;/);
+assert.match(css, /\.shop-wall-product-row--right > \.shop-wall-library-books\s*\{[^}]*left:\s*0;[^}]*right:\s*var\(--library-bookstop-clearance, 0px\);/);
+assert.match(storefront, /new ResizeObserver\(refresh\)\.observe\(row\)/);
+assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library::before,\s*\.shop-wall-shelf-level > \.shop-wall-product-row--library::after\s*\{[^}]*height:\s*50%;[^}]*aspect-ratio:\s*406 \/ 1774;/);
+assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library:not\(\.shop-wall-product-row--right\)::after,\s*\.shop-wall-shelf-level > \.shop-wall-product-row--library\.shop-wall-product-row--right::before\s*\{[^}]*content:\s*"";/);
+assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library:not\(\.shop-wall-product-row--right\)::after\s*\{[^}]*transform:\s*translateX\(500%\);/);
+assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library\.shop-wall-product-row--right::before\s*\{[^}]*transform:\s*translateX\(-500%\);/);
 assert.match(css, /#8f5429 0 var\(--shop-wall-merch-shelf-top\)/);
 assert.match(css, /\.shop-wall-row--bric-a-brac\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*min-height:\s*var\(--shop-wall-bric-row-height\);/);
 assert.match(css, /\.shop-wall-bric-shelf\s*\{[\s\S]*width:\s*100%;[\s\S]*min-height:\s*var\(--shop-wall-bric-row-height\);/);
@@ -81,6 +109,32 @@ assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.s
 assert.match(css, /\.shop-wall-row--identity \+ \.shop-wall-row--bric-a-brac \.shop-wall-bric-shelf__surface::after\s*\{[\s\S]*left:\s*83\.333%;/);
 assert.match(css, /\.homepage-shop-wall > \.storefront-ad-marquee,\s*\.homepage-shop-wall > \.storefront-news-chiron\s*\{[\s\S]*width:\s*100%;/);
 assert.match(css, /\.storefront-ad-marquee,\s*\.storefront-news-chiron\s*\{[\s\S]*height:\s*var\(--shop-wall-fixture-height\);/);
+const adMarquee = homepage.match(/<aside class="storefront-ad-marquee"[\s\S]*?<\/aside>/)?.[0] || "";
+assert.equal(previewAds.length, 3, "The marquee must contain three advertisement records.");
+const adGroups = [...adMarquee.matchAll(/<div class="storefront-ad-marquee__group"([^>]*)>([\s\S]*?)(?=<div class="storefront-ad-marquee__group"|<\/aside>)/g)];
+assert.equal(adGroups.length, 2, "The leftward loop needs two identical ad groups.");
+for (const group of adGroups) assert.equal((group[2].match(/<article class="storefront-ad /g) || []).length, 3, "Each group must retain three equal-width ads.");
+assert.match(adGroups[1][1], /aria-hidden="true"/, "Repeated ads must be hidden from assistive technology.");
+const groupArticles = adGroups.map(group => [...group[2].matchAll(/<article\b[\s\S]*?<\/article>/g)].map(match => match[0].replaceAll("-repeat-title", "-title")));
+assert.deepEqual(groupArticles[1], groupArticles[0], "Both ad groups must match exactly for a seamless loop.");
+const adTitleIds = [...adMarquee.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+assert.equal(new Set(adTitleIds).size, adTitleIds.length, "Repeated ads must not duplicate title IDs.");
+assert.equal(new Set(previewAds.map(ad => ad.theme)).size, 3, "Preview ads must have distinct art directions.");
+assert.doesNotMatch(adMarquee, /<a\b|<button\b|<script\b|tabindex=|onclick=|data-carousel/, "The scrolling display must not introduce controls or links.");
+for (const ad of previewAds) {
+  assert.ok(adMarquee.includes(ad.advertiser), `Missing advertisement publisher: ${ad.advertiser}`);
+  assert.ok(adMarquee.includes(ad.title), `Missing advertisement title: ${ad.title}`);
+  for (const copy of ad.supportingCopy) assert.ok(adMarquee.includes(copy), `Missing advertisement supporting copy: ${copy}`);
+  const asset = ad.artwork || ad.logo;
+  assert.ok(adMarquee.includes(asset), `Missing advertisement artwork: ${asset}`);
+  assert.ok(fs.existsSync(path.join(ROOT, asset)), `Advertisement asset must exist locally: ${asset}`);
+}
+assert.match(css, /\.storefront-ad-marquee__group\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*flex:\s*0 0 100%;[^}]*height:\s*100%;/);
+assert.match(css, /\.storefront-ad-marquee__track\s*\{[^}]*animation:\s*storefront-ads-left 60s linear infinite;/);
+assert.match(css, /to\s*\{\s*transform:\s*translateX\(calc\(-100% - var\(--storefront-ad-gap\)\)\);/);
+assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.storefront-ad-marquee__track\s*\{\s*animation:\s*none;/);
+assert.match(build, /ads\.map\(ad => renderHomepageAdItem\(ad, repeat \? "-repeat" : ""\)\)/);
+assert.match(build, /renderGroup\(true\)/);
 assert.match(css, /\.shop-wall-row--identity::after\s*\{[\s\S]*radial-gradient\(ellipse 9% 78% at 16\.666% 0%/);
 assert.match(css, /\.shop-wall-row--identity::after\s*\{[\s\S]*radial-gradient\(ellipse 9% 78% at 50% 0%/);
 assert.match(css, /\.shop-wall-row--identity::after\s*\{[\s\S]*radial-gradient\(ellipse 9% 78% at 83\.333% 0%/);
@@ -98,6 +152,7 @@ assertInOrder(homepage, [
   'NEW THIS WEEK',
   'aria-label="Bric-a-Brac display shelf"',
   'BEST SELLERS',
+  'class="shop-wall-product-mock shop-wall-product-mock--spine"',
   'FREE &amp; PWYW',
   'class="storefront-news-chiron"'
 ], "Homepage storefront sequence");
@@ -106,11 +161,12 @@ assertInOrder(build, [
   'renderHomepageLibraryBay()',
   'renderHomepageIdentityBay()',
   'renderHomepageBricABracShelf()',
-  'storefront-ad-marquee',
+  'renderHomepageAdMarquee()',
   'FEATURED CREATOR',
   'NEW THIS WEEK',
   'renderHomepageBricABracShelf()',
   'BEST SELLERS',
+  'productMock',
   'FREE & PWYW',
   'storefront-news-chiron'
 ], "Generated storefront sequence");

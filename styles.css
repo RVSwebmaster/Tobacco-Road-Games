@@ -3586,6 +3586,301 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   width: 100%;
 }
 
+.storefront-ad-marquee__display {
+  --storefront-ad-gap: 8px;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.storefront-ad-marquee__viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.storefront-ad-marquee__track {
+  display: flex;
+  gap: var(--storefront-ad-gap);
+  width: 100%;
+  height: 100%;
+  animation: storefront-ads-left 60s linear infinite;
+}
+
+.storefront-ad-marquee__group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 0 0 100%;
+  gap: var(--storefront-ad-gap);
+  min-width: 0;
+  height: 100%;
+}
+
+@keyframes storefront-ads-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% - var(--storefront-ad-gap))); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .storefront-ad-marquee__track {
+    animation: none;
+  }
+}
+
+.storefront-ad {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #625046;
+  border-radius: 0;
+  background: #111612;
+  box-shadow: inset 0 0 0 1px rgba(255, 235, 203, 0.13), inset 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+
+.storefront-ad__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.storefront-ad__copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+  padding: 8px 14px;
+  color: #f0eee5;
+}
+
+.storefront-ad__copy > *,
+.storefront-ad__callout {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.storefront-ad__advertiser {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.storefront-ad__title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.storefront-ad__support {
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.storefront-ad__callout {
+  position: absolute;
+  right: 10px;
+  bottom: 7px;
+  z-index: 2;
+  font-family: Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.storefront-ad--folk {
+  border-color: #6b574d;
+}
+
+.storefront-ad--folk .storefront-ad__art {
+  object-position: center 25%;
+}
+
+.storefront-ad--folk .storefront-ad__copy {
+  background: linear-gradient(90deg, rgba(6, 12, 9, 0.74), rgba(6, 12, 9, 0.16) 68%, transparent);
+  text-shadow: 0 1px 2px #000;
+}
+
+.storefront-ad--folk .storefront-ad__advertiser {
+  color: #c6cfc1;
+}
+
+.storefront-ad--folk .storefront-ad__title {
+  color: #f0e1d5;
+}
+
+.storefront-ad--folk .storefront-ad__callout {
+  padding-left: 6px;
+  border-left: 2px solid #a45248;
+  color: #dcb6ae;
+}
+
+.storefront-ad--space {
+  border-color: #71848c;
+  background: #0d293d;
+}
+
+.storefront-ad--space .storefront-ad__art {
+  opacity: 0.83;
+}
+
+.storefront-ad--space .storefront-ad__copy {
+  background: linear-gradient(90deg, rgba(7, 28, 47, 0.73), rgba(7, 28, 47, 0.08) 70%, transparent);
+  font-family: Arial, sans-serif;
+}
+
+.storefront-ad--space .storefront-ad__advertiser {
+  color: #a8d9e7;
+}
+
+.storefront-ad--space .storefront-ad__title {
+  color: #f3fbfc;
+  font-family: Arial, sans-serif;
+  font-style: italic;
+  font-weight: 800;
+}
+
+.storefront-ad--space .storefront-ad__support {
+  color: #f1c28d;
+}
+
+.storefront-ad--space .storefront-ad__callout {
+  color: #ffd19a;
+}
+
+.storefront-ad--house {
+  border-color: #b39557;
+  background:
+    repeating-linear-gradient(0deg, rgba(223, 194, 132, 0.025) 0 1px, transparent 1px 4px),
+    #18362b;
+}
+
+.storefront-ad__logo {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  transform: translateY(-50%);
+}
+
+.storefront-ad--house .storefront-ad__copy {
+  padding-left: 70px;
+  color: #ebdfb9;
+}
+
+.storefront-ad--house .storefront-ad__advertiser {
+  color: #c4ba98;
+  font-size: 9px;
+}
+
+.storefront-ad--house .storefront-ad__title {
+  font-size: 18px;
+}
+
+.storefront-ad--house .storefront-ad__support {
+  font-size: 10px;
+}
+
+@media (max-width: 1199px) {
+  .storefront-ad__copy {
+    padding: 7px 10px;
+  }
+
+  .storefront-ad__title {
+    font-size: 17px;
+  }
+
+  .storefront-ad__support {
+    font-size: 10px;
+  }
+
+  .storefront-ad__logo {
+    left: 8px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .storefront-ad--house .storefront-ad__copy {
+    padding-left: 43px;
+  }
+
+  .storefront-ad--house .storefront-ad__title {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 699px) {
+  .storefront-ad-marquee__display {
+    --storefront-ad-gap: 5px;
+    padding: 5px;
+  }
+
+  .storefront-ad__copy {
+    gap: 2px;
+    padding: 5px;
+  }
+
+  .storefront-ad__advertiser {
+    font-size: 7px;
+  }
+
+  .storefront-ad__title {
+    font-size: 11px;
+  }
+
+  .storefront-ad__support {
+    font-size: 8px;
+  }
+
+  .storefront-ad__callout {
+    display: none;
+  }
+
+  .storefront-ad__logo {
+    top: 7px;
+    right: 5px;
+    left: auto;
+    width: 17px;
+    height: 17px;
+    transform: none;
+  }
+
+  .storefront-ad--house .storefront-ad__copy {
+    gap: 2px;
+    padding: 5px;
+  }
+
+  .storefront-ad--house .storefront-ad__advertiser {
+    padding-right: 19px;
+    font-size: 6px;
+  }
+
+  .storefront-ad--house .storefront-ad__title {
+    font-size: 10px;
+  }
+
+  .storefront-ad--house .storefront-ad__support {
+    font-size: 7px;
+  }
+
+  .storefront-ad--house .storefront-ad__support span {
+    display: block;
+  }
+}
+
 .shop-wall-shelf-level {
   position: relative;
   display: flex;
@@ -3635,7 +3930,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     linear-gradient(180deg, #874d25 0 5px, #5a2a12 5px 15px, #351608 15px 100%);
 }
 
-.shop-wall-books {
+.shelf-storefront .shop-wall-books {
   position: relative;
   z-index: 2;
   display: flex;
@@ -3646,18 +3941,30 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   min-height: 136px;
   padding: 0;
   border: 0;
+  border-radius: 0;
   background: transparent;
   box-shadow: none;
+  isolation: auto;
+  overflow: visible;
+}
+
+.shelf-storefront .shop-wall-books::before,
+.shelf-storefront .shop-wall-books::after {
+  content: none;
 }
 
 /* Hang on the back wall within a shelf third, behind books and existing light.
    Absolute positioning leaves the locked shelf dimensions untouched. */
+.shop-wall-shelf-level {
+  --shop-wall-art-width: min(212px, calc(33.333% - 16px));
+}
+
 .shop-wall-back-wall-art {
   position: absolute;
   top: 4px;
   left: 16.666%;
   z-index: 0;
-  width: min(212px, calc(33.333% - 16px));
+  width: var(--shop-wall-art-width);
   height: auto;
   transform: translateX(-50%);
   filter: drop-shadow(2px 4px 5px rgba(16, 7, 3, 0.55));
@@ -3671,6 +3978,214 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 
 .shop-wall-back-wall-art--center {
   left: 50%;
+}
+
+.shop-wall-product-row {
+  position: absolute;
+  bottom: 43px;
+  left: calc(16.666% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774);
+  right: calc(16.667% - var(--shop-wall-art-width) / 2);
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  height: 188px;
+  margin: 0;
+  padding: 0;
+  filter: drop-shadow(0 12px 8px rgba(16, 7, 3, 0.58));
+}
+
+.shop-wall-product-row::before,
+.shop-wall-product-row::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  z-index: 6;
+  box-sizing: border-box;
+  width: calc(188px * 203 / 1774);
+  height: calc(188px / 2);
+  border: 1px solid #63401f;
+  border-top-color: #d5b17b;
+  border-radius: 1px;
+  background:
+    linear-gradient(90deg, rgba(255, 232, 190, 0.22), transparent 18%, transparent 78%, rgba(55, 27, 10, 0.2)),
+    repeating-linear-gradient(92deg, transparent 0 3px, rgba(71, 39, 15, 0.2) 3px 4px, transparent 4px 7px, rgba(244, 210, 155, 0.14) 7px 8px),
+    linear-gradient(180deg, #bd9460, #a37644 48%, #8b5c31);
+  box-shadow: inset 1px 0 0 rgba(245, 216, 168, 0.3), inset -2px 0 3px rgba(46, 23, 9, 0.2);
+  pointer-events: none;
+}
+
+.shop-wall-product-row::before {
+  left: calc(-188px * 203 / 1774);
+}
+
+.shop-wall-product-row::after {
+  right: calc(-188px * 203 / 1774);
+}
+
+.shop-wall-product-mock {
+  --mock-product-bottom: 43px;
+  --mock-product-height: 188px;
+  --mock-product-left: 50%;
+  position: absolute;
+  bottom: var(--mock-product-bottom);
+  left: var(--mock-product-left);
+  z-index: 5;
+  width: var(--mock-product-width, calc(var(--mock-product-height) * 0.64));
+  height: var(--mock-product-height);
+  margin: 0;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 12px 8px rgba(16, 7, 3, 0.58));
+  pointer-events: none;
+  user-select: none;
+}
+
+.shop-wall-product-mock::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: -13px;
+  bottom: 5px;
+  z-index: 0;
+  width: 17px;
+  border: 1px solid rgba(38, 20, 10, 0.72);
+  border-left: 0;
+  border-radius: 0 3px 3px 0;
+  background:
+    linear-gradient(90deg, rgba(255, 238, 191, 0.44), rgba(137, 92, 49, 0.8) 38%, rgba(51, 28, 15, 0.94)),
+    repeating-linear-gradient(180deg, rgba(255, 238, 191, 0.18) 0 1px, transparent 1px 4px);
+  transform: skewY(-4deg);
+  transform-origin: left center;
+}
+
+.shop-wall-product-mock--spine {
+  --mock-product-width: calc(var(--mock-product-height) * 203 / 1774);
+  overflow: hidden;
+}
+
+.shop-wall-product-row > .shop-wall-product-mock {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  flex: 0 0 var(--mock-product-width);
+  padding: 0;
+  transform: none;
+  filter: none;
+}
+
+.shop-wall-product-row[data-fill-spines] > .shop-wall-product-mock:not(:first-child) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.shop-wall-product-row[data-overhang-spine] {
+  right: calc(16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774);
+}
+
+.shop-wall-product-row[data-overhang-spine] > .shop-wall-product-mock:last-child {
+  flex: 0 0 var(--mock-product-width);
+}
+
+.shop-wall-product-row--library {
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  height: min(188px, calc(100% - 28px));
+}
+
+.shop-wall-product-row--library::before,
+.shop-wall-product-row--library::after {
+  content: none;
+}
+
+.shop-wall-product-row--right {
+  justify-content: flex-end;
+}
+
+.shop-wall-shelf-level > .shop-wall-product-row--library::before,
+.shop-wall-shelf-level > .shop-wall-product-row--library::after {
+  position: absolute;
+  width: auto;
+  height: 50%;
+  aspect-ratio: 406 / 1774;
+}
+
+.shop-wall-shelf-level > .shop-wall-product-row--library:not(.shop-wall-product-row--right)::after,
+.shop-wall-shelf-level > .shop-wall-product-row--library.shop-wall-product-row--right::before {
+  content: "";
+}
+
+/* Preserve the stops at the former five-spine boundary without mock books. */
+.shop-wall-shelf-level > .shop-wall-product-row--library:not(.shop-wall-product-row--right)::after {
+  left: 0;
+  right: auto;
+  transform: translateX(500%);
+}
+
+.shop-wall-shelf-level > .shop-wall-product-row--library.shop-wall-product-row--right::before {
+  left: auto;
+  right: 0;
+  transform: translateX(-500%);
+}
+
+.shop-wall-library-books {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--library-bookstop-clearance, 0px);
+  right: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.shop-wall-product-row--right > .shop-wall-library-books {
+  left: 0;
+  right: var(--library-bookstop-clearance, 0px);
+}
+
+.shop-wall-library-books > .shop-wall-product-mock {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  transform: none;
+  filter: none;
+}
+
+.shop-wall-product-mock--spine::before {
+  content: none;
+}
+
+.shop-wall-product-mock img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #2d1a10;
+  border-radius: 3px;
+  object-fit: cover;
+  background: #140c07;
+  box-shadow:
+    inset -7px 0 9px rgba(24, 12, 6, 0.28),
+    0 2px 0 rgba(237, 190, 105, 0.28);
+}
+
+.shop-wall-product-mock--spine img {
+  position: absolute;
+  left: 50%;
+  width: calc(100% * 887 / 203);
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  transform: translateX(-50%);
+  object-fit: fill;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* Match the jersey's frame footprint; contain narrower posters in dark matting. */
