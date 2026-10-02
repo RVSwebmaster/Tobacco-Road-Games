@@ -89,6 +89,28 @@ assert.match(css, /\.shop-wall-product-row--right\s*\{[^}]*justify-content:\s*fl
 assert.equal((openRulesBay.match(/class="shop-wall-product-row shop-wall-product-row--library"/g) || []).length, 2, "Each Open Rules Library shelf must retain its left-side bookstop.");
 assert.equal((yourLibraryBay.match(/data-fill-library/g) || []).length, 2, "Both Your Library shelves must fill the space opposite their bookstops.");
 assert.equal((openRulesBay.match(/data-fill-library/g) || []).length, 2, "Both Open Rules Library shelves must fill the space opposite their bookstops.");
+const dressingAssets = [
+  "scuppernong-vine.png",
+  "duke-blue-devil-bobblehead.png",
+  "kudzu-vine.png",
+  "hurricane-lantern-unlit.png"
+];
+const dressingTags = source => source.match(/<img class="shop-wall-top-dressing [^>]+>/g) || [];
+assert.equal(dressingTags(homepage).length, 4, "Only the four approved top-shelf dressing assets may be added.");
+for (const [index, name] of dressingAssets.entries()) {
+  const bay = index < 2 ? yourLibraryBay : openRulesBay;
+  assert.ok(bay.includes(`/assets/images/storefront-shelf-dressing/${name}`), `${name} must stay in its approved library bay.`);
+  const asset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing", name));
+  assert.deepEqual([...asset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], `${name} must be a local PNG.`);
+}
+const dressingContext = vm.createContext({ escapeAttribute: value => String(value), escapeHtml: value => String(value) });
+vm.runInContext(build.slice(build.indexOf("function renderHomepageLibraryBay()"), build.indexOf("function renderAiPolicyPage()")), dressingContext);
+const regeneratedLeftBay = vm.runInContext("renderHomepageLibraryBay()", dressingContext);
+const regeneratedRightBay = vm.runInContext('renderHomepageProductBay({title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: []})', dressingContext);
+assert.deepEqual(dressingTags(regeneratedLeftBay), dressingTags(yourLibraryBay), "Homepage builds must preserve the exact approved left-side dressing.");
+assert.deepEqual(dressingTags(regeneratedRightBay), dressingTags(openRulesBay), "Homepage builds must preserve the exact approved right-side dressing.");
+assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");
 assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");
 assert.doesNotMatch(openRulesBay, /data-overhang-spine/, "Library books must not use the full-width frame positioning.");
 assert.match(css, /\.shop-wall-product-row--library\s*\{[^}]*left:\s*0;[^}]*right:\s*0;/);

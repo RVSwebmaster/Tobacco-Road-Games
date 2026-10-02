@@ -1230,8 +1230,10 @@ function renderHomepageLibraryBay() {
   return `
         <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
+          <img class="shop-wall-top-dressing shop-wall-top-dressing--duke" src="/assets/images/storefront-shelf-dressing/duke-blue-devil-bobblehead.png" alt="Duke Blue Devil bobblehead beneath the Scuppernong vine" loading="eager" decoding="async" draggable="false">
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              <img class="shop-wall-top-dressing shop-wall-top-dressing--scuppernong" src="/assets/images/storefront-shelf-dressing/scuppernong-vine.png" alt="Scuppernong grapevine and fruit trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">
               ${productMockMarkup}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
@@ -1277,10 +1279,12 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">' : ""}
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
               ${productMockMarkup}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--lantern" src="/assets/images/storefront-shelf-dressing/hurricane-lantern-unlit.png" alt="Unlit antique brass hurricane lantern beneath the Kudzu" loading="eager" decoding="async" draggable="false">' : ""}
               ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : ""}
               ${productMockMarkup}
               ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}

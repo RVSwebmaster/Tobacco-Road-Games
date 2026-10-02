@@ -4350,6 +4350,57 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   filter: none;
 }
 
+/* Dressing occupies only the existing inner-edge niches, outside book flow.
+   Pot contact points are within the supplied trailing-vine bitmaps. */
+.shop-wall-top-dressing {
+  position: absolute;
+  display: block;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+  animation: none;
+  transition: none;
+}
+
+.shop-wall-top-dressing--scuppernong,
+.shop-wall-top-dressing--kudzu {
+  bottom: 18px;
+  z-index: 7;
+  width: min(130px, 25%);
+  height: auto;
+}
+
+.shop-wall-top-dressing--scuppernong {
+  right: 0;
+  transform: translateY(58%);
+}
+
+.shop-wall-top-dressing--kudzu {
+  left: 0;
+  transform: translateY(44%) scaleX(-1);
+}
+
+.shop-wall-top-dressing--duke,
+.shop-wall-top-dressing--lantern {
+  bottom: 14px;
+  z-index: 4;
+  width: auto;
+  height: min(144px, calc(100% - 28px));
+}
+
+.shop-wall-row--identity > .shop-wall-bay--library > .shop-wall-top-dressing--duke {
+  position: absolute;
+  z-index: 1;
+  height: min(144px, calc((100% - 58px) / 2 - 28px));
+  right: -8px;
+  /* Blend against the opaque bay, below the shelf/vine layer, without mirroring text. */
+  mix-blend-mode: lighten;
+}
+
+.shop-wall-top-dressing--lantern {
+  left: 8px;
+}
+
 .shop-wall-product-mock--spine::before {
   content: none;
 }
