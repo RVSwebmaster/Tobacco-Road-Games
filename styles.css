@@ -4177,7 +4177,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .shop-wall-bamboo-incense {
   position: absolute;
   left: -18px;
-  bottom: 40px;
+  bottom: 24px;
   z-index: 6;
   width: min(200px, 16%);
   aspect-ratio: 864 / 1821;
@@ -4198,7 +4198,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .shop-wall-bamboo-incense__plant {
   object-fit: contain;
   object-position: center bottom;
-  filter: drop-shadow(10px 9px 9px rgba(15, 6, 2, 0.38));
+  filter: drop-shadow(4px 3px 3px rgba(15, 6, 2, 0.46));
 }
 
 .shop-wall-bamboo-incense__smoke {
