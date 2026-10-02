@@ -4174,6 +4174,101 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   left: 50%;
 }
 
+.shop-wall-bamboo-incense {
+  position: absolute;
+  left: -22px;
+  bottom: 40px;
+  z-index: 6;
+  width: min(182px, 15.5%);
+  aspect-ratio: 2 / 3;
+  margin: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.shop-wall-bamboo-incense__plant,
+.shop-wall-bamboo-incense__smoke {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.shop-wall-bamboo-incense__plant {
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(10px 9px 9px rgba(15, 6, 2, 0.38));
+}
+
+.shop-wall-bamboo-incense__smoke {
+  overflow: visible;
+}
+
+.shop-wall-bamboo-incense__wisp {
+  fill: none;
+  stroke: rgba(245, 240, 225, 0.72);
+  stroke-linecap: round;
+  stroke-width: 7;
+  filter: blur(0.5px);
+  opacity: 0;
+  stroke-dasharray: 88 150;
+  animation: shop-wall-incense-smoke 6.2s ease-in-out infinite;
+}
+
+.shop-wall-bamboo-incense__wisp--left-soft,
+.shop-wall-bamboo-incense__wisp--right-soft {
+  stroke: rgba(235, 230, 215, 0.3);
+  stroke-width: 15;
+  filter: blur(3px);
+  stroke-dasharray: 78 165;
+  animation-duration: 7.8s;
+}
+
+.shop-wall-bamboo-incense__wisp--left {
+  animation-delay: -1.3s;
+}
+
+.shop-wall-bamboo-incense__wisp--left-soft {
+  animation-delay: -3.1s;
+}
+
+.shop-wall-bamboo-incense__wisp--right {
+  animation-delay: -3.7s;
+}
+
+.shop-wall-bamboo-incense__wisp--right-soft {
+  animation-delay: -0.9s;
+}
+
+@keyframes shop-wall-incense-smoke {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 142;
+  }
+
+  18% {
+    opacity: 0.72;
+  }
+
+  58% {
+    opacity: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -82;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-wall-bamboo-incense__wisp {
+    animation: none;
+    opacity: 0.45;
+    stroke-dasharray: none;
+  }
+}
+
 .shop-wall-product-row {
   position: absolute;
   bottom: 43px;
@@ -4394,15 +4489,21 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-top-dressing--kudzu-trail {
+  --kudzu-trail-drop: 302px;
   left: -25%;
-  bottom: -302px;
-  z-index: 6;
   width: auto;
-  height: min(650px, calc(100% * 3.3));
+  height: min(650px, calc((100% - 58px) * 1.65));
   object-fit: contain;
   object-position: center bottom;
   clip-path: inset(56% 10% 0 0);
   transform: scaleX(-1);
+}
+
+/* The trail shares the grapevine's foreground layer so it crosses the soffit. */
+.shop-wall-row--identity > .shop-wall-bay > .shop-wall-top-dressing--kudzu-trail {
+  position: absolute;
+  bottom: calc((100% - 58px) / 2 - var(--kudzu-trail-drop));
+  z-index: 6;
 }
 
 .shop-wall-top-dressing--duke,
@@ -4427,6 +4528,11 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 @media (max-width: 1023px) {
+  .shop-wall-bamboo-incense {
+    left: -12px;
+    width: min(142px, 20%);
+  }
+
   .shop-wall-top-dressing--scuppernong,
   .shop-wall-top-dressing--kudzu {
     width: calc(98px * 5 * 203 / 1774);
@@ -4446,22 +4552,27 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 
   .shop-wall-top-dressing--kudzu-trail {
+    --kudzu-trail-drop: 188px;
     left: calc(98px * 5 * 203 / 1774 * -1.35);
-    height: min(430px, calc(100% * 2.18));
-    bottom: -188px;
+    height: min(430px, calc((100% - 58px) * 1.09));
   }
 }
 
 @media (max-width: 699px) {
+  .shop-wall-bamboo-incense {
+    left: -8px;
+    width: min(118px, 27%);
+  }
+
   .shop-wall-top-dressing--scuppernong,
   .shop-wall-top-dressing--kudzu {
     width: calc(84px * 5 * 203 / 1774);
   }
 
   .shop-wall-top-dressing--kudzu-trail {
+    --kudzu-trail-drop: 158px;
     left: calc(84px * 5 * 203 / 1774 * -1.35);
-    height: min(370px, calc(100% * 1.88));
-    bottom: -158px;
+    height: min(370px, calc((100% - 58px) * 0.94));
   }
 }
 

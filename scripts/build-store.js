@@ -1146,7 +1146,7 @@ function renderHomepageShopWallMain(products) {
       ${renderHomepageBricABracShelf()}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
         ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
         ${renderHomepageBricABracShelf()}
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], productMock: { src: "/assets/products/spriggans/spine.png", alt: "Spriggans product spine mockup", label: "Spriggans product spine mockup", modifier: "spine" } })}
@@ -1256,7 +1256,7 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false }) {
   const visibleProducts = products.slice(0, 5);
   const libraryBooks = id === "open-rules-library-heading";
   const wallArtItems = wallArt ? (Array.isArray(wallArt) ? wallArt : [wallArt]) : [];
@@ -1268,10 +1268,20 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
     modifier: "spine"
   } : null);
   const productMockMarkup = shelfMock ? renderHomepageProductMock(shelfMock, { library: libraryBooks }) : "";
+  const bambooIncenseMarkup = bambooIncense ? `<figure class="shop-wall-bamboo-incense" aria-hidden="true">
+                <img class="shop-wall-bamboo-incense__plant" src="/assets/images/storefront-shelf-dressing/bamboo-incense-planter.png" alt="" loading="eager" decoding="async" draggable="false">
+                <svg class="shop-wall-bamboo-incense__smoke" viewBox="0 0 1024 1536" aria-hidden="true">
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left-soft" d="M297 892 C267 846 303 810 278 772 C256 737 278 700 315 672 C347 648 336 615 310 587"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left" d="M297 892 C275 853 305 819 286 783 C269 751 282 715 313 689 C339 666 331 637 309 608"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right-soft" d="M386 908 C418 865 382 831 407 792 C430 756 408 717 371 689 C339 665 354 632 384 604"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right" d="M386 908 C408 870 383 837 401 803 C418 770 406 734 375 708 C348 685 359 655 385 625"></path>
+                </svg>
+              </figure>` : "";
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
               ${wallArtMarkup}
+              ${bambooIncenseMarkup}
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
               ${productMockMarkup}
               ${renderHomepageShelfFixtures()}
@@ -1279,7 +1289,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false"><img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu-trail" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : ""}
+              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">' : ""}
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
               ${productMockMarkup}
             </div>
@@ -1293,6 +1303,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
   return `
         <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
           ${renderShopWallPlaque(title, id)}
+          ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu-trail" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : ""}
           ${shelves}
         </section>`;
 }
