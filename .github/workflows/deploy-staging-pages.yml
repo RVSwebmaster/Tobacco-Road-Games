@@ -1,0 +1,52 @@
+name: Deploy Staging Pages
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy staging branch
+    runs-on: windows-latest
+
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Check out staging
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Verify Cloudflare credentials
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CLOUDFLARE_ACCOUNT_ID)) {
+            throw "Missing repository secret CLOUDFLARE_ACCOUNT_ID."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:CLOUDFLARE_API_TOKEN)) {
+            throw "Missing repository secret CLOUDFLARE_API_TOKEN."
+          }
+
+      - name: Rebuild generated storefront
+        run: node scripts/build-store.js
+
+      - name: Deploy stable staging preview
+        shell: pwsh
+        run: ./ops/staging/deploy.ps1
