@@ -4394,14 +4394,14 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-top-dressing--kudzu-trail {
-  left: -4%;
-  bottom: -166px;
+  left: -25%;
+  bottom: -302px;
   z-index: 6;
   width: auto;
-  height: min(430px, calc(100% * 2.18));
+  height: min(650px, calc(100% * 3.3));
   object-fit: contain;
   object-position: center bottom;
-  clip-path: inset(60% 34% 0 0);
+  clip-path: inset(56% 10% 0 0);
   transform: scaleX(-1);
 }
 
@@ -4446,9 +4446,9 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 
   .shop-wall-top-dressing--kudzu-trail {
-    left: calc(98px * 5 * 203 / 1774 * 0.2);
-    height: min(290px, calc(100% * 1.48));
-    bottom: -98px;
+    left: calc(98px * 5 * 203 / 1774 * -1.35);
+    height: min(430px, calc(100% * 2.18));
+    bottom: -188px;
   }
 }
 
@@ -4459,9 +4459,9 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 
   .shop-wall-top-dressing--kudzu-trail {
-    left: calc(84px * 5 * 203 / 1774 * 0.2);
-    height: min(250px, calc(100% * 1.28));
-    bottom: -82px;
+    left: calc(84px * 5 * 203 / 1774 * -1.35);
+    height: min(370px, calc(100% * 1.88));
+    bottom: -158px;
   }
 }
 
