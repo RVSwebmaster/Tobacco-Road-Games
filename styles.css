@@ -4393,6 +4393,18 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   transform: translateY(44%) scaleX(-1);
 }
 
+.shop-wall-top-dressing--kudzu-trail {
+  left: -4%;
+  bottom: -166px;
+  z-index: 6;
+  width: auto;
+  height: min(430px, calc(100% * 2.18));
+  object-fit: contain;
+  object-position: center bottom;
+  clip-path: inset(60% 34% 0 0);
+  transform: scaleX(-1);
+}
+
 .shop-wall-top-dressing--duke,
 .shop-wall-top-dressing--lantern {
   bottom: 14px;
@@ -4432,12 +4444,24 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     object-fit: cover;
     object-position: 56% center;
   }
+
+  .shop-wall-top-dressing--kudzu-trail {
+    left: calc(98px * 5 * 203 / 1774 * 0.2);
+    height: min(290px, calc(100% * 1.48));
+    bottom: -98px;
+  }
 }
 
 @media (max-width: 699px) {
   .shop-wall-top-dressing--scuppernong,
   .shop-wall-top-dressing--kudzu {
     width: calc(84px * 5 * 203 / 1774);
+  }
+
+  .shop-wall-top-dressing--kudzu-trail {
+    left: calc(84px * 5 * 203 / 1774 * 0.2);
+    height: min(250px, calc(100% * 1.28));
+    bottom: -82px;
   }
 }
 

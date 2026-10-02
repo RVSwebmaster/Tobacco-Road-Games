@@ -1279,7 +1279,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">' : ""}
+              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false"><img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu-trail" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : ""}
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
               ${productMockMarkup}
             </div>

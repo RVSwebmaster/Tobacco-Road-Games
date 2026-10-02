@@ -96,7 +96,8 @@ const dressingAssets = [
   "hurricane-lantern-unlit.png"
 ];
 const dressingTags = source => source.match(/<img class="shop-wall-top-dressing [^>]+>/g) || [];
-assert.equal(dressingTags(homepage).length, 4, "Only the four approved top-shelf dressing assets may be added.");
+assert.equal(dressingTags(homepage).length, 5, "Only the four approved top-shelf dressing assets plus the kudzu tail layer may be added.");
+assert.equal((openRulesBay.match(/shop-wall-top-dressing--kudzu-trail/g) || []).length, 1, "The kudzu tail layer must remain in the Open Rules Library bay.");
 for (const [index, name] of dressingAssets.entries()) {
   const bay = index < 2 ? yourLibraryBay : openRulesBay;
   assert.ok(bay.includes(`/assets/images/storefront-shelf-dressing/${name}`), `${name} must stay in its approved library bay.`);
