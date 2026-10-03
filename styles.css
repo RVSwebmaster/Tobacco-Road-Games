@@ -4683,11 +4683,18 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-top-dressing--scuppernong {
-  right: -25%;
+  right: 0;
   width: auto;
   object-fit: contain;
-  clip-path: inset(0 26% 0 0);
-  transform: translateY(58%);
+  /* The shelf hides only the dark underside; trailing foliage stays in front. */
+  clip-path: polygon(evenodd,
+    0 0, 74% 0, 74% 100%, 0 100%, 0 0,
+    34.1797% 41.7318%, 45.8008% 41.1458%,
+    45.8008% 42.3828%, 34.1797% 42.3828%, 34.1797% 41.7318%
+  );
+  /* Center the pot's foot in the existing edge niche and keep its rim level. */
+  transform-origin: 41% 42.2%;
+  transform: translate(45%, calc(57.7474% + 4px)) rotate(4deg);
 }
 
 .shop-wall-row--identity > .shop-wall-bay--library > .shop-wall-top-dressing--scuppernong {
@@ -4770,6 +4777,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     object-fit: cover;
     object-position: 45% center;
     clip-path: none;
+    transform: translateY(calc(57.7474% + 2px)) rotate(4deg);
   }
 
   .shop-wall-top-dressing--kudzu {
