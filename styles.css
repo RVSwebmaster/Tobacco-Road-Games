@@ -4688,7 +4688,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   object-fit: contain;
   /* The shelf hides only the dark underside; trailing foliage stays in front. */
   clip-path: polygon(evenodd,
-    0 0, 74% 0, 74% 100%, 0 100%, 0 0,
+    0 0, 100% 0, 100% 100%, 0 100%, 0 0,
     34.1797% 41.7318%, 45.8008% 41.1458%,
     45.8008% 42.3828%, 34.1797% 42.3828%, 34.1797% 41.7318%
   );
