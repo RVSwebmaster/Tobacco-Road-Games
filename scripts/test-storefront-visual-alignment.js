@@ -13,6 +13,7 @@ const build = read("scripts/build-store.js");
 const storefront = read("assets/js/storefront.js");
 const sponsor = read("assets/js/sponsor-marquee.js");
 const previewAds = JSON.parse(read("data/homepage-ad-preview.json"));
+const previewBB1Ads = JSON.parse(read("data/bb1-creator-ad-preview.json"));
 const previewHeadlines = JSON.parse(read("data/homepage-news-preview.json"));
 const newsScript = read("assets/js/news-chyron.js");
 const logoPath = path.join(ROOT, "assets", "tobacco-road-games-logo.png");
@@ -257,10 +258,26 @@ assert.equal(sumoTags(bricShelves[0]).length, 1, "The supplied sumo figure must 
 assert.equal(sumoTags(bricShelves[1]).length, 0, "The second Bric-a-Brac shelf must remain unchanged.");
 const bricRenderer = build.match(/function renderHomepageBricABracShelf\([\s\S]*?\n}\r?\n/)?.[0];
 assert.ok(bricRenderer);
-const bricContext = {};
-vm.runInNewContext(`${bricRenderer}\nfirst = renderHomepageBricABracShelf({ sumo: true });\nsecond = renderHomepageBricABracShelf();`, bricContext);
+const bricContext = { HOMEPAGE_BB1_AD_PREVIEW: previewBB1Ads };
+vm.runInNewContext(`${htmlEscaper}\nconst escapeAttribute = escapeHtml;\n${bricRenderer}\nfirst = renderHomepageBricABracShelf({ sumo: true });\nsecond = renderHomepageBricABracShelf();`, bricContext);
 assert.deepEqual(sumoTags(bricContext.first), sumoTags(bricShelves[0]), "The build must preserve the first shelf's sumo figure.");
 assert.equal(sumoTags(bricContext.second).length, 0, "The build must not add the figure to other shelves.");
+const bb1Posters = source => (source.match(/<article class="bb1-poster [^>]+>[\s\S]*?<\/article>/g) || []).map(poster => poster.replaceAll("\r\n", "\n"));
+assert.equal(previewBB1Ads.length, 3, "BB-1 must have exactly three current faux creator ads.");
+assert.equal(new Set(previewBB1Ads.map(ad => ad.theme)).size, 3, "The BB-1 publishers must retain distinct poster designs.");
+assert.equal(bb1Posters(bricShelves[0]).length, 3, "The first Bric-a-Brac wall must display all three static posters.");
+assert.equal(bb1Posters(bricShelves[1]).length, 0, "BB-1 dressing must not spill onto the second Bric-a-Brac shelf.");
+assert.deepEqual(bb1Posters(bricContext.first), bb1Posters(bricShelves[0]), "The build must preserve the exact BB-1 poster artwork and copy.");
+assert.equal(bb1Posters(bricContext.second).length, 0, "The build must not add posters to other shelves.");
+for (const [index, ad] of previewBB1Ads.entries()) {
+  const poster = bb1Posters(bricShelves[0])[index];
+  for (const field of ["creator", "title", "tagline", "secondaryCopy", "callout"]) assert.ok(poster.includes(ad[field].replaceAll("&", "&amp;")), `BB-1 must preserve ${ad.id} ${field} verbatim.`);
+  assert.ok(poster.includes(ad.artwork));
+  assert.ok(fs.existsSync(path.join(ROOT, ad.artwork)), `Missing BB-1 artwork: ${ad.artwork}`);
+}
+assert.ok(fs.existsSync(path.join(ROOT, "assets/images/bb1/posting-wall-history.png")), "The BB-1 posting history texture must exist locally.");
+assert.doesNotMatch(bricShelves[0], /data-carousel|data-rotation|<a\b|<button\b/, "These faux BB-1 posters must not introduce rotation, controls, or pretend purchase links.");
+assert.match(css, /\.bb1-poster\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 const sumoAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/sumo-funko-pop.png"));
 assert.deepEqual([...sumoAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The supplied figure must remain a local PNG.");
 

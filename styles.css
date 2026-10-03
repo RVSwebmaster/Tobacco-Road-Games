@@ -3567,6 +3567,154 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     0 -4px 8px rgba(41, 17, 6, 0.25);
 }
 
+.shop-wall-bric-shelf__back[data-bb1-posting-wall] {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(22, 24, 17, 0.3), transparent 6%, transparent 94%, rgba(22, 24, 17, 0.3)),
+    url("/assets/images/bb1/posting-wall-history.png") center / cover,
+    #485047;
+}
+
+.bb1-posting-wall {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(340px, 1fr));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.bb1-ad-territory {
+  position: relative;
+  min-width: 0;
+}
+
+.bb1-ad-territory::before {
+  content: "";
+  position: absolute;
+  left: 4%;
+  top: 19px;
+  width: 24%;
+  height: 60px;
+  background: rgba(224, 217, 190, 0.3);
+  clip-path: polygon(7% 0, 99% 4%, 92% 48%, 95% 96%, 72% 85%, 46% 100%, 4% 87%, 0 26%);
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+.bb1-ad-territory:nth-child(2)::before { left: 71%; top: 4px; width: 20%; height: 71px; transform: rotate(5deg); }
+.bb1-ad-territory:nth-child(3)::before { left: 4%; top: 30px; width: 33%; height: 60px; transform: rotate(-3deg); }
+
+.bb1-poster {
+  position: absolute;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: 1px 2px 2px rgba(20, 17, 11, 0.4);
+  animation: none;
+  transition: none;
+  user-select: none;
+}
+
+.bb1-poster__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  pointer-events: none;
+}
+
+.bb1-poster__copy {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 5px 7px;
+}
+
+.bb1-poster__copy > * {
+  flex-shrink: 0;
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.bb1-poster--folk {
+  left: 9%;
+  top: 5px;
+  width: 74%;
+  height: 88px;
+  transform: rotate(-1.4deg);
+  color: #f0e0b6;
+  background: #111a13;
+}
+
+.bb1-poster--folk .bb1-poster__copy {
+  width: 88%;
+  background: linear-gradient(90deg, rgba(9, 17, 12, 0.94) 72%, transparent);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.bb1-poster--folk .bb1-poster__creator { font-size: 9px; line-height: 1.1; }
+.bb1-poster--folk h3 { font: 700 18px/1.05 Georgia, "Times New Roman", serif; color: #f4e5c0; }
+.bb1-poster--folk .bb1-poster__tagline { font-size: 10px; line-height: 1.15; }
+.bb1-poster--folk .bb1-poster__secondary { font-size: 10px; line-height: 1.15; font-style: italic; }
+.bb1-poster--folk .bb1-poster__callout { font-size: 9px; line-height: 1.1; color: #deb76b; }
+
+.bb1-poster--frontier {
+  left: 2%;
+  top: 13px;
+  width: 78%;
+  height: 81px;
+  transform: rotate(0.35deg);
+  color: #fff0d5;
+  background: #065086;
+}
+
+.bb1-poster--frontier .bb1-poster__copy {
+  width: 85%;
+  background: linear-gradient(90deg, rgba(3, 44, 75, 0.98) 76%, transparent);
+  font-family: "Arial Narrow", Arial, sans-serif;
+}
+
+.bb1-poster--frontier .bb1-poster__creator { font-size: 9px; line-height: 1.1; }
+.bb1-poster--frontier h3 { font: 900 15px/1.5 Arial, sans-serif; color: #fff0d5; }
+.bb1-poster--frontier .bb1-poster__tagline { font-size: 11px; line-height: 1.1; font-weight: 700; color: #ffc27b; }
+.bb1-poster--frontier .bb1-poster__secondary { font-size: 9px; line-height: 1.1; }
+.bb1-poster--frontier .bb1-poster__callout { align-self: flex-start; padding: 1px 4px; font: 700 9px/1 Arial, sans-serif; color: #171919; background: #f58d38; }
+
+.bb1-poster--goblin {
+  left: 12%;
+  top: 8px;
+  width: 74%;
+  height: 88px;
+  transform: rotate(1.8deg);
+  color: #172017;
+  background: #dfbe44;
+  clip-path: polygon(0 1%, 97% 0, 100% 4%, 99% 97%, 3% 100%, 0 97%);
+}
+
+.bb1-poster--goblin .bb1-poster__copy {
+  width: 100%;
+  background: none;
+  font-family: "Comic Sans MS", "Trebuchet MS", cursive;
+}
+
+.bb1-poster--goblin .bb1-poster__copy > * { align-self: flex-start; background: rgba(232, 197, 75, 0.94); }
+.bb1-poster--goblin .bb1-poster__creator { font-size: 9px; line-height: 1.25; font-weight: 700; }
+.bb1-poster--goblin h3 { font: 900 14px/1.2 "Comic Sans MS", "Trebuchet MS", cursive; color: #b52017; }
+.bb1-poster--goblin .bb1-poster__tagline { max-width: 74%; font-size: 9px; line-height: 1.25; font-weight: 700; }
+.bb1-poster--goblin .bb1-poster__secondary { max-width: 74%; font-size: 9px; line-height: 1.25; }
+.bb1-poster--goblin .bb1-poster__callout { font: 900 10px/1.25 "Comic Sans MS", "Trebuchet MS", cursive; color: #b52017; text-decoration: underline; }
+
 .shop-wall-bric-shelf__sumo {
   position: absolute;
   left: 50%;

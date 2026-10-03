@@ -16,6 +16,7 @@ const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
 const STOREFRONT_CACHE_BUST = "20261001-ad-marquee2";
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
+const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bb1-creator-ad-preview.json"), "utf8"));
 const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
 const NEWS_CHYRON_CACHE_BUST = "20261001-news-chyron1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
@@ -1158,9 +1159,23 @@ function renderHomepageShopWallMain(products) {
 }
 
 function renderHomepageBricABracShelf({ sumo = false } = {}) {
+  const postingWall = sumo ? `<div class="bb1-posting-wall" role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">
+            ${HOMEPAGE_BB1_AD_PREVIEW.map(ad => `<div class="bb1-ad-territory">
+              <article class="bb1-poster bb1-poster--${escapeAttribute(ad.theme)}" aria-labelledby="bb1-${escapeAttribute(ad.id)}-title">
+                <img class="bb1-poster__art" src="${escapeAttribute(ad.artwork)}" alt="" loading="eager" decoding="async" draggable="false">
+                <div class="bb1-poster__copy">
+                  <p class="bb1-poster__creator">${escapeHtml(ad.creator)}</p>
+                  <h3 id="bb1-${escapeAttribute(ad.id)}-title">${escapeHtml(ad.title)}</h3>
+                  <p class="bb1-poster__tagline">${escapeHtml(ad.tagline)}</p>
+                  <p class="bb1-poster__secondary">${escapeHtml(ad.secondaryCopy)}</p>
+                  <p class="bb1-poster__callout">${escapeHtml(ad.callout)}</p>
+                </div>
+              </article>
+            </div>`).join("\n            ")}
+          </div>` : "";
   return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
         <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : ' aria-hidden="true"'}>
-          <div class="shop-wall-bric-shelf__back"></div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
+          <div class="shop-wall-bric-shelf__back"${sumo ? ' data-bb1-posting-wall' : ""}>${postingWall}</div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
           <div class="shop-wall-bric-shelf__surface"></div>${sumo ? '\n          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>' : ""}
         </div>
       </section>`;
