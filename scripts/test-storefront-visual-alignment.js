@@ -112,6 +112,15 @@ const regeneratedLeftBay = vm.runInContext("renderHomepageLibraryBay()", dressin
 const regeneratedRightBay = vm.runInContext('renderHomepageProductBay({title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: []})', dressingContext);
 assert.deepEqual(dressingTags(regeneratedLeftBay), dressingTags(yourLibraryBay), "Homepage builds must preserve the exact approved left-side dressing.");
 assert.deepEqual(dressingTags(regeneratedRightBay), dressingTags(openRulesBay), "Homepage builds must preserve the exact approved right-side dressing.");
+const lanternLogoPath = "/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=20261003-golden-d20-1";
+const identityLogoTag = source => source.match(/<div class="shop-wall-identity-sign"[^>]*>\s*(<img[^>]*>)/)?.[1];
+const regeneratedIdentityBay = vm.runInContext("renderHomepageIdentityBay()", dressingContext);
+assert.ok(identityLogoTag(homepage)?.includes(lanternLogoPath), "Only the homepage sign must use the supplied golden-d20 lantern edit.");
+assert.equal(identityLogoTag(regeneratedIdentityBay), identityLogoTag(homepage), "Homepage builds must preserve the golden-d20 sign artwork.");
+const lanternLogo = fs.readFileSync(path.join(ROOT, lanternLogoPath.split("?")[0]));
+assert.deepEqual([...lanternLogo.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The edited homepage logo must be a local PNG.");
+assert.equal(lanternLogo.readUInt32BE(16), lanternLogo.readUInt32BE(20), "The replacement must preserve the original square logo proportions.");
+assert.ok(fs.existsSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/masters/golden-d20.png")), "The supplied d20 master must remain available locally.");
 assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");
 assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");
