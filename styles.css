@@ -4273,15 +4273,15 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-dogwood-bonsai {
-  /* Let the crown spread over the bookstop, keeping the pot inside the niche. */
-  --dogwood-render-width: min(calc(250px * 819 / 1920), calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 8px) * 819 / 589));
+  /* Reach the brass sign's level while fitting the pot independently in the niche. */
+  --dogwood-render-width: min(106px, calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 8px) * 740 / 533));
   position: absolute;
-  right: calc(4px - var(--dogwood-render-width) * 5 / 819);
+  right: calc(4px - var(--dogwood-render-width) * 5 / 740);
   bottom: 30px;
   z-index: 6;
   display: block;
   width: var(--dogwood-render-width);
-  height: auto;
+  height: calc(100% + 18px);
   max-width: none;
   filter: drop-shadow(4px 3px 3px rgba(15, 6, 2, 0.46));
   pointer-events: none;
@@ -4559,7 +4559,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 
   .shop-wall-dogwood-bonsai {
-    --dogwood-render-width: min(calc(250px * 819 / 1920), 25%);
+    --dogwood-render-width: min(106px, 25%);
   }
 
   .shop-wall-top-dressing--scuppernong,
@@ -4594,7 +4594,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 
   .shop-wall-dogwood-bonsai {
-    --dogwood-render-width: min(calc(250px * 819 / 1920), 29%);
+    --dogwood-render-width: min(106px, 29%);
   }
 
   .shop-wall-top-dressing--scuppernong,
