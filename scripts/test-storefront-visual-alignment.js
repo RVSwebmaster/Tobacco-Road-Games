@@ -130,7 +130,7 @@ assert.deepEqual(puzzleCubeTags(regeneratedBestSellersBay), puzzleCubeTags(bestS
 assert.equal(puzzleCubeTags(regeneratedLeftBay).length + puzzleCubeTags(regeneratedRightBay).length, 0, "The cube must not enter the locked upper libraries.");
 const puzzleCubeAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/ornate-puzzle-cube-on-stand.png"));
 assert.deepEqual([...puzzleCubeAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The supplied cube must remain a local PNG.");
-assert.match(css, /\.shop-wall-puzzle-cube\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*39px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+assert.match(css, /\.shop-wall-puzzle-cube\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*35px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");
 assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");

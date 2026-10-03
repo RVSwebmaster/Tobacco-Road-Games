@@ -4491,7 +4491,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   --puzzle-cube-render-width: clamp(0px, calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 12px) * 1230 / 891 * 1.25 * 1.05), 241.5px);
   position: absolute;
   right: calc(6px - var(--puzzle-cube-render-width) * 170 / 1230);
-  bottom: 39px;
+  bottom: 35px;
   z-index: 6;
   display: block;
   width: var(--puzzle-cube-render-width);
