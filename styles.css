@@ -4596,7 +4596,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   left: 8px;
 }
 
-@media (max-width: 1399px) {
+@media (max-width: 1199px) {
   .shop-wall-bamboo-incense {
     height: auto;
   }

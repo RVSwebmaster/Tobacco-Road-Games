@@ -263,6 +263,9 @@ assert.equal(sumoTags(bricContext.second).length, 0, "The build must not add the
 const sumoAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/sumo-funko-pop.png"));
 assert.deepEqual([...sumoAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The supplied figure must remain a local PNG.");
 
+assert.doesNotMatch(css, /@media\s*\(max-width:\s*1399px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*height:\s*auto/, "Normal desktop windows must retain the bamboo's approved tall reach.");
+assert.match(css, /@media\s*\(max-width:\s*1199px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*height:\s*auto/, "Constrained layouts must preserve their existing bamboo sizing.");
+
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
 assert.match(storefront, /pointer: coarse/);
