@@ -32,3 +32,14 @@ RV permanently locked the current white-flowering dogwood bonsai arrangement on 
 - Preserve the trunk, branch and foliage spread, white blossoms, pot, shape, dimensions, and responsive sizing. Keep it in the right Featured Creator shelf niche opposite the bamboo, between the bookstop and outer wall, reaching the brass Featured Creator sign's height. Preserve its approved `bottom: 30px` positioning and shelf contact.
 - The dogwood remains stationary decoration. Do not reposition, rescale, reshape, animate, or make it a movable curio without RV's explicit approval. Unrelated storefront work must leave it unchanged.
 - Run `npm run test:storefront-visual` after storefront changes. Its saved dogwood asset, style, responsive, and rendered-markup baselines require RV approval before any intentional update; do not change them merely to make a test pass.
+
+## RV-Approved Grapevine And Kudzu Lock
+
+RV permanently locked both current upper-library vine arrangements on October 3, 2026. The accepted visual baseline is commit `8b3f7fd853f0b48acc209af583038d7433125519`.
+
+- Preserve the exact grapevine artwork: `assets/images/storefront-shelf-dressing/scuppernong-vine.png` (SHA-256 `fabce33314f79050d43914c6cb12bc85665852fccb3f1a09647da9d3ad3b5fd1`). Keep it in the Your Library inner-edge niche. Preserve the centered pot, level shelf contact, size, `transform-origin: 41% 42.2%`, and `translate(45%, calc(57.7474% + 4px)) rotate(4deg)` desktop placement.
+- Preserve the grapevine's current pruning mask: no foliage over the books, the approved removed tips near the logo lettering, the hidden dark pot underside, and the otherwise natural trailing outline. Do not restore the former straight right-edge crop.
+- Preserve the exact kudzu artwork: `assets/images/storefront-shelf-dressing/kudzu-vine.png` (SHA-256 `76e5992bd45bf02c0b323b4fa4138d3f579ee75fdb70aa757d7ad95c77306cc3`). Keep the upper pot in the Open Rules Library inner-edge niche with its current size, position, and inward-facing orientation.
+- Preserve the separate kudzu foreground trail, its existing length, clipping, `--kudzu-trail-drop: 302px` desktop placement, and `z-index: 6` layering. It must continue to fall in front of the soffit and partially obscure the unlit lantern.
+- Preserve both plants' exact responsive rules and breakpoints. Do not reposition, rescale, reshape, prune further, re-layer, regenerate, substitute, animate, or make either plant a movable curio without RV's explicit approval. Unrelated changes to parent shelf geometry must not move these arrangements.
+- Run `npm run test:storefront-visual` after storefront changes. Its saved grapevine and kudzu asset, style, responsive-context, and current/generated-markup baselines require RV approval before any intentional update. Never update a locked baseline merely to make a test pass.

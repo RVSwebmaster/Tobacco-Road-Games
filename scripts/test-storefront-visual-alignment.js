@@ -322,6 +322,69 @@ for (const [label, source] of [["homepage", featuredCreatorBay], ["homepage gene
   assert.equal(approvedDressingHash(normalizeDressing(dogwood)), "6b8a79e6c3406e7b762624eb01d51c32c594da949c4755457dfade4c7feebc34", `RV-approved dogwood markup changed in the ${label}; RV approval is required before updating this baseline.`);
 }
 
+// RV locked both upper-library vines at 8b3f7fd; preserve their accepted pruning and layering.
+const approvedVines = [
+  {
+    name: "scuppernong",
+    asset: "fabce33314f79050d43914c6cb12bc85665852fccb3f1a09647da9d3ad3b5fd1",
+    styles: "08dab55817522d2b2a9f310c6ab16611a0c22a1769c14530e9cb8b1cce2fe989",
+    responsive: "e5cfff69b9dfa9fdea0b8ac389204f7c78c528fc23d999c15eef31a36695c2a3",
+    markup: "974d9c478238e5bfb79d2ae0300980236b17f5b6d8c346402b4935f839cd0035",
+    tagCount: 1,
+    sources: [["homepage", yourLibraryBay], ["homepage generator", regeneratedLeftBay]]
+  },
+  {
+    name: "kudzu",
+    asset: "76e5992bd45bf02c0b323b4fa4138d3f579ee75fdb70aa757d7ad95c77306cc3",
+    styles: "0955b5038c5439758fb0473c737029fbb3cb922206a41f3bb9034620a42227e4",
+    responsive: "dd7e9e2b5b5879674319ebf64e857b0e1fd5151c79138d1c25f9446d5d32574e",
+    markup: "3fe347b776f39abb00cb3660fb69f5e9bfe96c7d21f3ee87ca4365450063ba4a",
+    tagCount: 2,
+    sources: [["homepage", openRulesBay], ["homepage generator", regeneratedRightBay]]
+  }
+];
+const vineSelectorMatches = (selector, modifier) => selector.includes(modifier)
+  || /\.shop-wall-top-dressing(?![-\w])/.test(selector);
+const vineRulesFor = (source, modifier) => (source.match(/[^{}]+\{[^{}]*\}/g) || [])
+  .filter(rule => vineSelectorMatches(rule.slice(0, rule.indexOf("{")), modifier));
+// Keep conditional scopes with each rule; moving an unchanged rule can still move a plant.
+const scopedDressingRules = [];
+const dressingScopes = [];
+let dressingRuleStart = 0;
+for (const token of dressingCss.matchAll(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[{}]/g)) {
+  if (token[0] !== "{" && token[0] !== "}") continue;
+  if (token[0] === "{") {
+    dressingScopes.push({
+      selector: dressingCss.slice(dressingRuleStart, token.index).trim(),
+      start: token.index + 1,
+      conditions: dressingScopes.filter(scope => scope.selector.startsWith("@")).map(scope => scope.selector)
+    });
+  } else {
+    const scope = dressingScopes.pop();
+    assert.ok(scope, "The dressing stylesheet must have balanced blocks.");
+    scopedDressingRules.push({ ...scope, rule: `${scope.selector} {${dressingCss.slice(scope.start, token.index)}}` });
+  }
+  dressingRuleStart = token.index + 1;
+}
+assert.equal(dressingScopes.length, 0, "The dressing stylesheet must have balanced blocks.");
+for (const vine of approvedVines) {
+  const modifier = `.shop-wall-top-dressing--${vine.name}`;
+  const approvalRequired = `RV-approved ${vine.name} arrangement changed; RV approval is required before updating this baseline.`;
+  const asset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing", `${vine.name}-vine.png`));
+  assert.equal(approvedDressingHash(asset), vine.asset, `Artwork: ${approvalRequired}`);
+  const rules = vineRulesFor(dressingCss, modifier).map(normalizeDressing);
+  assert.equal(approvedDressingHash(rules.join("\n")), vine.styles, `Position, size, pruning, or layering: ${approvalRequired}`);
+  const responsive = scopedDressingRules
+    .filter(rule => rule.conditions.length && vineSelectorMatches(rule.selector, modifier))
+    .map(rule => normalizeDressing(`${rule.conditions.join(" > ")} ${rule.rule}`));
+  assert.equal(approvedDressingHash(responsive.join("\n")), vine.responsive, `Responsive rules or breakpoints: ${approvalRequired}`);
+  for (const [label, source] of vine.sources) {
+    const tags = dressingTags(source).filter(tag => tag.includes(modifier.slice(1)));
+    assert.equal(tags.length, vine.tagCount, `The ${label} must retain the approved ${vine.name} layers in their library bay.`);
+    assert.equal(approvedDressingHash(tags.map(normalizeDressing).join("\n")), vine.markup, `${label} markup: ${approvalRequired}`);
+  }
+}
+
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
 assert.match(storefront, /pointer: coarse/);
