@@ -4272,6 +4272,21 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   }
 }
 
+.shop-wall-dogwood-bonsai {
+  --dogwood-render-width: min(144px, calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 8px) * 1254 / 919));
+  position: absolute;
+  right: calc(4px - var(--dogwood-render-width) * 170 / 1254);
+  bottom: 30px;
+  z-index: 6;
+  display: block;
+  width: var(--dogwood-render-width);
+  height: auto;
+  max-width: none;
+  filter: drop-shadow(4px 3px 3px rgba(15, 6, 2, 0.46));
+  pointer-events: none;
+  user-select: none;
+}
+
 .shop-wall-product-row {
   position: absolute;
   bottom: 43px;
@@ -4542,6 +4557,10 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     width: min(180px, 25%);
   }
 
+  .shop-wall-dogwood-bonsai {
+    --dogwood-render-width: min(118px, 25%);
+  }
+
   .shop-wall-top-dressing--scuppernong,
   .shop-wall-top-dressing--kudzu {
     width: calc(98px * 5 * 203 / 1774);
@@ -4571,6 +4590,10 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   .shop-wall-bamboo-incense {
     left: -8px;
     width: min(158px, 42%);
+  }
+
+  .shop-wall-dogwood-bonsai {
+    --dogwood-render-width: min(106px, 29%);
   }
 
   .shop-wall-top-dressing--scuppernong,
