@@ -268,26 +268,41 @@ assert.doesNotMatch(css, /@media\s*\(max-width:\s*1399px\)\s*\{\s*\.shop-wall-ba
 assert.match(css, /@media\s*\(max-width:\s*1199px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*height:\s*auto/, "Constrained layouts must preserve their existing bamboo sizing.");
 
 // RV approved this composition at 60929bc; baseline changes require RV approval.
-const bambooHash = value => createHash("sha256").update(value).digest("hex");
-const normalizeBamboo = value => value.replace(/\s+/g, " ").trim();
+const approvedDressingHash = value => createHash("sha256").update(value).digest("hex");
+const normalizeDressing = value => value.replace(/\s+/g, " ").trim();
 const bambooAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/bamboo-incense-planter-niche.png"));
-assert.equal(bambooHash(bambooAsset), "99a6f293ec96b4e18ec9cf786e49abe29fa2243afac8a485a53991788740ec82", "RV-approved bamboo artwork changed; RV approval is required before updating this baseline.");
-const bambooCss = css.replace(/\/\*[\s\S]*?\*\//g, "");
-const bambooRules = (bambooCss.match(/[^{}]+\{[^{}]*\}/g) || [])
+assert.equal(approvedDressingHash(bambooAsset), "99a6f293ec96b4e18ec9cf786e49abe29fa2243afac8a485a53991788740ec82", "RV-approved bamboo artwork changed; RV approval is required before updating this baseline.");
+const dressingCss = css.replace(/\/\*[\s\S]*?\*\//g, "");
+const bambooRules = (dressingCss.match(/[^{}]+\{[^{}]*\}/g) || [])
   .filter(rule => rule.slice(0, rule.indexOf("{")).includes(".shop-wall-bamboo-incense"));
-const bambooSmoke = bambooCss.match(/@keyframes shop-wall-incense-smoke\s*\{[\s\S]*?\r?\n\}/)?.[0];
+const bambooSmoke = dressingCss.match(/@keyframes shop-wall-incense-smoke\s*\{[\s\S]*?\r?\n\}/)?.[0];
 assert.ok(bambooSmoke, "The approved incense smoke animation must remain present.");
-assert.equal(bambooHash([...bambooRules, bambooSmoke].map(normalizeBamboo).join("\n")), "30a7a9db7a6323db4fab0d8b67a8f87ff8e31358ad81a330d335b396f1261885", "RV-approved bamboo placement, shape, or incense styles changed; RV approval is required before updating this baseline.");
-const bambooResponsiveRules = [...bambooCss.matchAll(/@media\s*\(max-width:\s*\d+px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*\}/g)]
-  .map(match => normalizeBamboo(match[0]));
-assert.equal(bambooHash(bambooResponsiveRules.join("\n")), "997a6179779c272402850fd5e74eb8c1c7cf09106c1cf7184e8669afac731c7b", "RV-approved bamboo responsive sizing changed; RV approval is required before updating this baseline.");
+assert.equal(approvedDressingHash([...bambooRules, bambooSmoke].map(normalizeDressing).join("\n")), "30a7a9db7a6323db4fab0d8b67a8f87ff8e31358ad81a330d335b396f1261885", "RV-approved bamboo placement, shape, or incense styles changed; RV approval is required before updating this baseline.");
+const bambooResponsiveRules = [...dressingCss.matchAll(/@media\s*\(max-width:\s*\d+px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*\}/g)]
+  .map(match => normalizeDressing(match[0]));
+assert.equal(approvedDressingHash(bambooResponsiveRules.join("\n")), "997a6179779c272402850fd5e74eb8c1c7cf09106c1cf7184e8669afac731c7b", "RV-approved bamboo responsive sizing changed; RV approval is required before updating this baseline.");
+
+// RV also locked the unchanged dogwood composition at 42f8c3d.
+const dogwoodAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/white-flowering-dogwood-bonsai-sign-height.png"));
+assert.equal(approvedDressingHash(dogwoodAsset), "ed392cbe4e4b3a12f581109752b5b20f4c8ef2b017cb02db8731dcb9dfffa9f2", "RV-approved dogwood artwork changed; RV approval is required before updating this baseline.");
+const dogwoodRules = (dressingCss.match(/[^{}]+\{[^{}]*\}/g) || [])
+  .filter(rule => rule.slice(0, rule.indexOf("{")).includes(".shop-wall-dogwood-bonsai"));
+assert.equal(approvedDressingHash(dogwoodRules.map(normalizeDressing).join("\n")), "090e5e59a8d9b08777b367ef621e7bde586ae4a05e174497c59ca75161c33d0c", "RV-approved dogwood placement, shape, or sizing changed; RV approval is required before updating this baseline.");
+const dogwoodResponsiveRules = [...dressingCss.matchAll(/@media\s*\(max-width:\s*\d+px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*\}\s*(\.shop-wall-dogwood-bonsai\s*\{[^}]*\})/g)]
+  .map(match => normalizeDressing(`${match[0].slice(0, match[0].indexOf("{") + 1)} ${match[1]}`));
+assert.equal(approvedDressingHash(dogwoodResponsiveRules.join("\n")), "2ecd920d1f05deb708a0f6765f9eb4722700ba341e2d05713f6a2cf055d3d3d6", "RV-approved dogwood responsive sizing changed; RV approval is required before updating this baseline.");
+assert.equal((homepage.match(/class="shop-wall-dogwood-bonsai"/g) || []).length, 1, "The approved dogwood must appear only once on the homepage.");
+const dogwoodTag = source => source.match(/<img class="shop-wall-dogwood-bonsai"[^>]*>/)?.[0];
 const bambooFigure = source => source.match(/<figure class="shop-wall-bamboo-incense"[^>]*>[\s\S]*?<\/figure>/)?.[0];
 const featuredCreatorBay = homepage.match(/<section[^>]*aria-labelledby="featured-creator-wall-heading"[\s\S]*?<\/section>/)?.[0] || "";
 const regeneratedFeaturedCreatorBay = vm.runInContext('renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, bambooIncense: true })', dressingContext);
 for (const [label, source] of [["homepage", featuredCreatorBay], ["homepage generator", regeneratedFeaturedCreatorBay]]) {
   const figure = bambooFigure(source);
   assert.ok(figure, `The ${label} must keep bamboo in its approved Featured Creator niche.`);
-  assert.equal(bambooHash(normalizeBamboo(figure)), "cea41fc064e7c22884a32ae81cbda531c566b520030f1cb58b92cbbed87dbd2b", `RV-approved bamboo or incense markup changed in the ${label}; RV approval is required before updating this baseline.`);
+  assert.equal(approvedDressingHash(normalizeDressing(figure)), "cea41fc064e7c22884a32ae81cbda531c566b520030f1cb58b92cbbed87dbd2b", `RV-approved bamboo or incense markup changed in the ${label}; RV approval is required before updating this baseline.`);
+  const dogwood = dogwoodTag(source);
+  assert.ok(dogwood, `The ${label} must keep dogwood in its approved Featured Creator niche.`);
+  assert.equal(approvedDressingHash(normalizeDressing(dogwood)), "6b8a79e6c3406e7b762624eb01d51c32c594da949c4755457dfade4c7feebc34", `RV-approved dogwood markup changed in the ${label}; RV approval is required before updating this baseline.`);
 }
 
 assert.match(storefront, /openExamination/);
