@@ -4486,6 +4486,25 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   user-select: none;
 }
 
+.shop-wall-puzzle-cube {
+  /* Fit the supplied silhouette in the endcap; leave book geometry untouched. */
+  --puzzle-cube-render-width: clamp(0px, calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 12px) * 1230 / 891), 184px);
+  position: absolute;
+  right: calc(6px - var(--puzzle-cube-render-width) * 170 / 1230);
+  bottom: 43px;
+  z-index: 6;
+  display: block;
+  width: var(--puzzle-cube-render-width);
+  height: auto;
+  max-width: none;
+  /* Compensate only for transparent pixels beneath the stand's base. */
+  transform: translateY(1.408451%);
+  pointer-events: none;
+  user-select: none;
+  animation: none;
+  transition: none;
+}
+
 .shop-wall-product-row {
   position: absolute;
   bottom: 43px;
