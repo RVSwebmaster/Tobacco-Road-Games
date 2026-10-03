@@ -1277,7 +1277,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
                   <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right" d="M349 1168 C371 1130 346 1097 364 1063 C381 1030 369 994 338 968 C311 945 322 915 348 886"></path>
                 </svg>
               </figure>` : "";
-  const dogwoodBonsaiMarkup = id === "featured-creator-wall-heading" ? '<img class="shop-wall-dogwood-bonsai" src="/assets/images/storefront-shelf-dressing/white-flowering-dogwood-bonsai-upright.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : "";
+  const dogwoodBonsaiMarkup = id === "featured-creator-wall-heading" ? '<img class="shop-wall-dogwood-bonsai" src="/assets/images/storefront-shelf-dressing/white-flowering-dogwood-bonsai-spread.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : "";
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
