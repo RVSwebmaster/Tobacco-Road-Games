@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -105,7 +106,7 @@ for (const [index, name] of dressingAssets.entries()) {
   assert.deepEqual([...asset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], `${name} must be a local PNG.`);
 }
 const dressingContext = vm.createContext({ escapeAttribute: value => String(value), escapeHtml: value => String(value) });
-vm.runInContext(build.slice(build.indexOf("function renderHomepageLibraryBay()"), build.indexOf("function renderAiPolicyPage()")), dressingContext);
+vm.runInContext(build.slice(build.indexOf("function renderHomepageShelfFixtures()"), build.indexOf("function renderAiPolicyPage()")), dressingContext);
 const regeneratedLeftBay = vm.runInContext("renderHomepageLibraryBay()", dressingContext);
 const regeneratedRightBay = vm.runInContext('renderHomepageProductBay({title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: []})', dressingContext);
 assert.deepEqual(dressingTags(regeneratedLeftBay), dressingTags(yourLibraryBay), "Homepage builds must preserve the exact approved left-side dressing.");
@@ -265,6 +266,29 @@ assert.deepEqual([...sumoAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10
 
 assert.doesNotMatch(css, /@media\s*\(max-width:\s*1399px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*height:\s*auto/, "Normal desktop windows must retain the bamboo's approved tall reach.");
 assert.match(css, /@media\s*\(max-width:\s*1199px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*height:\s*auto/, "Constrained layouts must preserve their existing bamboo sizing.");
+
+// RV approved this composition at 60929bc; baseline changes require RV approval.
+const bambooHash = value => createHash("sha256").update(value).digest("hex");
+const normalizeBamboo = value => value.replace(/\s+/g, " ").trim();
+const bambooAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/bamboo-incense-planter-niche.png"));
+assert.equal(bambooHash(bambooAsset), "99a6f293ec96b4e18ec9cf786e49abe29fa2243afac8a485a53991788740ec82", "RV-approved bamboo artwork changed; RV approval is required before updating this baseline.");
+const bambooCss = css.replace(/\/\*[\s\S]*?\*\//g, "");
+const bambooRules = (bambooCss.match(/[^{}]+\{[^{}]*\}/g) || [])
+  .filter(rule => rule.slice(0, rule.indexOf("{")).includes(".shop-wall-bamboo-incense"));
+const bambooSmoke = bambooCss.match(/@keyframes shop-wall-incense-smoke\s*\{[\s\S]*?\r?\n\}/)?.[0];
+assert.ok(bambooSmoke, "The approved incense smoke animation must remain present.");
+assert.equal(bambooHash([...bambooRules, bambooSmoke].map(normalizeBamboo).join("\n")), "30a7a9db7a6323db4fab0d8b67a8f87ff8e31358ad81a330d335b396f1261885", "RV-approved bamboo placement, shape, or incense styles changed; RV approval is required before updating this baseline.");
+const bambooResponsiveRules = [...bambooCss.matchAll(/@media\s*\(max-width:\s*\d+px\)\s*\{\s*\.shop-wall-bamboo-incense\s*\{[^}]*\}/g)]
+  .map(match => normalizeBamboo(match[0]));
+assert.equal(bambooHash(bambooResponsiveRules.join("\n")), "997a6179779c272402850fd5e74eb8c1c7cf09106c1cf7184e8669afac731c7b", "RV-approved bamboo responsive sizing changed; RV approval is required before updating this baseline.");
+const bambooFigure = source => source.match(/<figure class="shop-wall-bamboo-incense"[^>]*>[\s\S]*?<\/figure>/)?.[0];
+const featuredCreatorBay = homepage.match(/<section[^>]*aria-labelledby="featured-creator-wall-heading"[\s\S]*?<\/section>/)?.[0] || "";
+const regeneratedFeaturedCreatorBay = vm.runInContext('renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, bambooIncense: true })', dressingContext);
+for (const [label, source] of [["homepage", featuredCreatorBay], ["homepage generator", regeneratedFeaturedCreatorBay]]) {
+  const figure = bambooFigure(source);
+  assert.ok(figure, `The ${label} must keep bamboo in its approved Featured Creator niche.`);
+  assert.equal(bambooHash(normalizeBamboo(figure)), "cea41fc064e7c22884a32ae81cbda531c566b520030f1cb58b92cbbed87dbd2b", `RV-approved bamboo or incense markup changed in the ${label}; RV approval is required before updating this baseline.`);
+}
 
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
