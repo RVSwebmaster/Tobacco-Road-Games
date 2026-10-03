@@ -4721,6 +4721,16 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   width: auto;
   height: min(340px, calc((100% - 28px) * 1.8));
   object-fit: contain;
+  /* Prune only the book-facing offshoot; retain the locked pot and main vine. */
+  clip-path: polygon(evenodd,
+    0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+    4.3945% 14.3229%, 17.0898% 13.9974%, 25.293% 14.3229%,
+    26.0742% 17.4479%, 30.4688% 18.8151%, 32.8125% 19.2057%,
+    32.4219% 20.3125%, 27.832% 20.1172%, 22.6563% 19.4661%,
+    21.582% 22.6563%, 19.8242% 25.7161%, 21.0938% 28.5156%,
+    16.2109% 29.2969%, 15.1367% 32.1615%, 10.6445% 34.2448%,
+    5.2734% 33.9193%, 4.3945% 14.3229%
+  );
   transform: translateY(44%) scaleX(-1);
 }
 
@@ -4796,6 +4806,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     left: 0;
     object-fit: cover;
     object-position: 56% center;
+    clip-path: none;
   }
 
   .shop-wall-top-dressing--kudzu-trail {

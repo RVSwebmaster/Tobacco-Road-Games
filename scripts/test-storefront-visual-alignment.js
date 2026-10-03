@@ -336,8 +336,9 @@ const approvedVines = [
   {
     name: "kudzu",
     asset: "76e5992bd45bf02c0b323b4fa4138d3f579ee75fdb70aa757d7ad95c77306cc3",
-    styles: "0955b5038c5439758fb0473c737029fbb3cb922206a41f3bb9034620a42227e4",
-    responsive: "dd7e9e2b5b5879674319ebf64e857b0e1fd5151c79138d1c25f9446d5d32574e",
+    // RV authorized only the book-facing branch mask; positioning remains locked.
+    styles: "bdb1c6060dc95b37624bbc940f9b40ba3c79a52933fa39d6ba0eb8be8896e0e8",
+    responsive: "01d09a0e058d95163798bc026031df22d88b1741baeb0bb9f5827ea097957534",
     markup: "3fe347b776f39abb00cb3660fb69f5e9bfe96c7d21f3ee87ca4365450063ba4a",
     tagCount: 2,
     sources: [["homepage", openRulesBay], ["homepage generator", regeneratedRightBay]]
