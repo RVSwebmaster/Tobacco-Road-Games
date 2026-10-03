@@ -18,6 +18,7 @@ const STOREFRONT_CACHE_BUST = "20261001-ad-marquee2";
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
 const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
 const NEWS_CHYRON_CACHE_BUST = "20261001-news-chyron1";
+const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1114,7 +1115,7 @@ function buildHomepage(products, indexes, bundleRules) {
   const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
-  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
   let next = html
@@ -1122,7 +1123,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>`;
+  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1158,9 +1159,9 @@ function renderHomepageShopWallMain(products) {
 
 function renderHomepageBricABracShelf({ sumo = false } = {}) {
   return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
-        <div class="shop-wall-bric-shelf" aria-hidden="true">
-          <div class="shop-wall-bric-shelf__back"></div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
-          <div class="shop-wall-bric-shelf__surface"></div>
+        <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : ' aria-hidden="true"'}>
+          <div class="shop-wall-bric-shelf__back"></div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
+          <div class="shop-wall-bric-shelf__surface"></div>${sumo ? '\n          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>' : ""}
         </div>
       </section>`;
 }

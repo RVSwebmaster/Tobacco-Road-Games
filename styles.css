@@ -3582,6 +3582,41 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   user-select: none;
 }
 
+.shop-wall-bric-shelf__sumo[data-curio-id] {
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: manipulation;
+}
+
+[data-curio-behavior]:focus-visible {
+  outline: 2px solid #e6ca80;
+  outline-offset: 3px;
+}
+
+[data-curio-behavior][aria-pressed="true"],
+[data-curio-shelf][data-curio-held] {
+  cursor: grabbing;
+  touch-action: none;
+}
+
+[data-curio-behavior][aria-busy="true"] { cursor: wait; }
+
+.shelf-curio-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[data-curio-effect="tardis"] [data-curio-light] {
+  opacity: 0;
+  background: #28adff;
+  box-shadow: 0 0 8px 3px rgba(40, 173, 255, 0.75);
+  pointer-events: none;
+}
+
 .storefront-ad-marquee,
 .storefront-news-chiron {
   display: block;
