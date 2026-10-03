@@ -1143,7 +1143,7 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules })}
         ${renderHomepageShelfFixtures()}
       </section>
-      ${renderHomepageBricABracShelf()}
+      ${renderHomepageBricABracShelf({ sumo: true })}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
         ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
@@ -1156,10 +1156,10 @@ function renderHomepageShopWallMain(products) {
     </main>`;
 }
 
-function renderHomepageBricABracShelf() {
+function renderHomepageBricABracShelf({ sumo = false } = {}) {
   return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
         <div class="shop-wall-bric-shelf" aria-hidden="true">
-          <div class="shop-wall-bric-shelf__back"></div>
+          <div class="shop-wall-bric-shelf__back"></div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
           <div class="shop-wall-bric-shelf__surface"></div>
         </div>
       </section>`;

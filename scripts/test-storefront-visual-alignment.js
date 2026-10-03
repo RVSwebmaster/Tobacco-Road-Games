@@ -238,7 +238,7 @@ assertInOrder(homepage, [
 assertInOrder(build, [
   'renderHomepageLibraryBay()',
   'renderHomepageIdentityBay()',
-  'renderHomepageBricABracShelf()',
+  'renderHomepageBricABracShelf({ sumo: true })',
   'renderHomepageAdMarquee()',
   'FEATURED CREATOR',
   'NEW THIS WEEK',
@@ -248,6 +248,20 @@ assertInOrder(build, [
   'FREE & PWYW',
   'storefront-news-chiron'
 ], "Generated storefront sequence");
+
+const bricShelves = [...homepage.matchAll(/<section class="shop-wall-row shop-wall-row--bric-a-brac"[\s\S]*?<\/section>/g)].map(match => match[0]);
+const sumoTags = source => source.match(/<img class="shop-wall-bric-shelf__sumo"[^>]+>/g) || [];
+assert.equal(bricShelves.length, 2);
+assert.equal(sumoTags(bricShelves[0]).length, 1, "The supplied sumo figure must appear on the first Bric-a-Brac shelf.");
+assert.equal(sumoTags(bricShelves[1]).length, 0, "The second Bric-a-Brac shelf must remain unchanged.");
+const bricRenderer = build.match(/function renderHomepageBricABracShelf\([\s\S]*?\n}\r?\n/)?.[0];
+assert.ok(bricRenderer);
+const bricContext = {};
+vm.runInNewContext(`${bricRenderer}\nfirst = renderHomepageBricABracShelf({ sumo: true });\nsecond = renderHomepageBricABracShelf();`, bricContext);
+assert.deepEqual(sumoTags(bricContext.first), sumoTags(bricShelves[0]), "The build must preserve the first shelf's sumo figure.");
+assert.equal(sumoTags(bricContext.second).length, 0, "The build must not add the figure to other shelves.");
+const sumoAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/sumo-funko-pop.png"));
+assert.deepEqual([...sumoAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The supplied figure must remain a local PNG.");
 
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
