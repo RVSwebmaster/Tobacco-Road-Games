@@ -53,6 +53,10 @@
       // Keep the five reference-book widths and the stop clear on the wall side.
       const clearance = spineWidth * 6;
       row.style.setProperty('--library-bookstop-clearance', `${clearance}px`);
+      const libraryBay = row.closest('.shop-wall-bay--library');
+      if (libraryBay && row.parentElement.classList.contains('shop-wall-shelf-level--lower')) {
+        libraryBay.style.setProperty('--library-edge-niche-width', `${spineWidth * 5}px`);
+      }
       const availableWidth = row.getBoundingClientRect().width - clearance;
       fillMockBooks(books, Math.max(1, Math.floor(availableWidth / spineWidth)));
     };

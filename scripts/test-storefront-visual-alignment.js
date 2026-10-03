@@ -120,6 +120,8 @@ assert.match(css, /\.shop-wall-product-row--library\s*\{[^}]*left:\s*0;[^}]*righ
 assert.match(css, /\.shop-wall-library-books\s*\{[^}]*left:\s*var\(--library-bookstop-clearance, 0px\);[^}]*right:\s*0;/);
 assert.match(css, /\.shop-wall-product-row--right > \.shop-wall-library-books\s*\{[^}]*left:\s*0;[^}]*right:\s*var\(--library-bookstop-clearance, 0px\);/);
 assert.match(storefront, /new ResizeObserver\(refresh\)\.observe\(row\)/);
+assert.match(storefront, /libraryBay\.style\.setProperty\('--library-edge-niche-width', `\$\{spineWidth \* 5\}px`\)/);
+assert.match(css, /\.shop-wall-row--identity > \.shop-wall-bay--library > \.shop-wall-top-dressing--duke\s*\{[^}]*right:\s*calc\(var\(--library-edge-niche-width, 0px\) \/ 2\);[^}]*transform:\s*translateX\(50%\);/);
 assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library::before,\s*\.shop-wall-shelf-level > \.shop-wall-product-row--library::after\s*\{[^}]*height:\s*50%;[^}]*aspect-ratio:\s*406 \/ 1774;/);
 assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library:not\(\.shop-wall-product-row--right\)::after,\s*\.shop-wall-shelf-level > \.shop-wall-product-row--library\.shop-wall-product-row--right::before\s*\{[^}]*content:\s*"";/);
 assert.match(css, /\.shop-wall-shelf-level > \.shop-wall-product-row--library:not\(\.shop-wall-product-row--right\)::after\s*\{[^}]*transform:\s*translateX\(500%\);/);
