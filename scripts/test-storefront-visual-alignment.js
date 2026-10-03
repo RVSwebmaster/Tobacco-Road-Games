@@ -322,7 +322,7 @@ for (const [label, source] of [["homepage", featuredCreatorBay], ["homepage gene
   assert.equal(approvedDressingHash(normalizeDressing(dogwood)), "6b8a79e6c3406e7b762624eb01d51c32c594da949c4755457dfade4c7feebc34", `RV-approved dogwood markup changed in the ${label}; RV approval is required before updating this baseline.`);
 }
 
-// RV locked both upper-library vines at 8b3f7fd; preserve their accepted pruning and layering.
+// RV locked the vines at 8b3f7fd and the kudzu branch pruning at 73ddcf9.
 const approvedVines = [
   {
     name: "scuppernong",
@@ -336,7 +336,7 @@ const approvedVines = [
   {
     name: "kudzu",
     asset: "76e5992bd45bf02c0b323b4fa4138d3f579ee75fdb70aa757d7ad95c77306cc3",
-    // RV authorized only the book-facing branch mask; positioning remains locked.
+    // RV permanently locked this book-facing branch mask; positioning remains unchanged.
     styles: "bdb1c6060dc95b37624bbc940f9b40ba3c79a52933fa39d6ba0eb8be8896e0e8",
     responsive: "01d09a0e058d95163798bc026031df22d88b1741baeb0bb9f5827ea097957534",
     markup: "3fe347b776f39abb00cb3660fb69f5e9bfe96c7d21f3ee87ca4365450063ba4a",
