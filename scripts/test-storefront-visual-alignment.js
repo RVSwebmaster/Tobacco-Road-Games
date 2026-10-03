@@ -388,6 +388,26 @@ for (const vine of approvedVines) {
   }
 }
 
+// RV permanently locked Duke's centered lower-library placement at 924fbfd.
+const dukeApprovalRequired = "RV-approved Duke arrangement changed; RV approval is required before updating this baseline.";
+const dukeModifier = ".shop-wall-top-dressing--duke";
+const dukeAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/duke-blue-devil-bobblehead.png"));
+assert.equal(approvedDressingHash(dukeAsset), "30a56a6d920d46e66f9d1cb534ce9b0a208c54e271d6eec073678bea041f8448", `Artwork: ${dukeApprovalRequired}`);
+const dukeRules = vineRulesFor(dressingCss, dukeModifier).map(normalizeDressing);
+assert.equal(approvedDressingHash(dukeRules.join("\n")), "8243ec0a6996eafd2dadd07344c27ac3edb0b52ed02bbe9ab4176d9a9c81de86", `Position, size, shelf contact, clipping, or layering: ${dukeApprovalRequired}`);
+const dukeResponsive = scopedDressingRules
+  .filter(rule => rule.conditions.length && vineSelectorMatches(rule.selector, dukeModifier))
+  .map(rule => normalizeDressing(`${rule.conditions.join(" > ")} ${rule.rule}`));
+assert.equal(approvedDressingHash(dukeResponsive.join("\n")), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", `Responsive rules or breakpoints: ${dukeApprovalRequired}`);
+const dukeMeasurement = storefront.match(/document\.querySelectorAll\('\[data-fill-library\]'\)\.forEach\(\(books\) => \{[\s\S]*?\n  \}\);/)?.[0];
+assert.ok(dukeMeasurement, `The bookstop measurement must keep Duke centered: ${dukeApprovalRequired}`);
+assert.equal(approvedDressingHash(normalizeDressing(dukeMeasurement)), "2e5db239d8f5886873e2224d36fd6a7e579ff5987b0a69d59c2c70d864aa24ff", `Centering measurement: ${dukeApprovalRequired}`);
+for (const [label, source] of [["homepage", yourLibraryBay], ["homepage generator", regeneratedLeftBay]]) {
+  const tags = dressingTags(source).filter(tag => tag.includes(dukeModifier.slice(1)));
+  assert.equal(tags.length, 1, `The ${label} must keep exactly one Duke in the approved library bay.`);
+  assert.equal(approvedDressingHash(tags.map(normalizeDressing).join("\n")), "38867a5c3aa375bb5c715a5e822cf42bae0b36f7c17df364c8722843f13a6e3d", `${label} markup: ${dukeApprovalRequired}`);
+}
+
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
 assert.match(storefront, /pointer: coarse/);

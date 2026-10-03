@@ -44,3 +44,13 @@ RV permanently locked both current upper-library vine arrangements on October 3,
 - Preserve the separate kudzu foreground trail, its existing length, clipping, `--kudzu-trail-drop: 302px` desktop placement, and `z-index: 6` layering. It must continue to fall in front of the soffit and partially obscure the unlit lantern.
 - Preserve both plants' exact responsive rules and breakpoints. Do not reposition, rescale, reshape, prune further, re-layer, regenerate, substitute, animate, or make either plant a movable curio without RV's explicit approval. Unrelated changes to parent shelf geometry must not move these arrangements.
 - Run `npm run test:storefront-visual` after storefront changes. Its saved grapevine and kudzu asset, style, responsive-context, and current/generated-markup baselines require RV approval before any intentional update. Never update a locked baseline merely to make a test pass.
+
+## RV-Approved Duke Blue Devil Lock
+
+RV approved and permanently locked Duke's centered placement on October 3, 2026. The accepted visual baseline is commit `924fbfd53c34036712d7278e5e976a1800aab8db`.
+
+- Preserve the exact artwork: `assets/images/storefront-shelf-dressing/duke-blue-devil-bobblehead.png` (SHA-256 `30a56a6d920d46e66f9d1cb534ce9b0a208c54e271d6eec073678bea041f8448`), inward-facing orientation, readable text, and current backdrop clipping.
+- Keep Duke centered between the lower Your Library bookstop and the inner wall beside the logo, partially behind the locked grapevine. Preserve his current size, `bottom: 14px` shelf contact, and `z-index: 1` layering.
+- Preserve the existing responsive centering: the lower row measures five bookstop widths into `--library-edge-niche-width`; Duke uses `right: calc(var(--library-edge-niche-width, 0px) / 2)` with `translateX(50%)`. Do not replace it with a fixed pixel offset or alter the measurement behavior.
+- Duke remains stationary decoration. Do not move, resize, reshape, re-layer, animate, regenerate, substitute, or make him a movable curio without RV's explicit approval. Unrelated shelf or plant changes must leave this arrangement unchanged.
+- Run `npm run test:storefront-visual` after storefront changes. Its Duke artwork, style, conditional-context, current/generated-markup, and centering-measurement baselines require RV approval before any intentional update. Never change the locked baseline merely to make a test pass.
