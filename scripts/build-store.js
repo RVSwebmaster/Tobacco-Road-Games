@@ -14,7 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
-const STOREFRONT_CACHE_BUST = "20261003-dice-endcap1";
+const STOREFRONT_CACHE_BUST = "20261004-frozen-cabinet1";
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
 const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bb1-creator-ad-preview.json"), "utf8"));
 const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
@@ -1139,12 +1139,19 @@ function renderHomepageShopWallMain(products) {
   const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 8);
 
   return `    <main id="top" class="homepage-shop-wall shelf-storefront" aria-labelledby="homepage-shop-wall-heading">
+      <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
       <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
+        <picture class="shop-wall-cabinet-art" aria-hidden="true">
+          <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1">
+          <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1">
+          <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
+        </picture>
         ${renderHomepageLibraryBay()}
         ${renderHomepageIdentityBay()}
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules })}
         ${renderHomepageShelfFixtures()}
       </section>
+      </div>
       ${renderHomepageBricABracShelf({ sumo: true })}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
@@ -1246,8 +1253,6 @@ function renderHomepageLibraryBay() {
   return `
         <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
-          <img class="shop-wall-top-dressing shop-wall-top-dressing--duke" src="/assets/images/storefront-shelf-dressing/duke-blue-devil-bobblehead.png" alt="Duke Blue Devil bobblehead beneath the Scuppernong vine" loading="eager" decoding="async" draggable="false">
-          <img class="shop-wall-top-dressing shop-wall-top-dressing--scuppernong" src="/assets/images/storefront-shelf-dressing/scuppernong-vine.png" alt="Scuppernong grapevine and fruit trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
               ${productMockMarkup}
@@ -1315,12 +1320,12 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">' : ""}
+
               ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
               ${productMockMarkup}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--lantern" src="/assets/images/storefront-shelf-dressing/hurricane-lantern-unlit.png" alt="Unlit antique brass hurricane lantern beneath the Kudzu" loading="eager" decoding="async" draggable="false">' : ""}
+
               ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : ""}
               ${productMockMarkup}
               ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
@@ -1329,7 +1334,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
   return `
         <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
           ${renderShopWallPlaque(title, id)}
-          ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu-trail" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : ""}
+
           ${shelves}
         </section>`;
 }

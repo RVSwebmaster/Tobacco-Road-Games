@@ -1,6 +1,10 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
+# Refuse to publish accidental changes to RV-approved storefront artwork.
+& node.exe (Join-Path $repoRoot "scripts/test-storefront-visual-alignment.js")
+if ($LASTEXITCODE -ne 0) { throw "Storefront visual protection failed; staging was not deployed." }
+
 $temporaryConfig = Join-Path $repoRoot "wrangler.toml"
 $pagesConfig = Join-Path $PSScriptRoot "wrangler.pages.toml"
 $wranglerRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot ".wrangler"))

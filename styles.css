@@ -4898,7 +4898,19 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   height: min(650px, calc((100% - 58px) * 1.65));
   object-fit: contain;
   object-position: center bottom;
-  clip-path: inset(56% 10% 0 0);
+  /* Preserve the trail crop; prune only the pale leaf over the D in ROAD. */
+  clip-path: polygon(evenodd,
+    0 56%, 90% 56%, 90% 100%, 0 100%, 0 56%,
+    77.0508% 67.9036%, 80.4688% 67.7083%, 83.0078% 68.2292%,
+    85.1563% 68.8802%, 87.3047% 69.4661%, 88.7695% 70.9635%,
+    89.4531% 72.5260%, 87.6953% 73.9583%, 89.9414% 74.0885%,
+    89.9414% 77.7344%, 84.5703% 77.2786%, 82.5195% 76.1719%,
+    79.3945% 74.8047%, 77.7344% 75.4557%, 75.9766% 73.9583%,
+    74.9023% 72.3958%, 73.2422% 71.6146%, 73.4375% 70.5729%,
+    74.1211% 69.5313%, 73.3398% 68.9453%, 74.7070% 68.2292%,
+    77.0508% 67.9036%,
+    0 56%
+  );
   transform: scaleX(-1);
 }
 
@@ -5289,3 +5301,103 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     font-size: 0.66rem;
   }
 }
+
+/* Frozen upper cabinet: artwork and lettering resize as one raster scene. */
+.shop-wall-fixed-cabinet {
+  --cabinet-width: 1452;
+  --cabinet-height: 474.333344;
+  position: relative;
+  min-width: 0;
+  z-index: 6;
+  width: 100%;
+  aspect-ratio: var(--cabinet-width) / var(--cabinet-height);
+}
+.shop-wall-fixed-cabinet > .shop-wall-row--identity {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: calc(var(--cabinet-width) * 1px);
+  height: calc(var(--cabinet-height) * 1px);
+  min-height: 0;
+  padding: 0;
+  background: none;
+  transform: scale(var(--cabinet-scale, 1));
+  transform-origin: top left;
+}
+.shop-wall-fixed-cabinet .shop-wall-bay,
+.shop-wall-fixed-cabinet .shop-wall-shelves,
+.shop-wall-fixed-cabinet .shop-wall-shelf-level {
+  display: contents;
+}
+.shop-wall-fixed-cabinet .shop-wall-plaque,
+.shop-wall-fixed-cabinet .shop-wall-identity-space,
+.shop-wall-fixed-cabinet .shop-wall-identity-sign {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.shop-wall-fixed-cabinet .shop-wall-shelf-fixtures { display: none; }
+.shop-wall-fixed-cabinet > .shop-wall-row--identity::after,
+.shop-wall-fixed-cabinet .shop-wall-bay::before,
+.shop-wall-fixed-cabinet .shop-wall-bay::after,
+.shop-wall-fixed-cabinet .shop-wall-shelf-level::before,
+.shop-wall-fixed-cabinet .shop-wall-shelf-level::after { content: none; }
+.shop-wall-fixed-cabinet .shop-wall-product-row--library::before,
+.shop-wall-fixed-cabinet .shop-wall-product-row--library::after { opacity: 0; }
+.shop-wall-fixed-cabinet .shop-wall-cabinet-art {
+  position: absolute;
+  left: 0;
+  top: -16px;
+  width: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.shop-wall-cabinet-art > img { display: block; width: 100%; height: auto; max-width: none; }
+.shop-wall-fixed-cabinet { --cabinet-width: 1452; --cabinet-height: 474.333344; }
+.shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 68px; right: auto; bottom: auto; width: 470px; height: 169.166672px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--lower > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 265.166687px; right: auto; bottom: auto; width: 470px; height: 169.166672px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="open-rules-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
+  position: absolute; left: 968.000031px; top: 68px; right: auto; bottom: auto; width: 484px; height: 169.166672px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="open-rules-library-heading"] .shop-wall-shelf-level--lower > .shop-wall-product-row--library {
+  position: absolute; left: 968.000031px; top: 265.166687px; right: auto; bottom: auto; width: 484px; height: 169.166672px;
+}
+@media (max-width: 1023px) {
+.shop-wall-fixed-cabinet { --cabinet-width: 836.666687; --cabinet-height: 637; }
+.shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 373px; right: auto; bottom: auto; width: 404.333344px; height: 98px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--lower > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 499px; right: auto; bottom: auto; width: 404.333344px; height: 98px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="open-rules-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
+  position: absolute; left: 418.333344px; top: 373px; right: auto; bottom: auto; width: 418.333344px; height: 98px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="open-rules-library-heading"] .shop-wall-shelf-level--lower > .shop-wall-product-row--library {
+  position: absolute; left: 418.333344px; top: 499px; right: auto; bottom: auto; width: 418.333344px; height: 98px;
+}
+}
+@media (max-width: 699px) {
+.shop-wall-fixed-cabinet { --cabinet-width: 346.666687; --cabinet-height: 913.770874; }
+.shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 367.770844px; right: auto; bottom: auto; width: 346.666687px; height: 84px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--lower > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 479.770874px; right: auto; bottom: auto; width: 346.666687px; height: 84px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="open-rules-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 663.770874px; right: auto; bottom: auto; width: 346.666687px; height: 84px;
+}
+.shop-wall-fixed-cabinet [aria-labelledby="open-rules-library-heading"] .shop-wall-shelf-level--lower > .shop-wall-product-row--library {
+  position: absolute; left: 0px; top: 775.770874px; right: auto; bottom: auto; width: 346.666687px; height: 84px;
+}
+}
+/* End frozen upper cabinet. */

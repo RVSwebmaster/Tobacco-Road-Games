@@ -27,6 +27,17 @@
     });
   });
 
+  document.querySelectorAll("[data-fixed-cabinet]").forEach((cabinet) => {
+    const stage = cabinet.querySelector(".shop-wall-row--identity");
+    const refresh = () => {
+      const width = Number.parseFloat(getComputedStyle(stage).width);
+      cabinet.style.setProperty("--cabinet-scale", String(cabinet.getBoundingClientRect().width / width));
+    };
+    refresh();
+    new ResizeObserver(refresh).observe(cabinet);
+    window.addEventListener("resize", refresh);
+  });
+
   const fillMockBooks = (row, count) => {
     const reference = row.firstElementChild;
     if (!reference) return;
@@ -57,7 +68,8 @@
       if (libraryBay && row.parentElement.classList.contains('shop-wall-shelf-level--lower')) {
         libraryBay.style.setProperty('--library-edge-niche-width', `${spineWidth * 5}px`);
       }
-      const availableWidth = row.getBoundingClientRect().width - clearance;
+      const rowWidth = row.closest("[data-fixed-cabinet]") ? row.clientWidth : row.getBoundingClientRect().width;
+      const availableWidth = rowWidth - clearance;
       fillMockBooks(books, Math.max(1, Math.floor(availableWidth / spineWidth)));
     };
     refresh();

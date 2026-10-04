@@ -98,11 +98,9 @@ const dressingAssets = [
   "hurricane-lantern-unlit.png"
 ];
 const dressingTags = source => source.match(/<img class="shop-wall-top-dressing [^>]+>/g) || [];
-assert.equal(dressingTags(homepage).length, 5, "Only the four approved top-shelf dressing assets plus the kudzu tail layer may be added.");
-assert.equal((openRulesBay.match(/shop-wall-top-dressing--kudzu-trail/g) || []).length, 1, "The kudzu tail layer must remain in the Open Rules Library bay.");
+assert.equal(dressingTags(homepage).length, 0, "The frozen cabinet must not restore independently positioned plants, Duke, or lantern layers.");
 for (const [index, name] of dressingAssets.entries()) {
-  const bay = index < 2 ? yourLibraryBay : openRulesBay;
-  assert.ok(bay.includes(`/assets/images/storefront-shelf-dressing/${name}`), `${name} must stay in its approved library bay.`);
+  // Original PNGs remain available as authoring masters, not live decoration.
   const asset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing", name));
   assert.deepEqual([...asset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], `${name} must be a local PNG.`);
 }
@@ -396,18 +394,16 @@ const approvedVines = [
     asset: "fabce33314f79050d43914c6cb12bc85665852fccb3f1a09647da9d3ad3b5fd1",
     styles: "08dab55817522d2b2a9f310c6ab16611a0c22a1769c14530e9cb8b1cce2fe989",
     responsive: "e5cfff69b9dfa9fdea0b8ac389204f7c78c528fc23d999c15eef31a36695c2a3",
-    markup: "974d9c478238e5bfb79d2ae0300980236b17f5b6d8c346402b4935f839cd0035",
-    tagCount: 1,
+
     sources: [["homepage", yourLibraryBay], ["homepage generator", regeneratedLeftBay]]
   },
   {
     name: "kudzu",
     asset: "76e5992bd45bf02c0b323b4fa4138d3f579ee75fdb70aa757d7ad95c77306cc3",
-    // RV permanently locked this book-facing branch mask; positioning remains unchanged.
-    styles: "bdb1c6060dc95b37624bbc940f9b40ba3c79a52933fa39d6ba0eb8be8896e0e8",
+    // RV authorized pruning only the foreground leaf over ROAD's D; positions remain unchanged.
+    styles: "69ff072f8f444acc5a40d373d18fcd01ac1f8ab96bb38530a28ca51ce50f45ab",
     responsive: "01d09a0e058d95163798bc026031df22d88b1741baeb0bb9f5827ea097957534",
-    markup: "3fe347b776f39abb00cb3660fb69f5e9bfe96c7d21f3ee87ca4365450063ba4a",
-    tagCount: 2,
+
     sources: [["homepage", openRulesBay], ["homepage generator", regeneratedRightBay]]
   }
 ];
@@ -448,8 +444,7 @@ for (const vine of approvedVines) {
   assert.equal(approvedDressingHash(responsive.join("\n")), vine.responsive, `Responsive rules or breakpoints: ${approvalRequired}`);
   for (const [label, source] of vine.sources) {
     const tags = dressingTags(source).filter(tag => tag.includes(modifier.slice(1)));
-    assert.equal(tags.length, vine.tagCount, `The ${label} must retain the approved ${vine.name} layers in their library bay.`);
-    assert.equal(approvedDressingHash(tags.map(normalizeDressing).join("\n")), vine.markup, `${label} markup: ${approvalRequired}`);
+    assert.equal(tags.length, 0, `The ${label} must keep ${vine.name} inside the frozen background, not restore separate layers.`);
   }
 }
 
@@ -466,12 +461,92 @@ const dukeResponsive = scopedDressingRules
 assert.equal(approvedDressingHash(dukeResponsive.join("\n")), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", `Responsive rules or breakpoints: ${dukeApprovalRequired}`);
 const dukeMeasurement = storefront.match(/document\.querySelectorAll\('\[data-fill-library\]'\)\.forEach\(\(books\) => \{[\s\S]*?\n  \}\);/)?.[0];
 assert.ok(dukeMeasurement, `The bookstop measurement must keep Duke centered: ${dukeApprovalRequired}`);
-assert.equal(approvedDressingHash(normalizeDressing(dukeMeasurement)), "2e5db239d8f5886873e2224d36fd6a7e579ff5987b0a69d59c2c70d864aa24ff", `Centering measurement: ${dukeApprovalRequired}`);
+assert.equal(approvedDressingHash(normalizeDressing(dukeMeasurement)), "6036c6d1b020ca2cf9171b9e29df02d4b437096d7decba18f099aeb91aa8f4a6", "Live library books must measure in the frozen cabinet's unscaled coordinates.");
 for (const [label, source] of [["homepage", yourLibraryBay], ["homepage generator", regeneratedLeftBay]]) {
   const tags = dressingTags(source).filter(tag => tag.includes(dukeModifier.slice(1)));
-  assert.equal(tags.length, 1, `The ${label} must keep exactly one Duke in the approved library bay.`);
-  assert.equal(approvedDressingHash(tags.map(normalizeDressing).join("\n")), "38867a5c3aa375bb5c715a5e822cf42bae0b36f7c17df364c8722843f13a6e3d", `${label} markup: ${dukeApprovalRequired}`);
+  assert.equal(tags.length, 0, `The ${label} must keep Duke in the frozen background, not restore a separate layer.`);
 }
+
+// RV requested the permanent composite on October 4, 2026, with the ROAD leaf gone.
+const frozenPicture = source => source.match(/<picture class="shop-wall-cabinet-art"[\s\S]*?<\/picture>/)?.[0];
+assert.ok(frozenPicture(homepage), "The homepage must render the frozen cabinet background.");
+assert.equal(normalizeDressing(frozenPicture(homepage)), normalizeDressing(frozenPicture(build)), "Homepage builds must preserve the exact frozen picture and responsive sources.");
+assert.match(homepage, /class="shop-wall-fixed-cabinet" data-fixed-cabinet/);
+assert.match(build, /class="shop-wall-fixed-cabinet" data-fixed-cabinet/);
+assert.equal((homepage.match(/data-fill-library/g) || []).length, 4, "All four book rows must remain live, outside the raster background.");
+const frozenAssets = [
+  {
+    "name": "desktop",
+    "hash": "b5d2a11354e7c3ac14a4b0f6d971404e20c51a7cf85433fd1f56205124d6d191",
+    "width": 2904,
+    "height": 1179
+  },
+  {
+    "name": "tablet",
+    "hash": "53344acb6bc8a9ac18edac1f0baa01db24a031fe28845c29e0f511dc8c0043c4",
+    "width": 1674,
+    "height": 1420
+  },
+  {
+    "name": "mobile",
+    "hash": "ba940d46455ed943efbc2a8a07cd9e48c5ebd12f90f69bbd3dde3f87b2378fef",
+    "width": 694,
+    "height": 1912
+  }
+];
+for (const approved of frozenAssets) {
+  const file = "assets/images/storefront-shelf-dressing/upper-cabinet-" + approved.name + ".png";
+  const asset = fs.readFileSync(path.join(ROOT, file));
+  assert.equal(approvedDressingHash(asset), approved.hash, "Frozen cabinet artwork changed; RV approval is required. Never restore the pruned leaf.");
+  assert.equal(asset.readUInt32BE(16), approved.width);
+  assert.equal(asset.readUInt32BE(20), approved.height);
+  assert.ok(frozenPicture(homepage).includes('/' + file));
+}
+assert.equal(approvedDressingHash(normalizeDressing(css.split('/* Frozen upper cabinet:')[1].split('/* End frozen upper cabinet. */')[0])), "45819cb68808b1d52dc6574d30f32eac49a67a79e19821ed0c6fd6eafde0f0fe", "Frozen cabinet geometry changed; RV approval is required.");
+const frozenResize = storefront.match(/document\.querySelectorAll\("\[data-fixed-cabinet\]"\)\.forEach\(\(cabinet\) => \{[\s\S]*?\n  \}\);/)?.[0];
+assert.equal(approvedDressingHash(normalizeDressing(frozenResize)), "c30f8b9c22150eda5a341209789e53e6df3d60e70c17813579a9c6884cdb3cbc", "The artwork and books must scale together as one fixed scene.");
+
+let cabinetWidth = 1216;
+let masterWidth = 1452;
+let scale;
+let observedResize;
+let windowResize;
+const stage = {};
+const cabinet = {
+  querySelector: () => stage,
+  getBoundingClientRect: () => ({ width: cabinetWidth }),
+  style: { setProperty: (name, value) => { assert.equal(name, '--cabinet-scale'); scale = Number(value); } }
+};
+vm.runInNewContext(frozenResize, {
+  document: { querySelectorAll: () => [cabinet] },
+  getComputedStyle: () => ({ width: `${masterWidth}px` }),
+  ResizeObserver: class { constructor(callback) { observedResize = callback; } observe(target) { assert.equal(target, cabinet); } },
+  window: { addEventListener: (event, callback) => { assert.equal(event, 'resize'); windowResize = callback; } }
+});
+assert.equal(scale, cabinetWidth / masterWidth, 'The complete desktop scene must scale uniformly.');
+cabinetWidth = 346;
+masterWidth = 346.666687;
+observedResize();
+assert.equal(scale, cabinetWidth / masterWidth, 'A responsive source change must preserve one shared coordinate system.');
+cabinetWidth = 500;
+windowResize();
+assert.equal(scale, cabinetWidth / masterWidth, 'Window resizing must update the complete scene, not individual decorations.');
+
+let liveBookCount;
+const bookRow = {
+  clientWidth: 470,
+  getBoundingClientRect: () => ({ width: 235 }),
+  closest: selector => selector === '[data-fixed-cabinet]' ? cabinet : null,
+  classList: { contains: () => false },
+  style: { setProperty: () => {} }
+};
+vm.runInNewContext(dukeMeasurement, {
+  document: { querySelectorAll: () => [{ parentElement: bookRow }] },
+  getComputedStyle: () => ({ width: '20px' }),
+  fillMockBooks: (_, count) => { liveBookCount = count; },
+  ResizeObserver: class { observe() {} }
+});
+assert.equal(liveBookCount, 17, 'Book count must use the fixed scene width, not its scaled screen width.');
 
 assert.match(storefront, /openExamination/);
 assert.match(storefront, /--examination-x/);
