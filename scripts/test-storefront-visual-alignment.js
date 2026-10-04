@@ -141,6 +141,7 @@ assert.equal(jesusFigurineTags(regeneratedLeftBay).length + jesusFigurineTags(re
 const jesusFigurineAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/jesus-loves-you-figurine.png"));
 assert.deepEqual([...jesusFigurineAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 assert.equal(jesusFigurineAsset[25], 6, "The figure must use an RGBA PNG, not a baked-in checkerboard.");
+assert.match(css, /--jesus-figurine-render-width:\s*clamp\(0px, calc\(\(100% - var\(--puzzle-cube-book-clearance\) - 90\.5px\) \* 1195 \/ 1050 \/ 2\), 82\.5px\);/, "The figure must render at half its original size while retaining its responsive sizing.");
 assert.ok(fs.existsSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/masters/jesus-loves-you-figurine-source.png")), "The original supplied artwork must remain available.");
 assert.match(css, /\.shop-wall-jesus-figurine\s*\{[^}]*position:\s*absolute;[^}]*left:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*left:\s*max\(var\(--jesus-figurine-book-clearance\),/, "Only Best Sellers must reserve the figure's left endcap.");

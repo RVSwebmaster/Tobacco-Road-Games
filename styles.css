@@ -4489,7 +4489,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .shop-wall-bay[aria-labelledby="best-sellers-wall-heading"] {
   --puzzle-cube-render-width: 154.05px;
   --puzzle-cube-book-clearance: calc(var(--puzzle-cube-render-width) * 891 / 1230 + 2.5px);
-  --jesus-figurine-render-width: clamp(0px, calc((100% - var(--puzzle-cube-book-clearance) - 90.5px) * 1195 / 1050), 165px);
+  --jesus-figurine-render-width: clamp(0px, calc((100% - var(--puzzle-cube-book-clearance) - 90.5px) * 1195 / 1050 / 2), 82.5px);
   --jesus-figurine-book-clearance: calc(var(--jesus-figurine-render-width) * 1050 / 1195 + 2.5px);
 }
 
