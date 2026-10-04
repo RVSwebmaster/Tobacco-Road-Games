@@ -4489,6 +4489,25 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .shop-wall-bay[aria-labelledby="best-sellers-wall-heading"] {
   --puzzle-cube-render-width: 154.05px;
   --puzzle-cube-book-clearance: calc(var(--puzzle-cube-render-width) * 891 / 1230 + 2.5px);
+  --jesus-figurine-render-width: clamp(0px, calc((100% - var(--puzzle-cube-book-clearance) - 90.5px) * 1195 / 1050), 165px);
+  --jesus-figurine-book-clearance: calc(var(--jesus-figurine-render-width) * 1050 / 1195 + 2.5px);
+}
+
+.shop-wall-jesus-figurine {
+  position: absolute;
+  left: calc(2px - var(--jesus-figurine-render-width) * 72 / 1195);
+  bottom: 31px;
+  z-index: 6;
+  display: block;
+  width: var(--jesus-figurine-render-width);
+  height: auto;
+  max-width: none;
+  /* Align the visible base rather than the transparent bottom margin. */
+  transform: translateY(1.215805%);
+  pointer-events: none;
+  user-select: none;
+  animation: none;
+  transition: none;
 }
 
 .shop-wall-puzzle-cube {
@@ -4611,7 +4630,8 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-bay[aria-labelledby="best-sellers-wall-heading"] .shop-wall-product-row[data-overhang-spine] {
-  /* Preserve the wide layout; reserve the same endcap on narrower screens. */
+  /* Reserve both decorative endcaps without changing the 50-book capacity. */
+  left: max(var(--jesus-figurine-book-clearance), calc(16.666% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774));
   right: max(var(--puzzle-cube-book-clearance), calc(16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774));
 }
 

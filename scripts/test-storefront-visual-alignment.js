@@ -133,6 +133,17 @@ assert.deepEqual([...puzzleCubeAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 
 assert.match(css, /\.shop-wall-puzzle-cube\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\]\s*\{[^}]*--puzzle-cube-render-width:\s*154\.05px;/, "The approved cube size must not collapse with the endcap width.");
 assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*right:\s*max\(var\(--puzzle-cube-book-clearance\),/, "Only the Best Sellers row must reserve the cube's endcap space.");
+const jesusFigurineTags = source => source.match(/<img class="shop-wall-jesus-figurine"[^>]*>/g) || [];
+assert.equal(jesusFigurineTags(homepage).length, 1, "The supplied figure must appear only once on the homepage.");
+assert.equal(jesusFigurineTags(bestSellersBay).length, 1, "The figure must stay on Best Sellers.");
+assert.deepEqual(jesusFigurineTags(regeneratedBestSellersBay), jesusFigurineTags(bestSellersBay), "Homepage builds must preserve the Best Sellers figure.");
+assert.equal(jesusFigurineTags(regeneratedLeftBay).length + jesusFigurineTags(regeneratedRightBay).length, 0, "The figure must not enter the locked upper libraries.");
+const jesusFigurineAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/jesus-loves-you-figurine.png"));
+assert.deepEqual([...jesusFigurineAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+assert.equal(jesusFigurineAsset[25], 6, "The figure must use an RGBA PNG, not a baked-in checkerboard.");
+assert.ok(fs.existsSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/masters/jesus-loves-you-figurine-source.png")), "The original supplied artwork must remain available.");
+assert.match(css, /\.shop-wall-jesus-figurine\s*\{[^}]*position:\s*absolute;[^}]*left:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*left:\s*max\(var\(--jesus-figurine-book-clearance\),/, "Only Best Sellers must reserve the figure's left endcap.");
 assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");
 assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");
