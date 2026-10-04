@@ -4486,9 +4486,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   user-select: none;
 }
 
+.shop-wall-bay[aria-labelledby="best-sellers-wall-heading"] {
+  --puzzle-cube-render-width: 154.05px;
+  --puzzle-cube-book-clearance: calc(var(--puzzle-cube-render-width) * 891 / 1230 + 2.5px);
+}
+
 .shop-wall-puzzle-cube {
-  /* Enlarge the accepted size another 5%; overlap the bookstop, not the books. */
-  --puzzle-cube-render-width: clamp(0px, calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 12px) * 1230 / 891 * 1.25 * 1.05 * 1.05), 253.575px);
   position: absolute;
   right: calc(2px - var(--puzzle-cube-render-width) * 170 / 1230);
   bottom: 31px;
@@ -4605,6 +4608,11 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 
 .shop-wall-product-row[data-overhang-spine] {
   right: calc(16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774);
+}
+
+.shop-wall-bay[aria-labelledby="best-sellers-wall-heading"] .shop-wall-product-row[data-overhang-spine] {
+  /* Preserve the wide layout; reserve the same endcap on narrower screens. */
+  right: max(var(--puzzle-cube-book-clearance), calc(16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774));
 }
 
 .shop-wall-product-row[data-overhang-spine] > .shop-wall-product-mock:last-child {

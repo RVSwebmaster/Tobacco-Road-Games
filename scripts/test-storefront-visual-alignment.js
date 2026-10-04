@@ -131,6 +131,8 @@ assert.equal(puzzleCubeTags(regeneratedLeftBay).length + puzzleCubeTags(regenera
 const puzzleCubeAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/ornate-puzzle-cube-on-stand.png"));
 assert.deepEqual([...puzzleCubeAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The supplied cube must remain a local PNG.");
 assert.match(css, /\.shop-wall-puzzle-cube\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\]\s*\{[^}]*--puzzle-cube-render-width:\s*154\.05px;/, "The approved cube size must not collapse with the endcap width.");
+assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*right:\s*max\(var\(--puzzle-cube-book-clearance\),/, "Only the Best Sellers row must reserve the cube's endcap space.");
 assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");
 assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");
