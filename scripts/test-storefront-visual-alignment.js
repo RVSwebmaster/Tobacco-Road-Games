@@ -134,7 +134,9 @@ assert.deepEqual([...dragonFigurineAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 
 assert.equal(dragonFigurineAsset[25], 6, "The dragon must have an RGBA PNG, not a solid black background.");
 assert.ok(fs.existsSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/masters/red-gold-dragon-figurine-source.png")), "The original supplied dragon must remain available.");
 assert.match(css, /\.shop-wall-dragon-figurine\s*\{[^}]*position:\s*absolute;[^}]*right:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
-assert.match(css, /\.shop-wall-bay\[aria-labelledby="new-this-week-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*right:\s*max\(var\(--dragon-figurine-book-clearance\),/, "Only New This Week must reserve the dragon's endcap space.");
+assert.doesNotMatch(css, /\.shop-wall-bay\[aria-labelledby="new-this-week-wall-heading"\] \.shop-wall-product-row/, "The dragon must never move or compress the New This Week book row.");
+assert.doesNotMatch(css, /--dragon-figurine-book-clearance/, "The dragon must adapt to the original endcap, not reserve new space from the books.");
+assert.match(css, /--dragon-figurine-render-width:\s*clamp\(0px, calc\(\(16\.667% - var\(--shop-wall-art-width\) \/ 2 - 2 \* 188px \* 203 \/ 1774 - 4\.5px\) \* 1122 \/ 919\), 157\.2px\);/);
 const puzzleCubeTags = source => source.match(/<img class="shop-wall-puzzle-cube"[^>]*>/g) || [];
 const regeneratedBestSellersBay = vm.runInContext('renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: [], singleShelf: true })', dressingContext);
 assert.equal(puzzleCubeTags(homepage).length, 1, "The supplied cube must appear only once on the homepage.");
