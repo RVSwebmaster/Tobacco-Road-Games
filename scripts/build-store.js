@@ -14,7 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
-const STOREFRONT_CACHE_BUST = "20261003-dragon-bookstop-edge1";
+const STOREFRONT_CACHE_BUST = "20261003-dice-endcap1";
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
 const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bb1-creator-ad-preview.json"), "utf8"));
 const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
@@ -1296,6 +1296,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
   const dogwoodBonsaiMarkup = id === "featured-creator-wall-heading" ? '<img class="shop-wall-dogwood-bonsai" src="/assets/images/storefront-shelf-dressing/white-flowering-dogwood-bonsai-sign-height.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : "";
   const puzzleCubeMarkup = id === "best-sellers-wall-heading" ? '<img class="shop-wall-puzzle-cube" src="/assets/images/storefront-shelf-dressing/ornate-puzzle-cube-on-stand.png" alt="Ornate black-and-gold puzzle cube on a display stand" loading="eager" decoding="async" draggable="false">' : "";
   const dragonFigurineMarkup = id === "new-this-week-wall-heading" ? '<img class="shop-wall-dragon-figurine" src="/assets/images/storefront-shelf-dressing/red-gold-dragon-figurine.png" alt="Seated red, black, and gold dragon figurine" loading="eager" decoding="async" draggable="false">' : "";
+  const dicePileMarkup = id === "new-this-week-wall-heading" ? '<img class="shop-wall-dice-pile" src="/assets/images/storefront-shelf-dressing/stacked-scattered-six-sided-dice.png" alt="A casually stacked and scattered pile of six-sided dice" loading="eager" decoding="async" draggable="false">' : "";
   const jesusFigurineMarkup = id === "best-sellers-wall-heading" ? '<img class="shop-wall-jesus-figurine" src="/assets/images/storefront-shelf-dressing/jesus-loves-you-figurine.png" alt="Jesus Loves You figurine on an ornate black-and-gold base" tabindex="0" aria-describedby="jesus-figurine-speech" loading="eager" decoding="async" draggable="false">\n              <span class="shop-wall-jesus-speech-bubble" id="jesus-figurine-speech" role="tooltip">Remember, I love you.</span>' : "";
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
@@ -1307,6 +1308,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
               ${productMockMarkup}
               ${jesusFigurineMarkup}
               ${puzzleCubeMarkup}
+              ${dicePileMarkup}
               ${dragonFigurineMarkup}
               ${renderHomepageShelfFixtures()}
             </div>

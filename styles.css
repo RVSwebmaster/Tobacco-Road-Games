@@ -4486,6 +4486,30 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   user-select: none;
 }
 
+.shop-wall-dice-pile {
+  --dice-pile-render-width: clamp(0px, calc((16.666% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 6.5px) * 1312 / 1260), 110px);
+  position: absolute;
+  left: calc(4px - var(--dice-pile-render-width) * 36 / 1312);
+  bottom: 31px;
+  z-index: 6;
+  display: block;
+  width: var(--dice-pile-render-width);
+  height: auto;
+  max-width: none;
+  /* Seat the visible dice, compensating for the transparent bottom margin. */
+  transform: translateY(4.503753%);
+  pointer-events: none;
+  user-select: none;
+  animation: none;
+  transition: none;
+}
+
+@media (max-width: 1100px) {
+  .shop-wall-dice-pile {
+    display: none;
+  }
+}
+
 .shop-wall-dragon-figurine {
   --dragon-figurine-render-width: clamp(0px, calc((16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774 - 4.5px) * 1122 / 919), 157.2px);
   position: absolute;

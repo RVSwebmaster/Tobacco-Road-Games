@@ -137,6 +137,16 @@ assert.match(css, /\.shop-wall-dragon-figurine\s*\{[^}]*position:\s*absolute;[^}
 assert.doesNotMatch(css, /\.shop-wall-bay\[aria-labelledby="new-this-week-wall-heading"\] \.shop-wall-product-row/, "The dragon must never move or compress the New This Week book row.");
 assert.doesNotMatch(css, /--dragon-figurine-book-clearance/, "The dragon must adapt to the original endcap, not reserve new space from the books.");
 assert.match(css, /--dragon-figurine-render-width:\s*clamp\(0px, calc\(\(16\.667% - var\(--shop-wall-art-width\) \/ 2 - 188px \* 203 \/ 1774 - 4\.5px\) \* 1122 \/ 919\), 157\.2px\);/, "The dragon may cover the bookstop but must stop before the unchanged book row.");
+const dicePileTags = source => source.match(/<img class="shop-wall-dice-pile"[^>]*>/g) || [];
+assert.equal(dicePileTags(homepage).length, 1, "The dice pile must appear exactly once.");
+assert.equal(dicePileTags(newThisWeekBay).length, 1, "The dice pile must stay on New This Week.");
+assert.deepEqual(dicePileTags(regeneratedNewThisWeekBay), dicePileTags(newThisWeekBay), "Homepage builds must preserve the dice endcap.");
+assert.equal(dicePileTags(regeneratedLeftBay).length + dicePileTags(regeneratedRightBay).length + dicePileTags(bestSellersBay).length, 0, "The dice must not enter other decorated shelves.");
+const dicePileAsset = fs.readFileSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/stacked-scattered-six-sided-dice.png"));
+assert.deepEqual([...dicePileAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+assert.equal(dicePileAsset[25], 6, "The dice must use a transparent RGBA PNG.");
+assert.match(css, /\.shop-wall-dice-pile\s*\{[^}]*position:\s*absolute;[^}]*left:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*height:\s*auto;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+assert.match(css, /--dice-pile-render-width:\s*clamp\(0px, calc\(\(16\.666% - var\(--shop-wall-art-width\) \/ 2 - 2 \* 188px \* 203 \/ 1774 - 6\.5px\) \* 1312 \/ 1260\), 110px\);/, "The dice must fit outside the existing left bookstop without changing the book row.");
 const puzzleCubeTags = source => source.match(/<img class="shop-wall-puzzle-cube"[^>]*>/g) || [];
 const regeneratedBestSellersBay = vm.runInContext('renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: [], singleShelf: true })', dressingContext);
 assert.equal(puzzleCubeTags(homepage).length, 1, "The supplied cube must appear only once on the homepage.");
