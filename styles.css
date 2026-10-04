@@ -4487,7 +4487,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .shop-wall-dragon-figurine {
-  --dragon-figurine-render-width: clamp(0px, calc((16.667% - var(--shop-wall-art-width) / 2 - 2 * 188px * 203 / 1774 - 4.5px) * 1122 / 919), 157.2px);
+  --dragon-figurine-render-width: clamp(0px, calc((16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774 - 4.5px) * 1122 / 919), 157.2px);
   position: absolute;
   right: calc(2px - var(--dragon-figurine-render-width) * 157 / 1122);
   bottom: 31px;

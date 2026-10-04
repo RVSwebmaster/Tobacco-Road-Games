@@ -136,7 +136,7 @@ assert.ok(fs.existsSync(path.join(ROOT, "assets/images/storefront-shelf-dressing
 assert.match(css, /\.shop-wall-dragon-figurine\s*\{[^}]*position:\s*absolute;[^}]*right:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-bay\[aria-labelledby="new-this-week-wall-heading"\] \.shop-wall-product-row/, "The dragon must never move or compress the New This Week book row.");
 assert.doesNotMatch(css, /--dragon-figurine-book-clearance/, "The dragon must adapt to the original endcap, not reserve new space from the books.");
-assert.match(css, /--dragon-figurine-render-width:\s*clamp\(0px, calc\(\(16\.667% - var\(--shop-wall-art-width\) \/ 2 - 2 \* 188px \* 203 \/ 1774 - 4\.5px\) \* 1122 \/ 919\), 157\.2px\);/);
+assert.match(css, /--dragon-figurine-render-width:\s*clamp\(0px, calc\(\(16\.667% - var\(--shop-wall-art-width\) \/ 2 - 188px \* 203 \/ 1774 - 4\.5px\) \* 1122 \/ 919\), 157\.2px\);/, "The dragon may cover the bookstop but must stop before the unchanged book row.");
 const puzzleCubeTags = source => source.match(/<img class="shop-wall-puzzle-cube"[^>]*>/g) || [];
 const regeneratedBestSellersBay = vm.runInContext('renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: [], singleShelf: true })', dressingContext);
 assert.equal(puzzleCubeTags(homepage).length, 1, "The supplied cube must appear only once on the homepage.");
