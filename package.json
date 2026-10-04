@@ -8,6 +8,7 @@
     "test:storefront-design": "node scripts/test-storefront-shelf-design.js",
     "test:storefront-themes": "node scripts/test-storefront-shelf-themes.js",
     "test:storefront-visual": "node scripts/test-storefront-visual-alignment.js",
+    "test:storefront-heroes": "node scripts/test-storefront-hero-books.js",
     "test:legacy-catalog-publication": "node scripts/test-legacy-catalog-publication.js",
     "test:owner-profile-finance": "node scripts/test-owner-profile-financial-controls.js",
     "test:creator-closure": "node scripts/test-creator-account-closure.js",

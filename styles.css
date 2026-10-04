@@ -5401,3 +5401,172 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 }
 /* End frozen upper cabinet. */
+
+/* Merchandising books occupy the existing run; outer stops and dressing stay put. */
+body:has(.shop-wall-product-row--hero) { overflow-x: clip; }
+.shop-wall-product-row--hero [hidden] { display: none; }
+.shop-wall-product-row--hero {
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 21fr) minmax(0, 8fr) minmax(0, 21fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: end;
+  gap: 0;
+}
+.shop-wall-spine-run {
+  display: grid;
+  grid-template-columns: repeat(21, minmax(0, 1fr));
+  align-items: end;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.shop-wall-stock-spine,
+.shop-wall-sale-spine {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: var(--merch-book-height, 188px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #30210d;
+  border-radius: 1px;
+  background: #163a31;
+  color: #ecd496;
+  box-shadow: inset 2px 0 3px #a98b4b, inset -3px 0 4px #051914;
+  text-decoration: none;
+}
+.shop-wall-stock-spine img {
+  position: absolute;
+  left: 50%;
+  width: calc(100% * 887 / 203);
+  max-width: none;
+  height: 100%;
+  transform: translateX(-50%);
+  object-fit: fill;
+}
+.shop-wall-stock-spine span,
+.shop-wall-sale-spine span {
+  position: absolute;
+  inset: 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #14291f;
+  color: #ecd496;
+  font: 600 11px/1 Georgia, serif;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  white-space: nowrap;
+}
+.shop-wall-sale-spine span {
+  background: transparent;
+}
+.shop-wall-spine-run[data-spine-run="left"] > :first-child,
+.shop-wall-spine-run[data-spine-run="right"] > :last-child {
+  width: min(100%, calc(188px * 203 / 1774));
+}
+.shop-wall-spine-run[data-spine-run="right"] > :last-child {
+  justify-self: end;
+}
+.shop-wall-hero-bay {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  container-type: inline-size;
+}
+.shop-wall-hero-bay::before,
+.shop-wall-hero-bay::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 4%;
+  height: 50%;
+  border: 1px solid #63401f;
+  border-top-color: #d5b17b;
+  border-radius: 1px;
+  background: repeating-linear-gradient(87deg, transparent 0 3px, #bd97564d 4px 5px), linear-gradient(90deg, #8d6336, #c69c61 42%, #744821);
+  box-shadow: inset 1px 0 1px #edc68b66, 1px 1px 2px #1d0d0866;
+}
+.shop-wall-hero-bay::before { left: 4%; }
+.shop-wall-hero-bay::after { right: 4%; }
+.shop-wall-hero-book {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 75%;
+  min-width: 0;
+  margin: 0;
+  border-radius: 2px;
+  line-height: 0;
+  text-decoration: none;
+  filter: drop-shadow(3px 3px 2px #160b066b);
+}
+.shop-wall-hero-book > img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc((var(--shop-wall-merch-product-space) - var(--shop-wall-merch-shelf-construction)) * 0.8);
+  object-fit: contain;
+  border-radius: 2px;
+  box-shadow: 2px 0 0 #cdbf9a, 4px 0 0 #463125;
+}
+.shop-wall-stock-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  max-height: calc((var(--shop-wall-merch-product-space) - var(--shop-wall-merch-shelf-construction)) * 0.8);
+  overflow: hidden;
+  border: 2px solid #183027;
+  border-radius: 2px;
+  background: #16473e;
+  box-shadow: inset 0 0 0 2px #c2a967, inset 6px 0 6px #08251d, 2px 0 0 #d1c49e, 4px 0 0 #463125;
+  color: #eddaa5;
+  text-align: center;
+}
+.shop-wall-stock-cover img {
+  width: 50%;
+  height: auto;
+  object-fit: contain;
+}
+.shop-wall-stock-cover span { font: 600 10px/1.2 Georgia, serif; }
+.shop-wall-stock-cover strong { font: 700 16px/1.2 Georgia, serif; }
+a.shop-wall-hero-book,
+.shop-wall-sale-spine {
+  transition: transform 160ms ease, filter 160ms ease;
+}
+a.shop-wall-hero-book:hover,
+a.shop-wall-hero-book:focus-visible,
+.shop-wall-sale-spine:hover,
+.shop-wall-sale-spine:focus-visible {
+  transform: translateY(-2px);
+  filter: brightness(1.08) drop-shadow(2px 4px 2px #160b0670);
+}
+a.shop-wall-hero-book:focus-visible,
+.shop-wall-sale-spine:focus-visible {
+  outline: 2px solid #f0d089;
+  outline-offset: 3px;
+}
+@container (max-width: 90px) {
+  .shop-wall-stock-cover span,
+  .shop-wall-stock-cover strong { display: none; }
+}
+@container (max-width: 700px) {
+  .shop-wall-stock-spine span,
+  .shop-wall-sale-spine span { visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  a.shop-wall-hero-book,
+  .shop-wall-sale-spine { transition: none; }
+}

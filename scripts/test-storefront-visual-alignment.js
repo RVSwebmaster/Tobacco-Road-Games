@@ -177,7 +177,7 @@ assert.match(css, /\.shop-wall-jesus-figurine:not\(\.is-speech-dismissed\):focus
 assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*left:\s*max\(var\(--jesus-figurine-book-clearance\),/, "Only Best Sellers must reserve the figure's left endcap.");
 assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");
-assert.equal((homepage.match(/data-book-count="50"/g) || []).length, 4, "The four full-width shelves must retain their fixed 50-book rows.");
+assert.equal((homepage.match(/data-book-units="50"/g) || []).length, 4, "The four full-width shelves retain their 50-unit run with the approved center bay.");
 assert.doesNotMatch(openRulesBay, /data-overhang-spine/, "Library books must not use the full-width frame positioning.");
 assert.match(css, /\.shop-wall-product-row--library\s*\{[^}]*left:\s*0;[^}]*right:\s*0;/);
 assert.match(css, /\.shop-wall-library-books\s*\{[^}]*left:\s*var\(--library-bookstop-clearance, 0px\);[^}]*right:\s*0;/);
@@ -297,7 +297,7 @@ assertInOrder(homepage, [
   'NEW THIS WEEK',
   'aria-label="Bric-a-Brac display shelf"',
   'BEST SELLERS',
-  'class="shop-wall-product-mock shop-wall-product-mock--spine"',
+  'class="shop-wall-product-row shop-wall-product-row--hero"',
   'FREE &amp; PWYW',
   'class="storefront-news-chiron"'
 ], "Homepage storefront sequence");

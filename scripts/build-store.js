@@ -15,6 +15,8 @@ const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
 const STOREFRONT_CACHE_BUST = "20261004-frozen-cabinet1";
+const HOMEPAGE_MERCHANDISING_PATH = path.join(ROOT, "data", "homepage-merchandising.json");
+const HOMEPAGE_MERCHANDISING = fs.existsSync(HOMEPAGE_MERCHANDISING_PATH) ? JSON.parse(fs.readFileSync(HOMEPAGE_MERCHANDISING_PATH, "utf8")) : {};
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
 const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bb1-creator-ad-preview.json"), "utf8"));
 const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
@@ -1124,6 +1126,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
+  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261004-center-books1");
   const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
@@ -1133,9 +1136,13 @@ function buildHomepage(products, indexes, bundleRules) {
 
 function renderHomepageShopWallMain(products) {
   const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
-  const newThisWeek = chooseNewReleases(eligible).slice(0, 5);
-  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling")).slice(0, 5);
-  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0).slice(0, 5);
+  const newThisWeek = sortProducts(eligible, "newest");
+  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling"));
+  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
+  const featuredConfig = HOMEPAGE_MERCHANDISING["featured-creator-wall-heading"] || {};
+  const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
+  const featuredCreator = featuredConfig.creatorSlug || (designated || chooseFeaturedProduct(eligible))?.authorSlugs?.[0];
+  const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
   const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 8);
 
   return `    <main id="top" class="homepage-shop-wall shelf-storefront" aria-labelledby="homepage-shop-wall-heading">
@@ -1155,7 +1162,7 @@ function renderHomepageShopWallMain(products) {
       ${renderHomepageBricABracShelf({ sumo: true })}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
         ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
         ${renderHomepageBricABracShelf()}
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], productMock: { src: "/assets/products/spriggans/spine.png", alt: "Spriggans product spine mockup", label: "Spriggans product spine mockup", modifier: "spine" } })}
@@ -1277,8 +1284,10 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null }) {
   const visibleProducts = products.slice(0, 5);
+  const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
+  const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
   const libraryBooks = id === "open-rules-library-heading";
   const wallArtItems = wallArt ? (Array.isArray(wallArt) ? wallArt : [wallArt]) : [];
   const wallArtMarkup = wallArtItems.map((art) => `<img class="shop-wall-back-wall-art${["center", "right"].includes(art.placement) ? ` shop-wall-back-wall-art--${art.placement}` : ""}" src="${escapeAttribute(art.src)}" alt="${escapeAttribute(art.alt)}" loading="lazy" decoding="async">`).join("\n              ");
@@ -1309,8 +1318,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
               ${wallArtMarkup}
               ${bambooIncenseMarkup}
               ${dogwoodBonsaiMarkup}
-              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
-              ${productMockMarkup}
+              ${merchandising ? renderHomepageMerchandisingBooks(products, configuredHero) : `${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}\n              ${productMockMarkup}`}
               ${jesusFigurineMarkup}
               ${puzzleCubeMarkup}
               ${dicePileMarkup}
@@ -1357,6 +1365,42 @@ function renderHomepageProductMock(mock, { library = false, alignRight = false }
 
 function renderHomepageShelfBooks(products) {
   return `<div class="bookshelf-grid shop-wall-books" style="--shelf-items: ${Math.max(1, products.length)}">${products.map((product) => renderBookshelfBook(product, { withDataset: true, centerExamination: true })).join("")}</div>`;
+}
+
+function homepageProductId(product) {
+  return String(product.id || product.slug);
+}
+
+function selectHomepageShelfBooks(products, heroProductId = null) {
+  const seen = new Set();
+  const inventory = products.filter(product => {
+    if (!["available-direct", "pay-what-you-want", "free-download"].includes(product.status) || product.buyMode === "retired") return false;
+    const id = homepageProductId(product);
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  const hero = inventory.find(product => homepageProductId(product) === String(heroProductId)) || inventory[0] || null;
+  const spines = inventory.filter(product => product !== hero).slice(0, 42);
+  return { hero, left: spines.slice(0, 21), right: spines.slice(21, 42) };
+}
+
+function renderHomepageMerchandisingBooks(products, heroProductId = null) {
+  const { hero, left, right } = selectHomepageShelfBooks(products, heroProductId);
+  const renderSpines = (run, side) => `<div class="shop-wall-spine-run" data-spine-run="${side}" data-spine-slots="21">${Array.from({ length: 21 }, (_, slot) => {
+    const product = run[slot];
+    if (!product) return `<figure class="shop-wall-stock-spine" data-decorative-stock aria-label="Decorative shelf stock"><img src="/assets/products/spriggans/spine.png" alt="" loading="lazy" decoding="async"><span aria-hidden="true">SHELF STOCK</span></figure>`;
+    const height = Math.round(bookshelfDimensions(product).height * 188 / 314);
+    return `<a class="shop-wall-sale-spine" data-product-card data-slug="${escapeAttribute(product.slug)}" data-product-id="${escapeAttribute(homepageProductId(product))}" href="${escapeAttribute(product.url)}" aria-label="Open ${escapeAttribute(product.title)} product page" title="${escapeAttribute(product.title)}" style="--merch-book-height:${height}px"><span aria-hidden="true">${escapeHtml(product.title)}</span></a>`;
+  }).join("")}</div>`;
+  const heroMarkup = hero
+    ? `<a class="shop-wall-hero-book" data-product-card data-slug="${escapeAttribute(hero.slug)}" data-product-id="${escapeAttribute(homepageProductId(hero))}" href="${escapeAttribute(hero.url)}" aria-label="Open ${escapeAttribute(hero.title)} product page" title="${escapeAttribute(hero.title)}"><img src="${escapeAttribute(hero.assetSet.cover)}" alt="${escapeAttribute(hero.title)} cover" loading="lazy" decoding="async"></a>`
+    : `<figure class="shop-wall-hero-book shop-wall-hero-book--stock" data-decorative-stock aria-label="Decorative face-out shelf stock, not a marketplace product"><div class="shop-wall-stock-cover" aria-hidden="true"><span>DECORATIVE</span><img src="/assets/tobacco-road-games-logo.png" alt="" loading="lazy" decoding="async"><strong>SHELF<br>STOCK</strong></div></figure>`;
+  return `<div class="shop-wall-product-row shop-wall-product-row--hero" data-overhang-spine data-book-units="50">
+                ${renderSpines(left, "left")}
+                <div class="shop-wall-hero-bay" data-hero-units="8">${heroMarkup}</div>
+                ${renderSpines(right, "right")}
+              </div>`;
 }
 
 function renderShopWallPlaque(title, id) {
@@ -3225,4 +3269,14 @@ function buildRuntimeCatalog() {
   }
 }
 
-main();
+if (require.main === module) {
+  if (process.argv.includes("--homepage-only")) {
+    const products = loadProducts(buildAuthorLookup(loadAuthors())).filter(isCatalogBrowsable);
+    buildHomepage(products);
+    console.log("Built homepage only.");
+  } else {
+    main();
+  }
+}
+
+module.exports = { selectHomepageShelfBooks, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, loadProducts, loadAuthors, buildAuthorLookup };
