@@ -4486,6 +4486,28 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   user-select: none;
 }
 
+.shop-wall-bay[aria-labelledby="new-this-week-wall-heading"] {
+  --dragon-figurine-render-width: 157.2px;
+  --dragon-figurine-book-clearance: calc(var(--dragon-figurine-render-width) * 919 / 1122 + 2.5px);
+}
+
+.shop-wall-dragon-figurine {
+  position: absolute;
+  right: calc(2px - var(--dragon-figurine-render-width) * 157 / 1122);
+  bottom: 31px;
+  z-index: 6;
+  display: block;
+  width: var(--dragon-figurine-render-width);
+  height: auto;
+  max-width: none;
+  /* Seat the visible tail, compensating for the transparent bottom margin. */
+  transform: translateY(3.566334%);
+  pointer-events: none;
+  user-select: none;
+  animation: none;
+  transition: none;
+}
+
 .shop-wall-bay[aria-labelledby="best-sellers-wall-heading"] {
   --puzzle-cube-render-width: 154.05px;
   --puzzle-cube-book-clearance: calc(var(--puzzle-cube-render-width) * 891 / 1230 + 2.5px);
@@ -4695,6 +4717,11 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   /* Reserve both decorative endcaps without changing the 50-book capacity. */
   left: max(var(--jesus-figurine-book-clearance), calc(16.666% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774));
   right: max(var(--puzzle-cube-book-clearance), calc(16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774));
+}
+
+.shop-wall-bay[aria-labelledby="new-this-week-wall-heading"] .shop-wall-product-row[data-overhang-spine] {
+  /* Reserve the dragon endcap while retaining the 50-book row. */
+  right: max(var(--dragon-figurine-book-clearance), calc(16.667% - var(--shop-wall-art-width) / 2 - 188px * 203 / 1774));
 }
 
 .shop-wall-product-row[data-overhang-spine] > .shop-wall-product-mock:last-child {
