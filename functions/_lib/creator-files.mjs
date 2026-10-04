@@ -4,18 +4,18 @@ import {
   validateSessionCsrf,
 } from "./account-auth.mjs";
 import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
-const LIMITS = {
+export const CREATOR_FILE_LIMITS = Object.freeze({
   product: 50 * 1024 * 1024,
   cover: 10 * 1024 * 1024,
   preview: 10 * 1024 * 1024,
   supporting: 20 * 1024 * 1024,
-};
-const ALLOWED = {
+});
+export const CREATOR_FILE_TYPES = Object.freeze({
   product: ["application/pdf"],
   cover: ["image/webp"],
   preview: ["image/webp"],
   supporting: ["application/pdf", "image/webp", "image/png", "image/jpeg"],
-};
+});
 export async function handleCreatorFileUpload(
   request,
   env = {},
@@ -114,33 +114,18 @@ export async function handleCreatorFileUpload(
   } catch {
     return invalid("Upload form is invalid.");
   }
-  const file = form.get("file"),
-    purpose = String(form.get("purpose") || "");
-  if (!(file instanceof File) || !ALLOWED[purpose])
-    return invalid("Choose a file and its purpose.");
-  if (file.size < 1 || file.size > LIMITS[purpose])
-    return invalid(
-      `File must be smaller than ${Math.floor(LIMITS[purpose] / 1024 / 1024)} MB.`,
-    );
-  const bytes = new Uint8Array(await file.arrayBuffer()),
-    detected = detectType(bytes);
-  if (
-    !detected ||
-    !ALLOWED[purpose].includes(detected) ||
-    !ALLOWED[purpose].includes(file.type)
-  )
+  const file = form.get("file"), purpose = String(form.get("purpose") || "");
+  let prepared;
+  try {
+    prepared = await prepareCreatorListingFile(file, purpose);
+  } catch (error) {
     return json(
-      {
-        error: {
-          code: "creator_file_type_rejected",
-          message:
-            "The file contents and declared type must match an allowed PDF, WebP, PNG, or JPEG type.",
-        },
-      },
-      415,
+      { error: { code: error.code || "invalid_creator_file", message: error.message } },
+      error.status || 400,
     );
+  }
+  const { bytes, contentType: detected, normalizedFilename: name } = prepared;
   const id = crypto.randomUUID(),
-    name = normalizeFilename(file.name, detected),
     key = `creator-quarantine/${listing.creator_id}/${listing.id}/${id}/${name}`,
     now = new Date(
       Number.isFinite(options.nowMs) ? options.nowMs : Date.now(),
@@ -193,6 +178,21 @@ export async function handleCreatorFileUpload(
     201,
   );
 }
+export async function prepareCreatorListingFile(file, purpose) {
+  if (!(file instanceof File) || !CREATOR_FILE_TYPES[purpose])
+    throw fileError(400, "invalid_creator_file", "Choose a file and its purpose.");
+  if (file.size < 1 || file.size > CREATOR_FILE_LIMITS[purpose])
+    throw fileError(
+      400,
+      "invalid_creator_file",
+      `File must be smaller than ${Math.floor(CREATOR_FILE_LIMITS[purpose] / 1024 / 1024)} MB.`,
+    );
+  const bytes = new Uint8Array(await file.arrayBuffer()), contentType = detectType(bytes);
+  if (!contentType || !CREATOR_FILE_TYPES[purpose].includes(contentType) || !CREATOR_FILE_TYPES[purpose].includes(file.type))
+    throw fileError(415, "creator_file_type_rejected", "The file contents and declared type must match an allowed PDF, WebP, PNG, or JPEG type.");
+  return { bytes, contentType, normalizedFilename: normalizeFilename(file.name, contentType) };
+}
+function fileError(status, code, message) { const error = new Error(message); error.status = status; error.code = code; return error; }
 function detectType(b) {
   if (b.length >= 5 && String.fromCharCode(...b.slice(0, 5)) === "%PDF-")
     return "application/pdf";

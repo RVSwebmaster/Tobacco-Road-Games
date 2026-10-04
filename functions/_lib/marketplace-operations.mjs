@@ -2,6 +2,7 @@ import { runDueCreatorAudits } from "./creator-account-audits.mjs";
 import { recordManualPayout } from "./creator-finance.mjs";
 import { runPreferredBillingScheduler } from "./preferred-billing.mjs";
 import { reserveCreatorPayout } from "./creator-liability.mjs";
+import { refreshCreatorClosure } from "./creator-closure.mjs";
 
 const iso = (n = Date.now()) => new Date(n).toISOString();
 const rows = async (s) => (await s.all()).results || [];
@@ -751,6 +752,12 @@ export async function completePayout(
     { reference: String(reference) },
     now,
   );
+  if (request.request_kind === "account_closure")
+    await refreshCreatorClosure(db, {
+      creatorId: request.creator_id,
+      actorId,
+      nowMs,
+    });
   return { paid: true, externalTransferConfirmed: true };
 }
 

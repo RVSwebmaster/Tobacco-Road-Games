@@ -25,7 +25,7 @@ export async function correctCreatorServicePurchase(
   } = {},
 ) {
   if (!SERVICE_REFUND_REASONS.includes(reasonCategory))
-    throw new Error("An objective TRG-caused service correction reason is required.");
+    throw new Error("An objective Tobacco Road Games-caused service correction reason is required.");
   if (!String(reasonDetail || "").trim())
     throw new Error("Document the Tobacco Road Games billing or service error.");
   if (!/^svc_refund_[0-9a-f-]{36}$/i.test(String(idempotencyKey || "")))
@@ -63,7 +63,7 @@ export async function correctCreatorServicePurchase(
       statements = [];
     if (amount)
       statements.push(
-        db.prepare("INSERT INTO creator_balance_transactions(id,creator_id,user_id,transaction_type,amount_cents,currency,idempotency_key,description,created_at) VALUES(?,?,?,'operator_correction',?,? ,?,'TRG-caused Creator service correction',?)")
+        db.prepare("INSERT INTO creator_balance_transactions(id,creator_id,user_id,transaction_type,amount_cents,currency,idempotency_key,description,created_at) VALUES(?,?,?,'operator_correction',?,? ,?,'Tobacco Road Games-caused Creator service correction',?)")
           .bind(creditId, purchase.creator_id, purchase.user_id, amount, purchase.currency, `service-refund:${idempotencyKey}`, now),
       );
     statements.push(
@@ -128,8 +128,8 @@ function entitlementStatements(db, purchase, action, adjustment, key, now) {
     if (purchase.service_type === "additional_creator_identity_fee") return [db.prepare("UPDATE creator_identity_coverage_periods SET status='reversed' WHERE service_purchase_id=?").bind(purchase.id)];
     return [db.prepare("UPDATE preferred_billing_installments SET status='cancelled',updated_at=? WHERE service_purchase_id=?").bind(now, purchase.id), db.prepare("UPDATE preferred_billing_commitments SET billing_state='suspended',paid_through_at=(SELECT MAX(coverage_ends_at) FROM preferred_billing_installments WHERE commitment_id=preferred_billing_commitments.id AND status='paid'),updated_at=? WHERE id IN (SELECT commitment_id FROM preferred_service_charges WHERE service_purchase_id=?)").bind(now, purchase.id)];
   }
-  if (action === "reverse_ad_credits") return [db.prepare("INSERT INTO creator_ad_credit_ledger(creator_id,entry_type,quantity,idempotency_key,context_json,created_at) VALUES(?,'operator_adjustment',-?,?,?,?)").bind(purchase.creator_id, Number(adjustment.quantity), `service-refund-credit:${key}`, JSON.stringify({ servicePurchaseId: purchase.id, reason: "TRG-caused correction" }), now)];
-  if (action === "restore_ad_credits") return [db.prepare("INSERT INTO creator_ad_credit_ledger(creator_id,entry_type,quantity,idempotency_key,context_json,created_at) VALUES(?,'operator_adjustment',?,?,?,?)").bind(purchase.creator_id, Number(adjustment.quantity), `service-refund-credit:${key}`, JSON.stringify({ servicePurchaseId: purchase.id, reason: "TRG-caused slot-service correction" }), now)];
+  if (action === "reverse_ad_credits") return [db.prepare("INSERT INTO creator_ad_credit_ledger(creator_id,entry_type,quantity,idempotency_key,context_json,created_at) VALUES(?,'operator_adjustment',-?,?,?,?)").bind(purchase.creator_id, Number(adjustment.quantity), `service-refund-credit:${key}`, JSON.stringify({ servicePurchaseId: purchase.id, reason: "Tobacco Road Games-caused correction" }), now)];
+  if (action === "restore_ad_credits") return [db.prepare("INSERT INTO creator_ad_credit_ledger(creator_id,entry_type,quantity,idempotency_key,context_json,created_at) VALUES(?,'operator_adjustment',?,?,?,?)").bind(purchase.creator_id, Number(adjustment.quantity), `service-refund-credit:${key}`, JSON.stringify({ servicePurchaseId: purchase.id, reason: "Tobacco Road Games-caused slot-service correction" }), now)];
   return [db.prepare("UPDATE creator_ad_slots SET expires_at=datetime(expires_at,'+' || ? || ' days'),updated_at=? WHERE id=? AND creator_id=? AND slot_type='purchased'").bind(Number(adjustment.days), now, String(adjustment.slotId), purchase.creator_id)];
 }
 function correctionResult(row, idempotent) { return { correctionId: row.id, status: row.status, paymentSource: row.payment_source, refundAmountCents: Number(row.refund_amount_cents), stripeRefund: row.payment_source === "stripe" && Number(row.refund_amount_cents) > 0, stripeRefundId: row.stripe_refund_id || null, idempotent }; }

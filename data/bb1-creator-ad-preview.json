@@ -1,0 +1,32 @@
+[
+  {
+    "id": "witch-road",
+    "theme": "folk",
+    "creator": "Blackbriar Games",
+    "title": "THE WITCH ROAD",
+    "tagline": "A Folk Horror Roleplaying Game",
+    "secondaryCopy": "The old road still remembers your name.",
+    "callout": "NOW AVAILABLE",
+    "artwork": "/assets/images/bb1/witch-road-art.png"
+  },
+  {
+    "id": "starfall-frontier",
+    "theme": "frontier",
+    "creator": "Iron Lantern Press",
+    "title": "STARFALL FRONTIER",
+    "tagline": "Explore the Rim",
+    "secondaryCopy": "Broken worlds. Lost colonies. One more jump.",
+    "callout": "NEW RELEASE",
+    "artwork": "/assets/images/bb1/starfall-frontier-art.png"
+  },
+  {
+    "id": "goblin-bundle",
+    "theme": "goblin",
+    "creator": "Mud & Blood Games",
+    "title": "THE COMPLETE GOBLIN BUNDLE",
+    "tagline": "More Goblins Than Anyone Asked For",
+    "secondaryCopy": "Three books. Too many goblins. One regrettable price.",
+    "callout": "BUNDLE SALE",
+    "artwork": "/assets/images/bb1/goblin-bundle-art.png"
+  }
+]

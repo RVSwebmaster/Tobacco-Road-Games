@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 500" preserveAspectRatio="none">
+  <defs>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.18" numOctaves="3" seed="19" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 .18 0 0 0 0 .07 0 0 0 0 .025 .65 0 0 0 0"/>
+    </filter>
+    <pattern id="streaks" width="600" height="100" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="#391707" stroke-width="1.4" opacity=".22">
+        <path d="M-30 13C50 8 78 25 165 17S292 9 357 15 497 29 630 14"/>
+        <path d="M-30 23C78 17 96 38 180 25S296 17 365 24 519 34 630 22"/>
+        <path d="M-30 41C47 46 109 36 170 43S269 53 348 42 471 38 630 45"/>
+        <path d="M-30 58C70 48 102 59 178 57S316 68 376 59 514 51 630 61"/>
+        <path d="M-30 72C92 83 126 63 212 73S315 80 401 72 526 77 630 72"/>
+        <path d="M-30 91C65 83 145 96 217 88S324 92 406 88 542 98 630 90"/>
+      </g>
+      <g fill="none" stroke="#e0a263" stroke-width=".7" opacity=".16">
+        <path d="M-30 15C50 10 78 27 165 19S292 11 357 17 497 31 630 16"/>
+        <path d="M-30 60C70 50 102 61 178 59S316 70 376 61 514 53 630 63"/>
+        <path d="M-30 93C65 85 145 98 217 90S324 94 406 90 542 100 630 92"/>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="600" height="500" filter="url(#grain)" opacity=".55"/>
+  <rect width="600" height="500" fill="url(#streaks)"/>
+  <g fill="none" stroke="#3b1909" opacity=".16">
+    <ellipse cx="82" cy="154" rx="57" ry="10"/>
+    <ellipse cx="82" cy="154" rx="40" ry="6"/>
+    <ellipse cx="82" cy="154" rx="19" ry="3"/>
+    <ellipse cx="482" cy="341" rx="72" ry="12"/>
+    <ellipse cx="482" cy="341" rx="49" ry="8"/>
+    <ellipse cx="482" cy="341" rx="26" ry="4"/>
+  </g>
+</svg>

@@ -101,28 +101,70 @@
         const totals = document.createElement("p");
         totals.textContent = `Gross ${money(item.grossSalesCents)} · fees ${money(item.marketplaceFeesCents)} · unpaid ${money(item.unpaidBalanceCents)} · available ${money(item.availableBalanceCents)} · held ${money(ready?.providerHeldCents || item.onHoldCents)} · paid ${money(item.paidBalanceCents)}`;
         const state = document.createElement("p");
-        state.textContent = ready?.eligible
-          ? `Eligible for payout: ${money(ready.eligibleAmountCents)}.`
-          : `Blocked: ${(ready?.blockedReasons || ["Status unavailable."]).join(" ")}`;
+        state.textContent = ready
+          ? `Eligible funds ${money(ready.eligibleAmountCents)} · maximum ordinary payout ${money(ready.maximumOrdinaryPayoutCents)} · remaining after maximum payout ${money(ready.ordinaryPayoutRemainderCents)}. ${ready.eligible ? "Ready to record after the manual bank movement is complete." : `Blocked: ${ready.blockedReasons.join(" ")}`}`
+          : "Payout status unavailable.";
         const profile = document.createElement("p");
         profile.textContent = `Provider ${ready?.profile?.provider || "manual"} · account ${ready?.profile?.provider_account_reference || "not created"} · onboarding ${ready?.profile?.onboarding_status || "not started"} · verification ${ready?.profile?.verification_status || "unverified"} · transfers ${ready?.profile?.transfers_capability || "inactive"} · payouts ${ready?.profile?.payouts_enabled ? "enabled" : "disabled"} · requirements due ${ready?.profile?.requirements_due_count || 0}${item.lastPayout ? ` · last payout ${item.lastPayout.paid_at}` : ""}`;
         body.append(title, totals, state, profile);
-        if (ready?.eligible) body.append(payoutForm(item));
+        if ((ready?.profile?.provider || "manual") === "manual")
+          body.append(manualProfile(item, ready));
+        if (ready?.eligible) body.append(payoutForm(item, ready));
         card.append(body);
         return card;
       }
-      function payoutForm(item) {
+      function manualProfile(item, ready) {
+        const section = document.createElement("section"),
+          heading = document.createElement("h3"),
+          status = document.createElement("p");
+        heading.textContent = "Manual Payout Profile";
+        status.textContent = `Method manual · onboarding ${ready?.profile?.onboarding_status || "not started"} · verification ${ready?.profile?.verification_status || "unverified"} · payouts ${ready?.profile?.payouts_enabled ? "enabled" : "disabled"}.`;
+        section.append(heading, status);
+        if (!ready?.providerReady) {
+          const explanation = document.createElement("p"),
+            button = document.createElement("button");
+          explanation.textContent = "Enable this only for a Creator whose completed payouts will be moved and confirmed manually. This changes payout readiness, not Creator funds.";
+          button.className = "button button--secondary";
+          button.type = "button";
+          button.textContent = "Enable Manual Payout Bookkeeping";
+          button.onclick = async () => {
+            button.disabled = true;
+            try {
+              await mutate({
+                action: "update_payout_profile",
+                creatorId: item.id,
+                provider: "manual",
+                providerAccountReference:
+                  ready?.profile?.provider_account_reference || "",
+                onboardingStatus: "complete",
+                payoutsEnabled: true,
+                verificationStatus: "verified",
+                country: ready?.profile?.country || "US",
+                currency: ready?.profile?.currency || "USD",
+                operatorHoldReason: "",
+              });
+              await load();
+            } catch (error) {
+              status.textContent = error.message;
+              button.disabled = false;
+            }
+          };
+          section.append(explanation, button);
+        }
+        return section;
+      }
+      function payoutForm(item, ready) {
         const form = document.createElement("form");
         form.className = "account-form";
         form.innerHTML =
-          '<label>Amount in cents <input name="amount" type="number" min="1" required></label><label>External transfer reference <input name="reference" required maxlength="200"></label><label>Non-sensitive note <input name="note" maxlength="1000" autocomplete="off"></label><button class="button button--secondary">Record Completed Manual Payout</button>';
+          `<label>Amount in dollars <input name="amount" type="number" min="10" step="10" max="${ready.maximumOrdinaryPayoutCents / 100}" required></label><label>Manual transfer reference <input name="reference" required maxlength="200"></label><label>Non-sensitive note <input name="note" maxlength="1000" autocomplete="off"></label><button class="button button--secondary">Record Completed Manual Payout</button>`;
         form.onsubmit = async (event) => {
           event.preventDefault();
           const data = new FormData(form);
           await mutate({
             action: "record_payout",
             creatorId: item.id,
-            amountCents: Number(data.get("amount")),
+            amountCents: Math.round(Number(data.get("amount")) * 100),
             currency: "USD",
             reference: data.get("reference"),
             note: data.get("note"),

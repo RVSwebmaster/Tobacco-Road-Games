@@ -1,0 +1,45 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const ROOT = path.resolve(__dirname, "..");
+const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
+
+const page = read("store/index.html"), css = read("styles.css"), storefront = read("assets/js/storefront.js"), sponsor = read("assets/js/sponsor-marquee.js"), rotation = read("functions/_lib/ad-rotation.mjs"), middleware = read("functions/_middleware.js"), build = read("scripts/build-store.js");
+assert.match(page, /styles\.css\?v=20260908-shelf-baseline5/); assert.match(page, /storefront\.js\?v=20260908-shelf-baseline5/);
+const order = ["id=\"shop-window\"", "id=\"browse-by-path\"", "class=\"sponsor-marquee", "id=\"new-this-week-heading\"", "id=\"best-sellers\"", "id=\"open-rules-pwyw\"", "id=\"product-lines\"", "id=\"creator-feature\"", "id=\"find-the-right-game\"", "id=\"back-room\"", "id=\"lower-shop\""];
+for (let index = 1; index < order.length; index += 1) assert.ok(page.indexOf(order[index - 1]) < page.indexOf(order[index]), `${order[index - 1]} must precede ${order[index]}.`);
+const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]); assert.equal(new Set(ids).size, ids.length, "Storefront section IDs must remain unique.");
+for (const id of ["new-this-week-heading", "best-sellers-shelf-heading", "open-rules-shelf-heading", "pwyw-free-shelf-heading", "product-lines-heading", "creator-feature-heading", "search-results-heading", "back-room-heading", "store-information-heading"]) assert.ok(ids.includes(id), `Missing required storefront structure: ${id}`);
+assert.match(page, />New This Week</); assert.doesNotMatch(page, /New Arrivals/);
+assert.match(page, /No eligible new releases are on the public shelf yet/); assert.match(page, /No public product lines are available yet/); assert.match(page, /No eligible Creator feature is selected yet/);
+assert.doesNotMatch(page, /legacy-not-for-sale|retired/);
+assert.match(build, /function renderStorefrontShopWindow/); assert.match(build, /function renderStorefrontBrowseByPath/); assert.match(build, /function renderStorefrontSponsorMarquee/); assert.match(build, /function renderStorefrontNewThisWeek/); assert.match(build, /function renderStorefrontBestSellers/); assert.match(build, /function renderStorefrontOpenRulesAndPwyw/); assert.match(build, /function renderStorefrontProductLines/); assert.match(build, /function renderStorefrontCreatorFeature/); assert.match(build, /function renderStorefrontCatalogEntry/); assert.match(build, /function renderStorefrontBackRoom/); assert.match(build, /function renderStorefrontLowerShop/);
+assert.match(build, /bookshelf-book__spine/); assert.match(build, /bookshelf-book__cover-frame/); assert.match(build, /bookshelf-book__details/); assert.match(build, /loading="lazy" decoding="async"/);
+assert.match(build, /bookshelf-book__badges/); assert.match(build, /bookshelf-book__creator/); assert.match(build, /bookshelf-book__publisher/); assert.match(build, /bookshelf-book__price/); assert.match(build, /const examinationMeta/);
+assert.match(build, /data-spine-width/); assert.match(build, /data-spine-source/); assert.match(build, /page-count/); assert.match(build, /catalog-fallback/); assert.match(build, /Math\.log1p/); assert.doesNotMatch(build, /file.*size.*spine|byte.*spine/i);
+assert.match(page, /data-search-results="true"/); assert.match(storefront, /Search Results —/); assert.match(storefront, /api\/discovery-labels/); assert.doesNotMatch(storefront, /best.?sell.*sort/i);
+const headerOrder = ["Explore", "Community Forum", "Creators", "Creator Login / Sign Up", "AI Policy", "Support", "Join / Sign In", "Cart"];
+const publicHeaderNav = page.match(/<nav class="site-nav"[\s\S]*?<\/nav>/)?.[0] || "";
+for (let index = 1; index < headerOrder.length; index += 1) assert.ok(publicHeaderNav.indexOf(`>${headerOrder[index - 1]}`) < publicHeaderNav.indexOf(`>${headerOrder[index]}`), `Public header must keep ${headerOrder[index - 1]} before ${headerOrder[index]}.`);
+for (const [key, href] of [["explore", "/store/catalog/"], ["forum", "/forum"], ["creators", "/authors.html"], ["creator-login", "/creator/"], ["ai-policy", "/ai-policy.html"], ["support", "/support.html"], ["account", "/account.html"], ["cart", "/store/cart/"]]) {
+  assert.match(publicHeaderNav, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `Store header must preserve ${key} navigation.`);
+}
+assert.doesNotMatch(publicHeaderNav, /Marketplace|New This Week|Sales & Bundles|Physical Goods|About Tobacco Road Games|Search games, Creators, or keywords/);
+assert.match(page, /Search the catalog by title, Creator, system, series, or tag/); assert.match(page, /data-cart-count/); assert.match(page, /Account &amp; Library/); assert.match(page, /Creator Resources/);
+assert.match(page, /Books Worth Pulling From the Shelf/); assert.match(page, /Independent tabletop games, supplements, adventures, and tools from Creators worth discovering/); assert.match(page, /storefront-empty-shelf/); assert.match(page, /No published marketplace books are currently on the front shelf/);
+assert.match(css, /Storefront remodel Phase 2/); assert.match(css, /--store-header-height:86px/); assert.match(css, /\.sponsor-marquee\{position:sticky;top:var\(--store-header-height\)/);
+assert.match(css, /storefront-browse-paths \.storefront-path-grid/); assert.match(css, /storefront-browse-paths \.storefront-path-card/);
+assert.match(sponsor, /target = "_blank"/); assert.match(sponsor, /noopener noreferrer sponsored/); assert.match(sponsor, /mouseenter/); assert.match(sponsor, /focusin/); assert.match(sponsor, /prefers-reduced-motion/); assert.match(sponsor, /log\(item, "click"\)/);
+assert.match(rotation, /pool === "sponsor-marquee"/); assert.match(rotation, /vendor_sponsor','event/); assert.match(middleware, /pathname!==['"]\/store\/['"]/);
+assert.ok(JSON.parse(read("_routes.json")).include.includes("/api/ad-rotation"));
+assert.match(css, /position:sticky;top:var\(--store-header-height\)/); assert.match(css, /scroll-snap-type:x proximity/); assert.match(css, /prefers-reduced-motion:reduce/); assert.match(storefront, /pointer: coarse/); assert.match(storefront, /event\.preventDefault\(\)/);
+assert.match(storefront, /openExamination/); assert.match(storefront, /--examination-x/); assert.match(storefront, /--examination-y/); assert.match(storefront, /presentationRect/); assert.match(storefront, /inTransitZone/); assert.match(storefront, /bookshelf-book__placeholder/); assert.match(storefront, /phase: reducedMotionQuery\.matches \? "foreground-ready" : "traveling"/); assert.match(storefront, /phase = "foreground"/); assert.match(storefront, /transitionend/); assert.match(storefront, /book\.addEventListener\("click"/); assert.match(storefront, /book\.addEventListener\("keydown"/); assert.match(storefront, /event\.key !== "Enter" && event\.key !== " "/); assert.match(storefront, /pointermove/); assert.match(storefront, /activeExamination\?\.mode === "keyboard" && activeExamination\.phase === "traveling"/); assert.doesNotMatch(storefront, /pointerenter/);
+assert.match(storefront, /book\.click\(\)/); assert.match(storefront, /state\.book\.setAttribute\("aria-expanded", "false"\)/); assert.match(storefront, /book\.setAttribute\("aria-expanded", "true"\)/);
+assert.doesNotMatch(storefront, /requestAnimationFrame\(\(\) => requestAnimationFrame/);
+assert.match(css, /\.bookshelf-book__placeholder/); assert.match(css, /\.bookshelf-book\.is-examining\{position:fixed/); assert.match(css, /translate3d\(var\(--examination-x,0\),var\(--examination-y,0\),40px\)/); assert.match(css, /\.is-examining\.is-returning/); assert.match(css, /right:50%;left:auto/); assert.match(css, /left:calc\(50% \+ 16px\)/); assert.match(css, /body\.book-examination-active \.shelf-storefront::before/);
+assert.doesNotMatch(css, /--left-edge-compensation/); assert.doesNotMatch(css, /\.bookshelf-book\.is-open/); assert.doesNotMatch(storefront, /consistentLeftPopout|classList\.contains\("is-open"\)/);
+assert.match(css, /\.shelf-storefront \.bookshelf-grid\{position:relative;display:flex;align-items:flex-end/); assert.doesNotMatch(css, /--book-lift|translateY\(calc\(\(var\(--book-lift/); assert.doesNotMatch(css, /\.bookshelf-book:hover \.bookshelf-book__details|:hover \.bookshelf-book__cover-frame/);
+assert.match(css, /\.bookshelf-book:focus-visible\s*\{[^}]*outline:\s*2px solid rgba\(242,\s*216,\s*170,\s*0\.82\)/);
+assert.doesNotMatch(css, /\.bookshelf-book:focus-visible\s*\{[^}]*outline:\s*none/);
+assert.doesNotMatch(page, /href="\/store\/products\/[^"]+\/"/); assert.doesNotMatch(page, /data-cart-add=/); assert.doesNotMatch(page, /data-ad-pool="public"/);
+console.log("TRG shelf storefront design tests passed.");

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Bric-a-Brac | RV's Owner Dashboard</title>
+  <link rel="stylesheet" href="/styles.css?v=20261002-shelf-curios1">
+  <style>
+    .curio-owner-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 24px 0; }
+    .curio-owner-scroll { overflow-x: auto; }
+    .curio-owner-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .curio-owner-table th, .curio-owner-table td { padding: 12px 10px; border-bottom: 1px solid rgba(242,216,170,.18); text-align: left; }
+    .curio-owner-table td { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body class="view-section">
+  <header class="site-header"><div class="page-shell site-header__inner"><a class="brand" href="/owner/"><span class="brand__text">RV's Owner Dashboard</span></a><nav class="site-nav" aria-label="Owner navigation"><a href="/owner/">Dashboard</a><a href="/" target="_blank" rel="noopener">View Site</a><a href="/owner/logout">Log Out</a></nav></div></header>
+  <main class="page-shell"><section class="store-section" aria-labelledby="curio-heading">
+    <h1 id="curio-heading">Bric-a-Brac</h1>
+    <div class="curio-owner-toolbar"><button class="button button--secondary" type="button" data-curio-reset disabled>Reset Original Arrangement</button><span data-curio-counts></span></div>
+    <p data-curio-owner-status role="status" aria-live="polite">Loading...</p>
+    <h2>Current Arrangement</h2>
+    <div class="curio-owner-scroll"><table class="curio-owner-table"><thead><tr><th scope="col">Curio</th><th scope="col">Shelf</th><th scope="col">Position</th><th scope="col">Revision</th></tr></thead><tbody data-curio-arrangement></tbody></table></div>
+    <h2>Recent Activity</h2>
+    <div class="curio-owner-scroll"><table class="curio-owner-table"><thead><tr><th scope="col">Time</th><th scope="col">Curio</th><th scope="col">Participant</th><th scope="col">Action</th><th scope="col">From</th><th scope="col">To</th></tr></thead><tbody data-curio-activity></tbody></table></div>
+  </section></main>
+  <script src="/assets/js/owner-curios.js?v=20261002-shelf-curios1" defer></script>
+</body>
+</html>

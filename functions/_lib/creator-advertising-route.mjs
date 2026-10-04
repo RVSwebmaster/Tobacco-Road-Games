@@ -15,6 +15,8 @@ import {
 import { purchaseServiceWithCreatorBalance } from "./creator-service-purchases.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
 import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
+import { getCreatorInternalPurchasePrivilege } from "./creator-internal-purchase-policy.mjs";
+import { resolveCreatorMembershipIdentity } from "./creator-identity-selection.mjs";
 export async function handleCreatorAdvertisingRequest(
   request,
   env = {},
@@ -31,14 +33,30 @@ export async function handleCreatorAdvertisingRequest(
       { error: { message: "Sign in to access advertising tools." } },
       401,
     );
-  const creator = await db
-    .prepare(
-      "SELECT c.*,cm.permission,u.email_normalized contact_email FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id JOIN users u ON u.id=cm.user_id WHERE cm.user_id=? AND c.marketplace_status='approved' LIMIT 1",
-    )
+  const requestedCreator = new URL(request.url).searchParams.get("creator"),
+    selection = await resolveCreatorMembershipIdentity(db, {
+      userId: session.user.id,
+      requestedCreator,
+    }),
+    creator = selection.creator;
+  if (!creator)
+    return json(
+      {
+        error: {
+          message: selection.ambiguous
+            ? "Choose the Creator identity you want to operate."
+            : "Creator access is unavailable.",
+        },
+      },
+      selection.ambiguous ? 409 : 403,
+    );
+  if (creator.marketplace_status !== "approved")
+    return json({ error: { message: "Creator access is unavailable." } }, 403);
+  const contact = await db
+    .prepare("SELECT email_normalized FROM users WHERE id=?")
     .bind(session.user.id)
     .first();
-  if (!creator)
-    return json({ error: { message: "Creator access is unavailable." } }, 403);
+  creator.contact_email = contact?.email_normalized || "";
   const readiness = await getCreatorOperationalEligibility(db, creator.id, {
     markInitialCompletion: true,
     nowMs: options.nowMs,
@@ -55,7 +73,12 @@ export async function handleCreatorAdvertisingRequest(
       },
       403,
     );
-  if (request.method === "GET")
+  if (request.method === "GET") {
+    const privilege = await getCreatorInternalPurchasePrivilege(db, {
+      creatorId: creator.id,
+      userId: session.user.id,
+      nowMs: options.nowMs,
+    });
     return json({
       ...(await getAdvertising(db, creator.id, { nowMs: options.nowMs })),
       creatorBalance: await getCreatorBalance(db, {
@@ -63,7 +86,9 @@ export async function handleCreatorAdvertisingRequest(
         userId: session.user.id,
         nowMs: options.nowMs,
       }),
+      internalPurchase: { canUseBalance: Boolean(privilege.allowed && readiness.eligible) },
     });
+  }
   if (
     !validateSameOriginRequest(request) ||
     !(await validateSessionCsrf(request, session)).valid
@@ -89,6 +114,11 @@ export async function handleCreatorAdvertisingRequest(
         201,
       );
     const body = await request.json();
+    if (["activate_included", "redeem_credit", "reassign"].includes(body.action)) {
+      const held = await db.prepare("SELECT l.owner_review_hold FROM creator_ad_creatives c JOIN creator_listings l ON l.id=c.listing_id WHERE c.id=? AND c.creator_id=?").bind(String(body.creativeId || ""), creator.id).first();
+      if (Number(held?.owner_review_hold) === 1)
+        throw new Error("A listing on Owner Review Hold cannot be promoted.");
+    }
     if (body.action === "activate_included")
       return json({
         ok: true,

@@ -14,19 +14,24 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
+const STOREFRONT_CACHE_BUST = "20261003-dice-endcap1";
+const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
+const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bb1-creator-ad-preview.json"), "utf8"));
+const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
+const NEWS_CHYRON_CACHE_BUST = "20261001-news-chyron1";
+const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
 const CREATOR_TEMPLATES = new Set(["bookshelf", "catalog"]);
 const PUBLIC_NAV_ITEMS = Object.freeze([
-  { key: "store", href: "/store/", label: "Marketplace" },
+  { key: "explore", href: "/store/catalog/", label: "Explore" },
+  { key: "forum", href: "/forum", label: "Community Forum" },
   { key: "creators", href: "/authors.html", label: "Creators" },
-  { key: "releases", href: "/store/#new-releases-bookshelf-heading", label: "New Releases" },
-  { key: "sales", href: "/store/catalog/", label: "Sales & Bundles" },
-  { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
-  { key: "forum", href: "/forum", label: "Community" },
-  { key: "about", href: "/#about", label: "About TRG" },
-  { key: "account", href: "/account.html", label: "Account / My Library" },
+  { key: "creator-login", href: "/creator/", label: "Creator Login / Sign Up" },
+  { key: "ai-policy", href: "/ai-policy.html", label: "AI Policy" },
+  { key: "support", href: SUPPORT_URL, label: "Support" },
+  { key: "account", href: "/account.html", label: "Join / Sign In" },
   { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
 ]);
 const MARKETPLACE_METADATA_ENUMS = Object.freeze({
@@ -73,9 +78,10 @@ function main() {
   const authors = loadAuthors();
   const authorLookup = buildAuthorLookup(authors);
   const products = loadProducts(authorLookup);
+  const publicCatalogProducts = products.filter(isCatalogBrowsable);
   const assetWarnings = collectAssetWarnings(products);
   const bundleRules = loadBundleRules();
-  const indexes = buildIndexes(products, authors.filter((creator) => creator.marketplaceStatus === "active"));
+  const indexes = buildIndexes(publicCatalogProducts, authors.filter((creator) => creator.marketplaceStatus === "active"));
 
   fs.rmSync(STORE_DIR, { recursive: true, force: true });
   fs.mkdirSync(STORE_DIR, { recursive: true });
@@ -109,15 +115,16 @@ function main() {
     }));
   }
 
-  writeFile("store/index.html", renderStoreHome(products, indexes));
-  writeFile("store/catalog/index.html", renderCatalogPage(products, indexes));
-  writeFile("store/cart/index.html", renderCartPage(products));
+  writeFile("store/index.html", renderShelfStoreHome(publicCatalogProducts, indexes));
+  writeFile("store/catalog/index.html", renderCatalogPage(publicCatalogProducts, indexes));
+  writeFile("store/cart/index.html", renderCartPage(publicCatalogProducts));
+  writeFile("ai-policy.html", renderAiPolicyPage());
 
   for (const product of products) {
-    writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, products));
+    writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, publicCatalogProducts));
   }
 
-  buildHomepage(products, indexes, bundleRules);
+  buildHomepage(publicCatalogProducts, indexes, bundleRules);
   buildAccountPage();
   buildStaticPublicPage("support.html", "");
 
@@ -187,12 +194,12 @@ function main() {
 
   writeFile(
     "store/bundles/bundle-what-you-want/index.html",
-    renderBundlePlanningPage(bundleRules, products)
+    renderBundlePlanningPage(bundleRules, publicCatalogProducts)
   );
-  writeFile("store/sitemap.xml", renderStoreSitemap(products, indexes, bundleRules));
+  writeFile("store/sitemap.xml", renderStoreSitemap(publicCatalogProducts, indexes, bundleRules));
   writeFile("sitemap.xml", renderRootSitemap(indexes.authors));
 
-  console.log(`Storefront generated for ${products.length} products.`);
+  console.log(`Storefront generated for ${publicCatalogProducts.length} active products; ${products.length - publicCatalogProducts.length} historical records retained as direct pages.`);
   if (assetWarnings.length) {
     console.log(`Asset cleanup needed for ${assetWarnings.length} product${assetWarnings.length === 1 ? "" : "s"}:`);
     for (const warning of assetWarnings) {
@@ -566,7 +573,7 @@ function renderCatalogPage(products, indexes) {
     canonicalPath: "/store/catalog/",
     ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST, "/assets/js/discovery-labels.js"],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
       description: "Search and browse Tobacco Road Games titles by creator, game system, product line, series, release status, and title.",
@@ -684,6 +691,7 @@ function renderProductPage(product, products) {
     canonicalPath: product.url,
     ogImage: product.assetSet.cover,
     currentNav: "store",
+    extraScripts: ["/assets/js/discovery-labels.js"],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Store", href: "/store/" },
@@ -709,7 +717,7 @@ function renderProductPage(product, products) {
             <p class="section-heading__kicker">${escapeHtml(product.gameSystem)}</p>
             <h1 id="product-title">${escapeHtml(product.title)}</h1>
             <p class="product-subtitle">${escapeHtml(product.subtitle)}</p>
-            ${authorByline ? `<p class="product-byline">${authorByline}</p>` : ""}
+            ${authorByline ? `<p class="product-byline">${authorByline}</p><div class="creator-reputation creator-reputation--listing" data-creator-reputation="${escapeAttribute(product.authorSlugs[0] || "")}" data-reputation-view="compact" aria-live="polite"></div>` : ""}
             <div class="product-hero__meta">
               ${heroMetaItems.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
             </div>
@@ -852,20 +860,24 @@ function renderLayout({
   currentNav,
   structuredData,
   extraScripts = [],
+  assetVersion = CACHE_BUST,
+  brandLogo = "/assets/logo.png",
+  brandTag = "",
   metaRobots = "",
+  navItems = PUBLIC_NAV_ITEMS,
   content
 }) {
   const canonicalUrl = `${BASE_URL}${canonicalPath}`;
   const resolvedOgImage = `${BASE_URL}${ogImage || "/assets/logo.png"}`;
-  const nav = renderStoreNav(currentNav);
+  const nav = renderStoreNav(currentNav, navItems);
   const structuredDataBlocks = Array.isArray(structuredData)
     ? structuredData.filter(Boolean)
     : structuredData
       ? [structuredData]
       : [];
   const scriptSources = Array.from(new Set([
-    `/assets/js/store-status.js?v=${CACHE_BUST}`,
-    `/assets/js/cart.js?v=${CACHE_BUST}`,
+    `/assets/js/store-status.js?v=${assetVersion}`,
+    `/assets/js/cart.js?v=${assetVersion}`,
     ...extraScripts
   ]));
 
@@ -885,8 +897,8 @@ function renderLayout({
   <meta property="og:image" content="${escapeAttribute(resolvedOgImage)}">
   <meta name="theme-color" content="#120c08">
   ${metaRobots ? `<meta name="robots" content="${escapeAttribute(metaRobots)}">` : ""}
-  <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
-  <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
+  <link rel="icon" type="image/png" href="${escapeAttribute(brandLogo)}?v=${assetVersion}">
+  <link rel="stylesheet" href="/styles.css?v=${assetVersion}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
   ${scriptSources.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
@@ -894,10 +906,10 @@ function renderLayout({
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="/" aria-label="Tobacco Road Games home">
-        <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
+        <img class="brand__logo" src="${escapeAttribute(brandLogo)}?v=${assetVersion}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Publisher-owned store and workshop catalog</span>
+          ${brandTag ? `<span class="brand__tag">${escapeHtml(brandTag)}</span>` : ""}
         </div>
       </a>
 
@@ -908,18 +920,173 @@ function renderLayout({
 
     <footer class="site-footer">
       <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">
-        <img src="/assets/logo.png?v=${CACHE_BUST}" alt="">
+        <img src="${escapeAttribute(brandLogo)}?v=${assetVersion}" alt="">
       </a>
       <p>&copy; 2026 Tobacco Road Games.</p>
       <p>A marketplace for independent creators, operated by Tobacco Road Games.</p>
     </footer>
   </div>
 </body>
-</html>`;
+</html>`.replace(/[ \t]+$/gm, "");
 }
 
-function renderStoreNav(currentNav) {
-  return renderSharedPublicNav(currentNav, "Store navigation");
+function renderStoreNav(currentNav, navItems = PUBLIC_NAV_ITEMS) {
+  return renderSharedPublicNav(currentNav, "Primary", navItems);
+}
+
+function renderShelfStoreHome(products, indexes) {
+  const home = buildStorefrontHomeModel(products, indexes);
+  return renderLayout({
+    pageTitle: `${STORE_TITLE} | Independent Tabletop Marketplace`,
+    description: "Browse independent tabletop games on the Tobacco Road Games shelf storefront.",
+    canonicalPath: "/store/",
+    ogImage: home.openRules[0]?.assetSet.cover || "/assets/logo.png",
+    currentNav: "store",
+    assetVersion: STOREFRONT_CACHE_BUST,
+    brandLogo: "/assets/tobacco-road-games-logo.png",
+    brandTag: "",
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
+    structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
+    content: `
+      <main id="top" class="shelf-storefront">
+        ${renderStorefrontShopWindow(home)}
+        ${renderStorefrontBrowseByPath(home)}
+        ${renderStorefrontSponsorMarquee()}
+        ${renderStorefrontNewThisWeek(home)}
+        ${renderStorefrontBestSellers(home)}
+        ${renderStorefrontOpenRulesAndPwyw(home)}
+        ${renderStorefrontProductLines(home)}
+        ${renderStorefrontCreatorFeature(home)}
+        ${renderStorefrontCatalogEntry(home)}
+        ${renderStorefrontBackRoom(home)}
+        ${renderStorefrontLowerShop()}
+      </main>`
+  }).replace(/[ \t]+$/gm, "");
+}
+
+function buildStorefrontHomeModel(products, indexes) {
+  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
+  const openRules = products.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 12);
+  const newThisWeek = chooseNewReleases(eligible).slice(0, 12);
+  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
+  const creatorFeature = indexes.authors.find((author) => author.products.length > 0) || null;
+
+  return { products, indexes, eligible, openRules, newThisWeek, pwywFree, creatorFeature };
+}
+
+function renderStorefrontShopWindow({ eligible }) {
+  const featured = eligible[0] || null;
+  return `
+        <header class="store-welcome storefront-shop-window" id="shop-window" aria-labelledby="store-home-heading">
+          <div class="storefront-shop-window__copy">
+            <p class="section-heading__kicker">Independent tabletop marketplace</p>
+            <h1 id="store-home-heading">Books Worth Pulling From the Shelf</h1>
+            <p>Independent tabletop games, supplements, adventures, and tools from Creators worth discovering.</p>
+            <div class="storefront-shop-window__actions" aria-label="Start browsing">
+              <a class="button button--primary" href="#browse-by-path">Browse the Shop</a>
+              <a class="button button--secondary" href="#search-results-heading">Find the Right Game</a>
+            </div>
+          </div>
+          <aside class="storefront-shop-window__display" aria-label="Featured shelf display">
+            ${featured ? `
+            <a class="storefront-feature-book" href="${escapeAttribute(featured.url)}">
+              <span class="storefront-feature-book__eyebrow">On the front shelf</span>
+              <strong>${escapeHtml(featured.title)}</strong>
+              <span>${escapeHtml(featured.authors.join(", ") || featured.publisher || "Tobacco Road Games")}</span>
+            </a>` : `
+            <div class="storefront-empty-shelf" aria-label="No published marketplace books are currently on the front shelf">
+              <span class="storefront-empty-shelf__book"></span>
+              <span class="storefront-empty-shelf__book"></span>
+              <span class="storefront-empty-shelf__book"></span>
+              <p>The front shelf is ready for the first published marketplace books.</p>
+            </div>`}
+          </aside>
+        </header>`;
+}
+
+function renderStorefrontBrowseByPath({ indexes }) {
+  const supportedPaths = [
+    { id: "free-pwyw", label: "Free / PWYW", note: "No-cost and pay-what-you-want listings when eligible.", href: "#pwyw-free-shelf-heading", active: true },
+    { id: "open-rules", label: "Open Rules", note: "Tobacco Road Games house rules and table tools.", href: "#open-rules-shelf-heading", active: true },
+    { id: "system-neutral", label: "System Neutral", note: "A catalog path reserved for matching metadata.", href: "#search-results-heading", active: indexes.systems.some((entry) => /system neutral/i.test(entry.name)) }
+  ];
+
+  return `
+        <section class="store-section storefront-browse-paths" id="browse-by-path" aria-labelledby="browse-by-path-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Guided discovery</p><h2 id="browse-by-path-heading">Browse by Your Path</h2><p>Start with safe, existing catalog signals. Inactive paths are structural placeholders until matching metadata exists.</p></div>
+          <nav class="browse-card-grid storefront-path-grid" aria-label="Browse by your path">
+            ${supportedPaths.map((path) => path.active ? `<a class="browse-card storefront-path-card" data-storefront-path="${escapeAttribute(path.id)}" href="${escapeAttribute(path.href)}"><strong>${escapeHtml(path.label)}</strong><span>${escapeHtml(path.note)}</span></a>` : `<span class="browse-card storefront-path-card is-inactive" data-storefront-path="${escapeAttribute(path.id)}" aria-disabled="true"><strong>${escapeHtml(path.label)}</strong><span>${escapeHtml(path.note)}</span></span>`).join("")}
+          </nav>
+        </section>`;
+}
+
+function renderStorefrontSponsorMarquee() {
+  return `
+        <aside class="sponsor-marquee storefront-sponsor-band" id="sponsor-marquee-band" data-sponsor-marquee data-ad-pool="sponsor-marquee" aria-label="Paid sponsors" hidden>
+          <span class="sponsor-marquee__label">Paid Sponsors</span><div class="sponsor-marquee__viewport"><div class="sponsor-marquee__track" data-sponsor-track></div></div>
+        </aside>`;
+}
+
+function renderStorefrontNewThisWeek({ newThisWeek }) {
+  return renderBookshelfSection({ id: "new-this-week-heading", kicker: "Just unpacked", title: "New This Week", description: "Recently released, currently eligible books in canonical marketplace order.", products: newThisWeek, centerExamination: true, emptyMessage: "No eligible new releases are on the public shelf yet." });
+}
+
+function renderStorefrontBestSellers({ eligible }) {
+  return `
+        <section class="store-section discovery-bookshelf storefront-best-sellers" id="best-sellers" data-canonical-discovery-shelf="best_selling" aria-labelledby="best-sellers-shelf-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Customer demand</p><h2 id="best-sellers-shelf-heading">Best Sellers</h2><p>Shown only when current marketplace discovery data awards the Best Selling label.</p></div>
+          <div class="bookshelf-grid" style="--shelf-items: ${Math.max(1, eligible.length)}">${eligible.map((product) => renderBookshelfBook(product, { withDataset: true, centerExamination: true })).join("")}</div>
+          <p class="shelf-empty" data-discovery-empty hidden>No current title meets the public Best Seller threshold.</p>
+        </section>`;
+}
+
+function renderStorefrontOpenRulesAndPwyw({ openRules, pwywFree }) {
+  return `
+        <section class="storefront-discovery-pair" id="open-rules-pwyw" aria-labelledby="open-rules-pwyw-heading">
+          <div class="section-heading storefront-discovery-pair__heading"><p class="section-heading__kicker">House tables</p><h2 id="open-rules-pwyw-heading">Open Rules + Pay What You Want</h2><p>Two independent discovery destinations, grouped for the later shop-table treatment.</p></div>
+          ${renderBookshelfSection({ id: "open-rules-shelf-heading", kicker: "The house shelf", title: "Open Rules", description: "Rules, settings, and table tools published by Tobacco Road Games.", products: openRules, centerExamination: true, emptyMessage: "No Open Rules titles are currently eligible for public browsing." })}
+          ${renderBookshelfSection({ id: "pwyw-free-shelf-heading", kicker: "Choose your price", title: "Pay What You Want", description: "Current pay-what-you-want and no-cost titles; acquisition rules are unchanged.", products: pwywFree, centerExamination: true, emptyMessage: "No pay-what-you-want or free titles are currently eligible for public browsing." })}
+        </section>`;
+}
+
+function renderStorefrontProductLines({ indexes }) {
+  return `
+        <section class="store-section storefront-product-lines" id="product-lines" aria-labelledby="product-lines-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Departments</p><h2 id="product-lines-heading">Product Lines</h2><p>Existing product-line routes remain the source of truth for miniature departments.</p></div>
+          ${indexes.lines.length ? `<div class="browse-card-grid">${indexes.lines.map((entry) => renderBrowseCard(entry.name, `${entry.products.length} title${entry.products.length === 1 ? "" : "s"}`, `/store/lines/${entry.slug}/`)).join("")}</div>` : `<p class="shelf-empty">No public product lines are available yet.</p>`}
+        </section>`;
+}
+
+function renderStorefrontCreatorFeature({ creatorFeature }) {
+  return `
+        <section class="store-section storefront-creator-feature" id="creator-feature" aria-labelledby="creator-feature-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Creator shelf</p><h2 id="creator-feature-heading">Featured Creator</h2><p>A generic feature slot for eligible marketplace Creators.</p></div>
+          ${creatorFeature ? `<a class="browse-card storefront-creator-card" href="${escapeAttribute(creatorFeature.url)}"><strong>${escapeHtml(creatorFeature.name)}</strong><span>${escapeHtml(creatorFeature.shortBio || creatorFeature.title || "Explore this Creator's public catalog.")}</span></a>` : `<p class="shelf-empty">No eligible Creator feature is selected yet.</p>`}
+        </section>`;
+}
+
+function renderStorefrontCatalogEntry({ products, indexes }) {
+  return `
+        <section class="store-section search-shelves storefront-catalog-entry" id="find-the-right-game" data-search-results-section aria-labelledby="search-results-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Find the right game</p><h2 id="search-results-heading" data-search-results-heading>Search Results</h2><p data-search-results-prompt>Search the catalog by title, Creator, system, series, or tag.</p></div>
+          ${renderStoreBrowser(products, indexes, { browserId: "store-search-browser", showShelf: true, centerExamination: true, defaultSort: "title", countLabel: "matching titles", shelfHeading: "Search shelf", shelfDescription: "Matching books continue onto additional shelf rows.", gridHeading: "Accessible catalog view", gridDescription: "The same canonical results in a compact list." }).replace('data-store-browser="store-search-browser"', 'data-store-browser="store-search-browser" data-search-results="true"')}
+        </section>`;
+}
+
+function renderStorefrontBackRoom() {
+  return `
+        <section class="store-section storefront-back-room" id="back-room" aria-labelledby="back-room-heading">
+          <div class="section-heading"><p class="section-heading__kicker">Back room</p><h2 id="back-room-heading">Community and Creator resources</h2><p>Current routes for discussion, Creator tools, announcements, and support.</p></div>
+          <nav class="browse-card-grid" aria-label="Back room links"><a class="browse-card" href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a class="browse-card" href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a class="browse-card" href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a class="browse-card" href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a></nav>
+        </section>`;
+}
+
+function renderStorefrontLowerShop() {
+  return `
+        <section class="store-lower storefront-lower-shop" id="lower-shop" aria-labelledby="store-information-heading">
+          <div class="store-lower__intro"><p class="section-heading__kicker">Lower shop</p><h2 id="store-information-heading">Information, help, and account links</h2><p>Legal, support, library, and cart destinations remain available below the discovery floor.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
+          <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/store/catalog/"><strong>Full Catalog</strong><span>Open the serious search and filter view.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/support.html"><strong>Support</strong><span>Customer support and accessibility help.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
+        </section>`;
 }
 
 function validateMarketplaceMetadata(product) {
@@ -943,50 +1110,271 @@ function validateMarketplaceMetadata(product) {
 
 function buildHomepage(products, indexes, bundleRules) {
   const homepagePath = path.join(ROOT, "index.html");
-  const configPath = path.join(ROOT, "data", "homepage.json");
-  if (!fs.existsSync(homepagePath) || !fs.existsSync(configPath)) return;
-  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-  const productMap = new Map(products.map((product) => [product.slug, product]));
-  const selected = (Array.isArray(config.workInProgressSlugs) ? config.workInProgressSlugs : [])
-    .map((slug) => productMap.get(slug))
-    .filter(Boolean);
-  const cards = selected.length
-    ? selected.map((product) => `        <article class="workshop-card">
-          <div class="workshop-card__media">
-            <img src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover">
-          </div>
-          <div class="workshop-card__copy">
-            <p class="workshop-card__label">${escapeHtml(product.statusLabel)}</p>
-            <h3>${escapeHtml(product.title)}</h3>
-            <p>${escapeHtml(product.shortDescription)}</p>
-            <p class="workshop-card__stage"><strong>Current stage:</strong> ${escapeHtml(product.statusLabel)}</p>
-            <a class="button button--secondary" href="${escapeAttribute(product.url)}">View Product</a>
-          </div>
-        </article>`).join("\n")
-    : "        <p>No work-in-progress titles are selected right now.</p>";
+  if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
-  const workshopPattern = /(      <section class="workshop" id="workshop"[\s\S]*?<\/div>\r?\n)([\s\S]*?)(\s*<\/section>\s*\n\s*<section class="commitment")/;
-  if (!workshopPattern.test(html)) {
-    throw new Error("Homepage work-in-progress section could not be found.");
-  }
-  const next = html.replace(
-    workshopPattern,
-    `$1${cards}$3`
-  );
-  const marketplaceSections = renderMarketplaceHomepageSections(products, indexes, bundleRules);
-  const generatedSectionPattern = /<!-- marketplace-home:start -->[\s\S]*?<!-- marketplace-home:end -->/;
-  const legacySectionPattern = /      <section class="latest" id="available"[\s\S]*?<\/section>\s*\n(?=\s*<section class="workshop")/;
-  const unmarkedGeneratedPattern = /<section class="latest" id="homepage-new-releases"[\s\S]*?<\/section>\s*\n(?=\s*<section class="workshop")/;
-  const withMarketplaceSections = generatedSectionPattern.test(next)
-    ? next.replace(generatedSectionPattern, marketplaceSections)
-    : legacySectionPattern.test(next)
-      ? next.replace(legacySectionPattern, `${marketplaceSections}\n`)
-      : unmarkedGeneratedPattern.test(next)
-        ? next.replace(unmarkedGeneratedPattern, `${marketplaceSections}\n`)
-        : (() => { throw new Error("Homepage marketplace entry section could not be found."); })();
   const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
-  const withSharedNav = withMarketplaceSections.replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `);
-  fs.writeFileSync(homepagePath, withSharedNav);
+  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
+  const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
+  const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
+  if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
+  if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
+  let next = html
+    .replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `)
+    .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
+    .replace(footerPattern, "")
+    .replace(scriptPattern, "\n");
+  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  next = homepageScriptsPattern.test(next)
+    ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
+    : next.replace("</body>", `${homepageScripts}\n</body>`);
+  fs.writeFileSync(homepagePath, stripPublicBrandTag(next).replace(/^[ \t]+$/gm, ""));
+}
+
+function renderHomepageShopWallMain(products) {
+  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
+  const newThisWeek = chooseNewReleases(eligible).slice(0, 5);
+  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling")).slice(0, 5);
+  const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0).slice(0, 5);
+  const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 8);
+
+  return `    <main id="top" class="homepage-shop-wall shelf-storefront" aria-labelledby="homepage-shop-wall-heading">
+      <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
+        ${renderHomepageLibraryBay()}
+        ${renderHomepageIdentityBay()}
+        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules })}
+        ${renderHomepageShelfFixtures()}
+      </section>
+      ${renderHomepageBricABracShelf({ sumo: true })}
+      ${renderHomepageAdMarquee()}
+      <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: [], singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageBricABracShelf()}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], productMock: { src: "/assets/products/spriggans/spine.png", alt: "Spriggans product spine mockup", label: "Spriggans product spine mockup", modifier: "spine" } })}
+        ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true, wallArt: [{ src: "/assets/justifiers-framed-cover.png", alt: "Framed Justifiers RPG cover on the shelf back wall" }, { src: "/assets/charlie-daniels-framed-art.png", alt: "Framed Charlie Daniels Band artwork on the shelf back wall", placement: "center" }, { src: "/assets/drolla-framed-cover.png", alt: "Framed Drolla Core Rulebook artwork on the shelf back wall", placement: "right" }] })}
+      </section>
+      ${renderHomepageNewsChyron()}
+    </main>`;
+}
+
+function renderHomepageBricABracShelf({ sumo = false } = {}) {
+  const postingWall = sumo ? `<div class="bb1-posting-wall" role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">
+            ${HOMEPAGE_BB1_AD_PREVIEW.map(ad => `<div class="bb1-ad-territory">
+              <article class="bb1-poster bb1-poster--${escapeAttribute(ad.theme)}" aria-labelledby="bb1-${escapeAttribute(ad.id)}-title">
+                <img class="bb1-poster__art" src="${escapeAttribute(ad.artwork)}" alt="" loading="eager" decoding="async" draggable="false">
+                <div class="bb1-poster__copy">
+                  <p class="bb1-poster__creator">${escapeHtml(ad.creator)}</p>
+                  <h3 id="bb1-${escapeAttribute(ad.id)}-title">${escapeHtml(ad.title)}</h3>
+                  <p class="bb1-poster__tagline">${escapeHtml(ad.tagline)}</p>
+                  <p class="bb1-poster__secondary">${escapeHtml(ad.secondaryCopy)}</p>
+                  <p class="bb1-poster__callout">${escapeHtml(ad.callout)}</p>
+                </div>
+              </article>
+            </div>`).join("\n            ")}
+          </div>` : "";
+  return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
+        <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : ' aria-hidden="true"'}>
+          <div class="shop-wall-bric-shelf__back"${sumo ? ' data-bb1-posting-wall' : ""}>${postingWall}</div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
+          <div class="shop-wall-bric-shelf__surface"></div>${sumo ? '\n          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>' : ""}
+        </div>
+      </section>`;
+}
+
+function renderHomepageNewsChyron(headlines = HOMEPAGE_NEWS_PREVIEW) {
+  const renderSequence = (repeat = false) => `<ul class="storefront-news-chiron__sequence"${repeat ? ' aria-hidden="true"' : " data-news-sequence"}>
+                ${headlines.map(item => `<li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">${escapeHtml(item.label)}</span><span class="storefront-news-chiron__headline">${escapeHtml(item.headline)}</span></li>`).join("\n                ")}
+              </ul>`;
+  return `<aside class="storefront-news-chiron" id="ttrpg-news-chyron" data-news-chyron aria-label="TTRPG News Chyron: fictional test headlines">
+        <div class="storefront-news-chiron__display">
+          <div class="storefront-news-chiron__bug">
+            <p class="storefront-news-chiron__brand">TTRPG</p>
+            <h2 class="storefront-news-chiron__title">NEWS</h2>
+            <p class="storefront-news-chiron__edition">TEST BULLETINS</p>
+          </div>
+          <div class="storefront-news-chiron__viewport" tabindex="0" role="region" aria-label="Fictional TTRPG headline stream">
+            <div class="storefront-news-chiron__track">
+              ${renderSequence()}
+              ${renderSequence(true)}
+            </div>
+          </div>
+        </div>
+      </aside>`;
+}
+
+function renderHomepageAdMarquee(ads = HOMEPAGE_AD_PREVIEW) {
+  const renderGroup = (repeat = false) => `<div class="storefront-ad-marquee__group"${repeat ? ' aria-hidden="true"' : ""}>
+          ${ads.map(ad => renderHomepageAdItem(ad, repeat ? "-repeat" : "")).join("\n          ")}
+        </div>`;
+  return `<aside class="storefront-ad-marquee" aria-label="Advertisement marquee">
+        <div class="storefront-ad-marquee__display">
+          <div class="storefront-ad-marquee__viewport">
+            <div class="storefront-ad-marquee__track">
+              ${renderGroup()}
+              ${renderGroup(true)}
+            </div>
+          </div>
+        </div>
+      </aside>`;
+}
+
+function renderHomepageAdItem(ad, idSuffix = "") {
+  const titleId = `homepage-ad-${ad.id}${idSuffix}-title`;
+  return `<article class="storefront-ad storefront-ad--${escapeAttribute(ad.theme)}" aria-labelledby="${escapeAttribute(titleId)}">
+            ${ad.artwork ? `<img class="storefront-ad__art" src="${escapeAttribute(ad.artwork)}" alt="" loading="eager" decoding="async">` : ""}
+            ${ad.logo ? `<img class="storefront-ad__logo" src="${escapeAttribute(ad.logo)}" alt="" loading="eager" decoding="async">` : ""}
+            <div class="storefront-ad__copy">
+              <p class="storefront-ad__advertiser">${escapeHtml(ad.advertiser)}</p>
+              <h3 class="storefront-ad__title" id="${escapeAttribute(titleId)}">${escapeHtml(ad.title)}</h3>
+              <p class="storefront-ad__support">${ad.supportingCopy.map(text => `<span>${escapeHtml(text)}</span>`).join(" ")}</p>
+            </div>
+            ${ad.callout ? `<p class="storefront-ad__callout">${escapeHtml(ad.callout)}</p>` : ""}
+          </article>`;
+}
+
+function renderHomepageShelfFixtures() {
+  return '<span class="shop-wall-shelf-fixtures" aria-hidden="true"><span></span><span></span><span></span></span>';
+}
+
+function renderHomepageLibraryBay() {
+  const productMockMarkup = renderHomepageProductMock({
+    src: "/assets/products/spriggans/spine.png",
+    alt: "Spriggans product spine mockup",
+    label: "Spriggans product spine mockup",
+    modifier: "spine"
+  }, { library: true, alignRight: true });
+  return `
+        <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
+          ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
+          <img class="shop-wall-top-dressing shop-wall-top-dressing--duke" src="/assets/images/storefront-shelf-dressing/duke-blue-devil-bobblehead.png" alt="Duke Blue Devil bobblehead beneath the Scuppernong vine" loading="eager" decoding="async" draggable="false">
+          <img class="shop-wall-top-dressing shop-wall-top-dressing--scuppernong" src="/assets/images/storefront-shelf-dressing/scuppernong-vine.png" alt="Scuppernong grapevine and fruit trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">
+          <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              ${productMockMarkup}
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              ${productMockMarkup}
+            </div>
+          </div>
+        </section>`;
+}
+
+function renderHomepageIdentityBay() {
+  return `
+        <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
+          <div class="shop-wall-identity-space">
+            <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
+          </div>
+          <div class="shop-wall-identity-sign" aria-hidden="true">
+            <img src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=20261003-golden-d20-1" alt="" loading="eager" decoding="async">
+            <p class="shop-wall-identity-title"><span>Tobacco Road</span><span>Games</span></p>
+          </div>
+        </section>`;
+}
+
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false }) {
+  const visibleProducts = products.slice(0, 5);
+  const libraryBooks = id === "open-rules-library-heading";
+  const wallArtItems = wallArt ? (Array.isArray(wallArt) ? wallArt : [wallArt]) : [];
+  const wallArtMarkup = wallArtItems.map((art) => `<img class="shop-wall-back-wall-art${["center", "right"].includes(art.placement) ? ` shop-wall-back-wall-art--${art.placement}` : ""}" src="${escapeAttribute(art.src)}" alt="${escapeAttribute(art.alt)}" loading="lazy" decoding="async">`).join("\n              ");
+  const shelfMock = productMock || ((singleShelf && wallArtItems.length === 3) || libraryBooks ? {
+    src: "/assets/products/spriggans/spine.png",
+    alt: "Spriggans product spine mockup",
+    label: "Spriggans product spine mockup",
+    modifier: "spine"
+  } : null);
+  const productMockMarkup = shelfMock ? renderHomepageProductMock(shelfMock, { library: libraryBooks }) : "";
+  const bambooIncenseMarkup = bambooIncense ? `<figure class="shop-wall-bamboo-incense" aria-hidden="true">
+                <img class="shop-wall-bamboo-incense__plant" src="/assets/images/storefront-shelf-dressing/bamboo-incense-planter-niche.png" alt="" loading="eager" decoding="async" draggable="false">
+                <svg class="shop-wall-bamboo-incense__smoke" viewBox="0 0 864 1821" preserveAspectRatio="none" aria-hidden="true">
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left-soft" d="M296 1133 C266 1087 302 1051 277 1013 C255 978 277 941 314 913 C346 889 335 856 309 828"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--left" d="M296 1133 C274 1094 304 1060 285 1024 C268 992 281 956 312 930 C338 907 330 878 308 849"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right-soft" d="M349 1168 C381 1125 345 1091 370 1052 C393 1016 371 977 334 949 C302 925 317 892 347 864"></path>
+                  <path class="shop-wall-bamboo-incense__wisp shop-wall-bamboo-incense__wisp--right" d="M349 1168 C371 1130 346 1097 364 1063 C381 1030 369 994 338 968 C311 945 322 915 348 886"></path>
+                </svg>
+              </figure>` : "";
+  const dogwoodBonsaiMarkup = id === "featured-creator-wall-heading" ? '<img class="shop-wall-dogwood-bonsai" src="/assets/images/storefront-shelf-dressing/white-flowering-dogwood-bonsai-sign-height.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : "";
+  const puzzleCubeMarkup = id === "best-sellers-wall-heading" ? '<img class="shop-wall-puzzle-cube" src="/assets/images/storefront-shelf-dressing/ornate-puzzle-cube-on-stand.png" alt="Ornate black-and-gold puzzle cube on a display stand" loading="eager" decoding="async" draggable="false">' : "";
+  const dragonFigurineMarkup = id === "new-this-week-wall-heading" ? '<img class="shop-wall-dragon-figurine" src="/assets/images/storefront-shelf-dressing/red-gold-dragon-figurine.png" alt="Seated red, black, and gold dragon figurine" loading="eager" decoding="async" draggable="false">' : "";
+  const dicePileMarkup = id === "new-this-week-wall-heading" ? '<img class="shop-wall-dice-pile" src="/assets/images/storefront-shelf-dressing/stacked-scattered-six-sided-dice.png" alt="A casually stacked and scattered pile of six-sided dice" loading="eager" decoding="async" draggable="false">' : "";
+  const jesusFigurineMarkup = id === "best-sellers-wall-heading" ? '<img class="shop-wall-jesus-figurine" src="/assets/images/storefront-shelf-dressing/jesus-loves-you-figurine.png" alt="Jesus Loves You figurine on an ornate black-and-gold base" tabindex="0" aria-describedby="jesus-figurine-speech" loading="eager" decoding="async" draggable="false">\n              <span class="shop-wall-jesus-speech-bubble" id="jesus-figurine-speech" role="tooltip">Remember, I love you.</span>' : "";
+  const shelves = singleShelf
+    ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
+            <div class="shop-wall-shelf-level">
+              ${wallArtMarkup}
+              ${bambooIncenseMarkup}
+              ${dogwoodBonsaiMarkup}
+              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}
+              ${productMockMarkup}
+              ${jesusFigurineMarkup}
+              ${puzzleCubeMarkup}
+              ${dicePileMarkup}
+              ${dragonFigurineMarkup}
+              ${renderHomepageShelfFixtures()}
+            </div>
+          </div>`
+    : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="Kudzu trailing from a weathered terracotta pot" loading="eager" decoding="async" draggable="false">' : ""}
+              ${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts.slice(0, 3)) : ""}
+              ${productMockMarkup}
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--lantern" src="/assets/images/storefront-shelf-dressing/hurricane-lantern-unlit.png" alt="Unlit antique brass hurricane lantern beneath the Kudzu" loading="eager" decoding="async" draggable="false">' : ""}
+              ${visibleProducts.length > 3 ? renderHomepageShelfBooks(visibleProducts.slice(3)) : ""}
+              ${productMockMarkup}
+              ${viewAllHref ? `<a class="shop-wall-view-link" href="${escapeAttribute(viewAllHref)}">View All →</a>` : ""}
+            </div>
+          </div>`;
+  return `
+        <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
+          ${renderShopWallPlaque(title, id)}
+          ${libraryBooks ? '<img class="shop-wall-top-dressing shop-wall-top-dressing--kudzu-trail" src="/assets/images/storefront-shelf-dressing/kudzu-vine.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false">' : ""}
+          ${shelves}
+        </section>`;
+}
+
+function renderHomepageProductMock(mock, { library = false, alignRight = false } = {}) {
+  const rowModifier = (library ? " shop-wall-product-row--library" : "") + (alignRight ? " shop-wall-product-row--right" : "");
+  const modifier = mock.modifier ? ` shop-wall-product-mock--${escapeAttribute(mock.modifier)}` : "";
+  const bookMarkup = `<figure class="shop-wall-product-mock${modifier}" aria-label="${escapeAttribute(mock.label)}">
+                  <img src="${escapeAttribute(mock.src)}" alt="${escapeAttribute(mock.alt)}" loading="eager" decoding="async">
+                </figure>`;
+  if (library) return `<div class="shop-wall-product-row${rowModifier}">
+                <div class="shop-wall-library-books" data-fill-library>
+                  ${bookMarkup}
+                </div>
+              </div>`;
+  return `<div class="shop-wall-product-row${rowModifier}" data-fill-spines data-overhang-spine data-book-count="50">
+                ${bookMarkup}
+              </div>`;
+}
+
+function renderHomepageShelfBooks(products) {
+  return `<div class="bookshelf-grid shop-wall-books" style="--shelf-items: ${Math.max(1, products.length)}">${products.map((product) => renderBookshelfBook(product, { withDataset: true, centerExamination: true })).join("")}</div>`;
+}
+
+function renderShopWallPlaque(title, id) {
+  return `<div class="shop-wall-plaque"><h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2></div>`;
+}
+
+function renderAiPolicyPage() {
+  return renderLayout({
+    pageTitle: `AI Policy | ${SITE_NAME}`,
+    description: "Tobacco Road Games AI Policy.",
+    canonicalPath: "/ai-policy.html",
+    currentNav: "ai-policy",
+    content: `
+      <main id="top">
+        <section class="statement-page" aria-labelledby="ai-policy-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Policy</p>
+            <h1 id="ai-policy-heading">AI Policy</h1>
+            <p class="statement-intro">The approved Tobacco Road Games AI Policy text is awaiting insertion.</p>
+          </div>
+        </section>
+      </main>`
+  });
 }
 
 function buildAccountPage() {
@@ -997,10 +1385,9 @@ function buildAccountPage() {
   if (!navPattern.test(html)) throw new Error("Account navigation could not be found.");
   const next = html
     .replace(navPattern, `${renderSharedPublicNav("account", "Primary")}\n    `)
-    .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
     .replace("Your Tobacco Road Games Account", "Account / My Library")
     .replace("Shared account foundation", "Customer account");
-  fs.writeFileSync(accountPath, next);
+  fs.writeFileSync(accountPath, stripPublicBrandTag(next));
 }
 
 function buildStaticPublicPage(relativePath, currentNav) {
@@ -1011,9 +1398,12 @@ function buildStaticPublicPage(relativePath, currentNav) {
   if (!navPattern.test(html)) throw new Error(`${relativePath} navigation could not be found.`);
   const next = html
     .replace(navPattern, `${renderSharedPublicNav(currentNav, "Primary")}\n    `)
-    .replace("A working GM's bench for strange tables and long campaigns", "Independent games, remarkable creators, and tools for the table")
     .replace("Published by RV Sawyer, built for tables that still surprise the person running them.", "A marketplace for independent creators, operated by Tobacco Road Games.");
-  fs.writeFileSync(pagePath, next);
+  fs.writeFileSync(pagePath, stripPublicBrandTag(next));
+}
+
+function stripPublicBrandTag(html) {
+  return html.replace(/\s*<span class="brand__tag">[\s\S]*?<\/span>/g, "");
 }
 
 function renderMarketplaceHomepageSections(products, indexes, bundleRules) {
@@ -1063,9 +1453,19 @@ function renderFeatureSpotlight(product) {
   `;
 }
 
-function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false }) {
+function renderBookshelfSection({ id, kicker, title, description, products, forceOpenRightSlugs = [], compact = false, centerExamination = false, emptyMessage = "" }) {
   if (!products.length) {
-    return "";
+    if (!emptyMessage) return "";
+    return `
+    <section class="store-section" aria-labelledby="${escapeAttribute(id)}">
+      <div class="section-heading">
+        <p class="section-heading__kicker">${escapeHtml(kicker)}</p>
+        <h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2>
+        <p>${escapeHtml(description)}</p>
+      </div>
+      <p class="shelf-empty">${escapeHtml(emptyMessage)}</p>
+    </section>
+  `;
   }
 
   const forceOpenRightSlugSet = new Set(forceOpenRightSlugs);
@@ -1079,7 +1479,9 @@ function renderBookshelfSection({ id, kicker, title, description, products, forc
       </div>
       <div class="bookshelf-grid${compact ? " bookshelf-grid--compact" : ""}">
         ${products.map((product) => renderBookshelfBook(product, {
-          forceOpenRight: forceOpenRightSlugSet.has(product.slug)
+          withDataset: true,
+          forceOpenRight: forceOpenRightSlugSet.has(product.slug),
+          centerExamination
         })).join("")}
       </div>
     </section>
@@ -1096,6 +1498,7 @@ function renderStoreBrowser(products, indexes, options = {}) {
     shelfHeading = "",
     shelfDescription = "",
     forceOpenRightSlugs = [],
+    centerExamination = false,
     gridHeading = "",
     gridDescription = ""
   } = options;
@@ -1132,7 +1535,8 @@ function renderStoreBrowser(products, indexes, options = {}) {
             ${renderBookshelfRows(products, (product, shelfIndex) => renderBookshelfBook(product, {
               withDataset: true,
               forceOpenRight: forceOpenRightSlugSet.has(product.slug),
-              edgeRight: shelfIndex >= 10
+              edgeRight: shelfIndex >= 10,
+              centerExamination
             }))}
           </div>
         </section>
@@ -1253,14 +1657,27 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
 }
 
 function renderBookshelfBook(product, options = {}) {
-  const { withDataset = false, forceOpenRight = false, edgeRight = false } = options;
+  const { withDataset = false, forceOpenRight = false, edgeRight = false, centerExamination = false } = options;
   const dataset = withDataset ? renderProductDatasetAttributes(product) : "";
   const forceOpenRightAttribute = forceOpenRight ? ' data-bookshelf-force-right="true"' : "";
   const edgeClass = edgeRight ? " bookshelf-book--edge-right" : "";
   const authorName = product.authors.join(", ") || product.publisher;
+  const publisherLine = product.publisher && product.publisher !== authorName
+    ? `<span class="bookshelf-book__publisher">${escapeHtml(product.publisher)}</span>`
+    : "";
+  const saleBadge = product.saleActive
+    ? `<span class="status-badge status-badge--sale">${escapeHtml(product.saleLabel || "Sale")}</span>`
+    : "";
+  const examinationMeta = [
+    renderCatalogMeta(product),
+    product.genre ? humanizeMetadata(product.genre) : "",
+    product.mediaType ? humanizeMetadata(product.mediaType) : "",
+    product.format.join(" / ")
+  ].filter(Boolean).join(" | ");
+  const dimensions = bookshelfDimensions(product);
 
   return `
-    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset} aria-label="Open ${escapeAttribute(product.title)} product page">
+    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset} data-spine-width="${dimensions.width}" data-spine-source="${dimensions.source}" style="--book-spine-width:${dimensions.width}px;--book-height:${dimensions.height}px" aria-label="Open ${escapeAttribute(product.title)} product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">${escapeHtml(product.statusLabel)}</span>
@@ -1268,8 +1685,11 @@ function renderBookshelfBook(product, options = {}) {
           <span class="bookshelf-book__author">${escapeHtml(authorName)}</span>
         </span>
         <span class="bookshelf-book__cover-frame">
-          <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover">
+          <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} cover" loading="lazy" decoding="async">
         </span>
+        ${centerExamination
+          ? `<span class="bookshelf-book__details"><span class="bookshelf-book__badges"><span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(product.statusLabel)}</span>${saleBadge}</span><strong>${escapeHtml(product.title)}</strong><span class="bookshelf-book__creator">${escapeHtml(authorName)}</span>${publisherLine}<span class="bookshelf-book__price">${escapeHtml(renderCardPrice(product))}</span><span>${escapeHtml(examinationMeta)}</span><small>${escapeHtml(product.shortDescription)}</small><em>Open product page</em></span>`
+          : `<span class="bookshelf-book__details"><strong>${escapeHtml(product.title)}</strong><span>${escapeHtml(authorName)}</span><span>${escapeHtml(renderCardPrice(product))}</span><span>${escapeHtml(renderCatalogMeta(product))}</span><small>${escapeHtml(product.shortDescription)}</small><em>Open product page</em></span>`}
         <span class="bookshelf-book__mobile">
           <span class="bookshelf-book__mobile-media">
             <img class="bookshelf-book__cover" src="${escapeAttribute(product.assetSet.cover)}" alt="">
@@ -1390,6 +1810,7 @@ function renderAuthorsIndexPage(authors) {
     description: "Meet the creators publishing tabletop games, tools, adventures, and workshop material through Tobacco Road Games.",
     canonicalPath: "/authors.html",
     currentNav: "authors",
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js"],
     structuredData: renderBreadcrumbSchema([
       { label: "Home", href: "/" },
       { label: "Authors", href: "/authors.html" }
@@ -1421,6 +1842,7 @@ function renderAuthorProfilePage(author) {
     description: author.shortBio || `Meet ${author.name} at Tobacco Road Games.`,
     canonicalPath: author.url,
     currentNav: "authors",
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js"],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Home", href: "/" },
@@ -1441,6 +1863,7 @@ function renderAuthorProfilePage(author) {
           <div class="author-hero__copy">
             <p class="section-heading__kicker">Creator</p>
             <h1 id="${escapeAttribute(author.slug)}-heading">${escapeHtml(author.name)}</h1>
+            <div class="creator-reputation creator-reputation--profile" data-creator-reputation="${escapeAttribute(author.slug)}" data-reputation-view="profile" aria-live="polite"><p class="creator-rating">Creator reputation loading…</p></div>
             ${author.title ? `<p class="product-subtitle">${escapeHtml(author.title)}</p>` : ""}
             ${author.shortBio ? `<p class="hero__lead">${escapeHtml(author.shortBio)}</p>` : ""}
             ${author.links.length ? `<div class="author-link-list">${author.links.map(renderAuthorLink).join("")}</div>` : ""}
@@ -1525,6 +1948,7 @@ function renderPublicLayout({
   canonicalPath,
   currentNav,
   structuredData,
+  extraScripts = [],
   content
 }) {
   const canonicalUrl = `${BASE_URL}${canonicalPath}`;
@@ -1552,6 +1976,7 @@ function renderPublicLayout({
   <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
   <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
+  ${extraScripts.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -1560,7 +1985,6 @@ function renderPublicLayout({
         <img class="brand__logo" src="/assets/logo.png?v=${CACHE_BUST}" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Independent games, remarkable creators, and tools for the table</span>
         </div>
       </a>
 
@@ -1578,7 +2002,7 @@ function renderPublicLayout({
     </footer>
   </div>
 </body>
-</html>`;
+</html>`.replace(/[ \t]+$/gm, "");
 }
 
 function renderAliasPage({
@@ -1623,6 +2047,18 @@ function renderPublicNav(currentNav) {
   return renderSharedPublicNav(currentNav, "Primary");
 }
 
+function bookshelfDimensions(product) {
+  const hash = [...String(product.slug || product.title || "book")].reduce((value, character) => ((value * 33) ^ character.charCodeAt(0)) >>> 0, 5381);
+  const pageCount = Number(product.pageCount);
+  const hasPageCount = Number.isFinite(pageCount) && pageCount > 0;
+  const pageSignal = hasPageCount ? Math.log1p(Math.min(pageCount, 600)) / Math.log1p(600) : 0.48;
+  const variation = ((hash % 1000) / 999 - 0.5) * (hasPageCount ? 5 : 10);
+  const width = Math.round(Math.max(46, Math.min(78, 46 + pageSignal * 31 + variation)) * 10) / 10;
+  const heightSignal = hasPageCount ? Math.min(18, Math.log1p(pageCount) * 3.2) : 9;
+  const height = Math.round(Math.max(270, Math.min(332, 286 + heightSignal + (hash % 19) - 9)));
+  return { width, height, source: hasPageCount ? "page-count" : "catalog-fallback" };
+}
+
 function renderCreatorProducts(creator) {
   if (!creator.products.length) {
     return `<div class="about__panel"><p>Public catalog titles will appear here as they are added to the marketplace.</p></div>`;
@@ -1660,11 +2096,15 @@ function renderCreatorProfileAlias(creator) {
   });
 }
 
-function renderSharedPublicNav(currentNav, ariaLabel) {
-  const normalizedCurrent = currentNav === "authors" ? "creators" : currentNav === "catalog" ? "sales" : currentNav;
+function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEMS) {
+  const normalizedCurrent = ["authors", "author"].includes(currentNav)
+    ? "creators"
+    : ["store", "catalog", "sales", "product", "collection"].includes(currentNav)
+      ? "explore"
+      : currentNav;
   return `
     <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}">
-      ${PUBLIC_NAV_ITEMS.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
+      ${navItems.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
     </nav>`;
 }
 
@@ -1674,6 +2114,7 @@ function renderAuthorCard(author) {
       ${author.profileImage ? `<img class="author-card__image" src="${escapeAttribute(author.profileImage)}" alt="${escapeAttribute(author.name)} profile image">` : ""}
       <p class="note-card__label">Creator</p>
       <h2>${escapeHtml(author.name)}</h2>
+      <div class="creator-reputation creator-reputation--directory" data-creator-reputation="${escapeAttribute(author.slug)}" data-reputation-view="directory" aria-live="polite"><p class="creator-rating">Creator reputation loading…</p></div>
       ${author.title ? `<p class="author-card__tagline">${escapeHtml(author.title)}</p>` : ""}
       ${author.shortBio ? `<p class="author-card__bio">${escapeHtml(author.shortBio)}</p>` : ""}
       <div class="author-card__meta">
@@ -2082,12 +2523,17 @@ function buildTitleIndex(products) {
 }
 
 function resolveProductAssets(product) {
-  const coverSource = pickExistingPath(product.coverImage, product.frontCoverImage, product.thumbnailImage);
-  const thumbSource = pickExistingPath(product.thumbnailImage, product.coverImage, product.frontCoverImage, coverSource);
-  const previewImages = product.previewImages.filter((sitePath) => sitePath && sitePathExists(sitePath));
-  const previewFeature = pickExistingPath(product.previewImage, previewImages[0]);
-  const previewPdf = sitePathExists(product.previewPdf) ? product.previewPdf : "";
-  const teaserVideo = sitePathExists(product.teaserVideo) ? product.teaserVideo : "";
+  const canUseProductStorage = isCatalogBrowsable(product);
+  const usable = (sitePath) => sitePath
+    && (canUseProductStorage || !isR2BackedProductAssetPath(sitePath))
+    && sitePathExists(sitePath);
+  const pickUsable = (...pathsToTry) => pathsToTry.find(usable) || "";
+  const coverSource = pickUsable(product.coverImage, product.frontCoverImage, product.thumbnailImage);
+  const thumbSource = pickUsable(product.thumbnailImage, product.coverImage, product.frontCoverImage, coverSource);
+  const previewImages = product.previewImages.filter(usable);
+  const previewFeature = pickUsable(product.previewImage, previewImages[0]);
+  const previewPdf = usable(product.previewPdf) ? product.previewPdf : "";
+  const teaserVideo = usable(product.teaserVideo) ? product.teaserVideo : "";
   const coverAudit = !coverSource
     ? (product.coverImage ? `coverImage missing file ${product.coverImage}` : "coverImage field missing")
     : "";
@@ -2191,6 +2637,9 @@ function formatPrice(product) {
 }
 
 function renderCardPrice(product) {
+  if (!isCatalogBrowsable(product)) {
+    return product.statusLabel;
+  }
   if (product.buyMode === "pay-what-you-want") {
     return "Pay What You Want";
   }
@@ -2204,6 +2653,9 @@ function renderCardPrice(product) {
 }
 
 function renderDisplayPrice(product) {
+  if (!isCatalogBrowsable(product)) {
+    return product.statusLabel;
+  }
   if (product.buyMode === "pay-what-you-want") {
     const minimum = product.minimumPriceCents !== null ? `Minimum ${formatCents(product.minimumPriceCents, product.currency)}` : "";
     const suggested = product.suggestedPriceCents !== null ? `Suggested ${formatCents(product.suggestedPriceCents, product.currency)}` : "";
@@ -2314,6 +2766,9 @@ function renderProductDatasetAttributes(product, searchText) {
 }
 
 function renderFileListSummary(product) {
+  if (!isCatalogBrowsable(product)) {
+    return "No files are currently offered from this historical catalog record.";
+  }
   if (product.buyMode === "preview-only") {
     const plannedFormat = product.format.length ? product.format.join(", ") : "digital file";
     return `No downloadable file is included on this preview page. Planned release format: ${plannedFormat}.`;
@@ -2328,6 +2783,9 @@ function renderFileListSummary(product) {
 }
 
 function renderPurchaseSummary(product) {
+  if (!isCatalogBrowsable(product)) {
+    return `${product.title} is retained as a historical catalog record and is not currently available for purchase.`;
+  }
   if (product.buyMode === "preview-only") {
     return `${product.title} is currently presented as a preview page with artwork, product details, and preview assets only.`;
   }
@@ -2356,6 +2814,7 @@ function renderCartPage(products) {
     description: "Review the Tobacco Road Games browser cart before checkout is enabled.",
     canonicalPath: "/store/cart/",
     currentNav: "cart",
+    extraScripts: ["/assets/js/creator-balance-checkout.js?v=20260907-identity-repair"],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Cart`,
       description: "Review the Tobacco Road Games browser cart before checkout is enabled.",
@@ -2391,9 +2850,22 @@ function renderCartPage(products) {
                   <span>Confirm Email</span>
                   <input type="email" name="emailConfirmation" autocomplete="email" inputmode="email" data-cart-email-confirmation>
                 </label>
-                <p class="cart-summary__copy">Checkout opens securely on a Stripe-hosted page.</p>
+                <div data-cart-email-verification><button type="button" class="button button--secondary" data-cart-email-send>Send Verification Code</button><label class="cart-checkout-form__field"><span>Verification Code</span><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" data-cart-email-code></label><button type="button" class="button button--secondary" data-cart-email-verify>Verify Email</button></div>
+                <p class="cart-summary__copy">Every acquisition requires a verified email. An account is optional. Paid checkout opens securely on a Stripe-hosted page.</p>
                 <p class="cart-checkout-form__feedback" data-cart-checkout-feedback aria-live="polite"></p>
                 <button type="submit" class="button button--primary cart-summary__button" data-cart-checkout-submit disabled aria-disabled="true">Continue to Secure Checkout</button>
+                <section class="creator-balance-checkout" data-creator-payment-identity hidden>
+                  <label>
+                    Creator identity for Creator Balance
+                    <select data-creator-payment-identity-select></select>
+                  </label>
+                </section>
+                <section class="creator-balance-checkout" data-creator-balance hidden>
+                  <p class="note-card__label">Creator Balance</p>
+                  <p data-creator-balance-status>Checking eligibility…</p>
+                  <button type="button" class="button button--secondary cart-summary__button" data-creator-balance-submit disabled>Pay Entire Total with Creator Balance</button>
+                  <p class="cart-checkout-form__feedback" data-creator-balance-feedback aria-live="polite"></p>
+                </section>
               </form>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-retry hidden>Retry Verified Quote</button>
               <button type="button" class="button button--secondary cart-summary__button" data-cart-clear>Clear Cart (Development)</button>
@@ -2487,6 +2959,12 @@ function resolvePriceType(product) {
 
 function isBuyModeActive(buyMode) {
   return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
+}
+
+function isCatalogBrowsable(product) {
+  return product.buyMode !== "retired"
+    && product.status !== "retired"
+    && product.status !== "legacy-not-for-sale";
 }
 
 function isCartReady(product) {

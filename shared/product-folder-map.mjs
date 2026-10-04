@@ -1,16 +1,9 @@
 export const PRODUCT_FOLDER_MAP = Object.freeze({
   "agency": "agency",
   "circle-of-cinder": "circleofcinder",
-  "final-flame": "finalflame",
   "janni": "janni",
-  "mouthy-monsters": "mouthy-monsters",
-  "path-of-the-janky": "path of the janky",
   "ringbound": "ringbound",
-  "silence-and-the-spotlight": "silenceandthespotlight",
-  "sirrocans": "sirrocans",
-  "spriggans": "spriggans",
-  "tablecraft-primer": "Tablecraft Primer",
-  "yojimbo": "yojimbo"
+  "tablecraft-primer": "Tablecraft Primer"
 });
 
 export function getFolderForSlug(slug) {

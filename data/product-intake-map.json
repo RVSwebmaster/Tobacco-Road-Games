@@ -66,23 +66,6 @@
       "seriesSlug": ""
     },
     {
-      "slug": "final-flame",
-      "folder": "finalflame",
-      "title": "Final Flame",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Preview"
-      ]
-    },
-    {
       "folder": "janni",
       "slug": "janni",
       "title": "Janni",
@@ -100,40 +83,6 @@
         "Supplement",
         "Dungeons & Dragons",
         "SRD 5.1"
-      ]
-    },
-    {
-      "slug": "mouthy-monsters",
-      "folder": "mouthy-monsters",
-      "title": "Mouthy Monsters",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Preview"
-      ]
-    },
-    {
-      "slug": "path-of-the-janky",
-      "folder": "path of the janky",
-      "title": "Path of the Janky",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "5e Fantasy Roleplaying",
-      "gameSystemSlug": "5e-fantasy-roleplaying",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-experiments",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Preview"
       ]
     },
     {
@@ -158,84 +107,6 @@
       ]
     },
     {
-      "slug": "silence-and-the-spotlight",
-      "folder": "silenceandthespotlight",
-      "title": "Silence and the Spotlight",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Preview"
-      ],
-      "releaseDate": "2026-06-20",
-      "lastUpdated": "2026-06-20"
-    },
-    {
-      "slug": "sirrocans",
-      "folder": "sirrocans",
-      "title": "Sirrocans",
-      "subtitle": "A 5E-compatible character race of giant-blooded desert nomads",
-      "featured": true,
-      "gameSystem": "5E Compatible",
-      "gameSystemSlug": "5e-compatible",
-      "productLine": "Fifth Edition Fantasy Roleplaying",
-      "productLineSlug": "fifth-edition-fantasy-roleplaying",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "5E",
-        "Ancestry",
-        "Desert",
-        "Character Race",
-        "Giant-Blooded",
-        "Preview"
-      ],
-      "coverImageOverride": "/assets/products/sirrocans/cover.webp",
-      "frontCoverImageOverride": "/assets/products/sirrocans/cover.webp",
-      "thumbnailImage": "/assets/products/sirrocans/thumb.webp",
-      "previewImages": [
-        "/assets/products/sirrocans/preview-01.webp",
-        "/assets/products/sirrocans/preview-02.webp"
-      ],
-      "teaserVideo": ""
-    },
-    {
-      "slug": "spriggans",
-      "folder": "spriggans",
-      "title": "Spriggans",
-      "subtitle": "A 5E-compatible fantasy roleplaying supplement",
-      "featured": false,
-      "gameSystem": "5E Compatible",
-      "gameSystemSlug": "5e-compatible",
-      "productLine": "Fifth Edition Fantasy Roleplaying",
-      "productLineSlug": "fifth-edition-fantasy-roleplaying",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "5E",
-        "Fantasy",
-        "Preview"
-      ],
-      "thumbnailImage": "/assets/products/spriggans/thumb.webp",
-      "previewImages": [
-        "/assets/products/spriggans/preview-01.webp",
-        "/assets/products/spriggans/preview-02.webp",
-        "/assets/products/spriggans/preview-03.webp"
-      ],
-      "previewPdf": "/assets/products/spriggans/sample.pdf",
-      "relatedProducts": [
-        "sirrocans"
-      ]
-    },
-    {
       "slug": "tablecraft-primer",
       "folder": "Tablecraft Primer",
       "title": "Tablecraft Primer",
@@ -252,23 +123,6 @@
       ],
       "tags": [
         "Tablecraft",
-        "Preview"
-      ]
-    },
-    {
-      "slug": "yojimbo",
-      "folder": "yojimbo",
-      "title": "Yojimbo",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-and-experiments",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
         "Preview"
       ]
     }

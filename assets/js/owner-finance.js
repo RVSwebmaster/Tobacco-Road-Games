@@ -51,6 +51,8 @@
         card("TRG Product Commission", u.productCommission.netCents),
         card("TRG Service Revenue", u.serviceRevenue.netCents),
         card("Processor / Provider Costs", u.costs.totalCents),
+        card("TRG Before Owner Adjustments", u.netBeforeOwnerAdjustmentsCents),
+        card("Owner Revenue Adjustments", u.ownerRevenueAdjustmentsCents),
         card("TRG Net Retained", u.netRetainedRevenueCents),
         card(
           "External Stripe Activity",
@@ -65,6 +67,8 @@
       );
     document.querySelector("#bank").textContent =
       `Creator Money Required: ${money(d.bankReconciliation.creatorMoneyRequiredCents)}. TRG-earned ledger amount: ${money(d.bankReconciliation.trgEarnedLedgerAmountCents)}. ${d.bankReconciliation.warning}`;
+    document.querySelector("#owner-adjustments").replaceChildren(...(d.revenueAdjustments.length ? d.revenueAdjustments : [{empty:true}]).map((x)=>{const p=document.createElement("p");p.textContent=x.empty?"No owner revenue adjustments recorded.":`${new Date(x.created_at).toLocaleString()} · ${money(x.delta_cents)} · resulting TRG earned ${money(x.new_total_cents)} · ${x.reason} · ${x.actor_display}`;return p;}));
+    document.querySelector("#closures").replaceChildren(...(d.closures.length ? d.closures : [{state:"none"}]).map((x)=>{const p=document.createElement("p");p.textContent=x.state==="none"?"No Creator closures requested.":`${x.creatorName} (${x.creatorId}) · ${x.state.toUpperCase()} · requested ${x.requestedAt || "—"} · listings shut down: ${x.listingsShutDown ? "yes" : "NO"} · ${x.blockers.length ? x.blockers.map(b=>b.message).join(" ") : "No financial blockers"} · final settlement: ${String(x.finalSettlementState).replaceAll("_"," ")} · closed ${x.closedAt || "—"}`;return p;}));
     document
       .querySelector("#creators")
       .replaceChildren(

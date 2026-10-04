@@ -1,12 +1,11 @@
 export const PUBLIC_NAV_ITEMS = Object.freeze([
-  { key: "store", href: "/store/", label: "Marketplace" },
+  { key: "explore", href: "/store/catalog/", label: "Explore" },
+  { key: "forum", href: "/forum", label: "Community Forum" },
   { key: "creators", href: "/authors.html", label: "Creators" },
-  { key: "releases", href: "/store/#new-releases-bookshelf-heading", label: "New Releases" },
-  { key: "sales", href: "/store/catalog/", label: "Sales &amp; Bundles" },
-  { key: "goods", href: "/#physical-goods", label: "Physical Goods" },
-  { key: "forum", href: "/forum", label: "Community" },
-  { key: "about", href: "/#about", label: "About TRG" },
-  { key: "account", href: "/account.html", label: "Account / My Library" },
+  { key: "creator-login", href: "/creator/", label: "Creator Login / Sign Up" },
+  { key: "ai-policy", href: "/ai-policy.html", label: "AI Policy" },
+  { key: "support", href: "/support.html", label: "Support" },
+  { key: "account", href: "/account.html", label: "Join / Sign In" },
   { key: "cart", href: "/store/cart/", label: "Cart" }
 ]);
 

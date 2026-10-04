@@ -1,5 +1,5 @@
 name = "tobacco-road-games-staging"
-pages_build_output_dir = "."
+pages_build_output_dir = ".wrangler/staging-pages-output"
 compatibility_date = "2026-06-18"
 
 [vars]
@@ -20,7 +20,7 @@ migrations_dir = "migrations"
 
 [[r2_buckets]]
 binding = "TRG_PRODUCTS"
-bucket_name = "trg-products"
+bucket_name = "trg-products-staging"
 
 [[r2_buckets]]
 binding = "TRG_FORUM_AVATARS"

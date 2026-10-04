@@ -70,6 +70,7 @@ function seed(raw) {
   }
   for (const [id, creatorId, sessionId] of [["stripe-buy", "creator", "cs_test_ad"], ["failed-buy", "other-creator", "cs_test_failed"], ["forged-buy", "other-creator", "cs_test_forged"]])
     raw.prepare("INSERT INTO creator_ad_credit_purchases(id,creator_id,status,stripe_checkout_session_id,created_at,initiated_by_user_id) VALUES(?,?,'pending',?,?,?)").run(id, creatorId, sessionId, ISO, creatorId === "creator" ? "user" : "other-user");
+  raw.prepare("INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at)VALUES('creator-preferred','creator','annual_prepaid',20000,'2026-01-01T00:00:00.000Z','2027-01-01T00:00:00.000Z','renews','active',?,?)").run(ISO, ISO);
 }
 function event(id, purchaseId, sessionId, paymentIntent, extra = {}) { return { id, type: extra.type || "checkout.session.completed", api_version: "2026-06-24.dahlia", created: Math.floor(NOW / 1000), livemode: false, data: { object: { id: sessionId, object: "checkout.session", livemode: false, client_reference_id: purchaseId, payment_intent: paymentIntent, payment_status: extra.paymentStatus || "paid", amount_total: extra.amountTotal ?? 500, currency: "usd", metadata: { trg_service_type: "ad_credit_pack", trg_service_reference_id: purchaseId, trg_checkout_attempt_id: `ad-credit-${purchaseId}` } } } }; }
 function options() { return { nowMs: NOW, pipelineStage: "staging" }; }

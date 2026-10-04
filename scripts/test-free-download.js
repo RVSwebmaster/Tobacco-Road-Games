@@ -12,9 +12,10 @@ async function main() {
   const free = await importModule("functions/_lib/free-download.mjs");
   const agencyPage = fs.readFileSync(path.join(ROOT, "store/products/agency/index.html"), "utf8");
   const janniPage = fs.readFileSync(path.join(ROOT, "store/products/janni/index.html"), "utf8");
-  assert.match(agencyPage, /Download Free PDF/, "$0.00 products should display the free-download control.");
-  assert.match(agencyPage, /data-cart-add="agency"/, "Free products must use recorded acquisition checkout.");
-  assert.match(janniPage, /data-cart-add="janni"/, "Paid products must retain the existing cart control.");
+  assert.match(agencyPage, /Legacy Not For Sale/, "The unpublished legacy free record must display an unavailable state.");
+  assert.doesNotMatch(agencyPage, /Download Free PDF|data-cart-add="agency"/, "The unpublished legacy free record must not offer acquisition.");
+  assert.match(janniPage, /Legacy Not For Sale/, "The unpublished legacy paid record must display an unavailable state.");
+  assert.doesNotMatch(janniPage, /data-cart-add="janni"/, "The unpublished legacy paid record must not offer acquisition.");
   assert.deepEqual(getDeliveryProduct("janni"), {
     contentType: "application/pdf",
     customerFilename: "Janni.pdf",
@@ -26,31 +27,20 @@ async function main() {
   const bucket = createBucket();
   const openEnv = { DOWNLOAD_SIGNING_SECRET: SECRET, STRIPE_SECRET_KEY: { get value() { stripeCalls += 1; return ""; } }, TRG_ORDERS: stateDatabase("OPEN"), TRG_PRODUCTS: bucket };
   const issued = await free.handleFreeDownloadRequest(new Request("https://example.com/store/free-download?product=agency"), openEnv, { nowMs: 1000000, allowLegacyAnonymousAcquisition: true });
-  assert.equal(issued.status, 303, "OPEN should issue a short-lived free-download redirect.");
-  assert.equal(stripeCalls, 0, "Free fulfillment must never inspect or call Stripe.");
-  const location = issued.headers.get("location");
-  assert.match(location, /free-download-file\?credential=/, "Issuance should redirect through an authorized private route.");
-
-  let response = await free.handleFreeDownloadFileRequest(new Request(location), openEnv, { nowMs: 1001000 });
-  assert.equal(response.status, 200, "OPEN should allow an authorized free download.");
-  assert.equal(response.headers.get("content-type"), "application/pdf");
-  assert.match(response.headers.get("content-disposition"), /Agency\.pdf/);
-  assert.equal(Buffer.from(await response.arrayBuffer()).toString("utf8"), Buffer.from(PDF).toString("utf8"));
-
-  response = await free.handleFreeDownloadFileRequest(new Request("https://example.com/store/free-download-file"), openEnv, { nowMs: 1001000 });
+  assert.equal(issued.status, 404, "OPEN must not resurrect an unpublished legacy free acquisition.");
+  assert.equal(stripeCalls, 0, "Rejected free fulfillment must never inspect or call Stripe.");
+  let response = await free.handleFreeDownloadFileRequest(new Request("https://example.com/store/free-download-file"), openEnv, { nowMs: 1001000 });
   assert.equal(response.status, 403, "Private R2 content must require a valid credential.");
 
   for (const state of ["CLOSED", "MAINTENANCE"]) {
     const env = { ...openEnv, TRG_ORDERS: stateDatabase(state) };
     response = await free.handleFreeDownloadRequest(new Request("https://example.com/store/free-download?product=agency"), env, { nowMs: 1000000 });
-    assert.equal(response.status, 503, `${state} must block free credential issuance.`);
-    response = await free.handleFreeDownloadFileRequest(new Request(location), env, { nowMs: 1001000 });
-    assert.equal(response.status, 503, `${state} must block credential redemption.`);
+    assert.equal(response.status, 503, `${state} must block acquisition before catalog eligibility is considered.`);
   }
 
   response = await free.handleFreeDownloadRequest(new Request("https://example.com/store/free-download?product=agency"), { ...openEnv, TRG_ORDERS: failingDatabase() });
   assert.equal(response.status, 503, "Unreadable state must fail closed for free downloads.");
-  assert.equal(bucket.getCalls, 1, "Only the authorized OPEN redemption should read private R2 bytes.");
+  assert.equal(bucket.getCalls, 0, "Rejected legacy acquisition must not read private R2 bytes.");
   console.log("Free product download tests passed.");
 }
 

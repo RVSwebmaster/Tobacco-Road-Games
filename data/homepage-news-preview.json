@@ -1,0 +1,32 @@
+[
+  {
+    "id": "gen-con-registration",
+    "label": "TTRPG NEWS",
+    "headline": "Gen Con Event Registration Opens This Week"
+  },
+  {
+    "id": "creator-analytics",
+    "label": "TRG UPDATE",
+    "headline": "New Creator Analytics Tools Enter Testing"
+  },
+  {
+    "id": "witch-road-announcement",
+    "label": "INDUSTRY",
+    "headline": "Blackbriar Games Announces The Witch Road"
+  },
+  {
+    "id": "carolina-game-days",
+    "label": "CONVENTIONS",
+    "headline": "Carolina Game Days Adds New RPG Programming"
+  },
+  {
+    "id": "open-rules-expansion",
+    "label": "TRG UPDATE",
+    "headline": "Open Rules Library Expands This Month"
+  },
+  {
+    "id": "featured-creator-submissions",
+    "label": "CREATOR CALL",
+    "headline": "Submissions Open for Featured Creator Rotation"
+  }
+]

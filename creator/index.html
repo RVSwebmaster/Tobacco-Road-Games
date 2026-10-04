@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>Creator Dashboard | Tobacco Road Games</title>
     <link rel="stylesheet" href="/styles.css" />
-    <script src="/assets/js/creator-dashboard.js" defer></script>
+    <script src="/assets/js/creator-dashboard.js?v=20260907-review-hold" defer></script>
   </head>
   <body class="view-section">
     <div class="page-shell">
@@ -35,6 +35,10 @@
           <p class="section-heading__kicker">Private creator area</p>
           <h1 id="creator-name">Creator Dashboard</h1>
           <p id="creator-status" role="status">Loading creator access…</p>
+          <label id="creator-identity-control" hidden>
+            Operating Creator identity
+            <select id="creator-identity-selector"></select>
+          </label>
         </div>
         <section class="account-grid" id="creator-overview" hidden>
           <article class="account-card">
@@ -62,21 +66,36 @@
         <section class="account-card" id="creator-finance" hidden>
           <h2>Payment Method &amp; Payout Setup</h2>
           <p>
-            Every Creator maintains a Stripe-hosted payment method. TRG never
+            Every Creator maintains a Stripe-hosted payment method. Tobacco Road Games never
             collects or stores raw card details.
           </p>
           <p id="creator-payment-method-status"></p>
           <p>
-            TRG needs a completed payout account before you can sell products.
-            Stripe handles bank, identity, tax, and KYC information; TRG
+            Tobacco Road Games needs a completed payout account before you can sell products.
+            Stripe handles bank, identity, tax, and KYC information; Tobacco Road Games
             displays only safe readiness information.
           </p>
           <p id="creator-finance-summary"></p>
+          <div id="owner-financial-controls" hidden>
+            <h3>Owner Financial Controls</h3>
+            <p id="owner-financial-summary"></p>
+            <p>These private controls set a desired total by appending a fully audited adjustment. Creator funds and Tobacco Road Games earnings remain separate.</p>
+            <form class="account-form" id="owner-financial-adjustment-form">
+              <label>Account
+                <select name="kind"><option value="creator_funds">Creator funds</option><option value="trg_revenue">Tobacco Road Games earnings</option></select>
+              </label>
+              <label>Desired total in dollars <input name="total" type="number" step="0.01" required /></label>
+              <label>Reason <textarea name="reason" minlength="3" required></textarea></label>
+              <button class="button button--secondary">Record audited adjustment</button>
+            </form>
+            <p id="owner-financial-result" role="status"></p>
+            <div id="owner-financial-history"></div>
+          </div>
           <p id="creator-payout-status"></p>
           <form class="account-form" id="creator-payout-request-form">
             <label
               >Withdrawal amount in dollars
-              <input name="amount" type="number" min="10" step="0.01" required
+              <input name="amount" type="number" min="10" step="10" required
             /></label>
             <button class="button button--secondary">Request payout</button>
           </form>
@@ -130,7 +149,7 @@
           <h2>Preferred Creator</h2>
           <p>
             $20 per month under a 12-month commitment, or $200 annually prepaid.
-            Preferred Creators are committed leaders of the TRG Creator Community.
+            Preferred Creators are committed leaders of the Tobacco Road Games Creator Community.
             This service status does not grant operator, moderation, ownership,
             governance, or organic-ranking authority.
           </p>
@@ -143,12 +162,14 @@
           <button
             class="button button--secondary"
             data-preferred-balance-plan="monthly_commitment"
+            hidden
           >
             Pay $20 Monthly Charge with Creator Balance
           </button>
           <button
             class="button button--secondary"
             data-preferred-balance-plan="annual_prepaid"
+            hidden
           >
             Pay $200 Annual Charge with Creator Balance
           </button>
@@ -161,7 +182,22 @@
           <button class="button button--secondary" id="creator-preferred-do-not-renew" hidden>
             Do Not Renew After Current Commitment
           </button>
+          <p class="account-help" id="creator-preferred-balance-guidance"></p>
           <p id="creator-preferred-status" role="status"></p>
+        </section>
+        <section class="account-card" id="creator-closure" hidden>
+          <h2>Close Creator Account</h2>
+          <p>Closing stops selling and pauses listings without deleting marketplace history. Existing customers keep their purchases and downloads. Your ordinary customer account, My Library, and order history remain available.</p>
+          <p>Legitimate Creator earnings remain owed. Pending, held, disputed, reserved, or negative balances can delay completion. Annual prepaid Creator services are not refunded or credited, and existing monthly commitment obligations are not forgiven. No new renewal commitment will begin.</p>
+          <p id="creator-closure-status"></p>
+          <div id="creator-closure-blockers"></div>
+          <form class="account-form" id="creator-closure-form">
+            <label>Optional reason <textarea name="reason"></textarea></label>
+            <label>Type CLOSE to confirm <input name="confirmation" autocomplete="off" required /></label>
+            <button class="button button--secondary">Close Creator Account</button>
+          </form>
+          <button class="button button--secondary" id="creator-closure-refresh" type="button">Refresh closure status</button>
+          <p id="creator-closure-result" role="status"></p>
         </section>
         <section class="account-card" id="creator-remediations" hidden>
           <h2>Product Remediation</h2>
@@ -228,7 +264,7 @@
         <section class="account-card" id="creator-advertising" hidden>
           <h2>Advertising</h2>
           <p>
-            TRG does not create creator ads. Upload your own product banner and
+            Tobacco Road Games does not create Creator ads. Upload your own product banner and
             choose which validated ads occupy your rotation slots. Rotation does
             not guarantee impressions, clicks, or sales.
           </p>
@@ -261,9 +297,11 @@
           <button
             class="button button--secondary"
             id="creator-buy-ad-credits-balance"
+            hidden
           >
             Pay $5 with Creator Balance
           </button>
+          <p class="account-help" id="creator-ad-balance-guidance"></p>
           <p class="account-help">Unused Ad Credits do not expire and remain until redeemed. Credits are not cash-equivalent or refundable merely for non-use. Advertising does not guarantee impressions, clicks, or sales.</p>
           <p id="creator-ad-status" role="status"></p>
         </section>

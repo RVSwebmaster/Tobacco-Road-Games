@@ -825,8 +825,8 @@ function assertNoAuthBoundaryChanges() {
 function assertAccountPageAndRoutes() {
   const accountPage = fs.readFileSync(path.join(ROOT, "account.html"), "utf8");
   assert.match(accountPage, /Continue with Google/, "Account page should offer Google sign-in.");
-  assert.match(accountPage, /Create a TRG account/, "Account page should offer native registration.");
-  assert.match(accountPage, /Sign in with a TRG account/, "Account page should offer native sign-in.");
+  assert.match(accountPage, /Create a Tobacco Road Games account/, "Account page should offer native registration.");
+  assert.match(accountPage, /Sign in with a Tobacco Road Games account/, "Account page should offer native sign-in.");
   assert.match(accountPage, /Forgot password/, "Account page should offer password reset.");
   assert.match(accountPage, /Sign Out/i, "Account page should offer sign-out.");
   assert.doesNotMatch(accountPage, /Google (?:profile )?(?:photo|avatar)/i, "Account page must not expose Google profile photos or avatars.");

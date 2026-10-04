@@ -22,7 +22,18 @@ import {
 import { getCreatorRatingSummary } from "./creator-reputation.mjs";
 import { getCreatorBalance } from "./creator-balance.mjs";
 import {
+  adjustOwnerCreatorFunds,
+  adjustTrgRevenue,
+  ownerProfileFinancials,
+} from "./owner-profile-finance.mjs";
+import {
+  creatorClosureStatus,
+  refreshCreatorClosure,
+  requestCreatorClosure,
+} from "./creator-closure.mjs";
+import {
   getPreferredBillingState,
+  getPreferredBalancePaymentEligibility,
   markPreferredDoNotRenew,
   preferredGraceDays,
   startAnnualPreferredCheckout,
@@ -32,6 +43,10 @@ import {
   purchaseServiceWithCreatorBalance,
   SERVICE_PRICING,
 } from "./creator-service-purchases.mjs";
+import {
+  listCreatorMembershipIdentities,
+  selectCreatorIdentity,
+} from "./creator-identity-selection.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -54,6 +69,21 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       },
       401,
     );
+  const route = routePath(request);
+  if (request.method === "GET" && route === "identity-options") {
+    const identities = await listCreatorMembershipIdentities(
+      database,
+      session.user.id,
+    );
+    return json({
+      creators: identities.map((creator) => ({
+        id: creator.id,
+        slug: creator.slug,
+        displayName: creator.display_name,
+        permission: creator.permission,
+      })),
+    });
+  }
   const creator = await resolveCreator(database, session.user.id, request);
   if (!creator)
     return json(
@@ -65,7 +95,6 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       },
       403,
     );
-  const route = routePath(request);
   const readiness = await getCreatorOperationalEligibility(
     database,
     creator.id,
@@ -93,6 +122,42 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
   }
   if (request.method === "GET" && route === "overview")
     return overview(database, creator, readiness);
+  if (request.method === "GET" && route === "closure") {
+    try {
+      return json(
+        await creatorClosureStatus(database, {
+          creatorId: creator.id,
+          userId: session.user.id,
+          nowMs: options.nowMs,
+        }),
+      );
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
+  if (request.method === "POST" && route === "closure") {
+    try {
+      const body = await request.json();
+      return json(
+        await requestCreatorClosure(database, {
+          creatorId: creator.id,
+          userId: session.user.id,
+          confirmation: body.confirmation,
+          reason: body.reason,
+          nowMs: options.nowMs,
+        }),
+      );
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
+  if (request.method === "POST" && route === "closure/refresh") {
+    try {
+      return json(await refreshCreatorClosure(database, { creatorId: creator.id, userId: session.user.id, nowMs: options.nowMs, requireOwner: true }));
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
   if (request.method === "GET" && route === "listings")
     return listings(database, creator);
   if (request.method === "GET" && route === "profile")
@@ -140,7 +205,36 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
   if (request.method === "GET" && route === "analytics")
     return analytics(database, creator);
   if (request.method === "GET" && route === "finance")
-    return creatorFinance(request, database, creator, { ...options, env });
+    return creatorFinance(request, database, creator, {
+      ...options,
+      env,
+      userId: session.user.id,
+    });
+  if (request.method === "POST" && route === "owner-financial-adjustment") {
+    try {
+      const body = await request.json();
+      const input = {
+        creatorId: creator.id,
+        userId: session.user.id,
+        newTotalCents: body.newTotalCents,
+        expectedTotalCents: body.expectedTotalCents,
+        idempotencyKey: body.idempotencyKey,
+        reason: body.reason,
+        nowMs: options.nowMs,
+      };
+      const adjustment =
+        body.kind === "creator_funds"
+          ? await adjustOwnerCreatorFunds(database, input)
+          : body.kind === "trg_revenue"
+            ? await adjustTrgRevenue(database, input)
+            : (() => {
+                throw new Error("Choose Creator funds or Tobacco Road Games earnings.");
+              })();
+      return json({ ok: true, adjustment });
+    } catch (error) {
+      return invalid(error.message);
+    }
+  }
   if (request.method === "GET" && route === "operations")
     return json(await listOperations(database, { creatorId: creator.id }));
   if (request.method === "GET" && route === "preferred") {
@@ -155,11 +249,15 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       userId: session.user.id,
       nowMs: options.nowMs,
     });
-    const billing = await getPreferredBillingState(
-      database,
-      creator.id,
-      options.nowMs || Date.now(),
-    );
+    const internalPurchase = await getPreferredBalancePaymentEligibility(
+        database,
+        {
+          creatorId: creator.id,
+          creatorEligible: readiness.eligible,
+          nowMs: options.nowMs || Date.now(),
+        },
+      ),
+      billing = internalPurchase.billing;
     return json({
       term,
       billing,
@@ -172,6 +270,12 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       automaticStripeInstallments: true,
       paymentMethod: {
         ready: Boolean(readiness.paymentMethodReady),
+      },
+      internalPurchase: {
+        canUseBalance: internalPurchase.canUseBalance,
+        preferred: internalPurchase.preferred,
+        monthlyEligible: internalPurchase.monthlyEligible,
+        annualRenewalEligible: internalPurchase.annualRenewalEligible,
       },
     });
   }
@@ -293,13 +397,7 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
 
 async function resolveCreator(db, userId, request) {
   const requested = new URL(request.url).searchParams.get("creator") || "";
-  const rows = await all(
-    db
-      .prepare(
-        `SELECT c.*, cm.permission, cm.user_id FROM creator_memberships cm JOIN marketplace_creators c ON c.id=cm.creator_id WHERE cm.user_id=? ORDER BY c.display_name`,
-      )
-      .bind(userId),
-  );
+  const rows = await listCreatorMembershipIdentities(db, userId);
   for (const row of rows)
     row.marketplace_status =
       row.registration_status ||
@@ -308,10 +406,7 @@ async function resolveCreator(db, userId, request) {
       ] ||
       "incomplete";
   if (!rows.length) return null;
-  if (!requested) return rows[0];
-  return (
-    rows.find((row) => row.id === requested || row.slug === requested) || null
-  );
+  return selectCreatorIdentity(rows, requested);
 }
 async function overview(db, creator, readiness) {
   const counts = await db
@@ -482,7 +577,7 @@ async function updateListing(request, db, creator, id) {
     .bind(id, creator.id)
     .first();
   if (!current) return notFound();
-  if (!EDITABLE_STATES.has(current.lifecycle_state))
+  if (!EDITABLE_STATES.has(current.lifecycle_state) && Number(current.owner_review_hold) !== 1)
     return invalid(
       "Only drafts, paused listings, or listings needing changes can be edited.",
     );
@@ -547,6 +642,8 @@ async function changeListingState(request, db, creator, id, state) {
     .bind(id, creator.id)
     .first();
   if (!current) return notFound();
+  if (Number(current.owner_review_hold) === 1)
+    return invalid("Tobacco Road Games has placed this listing on Owner Review Hold. Corrective edits and file replacement remain available, but only Tobacco Road Games can restore saleability.");
   if (state === "submitted" && !EDITABLE_STATES.has(current.lifecycle_state))
     return invalid("This listing cannot be submitted from its current state.");
   if (state === "paused" && current.lifecycle_state !== "active")
@@ -658,12 +755,19 @@ async function creatorFinance(request, db, creator, options) {
         "SELECT p.id,p.service_type,p.service_sku,p.quantity,p.amount_cents,p.currency,p.payment_source,p.settlement_method,CASE WHEN p.processor_fee_authoritative=1 THEN p.processor_fee_cents ELSE NULL END processor_fee_cents,p.status,p.created_at,p.completed_at,p.reversed_at,cp.billing_plan,cp.coverage_starts_at,cp.coverage_ends_at FROM marketplace_service_purchases p LEFT JOIN creator_identity_coverage_periods cp ON cp.service_purchase_id=p.id WHERE p.creator_id=? ORDER BY p.created_at DESC LIMIT 100",
       )
       .bind(creator.id)
-      .all();
+      .all(),
+    ownerFinancials = await ownerProfileFinancials(
+      db,
+      creator.id,
+      options.userId,
+      options.nowMs,
+    ).catch(() => null);
   return json({
     creator: publicCreator(creator),
     ...finance,
     payout,
     creatorBalance,
+    ownerFinancials,
     servicePurchases: serviceResult.results || [],
   });
 }
@@ -843,6 +947,10 @@ function publicListing(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     inactivityState: row.inactivity_state || "active",
+    ownerReviewHold: Number(row.owner_review_hold) === 1,
+    ownerReviewHoldReason: Number(row.owner_review_hold) === 1 ? row.owner_review_hold_reason : "",
+    ownerReviewHoldStartedAt: Number(row.owner_review_hold) === 1 ? row.owner_review_hold_started_at : null,
+    ownerReviewHoldCorrectiveActionExpected: Number(row.owner_review_hold) === 1 && Number(row.owner_review_hold_corrective_action_expected) === 1,
     lastQualifyingActivityAt:
       row.last_qualifying_activity_at || row.first_published_at || null,
     inactivityWarningStartedAt: row.inactivity_warning_started_at || null,
@@ -859,6 +967,7 @@ export function requiresCurrentEligibility(method, route) {
   if (method === "GET") return false;
   if (
     route === "profile" ||
+    route.startsWith("closure") ||
     route.startsWith("remediations/") ||
     /^listings\/[^/]+\/pause$/.test(route)
   )

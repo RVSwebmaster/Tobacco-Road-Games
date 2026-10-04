@@ -13,13 +13,13 @@
   <meta property="og:url" content="https://tobaccoroadgames.com/store/cart/">
   <meta property="og:image" content="https://tobaccoroadgames.com/assets/logo.png">
   <meta name="theme-color" content="#120c08">
-  
+
   <link rel="icon" type="image/png" href="/assets/logo.png?v=20260712-shelf12-hinges">
   <link rel="stylesheet" href="/styles.css?v=20260712-shelf12-hinges">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Tobacco Road Games Store Cart","description":"Review the Tobacco Road Games browser cart before checkout is enabled.","url":"https://tobaccoroadgames.com/store/cart/"}</script>
   <script src="/assets/js/store-status.js?v=20260712-shelf12-hinges" defer></script>
   <script src="/assets/js/cart.js?v=20260712-shelf12-hinges" defer></script>
-  <script src="/assets/js/creator-balance-checkout.js?v=20260831-creator-balance" defer></script>
+  <script src="/assets/js/creator-balance-checkout.js?v=20260907-identity-repair" defer></script>
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -28,23 +28,23 @@
         <img class="brand__logo" src="/assets/logo.png?v=20260712-shelf12-hinges" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Publisher-owned store and workshop catalog</span>
+
         </div>
       </a>
 
-      
-    <nav class="site-nav" aria-label="Store navigation">
-      <a href="/store/">Marketplace</a><a href="/authors.html">Creators</a><a href="/store/#new-releases-bookshelf-heading">New Releases</a><a href="/store/catalog/">Sales & Bundles</a><a href="/#physical-goods">Physical Goods</a><a href="/forum">Community</a><a href="/#about">About TRG</a><a href="/account.html">Account / My Library</a><a href="/store/cart/" aria-current="page">Cart <span class="cart-count-badge" data-cart-count>0</span></a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/store/catalog/">Explore</a><a href="/forum">Community Forum</a><a href="/authors.html">Creators</a><a href="/creator/">Creator Login / Sign Up</a><a href="/ai-policy.html">AI Policy</a><a href="/support.html">Support</a><a href="/account.html">Join / Sign In</a><a href="/store/cart/" aria-current="page">Cart <span class="cart-count-badge" data-cart-count>0</span></a>
     </nav>
     </header>
 
-    
+
       <main id="top">
-        
+
     <nav class="breadcrumbs" aria-label="Breadcrumb">
       <a href="/store/">Store</a><span class="breadcrumbs__sep">/</span><span aria-current="page">Cart</span>
     </nav>
-  
+
 
         <section class="store-section" aria-labelledby="cart-heading">
           <div class="section-heading">
@@ -76,10 +76,16 @@
                 <p class="cart-summary__copy">Every acquisition requires a verified email. An account is optional. Paid checkout opens securely on a Stripe-hosted page.</p>
                 <p class="cart-checkout-form__feedback" data-cart-checkout-feedback aria-live="polite"></p>
                 <button type="submit" class="button button--primary cart-summary__button" data-cart-checkout-submit disabled aria-disabled="true">Continue to Secure Checkout</button>
+                <section class="creator-balance-checkout" data-creator-payment-identity hidden>
+                  <label>
+                    Creator identity for Creator Balance
+                    <select data-creator-payment-identity-select></select>
+                  </label>
+                </section>
                 <section class="creator-balance-checkout" data-creator-balance hidden>
                   <p class="note-card__label">Creator Balance</p>
                   <p data-creator-balance-status>Checking eligibility…</p>
-                  <button type="button" class="button button--secondary cart-summary__button" data-creator-balance-submit>Pay Entire Total with Creator Balance</button>
+                  <button type="button" class="button button--secondary cart-summary__button" data-creator-balance-submit disabled>Pay Entire Total with Creator Balance</button>
                   <p class="cart-checkout-form__feedback" data-creator-balance-feedback aria-live="polite"></p>
                 </section>
               </form>
@@ -88,9 +94,9 @@
             </aside>
           </div>
         </section>
-        <script id="trg-cart-catalog" type="application/json">[{"cover":"/product-assets/circle-of-cinder/cover.webp","currency":"USD","priceCents":200,"priceDisplay":"$2.00","slug":"circle-of-cinder","title":"Circle of Cinder","url":"/store/products/circle-of-cinder/"},{"cover":"/product-assets/ringbound/cover.webp","currency":"USD","priceCents":500,"priceDisplay":"$5.00","slug":"ringbound","title":"Ringbound","url":"/store/products/ringbound/"},{"cover":"/product-assets/janni/cover.webp","currency":"USD","priceCents":499,"priceDisplay":"$4.99","slug":"janni","title":"Janni","url":"/store/products/janni/"}]</script>
+        <script id="trg-cart-catalog" type="application/json">[]</script>
       </main>
-    
+
 
     <footer class="site-footer">
       <a class="footer-mark" href="/ad-depot.html" title="Ad depot" aria-label="Ad depot">

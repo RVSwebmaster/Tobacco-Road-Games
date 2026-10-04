@@ -1,6 +1,10 @@
 import { getEffectiveFeePolicy } from "./creator-finance.mjs";
 import { resolveSalePolicy } from "./marketplace-policy.mjs";
 import { getCreatorLiability } from "./creator-liability.mjs";
+import {
+  assertCreatorInternalPurchasePrivilege,
+  assertDigitalCreatorProduct,
+} from "./creator-internal-purchase-policy.mjs";
 export async function getCreatorBalance(
   db,
   { creatorId, userId, currency = "USD", nowMs = Date.now() } = {},
@@ -42,6 +46,7 @@ export async function settleCreatorBalancePurchase(
     currency = "USD",
     items,
     deliveryMappings,
+    catalogProducts,
     nowMs = Date.now(),
     env = {},
   } = {},
@@ -50,7 +55,9 @@ export async function settleCreatorBalancePurchase(
     !Array.isArray(items) ||
     !items.length ||
     !Array.isArray(deliveryMappings) ||
-    deliveryMappings.length !== items.length
+    deliveryMappings.length !== items.length ||
+    !Array.isArray(catalogProducts) ||
+    catalogProducts.length !== items.length
   )
     throw new Error("A complete product purchase is required.");
   const total = items.reduce((n, x) => n + Number(x.lineTotalCents), 0);
@@ -69,6 +76,11 @@ export async function settleCreatorBalancePurchase(
       totalCents: existing.gross_cents,
       idempotent: true,
     };
+  const purchasePrivilege = await assertCreatorInternalPurchasePrivilege(db, {
+    creatorId: buyerCreatorId,
+    userId: buyerUserId,
+    nowMs,
+  });
   const balance = await getCreatorBalance(db, {
     creatorId: buyerCreatorId,
     userId: buyerUserId,
@@ -90,11 +102,16 @@ export async function settleCreatorBalancePurchase(
     totalNet = 0;
   for (let index = 0; index < items.length; index++) {
     const item = items[index],
-      listing = await db
+      catalogProduct = catalogProducts[index],
+      deliveryMapping = deliveryMappings[index];
+    if (catalogProduct?.slug !== item.productSlug)
+      throw new Error("Creator Balance product policy data is inconsistent.");
+    assertDigitalCreatorProduct(catalogProduct, deliveryMapping);
+    const listing = await db
         .prepare(
-          "SELECT id,creator_id,first_published_at FROM creator_listings WHERE source_product_slug=? OR public_product_slug=? LIMIT 1",
+          "SELECT id,creator_id,first_published_at FROM creator_listings WHERE creator_id=? AND lifecycle_state='active' AND publication_state='published' AND owner_review_hold=0 AND (source_product_slug=? OR public_product_slug=?) LIMIT 1",
         )
-        .bind(item.productSlug, item.productSlug)
+        .bind(catalogProduct.creatorId, item.productSlug, item.productSlug)
         .first();
     if (!listing)
       throw new Error("A cart product is not mapped to a Creator listing.");
@@ -293,6 +310,8 @@ export async function settleCreatorBalancePurchase(
           commissionCents: totalFee,
           sellerNetCents: totalNet,
           paymentSource: "creator_balance",
+          preferred: purchasePrivilege.preferred,
+          ownerException: purchasePrivilege.ownerException,
         }),
         now,
       ),

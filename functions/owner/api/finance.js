@@ -16,6 +16,7 @@ import {
   reconcileProviderFinance,
 } from "../../_lib/creator-payout-readiness.mjs";
 import { reconcileCreatorFinance } from "../../_lib/creator-finance.mjs";
+import { listCreatorClosures } from "../../_lib/creator-closure.mjs";
 
 export async function onRequestGet({ request, env }) {
   const auth = await verifySessionToken(
@@ -34,12 +35,14 @@ export async function onRequestGet({ request, env }) {
     transactions,
     ledgerExceptions,
     providerExceptions,
+    closures,
   ] = await Promise.all([
     getMarketplaceCreatorLiability(env.TRG_ORDERS),
     getTrgRevenueReport(env.TRG_ORDERS),
     listFinanceTransactions(env.TRG_ORDERS),
     reconcileCreatorFinance(env.TRG_ORDERS),
     reconcileProviderFinance(env.TRG_ORDERS),
+    listCreatorClosures(env.TRG_ORDERS),
   ]);
   for (const item of liability.items) {
     const status = await getCreatorPayoutStatus(env.TRG_ORDERS, item.id, {
@@ -97,9 +100,11 @@ export async function onRequestGet({ request, env }) {
     generatedAt: new Date().toISOString(),
     liability,
     revenue,
+    revenueAdjustments: (await env.TRG_ORDERS.prepare("SELECT a.*,COALESCE(c.display_name,u.email_normalized,'Owner') actor_display FROM trg_revenue_adjustments a JOIN users u ON u.id=a.actor_user_id LEFT JOIN creator_identity_ownership own ON own.owner_user_id=u.id AND own.identity_type='primary' LEFT JOIN marketplace_creators c ON c.id=own.creator_id ORDER BY a.created_at DESC").all()).results || [],
     transactions,
     exceptions,
     filters,
+    closures,
     bankReconciliation: {
       creatorMoneyRequiredCents: liability.totals.totalCreatorLiabilityCents,
       trgEarnedLedgerAmountCents: revenue.netRetainedRevenueCents,

@@ -9,6 +9,8 @@ const firstOrZero = async (statement) => {
   }
 };
 
+import { assertOrdinaryPayoutAmount } from "./creator-payout-amount-policy.mjs";
+
 export async function getCreatorLiability(
   db,
   creatorId,
@@ -104,6 +106,7 @@ export async function getCreatorLiability(
     negativeBalanceCents: Math.max(0, -signedNet),
     completedPayoutsCents: amount(completed),
     currentNetLiabilityCents: Math.max(0, signedNet),
+    signedNetBalanceCents: signedNet,
     rawPayoutReservationCapacityCents: eligible,
     payoutEligibleCents: Math.max(0, eligible),
   };
@@ -183,7 +186,8 @@ export async function reserveCreatorPayout(
     amountCents,
     currency = "USD",
     accountClosure = false,
-    enforceMinimum = true,
+    closureRequestId = null,
+    closureActorId = null,
     requestId = crypto.randomUUID(),
     nowMs = Date.now(),
   } = {},
@@ -196,14 +200,28 @@ export async function reserveCreatorPayout(
       ? liability.payoutEligibleCents
       : Number(amountCents),
     now = new Date(nowMs).toISOString();
-  if (
-    !Number.isInteger(amount) ||
-    amount <= 0 ||
-    amount > liability.payoutEligibleCents
-  )
-    throw new Error("Payout exceeds canonical eligible Creator liability.");
-  if (enforceMinimum && !accountClosure && amount < 1000)
-    throw new Error("Normal withdrawals require at least $10.");
+  if (accountClosure)
+    {
+      const closing = await db
+        .prepare(
+          "SELECT 1 ok FROM marketplace_creators c JOIN creator_closure_requests r ON r.creator_id=c.id WHERE c.id=? AND c.closure_state='closing' AND r.state='closing'",
+        )
+        .bind(creatorId)
+        .first()
+        .catch((error) => {
+          if (/no such table|no such column/i.test(String(error))) return null;
+          throw error;
+        });
+      if (!closing)
+        throw new Error(
+          "Final closure payout requires a durable Creator closing state.",
+        );
+      if (amount <= 0)
+        throw new Error("No positive Creator balance requires settlement.");
+      const request = await db.prepare("SELECT id FROM creator_closure_requests WHERE id=? AND creator_id=? AND state='closing' AND final_payout_request_id IS NULL").bind(String(closureRequestId || ""),creatorId).first();
+      if (!request) throw new Error("A matching unsettled Creator closure request is required.");
+    }
+  else assertOrdinaryPayoutAmount(amount, liability.payoutEligibleCents);
   const reservationsAvailable = await payoutReservationSchemaAvailable(db);
   try {
     const statements = [
@@ -228,6 +246,12 @@ export async function reserveCreatorPayout(
           )
           .bind(requestId, creatorId, amount, now),
       );
+    if (accountClosure) {
+      statements.push(
+        db.prepare("UPDATE creator_closure_requests SET final_payout_request_id=?,updated_at=? WHERE id=? AND creator_id=? AND final_payout_request_id IS NULL").bind(requestId,now,closureRequestId,creatorId),
+        db.prepare("INSERT INTO creator_closure_audit(id,closure_request_id,creator_id,actor_user_id,action,context_json,created_at,payout_request_id) VALUES(?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),closureRequestId,creatorId,closureActorId||null,"final_settlement_requested",JSON.stringify({amountCents:amount}),now,requestId),
+      );
+    }
     await db.batch(statements);
   } catch (error) {
     throw new Error(
@@ -271,6 +295,7 @@ export async function getTrgRevenueReport(db) {
     service,
     providerCosts,
     orders,
+    ownerAdjustments,
   ] = await Promise.all([
     db
       .prepare(
@@ -320,6 +345,12 @@ export async function getTrgRevenueReport(db) {
    COALESCE(SUM(CASE WHEN payment_source='stripe' THEN processor_fee_cents ELSE 0 END),0) processor_fees FROM orders`,
       )
       .first(),
+    db
+      .prepare(
+        "SELECT COALESCE(SUM(delta_cents),0) amount FROM trg_revenue_adjustments",
+      )
+      .first()
+      .catch(() => ({ amount: 0 })),
   ]);
   const productGross =
       amount(externalProduct) + Number(internalProduct?.gross || 0),
@@ -373,7 +404,14 @@ export async function getTrgRevenueReport(db) {
         Number(service?.balance_net || 0),
       ),
     },
-    netRetainedRevenueCents: productNet + Number(service?.net || 0) - costs,
+    ownerRevenueAdjustmentsCents: amount(ownerAdjustments),
+    netBeforeOwnerAdjustmentsCents:
+      productNet + Number(service?.net || 0) - costs,
+    netRetainedRevenueCents:
+      productNet +
+      Number(service?.net || 0) -
+      costs +
+      amount(ownerAdjustments),
     timingWarning:
       "Stripe settlement timing and bank transfers are not represented; this is ledger activity, not a bank-statement reconciliation.",
   };

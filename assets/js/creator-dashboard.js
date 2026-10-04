@@ -4,6 +4,14 @@
     listingsPanel = document.querySelector("#creator-listings"),
     profilePanel = document.querySelector("#creator-profile");
   let csrf = "";
+  let currentCreatorId = "";
+  let ownerAdjustmentKey = "";
+  let ownerFinancialSnapshot = null;
+  function creatorApiUrl(path) {
+    const url = new URL(`/api/creator/${path}`, location.origin);
+    if (currentCreatorId) url.searchParams.set("creator", currentCreatorId);
+    return `${url.pathname}${url.search}`;
+  }
   async function api(path, body) {
     if (
       body &&
@@ -23,7 +31,7 @@
         licensesConfirmed: true,
       };
     }
-    const response = await fetch(`/api/creator/${path}`, {
+    const response = await fetch(creatorApiUrl(path), {
       method: body ? "POST" : "GET",
       credentials: "same-origin",
       headers: body
@@ -43,13 +51,26 @@
       credentials: "same-origin",
     }).then((r) => r.json());
     csrf = account.csrfToken || "";
-    const [summary, profileData, finance, operations, preferred] =
+    const identityOptions = await api("identity-options"),
+      identities = identityOptions.creators || [],
+      requested = new URL(location.href).searchParams.get("creator") || "",
+      stored = readSelectedCreator();
+    currentCreatorId =
+      identities.find((creator) => creator.id === requested)?.id ||
+      identities.find((creator) => creator.id === stored)?.id ||
+      identities[0]?.id ||
+      "";
+    if (!currentCreatorId)
+      throw new Error("No authorized Creator identity is available.");
+    renderCreatorSelector(identities);
+    const summary = await api("overview"),
+      [profileData, finance, operations, preferred, closure] =
       await Promise.all([
-        api("overview"),
         api("profile"),
         api("finance"),
         api("operations"),
         api("preferred"),
+        api("closure"),
       ]);
     document.querySelector("#creator-name").textContent =
       summary.creator.displayName;
@@ -65,9 +86,15 @@
     const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
     document.querySelector("#creator-finance-summary").textContent =
       `Gross ${money(finance.summary.grossSalesCents)} · marketplace fees ${money(finance.summary.marketplaceFeesCents)} · lifetime net earnings ${money(finance.summary.lifetimeEarningsCents)} · refunds/adjustments ${money(finance.summary.refundsAndAdjustmentsCents)} · Creator Balance available ${money(finance.creatorBalance.availableCents)} · pending ${money(finance.creatorBalance.pendingCents)} · held ${money(finance.creatorBalance.heldCents)} · payout reserved ${money(finance.creatorBalance.payoutReservedCents)} · purchase reserved ${money(finance.creatorBalance.purchaseReservedCents)} · paid ${money(finance.summary.paidBalanceCents)}`;
+    renderOwnerFinancials(finance.ownerFinancials, finance.payout, money);
+    const payoutInput = document.querySelector(
+      '#creator-payout-request-form input[name="amount"]',
+    );
+    payoutInput.max = String(finance.payout.maximumOrdinaryPayoutCents / 100);
+    payoutInput.disabled = finance.payout.maximumOrdinaryPayoutCents < 1000;
     document.querySelector("#creator-payout-status").textContent = finance
       .payout.eligible
-      ? `Payout ready: ${money(finance.payout.eligibleAmountCents)} is eligible.`
+      ? `Payout ready: up to ${money(finance.payout.maximumOrdinaryPayoutCents)} in $10 increments. ${money(finance.payout.ordinaryPayoutRemainderCents)} remains in Creator Balance.`
       : `Payout blocked: ${finance.payout.blockedReasons.join(" ")}`;
     document.querySelector("#creator-payment-method-status").textContent =
       summary.registrationChecks?.paymentMethodReady
@@ -80,19 +107,24 @@
     document.querySelector("#creator-preferred-summary").textContent = commitment
       ? `${preferredBilling.active ? "Preferred active" : "Preferred billing needs attention"} · ${commitment.plan_type === "monthly_commitment" ? `installment ${Math.min((preferredBilling.paidCount || 0) + 1, 12)} of 12${currentInstallment ? ` · next $20 due ${formatDate(currentInstallment.due_at)}` : ""}` : "annual prepaid"} · paid through ${commitment.paid_through_at ? formatDate(commitment.paid_through_at) : "payment pending"} · billing ${commitment.billing_state} · renewal ${commitment.renewal_state.replaceAll("_", " ")} · Creator Balance ${money(preferred.balance.availableCents)} available. Creator Balance is never spent automatically.`
       : `Standard tier · Creator Balance ${money(preferred.balance.availableCents)} available. Choose a 12-month monthly commitment or annual prepaid coverage.`;
-    document.querySelector("#creator-preferred-monthly-stripe").hidden = Boolean(commitment);
-    document.querySelector("#creator-preferred-annual-stripe").hidden = Boolean(commitment);
+    const balancePrivilege = preferred.internalPurchase || {},
+      currentPreferred = Boolean(balancePrivilege.preferred);
+    document.querySelector("#creator-preferred-monthly-stripe").hidden = currentPreferred || Boolean(commitment);
+    document.querySelector("#creator-preferred-annual-stripe").hidden = currentPreferred || Boolean(commitment);
     document.querySelector("#creator-preferred-do-not-renew").hidden =
       !commitment || commitment.renewal_state === "do_not_renew";
-    for (const button of document.querySelectorAll(
-      "[data-preferred-balance-plan]",
-    ))
-      button.disabled =
-        preferred.balance.availableCents <
-        (button.dataset.preferredBalancePlan === "annual_prepaid"
-          ? 20000
-          : 2000);
+    for (const button of document.querySelectorAll("[data-preferred-balance-plan]")) {
+      const annual = button.dataset.preferredBalancePlan === "annual_prepaid",
+        eligible = annual ? balancePrivilege.annualRenewalEligible : balancePrivilege.monthlyEligible,
+        required = annual ? preferred.pricing.annualPrepaidCents : preferred.pricing.monthlyCommitmentCents;
+      button.hidden = !eligible;
+      button.disabled = !eligible || preferred.balance.availableCents < required;
+    }
+    document.querySelector("#creator-preferred-balance-guidance").textContent = currentPreferred
+      ? `Creator Balance: ${money(preferred.balance.availableCents)}. Eligible charges require full coverage; external payment is required when Balance is insufficient. Balance and card payment cannot be combined.`
+      : "Initial Preferred activation requires external payment.";
     renderOperations(operations);
+    renderClosure(closure, money);
     fillProfile(profileData.creator);
     overview.hidden =
       profilePanel.hidden =
@@ -124,6 +156,64 @@
         ...listingData.listings.map((item) => new Option(item.title, item.id)),
       );
     document.querySelector("#creator-advertising").hidden = false;
+  }
+  function readSelectedCreator() {
+    try {
+      return localStorage.getItem("trg_current_creator_identity") || "";
+    } catch {
+      return "";
+    }
+  }
+  function rememberSelectedCreator(creatorId) {
+    try {
+      localStorage.setItem("trg_current_creator_identity", creatorId);
+    } catch {}
+  }
+  function renderCreatorSelector(identities) {
+    const control = document.querySelector("#creator-identity-control"),
+      selector = document.querySelector("#creator-identity-selector");
+    selector.replaceChildren(
+      ...identities.map((creator) => {
+        const option = document.createElement("option");
+        option.value = creator.id;
+        option.textContent = creator.displayName;
+        option.selected = creator.id === currentCreatorId;
+        return option;
+      }),
+    );
+    control.hidden = identities.length < 2;
+    rememberSelectedCreator(currentCreatorId);
+  }
+  document
+    .querySelector("#creator-identity-selector")
+    .addEventListener("change", (event) => {
+      const creatorId = event.currentTarget.value;
+      rememberSelectedCreator(creatorId);
+      const url = new URL(location.href);
+      url.searchParams.set("creator", creatorId);
+      location.assign(url.toString());
+    });
+  function renderClosure(closure, money) {
+    const panel = document.querySelector("#creator-closure");
+    panel.hidden = false;
+    const labels = { active: "Creator account is active.", closing: "Closure requested. Listings are closed to new sales.", closed: "Creator account closed." };
+    document.querySelector("#creator-closure-status").textContent = labels[closure.state] || closure.state;
+    document.querySelector("#creator-closure-blockers").replaceChildren(...(closure.blockers || []).map((x) => { const p=document.createElement("p"); p.textContent=`${x.message}${x.amountCents ? ` ${money(x.amountCents)}` : ""}`; return p; }));
+    document.querySelector("#creator-closure-form").hidden = closure.state !== "active";
+  }
+  function renderOwnerFinancials(data, payout, money) {
+    const panel = document.querySelector("#owner-financial-controls");
+    if (!data) return;
+    ownerFinancialSnapshot = data;
+    panel.hidden = false;
+    document.querySelector("#owner-financial-summary").textContent =
+      `Creator funds ${money(data.liability.currentNetLiabilityCents)} · available ${money(data.liability.availableBalanceCents)} · pending ${money(data.liability.pendingBalanceCents)} · held ${money(data.liability.heldBalanceCents)} · dispute-held ${money(data.liability.disputeHeldCents)} · payout reserved ${money(data.liability.payoutReservedCents)} · purchase reserved ${money(data.liability.purchaseReservedCents)} · payout eligible ${money(data.liability.payoutEligibleCents)} · retained ordinary-payout remainder ${money(payout.ordinaryPayoutRemainderCents)}. Tobacco Road Games earned ${money(data.revenue.netRetainedRevenueCents)}: product commissions ${money(data.revenue.productCommission.netCents)}, Preferred ${money(data.revenue.serviceRevenue.preferredStripeNetCents + data.revenue.serviceRevenue.preferredCreatorBalanceNetCents)}, additional identities ${money(data.revenue.serviceRevenue.additionalIdentityStripeNetCents + data.revenue.serviceRevenue.additionalIdentityCreatorBalanceNetCents)}, Ad Credits ${money(data.revenue.serviceRevenue.adCreditsStripeNetCents + data.revenue.serviceRevenue.adCreditsCreatorBalanceNetCents)}, all services ${money(data.revenue.serviceRevenue.netCents)}, reversals ${money(data.revenue.productCommission.reversalsCents + data.revenue.serviceRevenue.reversalsCents)}, provider/processor costs ${money(data.revenue.costs.totalCents)}, owner adjustments ${money(data.revenue.ownerRevenueAdjustmentsCents)}.`;
+    const history = [...data.creatorAdjustments.map((x) => ({ ...x, account: "Creator funds" })), ...data.revenueAdjustments.map((x) => ({ ...x, account: "Tobacco Road Games earned" }))].sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
+    document.querySelector("#owner-financial-history").replaceChildren(...history.map((x) => {
+      const p = document.createElement("p");
+      p.textContent = `${x.created_at} · ${x.account}: ${money(x.previous_total_cents)} → ${money(x.new_total_cents)} (${money(x.delta_cents)}) · ${x.reason} · ${x.actor_display}`;
+      return p;
+    }), ...data.payoutHistory.map((x) => { const p=document.createElement("p"); p.textContent=`${x.paid_at} · Creator payout ${money(x.amount_cents)} · ${x.status} · ${x.reference}`; return p; }));
   }
   function renderCreatorAnalytics(analytics) {
     const root = document.querySelector("#creator-analytics");
@@ -245,6 +335,12 @@
         const meta = document.createElement("p");
         meta.textContent = `${item.lifecycleState} · publication ${item.publicationState} · ${item.mediaType || "media unset"} · ${item.priceCents == null ? "price unset" : `$${(item.priceCents / 100).toFixed(2)}`}`;
         body.append(title, meta);
+        if (item.ownerReviewHold) {
+          const hold = document.createElement("p");
+          hold.className = "status-note";
+          hold.textContent = `Not currently for sale — Owner Review Hold began ${formatDate(item.ownerReviewHoldStartedAt)}. Tobacco Road Games reason: ${item.ownerReviewHoldReason}${item.ownerReviewHoldCorrectiveActionExpected ? " Corrective action is expected; listing metadata and permitted file work remain available." : " No Creator corrective action is currently requested."}`;
+          body.append(hold);
+        }
         if (item.inactivityState === "warning") {
           const warning = document.createElement("p");
           warning.className = "status-note";
@@ -278,7 +374,8 @@
         }
         if (
           ["draft", "needs_changes", "paused"].includes(item.lifecycleState) &&
-          item.inactivityState !== "inactive"
+          item.inactivityState !== "inactive" &&
+          !item.ownerReviewHold
         ) {
           const button = document.createElement("button");
           button.className = "button button--secondary";
@@ -289,7 +386,7 @@
           };
           body.append(button);
         }
-        if (item.inactivityState === "inactive") {
+        if (item.inactivityState === "inactive" && !item.ownerReviewHold) {
           const button = document.createElement("button");
           button.className = "button button--secondary";
           button.textContent = "Request Reactivation";
@@ -312,8 +409,15 @@
   function renderAdvertising(data) {
     document.querySelector("#creator-ad-summary").textContent =
       `${data.tier} tier · ${data.includedEntitlement} included active slot${data.includedEntitlement === 1 ? "" : "s"} · ${data.slots.filter((x) => x.slot_type === "purchased").length} active credit-funded slots · ${data.unusedCredits} unused Ad Credits · Creator Balance $${(data.creatorBalance.availableCents / 100).toFixed(2)} available.`;
-    document.querySelector("#creator-buy-ad-credits-balance").disabled =
-      data.creatorBalance.availableCents < 500;
+    const balanceButton = document.querySelector("#creator-buy-ad-credits-balance"),
+      balanceAllowed = Boolean(data.internalPurchase?.canUseBalance);
+    balanceButton.hidden = !balanceAllowed;
+    balanceButton.disabled = !balanceAllowed || data.creatorBalance.availableCents < 500;
+    document.querySelector("#creator-ad-balance-guidance").textContent = balanceAllowed
+      ? data.creatorBalance.availableCents >= 500
+        ? "Use $5.00 from Creator Balance with no external card charge."
+        : `Creator Balance: $${(data.creatorBalance.availableCents / 100).toFixed(2)}. The full $5.00 is required, so use external payment.`
+      : "Ad Credits remain available through external payment.";
     const slots = document.querySelector("#creator-ad-slots");
     slots.replaceChildren(
       ...data.slots.map((slot) => {
@@ -446,6 +550,7 @@
         await load();
       } catch (error) {
         output.textContent = error.message;
+        await load();
       }
     });
   document
@@ -488,6 +593,7 @@
         await load();
       } catch (error) {
         output.textContent = error.message;
+        await load();
       }
     });
   document
@@ -543,7 +649,7 @@
       event.preventDefault();
       const form = event.currentTarget;
       try {
-        const response = await fetch("/api/creator/advertising", {
+        const response = await fetch(creatorApiUrl("advertising"), {
             method: "POST",
             credentials: "same-origin",
             headers: { "x-csrf-token": csrf },
@@ -578,7 +684,10 @@
       const output = document.querySelector("#creator-connect-status");
       try {
         output.textContent = "Opening secure payout setup…";
-        const result = await api("connect", { action: "start" });
+        const result = await api("connect", {
+          action: "start",
+          creatorId: currentCreatorId,
+        });
         location.assign(result.onboardingUrl);
       } catch (error) {
         output.textContent = error.message;
@@ -589,7 +698,10 @@
     .addEventListener("click", async () => {
       const output = document.querySelector("#creator-connect-status");
       try {
-        const result = await api("connect", { action: "sync" });
+        const result = await api("connect", {
+          action: "sync",
+          creatorId: currentCreatorId,
+        });
         output.textContent =
           result.state === "ready"
             ? "Payout setup is ready."
@@ -628,6 +740,39 @@
         output.textContent = error.message;
       }
     });
+  document
+    .querySelector("#owner-financial-adjustment-form")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget,
+        output = document.querySelector("#owner-financial-result"),
+        cents = Math.round(Number(form.elements.total.value) * 100);
+      try {
+        output.textContent = "Recording audited adjustment…";
+        ownerAdjustmentKey ||= crypto.randomUUID();
+        const kind = form.elements.kind.value;
+        await api("owner-financial-adjustment", {
+          kind,
+          newTotalCents: cents,
+          expectedTotalCents: kind === "creator_funds" ? ownerFinancialSnapshot.liability.signedNetBalanceCents : ownerFinancialSnapshot.revenue.netRetainedRevenueCents,
+          idempotencyKey: ownerAdjustmentKey,
+          reason: form.elements.reason.value,
+        });
+        ownerAdjustmentKey = "";
+        output.textContent = "Adjustment recorded.";
+        await load();
+      } catch (error) {
+        output.textContent = error.message;
+      }
+    });
+  document.querySelector("#owner-financial-adjustment-form").addEventListener("input", () => { ownerAdjustmentKey = ""; });
+  document.querySelector("#creator-closure-form").addEventListener("submit", async (event) => {
+    event.preventDefault(); const form=event.currentTarget,output=document.querySelector("#creator-closure-result");
+    try { output.textContent="Requesting closure…"; await api("closure",{confirmation:form.elements.confirmation.value,reason:form.elements.reason.value}); output.textContent="Closure request recorded."; await load(); } catch(error){ output.textContent=error.message; }
+  });
+  document.querySelector("#creator-closure-refresh").addEventListener("click", async () => {
+    const output=document.querySelector("#creator-closure-result"); try{output.textContent="Refreshing closure status…";await api("closure/refresh",{});await load();}catch(error){output.textContent=error.message;}
+  });
   async function loadAudit() {
     const summary = await api("overview"),
       audit = document.querySelector("#creator-audit-status"),

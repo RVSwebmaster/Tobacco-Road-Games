@@ -104,7 +104,7 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
   const pricingPolicy = options.pricingPolicy || getRuntimePricingPolicy();
   const resolution = resolvePendingOrderItems(parsed.body.items, checkoutCatalogMap, { now });
 
-  try{for(const item of resolution.items){const listing=await database.prepare("SELECT inactivity_state FROM creator_listings WHERE source_product_slug=? OR public_product_slug=? LIMIT 1").bind(item.productSlug,item.productSlug).first();if(listing?.inactivity_state==='inactive')resolution.unavailableItems.push({code:'inactive_product',message:'This product is not currently available for new acquisition.',quantity:1,slug:item.productSlug});}}catch{}
+  try{for(const item of resolution.items){const listing=await database.prepare("SELECT l.inactivity_state,l.lifecycle_state,l.publication_state,l.owner_review_hold,c.closure_state FROM creator_listings l JOIN marketplace_creators c ON c.id=l.creator_id WHERE l.source_product_slug=? OR l.public_product_slug=? LIMIT 1").bind(item.productSlug,item.productSlug).first();if(listing&&(listing.inactivity_state==='inactive'||listing.lifecycle_state!=='active'||listing.publication_state!=='published'||Number(listing.owner_review_hold)===1||listing.closure_state!=='active'))resolution.unavailableItems.push({code:'inactive_product',message:'This product is not currently available for new acquisition.',quantity:1,slug:item.productSlug});}}catch{}
 
   if (resolution.unavailableItems.length) {
     return jsonResponse({

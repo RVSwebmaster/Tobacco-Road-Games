@@ -1,0 +1,28 @@
+[
+  {
+    "id": "witch-road",
+    "theme": "folk",
+    "advertiser": "BLACKBRIAR GAMES",
+    "title": "THE WITCH ROAD",
+    "supportingCopy": ["A Folk Horror Roleplaying Game"],
+    "callout": "NOW AVAILABLE",
+    "artwork": "/assets/images/ads/witch-road.png"
+  },
+  {
+    "id": "starfall-frontier",
+    "theme": "space",
+    "advertiser": "IRON LANTERN PRESS",
+    "title": "STARFALL FRONTIER",
+    "supportingCopy": ["Explore the Rim"],
+    "callout": "NEW RELEASE",
+    "artwork": "/assets/images/ads/starfall-frontier.png"
+  },
+  {
+    "id": "trg-house",
+    "theme": "house",
+    "advertiser": "TOBACCO ROAD GAMES",
+    "title": "SELL YOUR GAMES HERE",
+    "supportingCopy": ["Your Catalog.", "Your Storefront.", "Your Customers."],
+    "logo": "/assets/tobacco-road-games-logo.png"
+  }
+]

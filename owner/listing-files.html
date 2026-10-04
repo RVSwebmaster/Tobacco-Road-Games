@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Listing File Maintenance | Tobacco Road Games</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png?v=20260604e">
+  <link rel="stylesheet" href="../styles.css?v=20260604e">
+  <style>
+    .maintenance { display: grid; gap: 22px; }
+    .maintenance-panel { padding: 20px; border: 1px solid rgba(242,216,170,.16); border-radius: 16px; background: rgba(255,255,255,.045); }
+    .maintenance-search { display: grid; grid-template-columns: minmax(240px,1fr) minmax(170px,.3fr) auto; gap: 12px; align-items: end; }
+    .maintenance-search label, .replacement label { display: grid; gap: 7px; color: var(--muted); }
+    .maintenance-search input, .maintenance-search select, .replacement input { box-sizing: border-box; width: 100%; padding: .75rem; color: inherit; background: #0d0b09; border: 1px solid #8a7655; border-radius: 5px; }
+    .listing-results, .file-results { display: grid; gap: 12px; margin-top: 16px; }
+    .listing-row, .file-row { padding: 16px; border: 1px solid rgba(242,216,170,.14); border-radius: 12px; background: rgba(0,0,0,.16); }
+    .listing-row h2, .file-row h3 { margin: 0 0 8px; }
+    .listing-row p, .file-row p { margin: 5px 0; color: var(--muted); overflow-wrap: anywhere; }
+    .listing-row .button, .file-row .button { margin: 8px 8px 0 0; }
+    .replacement { display: grid; grid-template-columns: minmax(220px,1fr) auto; gap: 10px; align-items: end; margin-top: 12px; }
+    .maintenance-note { color: var(--muted); line-height: 1.6; }
+    @media (max-width: 720px) { .maintenance-search, .replacement { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="view-section"><div class="page-shell">
+  <header class="site-header">
+    <a class="brand" href="/owner/"><img class="brand__logo" src="../assets/logo.png?v=20260604e" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">RV's Owner Dashboard</span><span class="brand__tag">Listing file maintenance</span></div></a>
+    <nav class="site-nav" aria-label="Owner navigation"><a href="/owner/">Dashboard</a><a href="/owner/creator-reviews.html">Creator Reviews</a><a href="/owner/logout">Log Out</a></nav>
+  </header>
+  <main id="top"><section class="store-section maintenance" aria-labelledby="maintenance-heading">
+    <div class="section-heading"><p class="section-heading__kicker">Owner-only support</p><h1 id="maintenance-heading">Listing File Maintenance</h1><p>Find a Creator listing, inspect its stored files, securely download a file, or replace a current file using the marketplace's existing validation and delivery rules.</p></div>
+    <form id="listing-search" class="maintenance-panel maintenance-search">
+      <label>Creator, title, slug, or listing ID<input id="listing-query" name="q" type="search" autocomplete="off"></label>
+      <label>Listing state<select id="listing-state" name="state"><option value="">Any state</option><option value="active">Active</option><option value="paused">Paused</option><option value="submitted">Submitted</option><option value="published">Published</option><option value="inactive">Inactive</option></select></label>
+      <button class="button button--primary" type="submit">Find Listings</button>
+    </form>
+    <p id="maintenance-status" role="status" aria-live="polite"></p>
+    <section class="maintenance-panel" aria-labelledby="results-heading"><h2 id="results-heading">Listings</h2><div id="listing-results" class="listing-results"></div></section>
+    <section id="file-panel" class="maintenance-panel" aria-labelledby="files-heading" hidden><h2 id="files-heading">Stored files</h2><div id="listing-context"></div><div id="file-results" class="file-results"></div><p class="maintenance-note">This tool replaces an existing file at its stable delivery location. It does not add extra delivery files or delete historical objects because the current marketplace model does not define those operations safely.</p></section>
+  </section></main>
+  <footer class="site-footer"><p>&copy; 2026 Tobacco Road Games.</p><p>Private owner maintenance controls.</p></footer>
+</div><script src="/assets/js/owner-listing-files.js?v=20260907-review-hold" defer></script></body>
+</html>

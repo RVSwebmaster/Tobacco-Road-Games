@@ -13,7 +13,8 @@ const MAX_CART_ITEMS = 25;
 
 export async function onRequestPost(context) {
   return handleCartQuoteRequest(context.request, {
-    allowedProductSlug: context.env?.STAGING_CHECKOUT_PRODUCT_SLUG
+    allowedProductSlug: context.env?.STAGING_CHECKOUT_PRODUCT_SLUG,
+    database: context.env?.TRG_ORDERS
   });
 }
 
@@ -64,6 +65,15 @@ export async function handleCartQuoteRequest(request, options = {}) {
     if (product.buyMode !== "cart" && !(product.buyMode==='free-download'&&Number(product.priceCents)===0)) {
       unavailableItems.push(buildUnavailableItem(item.slug, "not_cart_mode", "This item is not available through the cart yet."));
       continue;
+    }
+
+    if (options.database) {
+      const held = await options.database.prepare("SELECT l.owner_review_hold FROM creator_listings l WHERE l.source_product_slug=? OR l.public_product_slug=? LIMIT 1").bind(item.slug, item.slug).first();
+      const bundleHeld = await options.database.prepare("SELECT 1 FROM creator_bundles b JOIN creator_bundle_items bi ON bi.bundle_id=b.id JOIN creator_listings l ON l.id=bi.listing_id WHERE b.public_bundle_slug=? AND l.owner_review_hold=1 LIMIT 1").bind(item.slug).first();
+      if (Number(held?.owner_review_hold) === 1 || bundleHeld) {
+        unavailableItems.push(buildUnavailableItem(item.slug, "owner_review_hold", "This item is not currently available for checkout."));
+        continue;
+      }
     }
 
     const priceCheck = product.buyMode==='free-download'&&Number(product.priceCents)===0?{valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:0,regularPriceCents:0,saleActive:false}}:validateCartPrice(product, { now });

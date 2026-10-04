@@ -24,6 +24,11 @@ import {
   assertNotFraudBlocked,
   findDuplicateDigitalOwnership,
 } from "./transaction-policy.mjs";
+import {
+  getCreatorInternalPurchasePrivilege,
+  getEligibleCreatorProductListing,
+} from "./creator-internal-purchase-policy.mjs";
+import { resolveOwnedCreatorIdentity } from "./creator-identity-selection.mjs";
 
 export async function handleCreatorBalanceRequest(
   request,
@@ -41,19 +46,23 @@ export async function handleCreatorBalanceRequest(
       { error: "Sign in to use Creator Balance.", code: "not_authenticated" },
       401,
     );
-  const creator = await db
-    .prepare(
-      "SELECT c.* FROM marketplace_creators c JOIN creator_identity_ownership o ON o.creator_id=c.id WHERE o.owner_user_id=? ORDER BY c.created_at LIMIT 1",
-    )
-    .bind(session.user.id)
-    .first();
+  const requestedCreator = new URL(request.url).searchParams.get("creator"),
+    selection = await resolveOwnedCreatorIdentity(db, {
+      userId: session.user.id,
+      requestedCreator,
+    }),
+    creator = selection.creator;
   if (!creator)
     return json(
       {
-        error: "A registered Creator account is required.",
-        code: "creator_required",
+        error: selection.ambiguous
+          ? "Choose the Creator identity whose Balance you want to use."
+          : "That Creator identity is unavailable or is not owned by this account.",
+        code: selection.ambiguous
+          ? "creator_identity_required"
+          : "creator_access_denied",
       },
-      403,
+      selection.ambiguous ? 409 : 403,
     );
   const ready = await getCreatorOperationalEligibility(db, creator.id, {
     markInitialCompletion: false,
@@ -69,15 +78,66 @@ export async function handleCreatorBalanceRequest(
       },
       403,
     );
-  if (request.method === "GET")
-    return json({
-      ok: true,
-      balance: await getCreatorBalance(db, {
+  if (request.method === "GET") {
+    const balance = await getCreatorBalance(db, {
         creatorId: creator.id,
         userId: session.user.id,
         nowMs: options.nowMs,
       }),
+      privilege = await getCreatorInternalPurchasePrivilege(db, {
+        creatorId: creator.id,
+        userId: session.user.id,
+        nowMs: options.nowMs,
+      }),
+      catalogMap = options.catalogMap || getRuntimeCatalogMap(),
+      productSlugs = [
+        ...new Set(
+          new URL(request.url).searchParams
+            .getAll("product")
+            .map((value) => String(value).trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      ],
+      products = [];
+    for (const slug of productSlugs) {
+      const product = catalogMap.get(slug),
+        delivery = options.deliveryProducts?.[slug] || getDeliveryProduct(slug);
+      let eligible = false,
+        reason = "This product requires external checkout.";
+      try {
+        await getEligibleCreatorProductListing(db, {
+          product,
+          deliveryMapping: delivery,
+        });
+        const head =
+          delivery &&
+          (options.deliveryHeads?.[slug] ||
+            (await env.TRG_PRODUCTS?.head(delivery.r2ObjectKey)));
+        eligible = Boolean(head);
+        if (!head)
+          reason = "This product is not ready for secure internal delivery.";
+      } catch (error) {
+        reason = error.message;
+      }
+      products.push({ slug, eligible, reason });
+    }
+    return json({
+      ok: true,
+      balance,
+      internalPurchase: {
+        creator: {
+          id: creator.id,
+          slug: creator.slug,
+          displayName: creator.display_name,
+        },
+        canUseBalance: Boolean(privilege.allowed && ready.eligible),
+        products,
+        allProductsEligible:
+          productSlugs.length > 0 &&
+          products.every((product) => product.eligible),
+      },
     });
+  }
   if (request.method !== "POST")
     return json({ error: "Method not allowed." }, 405);
   if (
@@ -119,11 +179,12 @@ export async function handleCreatorBalanceRequest(
       { error: "Use the verified email address on your signed-in account." },
       403,
     );
-  const resolution = resolvePendingOrderItems(
-    parsed.body.items,
-    options.catalogMap || getRuntimeCatalogMap(),
-    { now: options.nowMs || Date.now() },
-  );
+  const catalogMap = options.catalogMap || getRuntimeCatalogMap(),
+    resolution = resolvePendingOrderItems(
+      parsed.body.items,
+      catalogMap,
+      { now: options.nowMs || Date.now() },
+    );
   if (
     resolution.unavailableItems.length ||
     !resolution.items.length ||
@@ -197,6 +258,9 @@ export async function handleCreatorBalanceRequest(
       currency: resolution.currency,
       items: resolution.itemSnapshots,
       deliveryMappings: mappings,
+      catalogProducts: resolution.items.map((item) =>
+        catalogMap.get(item.productSlug),
+      ),
       nowMs: options.nowMs || Date.now(),
       env,
     });
