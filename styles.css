@@ -4504,10 +4504,72 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   max-width: none;
   /* Align the visible base rather than the transparent bottom margin. */
   transform: translateY(1.215805%);
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
   animation: none;
   transition: none;
+}
+
+.shop-wall-jesus-figurine:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.shop-wall-jesus-speech-bubble {
+  position: absolute;
+  left: calc(2px + var(--jesus-figurine-render-width) * 0.3);
+  bottom: calc(43px + var(--jesus-figurine-render-width) * 1316 / 1195);
+  z-index: 7;
+  box-sizing: border-box;
+  width: 196px;
+  max-width: calc(100% - var(--jesus-figurine-render-width) * 0.3 - 12px);
+  padding: 12px 18px;
+  border: 3px solid #191919;
+  border-radius: 48% 45% 46% 42%;
+  background: #fff;
+  color: #191919;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.35);
+  font: 700 16px/1.35 "Comic Sans MS", "Comic Sans", cursive;
+  letter-spacing: 0;
+  text-align: center;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.shop-wall-jesus-speech-bubble::before,
+.shop-wall-jesus-speech-bubble::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.shop-wall-jesus-speech-bubble::before {
+  left: 12px;
+  top: 100%;
+  border-width: 17px 14px 0 0;
+  border-color: #191919 transparent transparent transparent;
+}
+
+.shop-wall-jesus-speech-bubble::after {
+  left: 15px;
+  top: calc(100% - 4px);
+  border-width: 15px 10px 0 0;
+  border-color: #fff transparent transparent transparent;
+}
+
+.shop-wall-jesus-figurine:not(.is-speech-dismissed):focus-visible + .shop-wall-jesus-speech-bubble {
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .shop-wall-jesus-figurine:not(.is-speech-dismissed):hover + .shop-wall-jesus-speech-bubble {
+    visibility: visible;
+    opacity: 1;
+  }
 }
 
 .shop-wall-puzzle-cube {

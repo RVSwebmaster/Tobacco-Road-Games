@@ -143,7 +143,14 @@ assert.deepEqual([...jesusFigurineAsset.subarray(0, 8)], [137, 80, 78, 71, 13, 1
 assert.equal(jesusFigurineAsset[25], 6, "The figure must use an RGBA PNG, not a baked-in checkerboard.");
 assert.match(css, /--jesus-figurine-render-width:\s*clamp\(0px, calc\(\(100% - var\(--puzzle-cube-book-clearance\) - 90\.5px\) \* 1195 \/ 1050 \/ 2\), 82\.5px\);/, "The figure must render at half its original size while retaining its responsive sizing.");
 assert.ok(fs.existsSync(path.join(ROOT, "assets/images/storefront-shelf-dressing/masters/jesus-loves-you-figurine-source.png")), "The original supplied artwork must remain available.");
-assert.match(css, /\.shop-wall-jesus-figurine\s*\{[^}]*position:\s*absolute;[^}]*left:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+assert.match(css, /\.shop-wall-jesus-figurine\s*\{[^}]*position:\s*absolute;[^}]*left:\s*calc\([^;]+;[^}]*bottom:\s*31px;[^}]*pointer-events:\s*auto;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
+const speechBubbleMarkup = '<span class="shop-wall-jesus-speech-bubble" id="jesus-figurine-speech" role="tooltip">Remember, I love you.</span>';
+assert.equal(homepage.split(speechBubbleMarkup).length - 1, 1, "The homepage must contain exactly one speech bubble with RV's wording.");
+assert.ok(regeneratedBestSellersBay.includes(speechBubbleMarkup), "Homepage builds must preserve the speech bubble.");
+assert.match(jesusFigurineTags(bestSellersBay)[0], /tabindex="0" aria-describedby="jesus-figurine-speech"/);
+assert.match(css, /\.shop-wall-jesus-speech-bubble\s*\{[^}]*visibility:\s*hidden;[^}]*opacity:\s*0;[^}]*pointer-events:\s*none;/);
+assert.match(css, /\.shop-wall-jesus-figurine:not\(\.is-speech-dismissed\):hover \+ \.shop-wall-jesus-speech-bubble\s*\{[^}]*visibility:\s*visible;/);
+assert.match(css, /\.shop-wall-jesus-figurine:not\(\.is-speech-dismissed\):focus-visible \+ \.shop-wall-jesus-speech-bubble/);
 assert.match(css, /\.shop-wall-bay\[aria-labelledby="best-sellers-wall-heading"\] \.shop-wall-product-row\[data-overhang-spine\]\s*\{[^}]*left:\s*max\(var\(--jesus-figurine-book-clearance\),/, "Only Best Sellers must reserve the figure's left endcap.");
 assert.match(css, /\.shop-wall-top-dressing\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;[^}]*animation:\s*none;[^}]*transition:\s*none;/);
 assert.doesNotMatch(css, /\.shop-wall-top-dressing[^{}]*:hover/, "This dressing pass must not add hover effects.");

@@ -64,6 +64,15 @@
     new ResizeObserver(refresh).observe(row);
   });
 
+  document.querySelectorAll(".shop-wall-jesus-figurine").forEach((figurine) => {
+    const restoreSpeech = () => figurine.classList.remove("is-speech-dismissed");
+    figurine.addEventListener("mouseenter", restoreSpeech);
+    figurine.addEventListener("focus", restoreSpeech);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") figurine.classList.add("is-speech-dismissed");
+    });
+  });
+
   if (!browsers.length && !shelves.length) {
     return;
   }
