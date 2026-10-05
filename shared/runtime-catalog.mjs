@@ -16,7 +16,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
-    "buyMode": "retired",
+    "buyMode": "free-download",
     "coverUrl": "/product-assets/agency/cover.webp",
     "contentDescriptors": [],
     "creatorId": "",
@@ -42,7 +42,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "rulesComplexity": "",
     "slug": "agency",
-    "status": "legacy-not-for-sale",
+    "status": "available-direct",
     "title": "Agency",
     "updateEligible": true,
     "version": "1.0"
@@ -55,7 +55,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
-    "buyMode": "retired",
+    "buyMode": "cart",
     "coverUrl": "/product-assets/circle-of-cinder/cover.webp",
     "contentDescriptors": [],
     "creatorId": "",
@@ -81,7 +81,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "rulesComplexity": "",
     "slug": "circle-of-cinder",
-    "status": "legacy-not-for-sale",
+    "status": "available-direct",
     "title": "Circle of Cinder",
     "updateEligible": true,
     "version": "2026 catalog preview"
@@ -94,7 +94,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
-    "buyMode": "retired",
+    "buyMode": "cart",
     "coverUrl": "/product-assets/janni/cover.webp",
     "contentDescriptors": [],
     "creatorId": "",
@@ -120,7 +120,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "rulesComplexity": "",
     "slug": "janni",
-    "status": "legacy-not-for-sale",
+    "status": "available-direct",
     "title": "Janni",
     "updateEligible": true,
     "version": "1.0"
@@ -133,7 +133,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
-    "buyMode": "retired",
+    "buyMode": "cart",
     "coverUrl": "/product-assets/ringbound/cover.webp",
     "contentDescriptors": [],
     "creatorId": "",
@@ -159,7 +159,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "rulesComplexity": "",
     "slug": "ringbound",
-    "status": "legacy-not-for-sale",
+    "status": "available-direct",
     "title": "Ringbound",
     "updateEligible": true,
     "version": "2026 catalog preview"
@@ -172,7 +172,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "authors": [
       "RV Sawyer"
     ],
-    "buyMode": "retired",
+    "buyMode": "free-download",
     "coverUrl": "/product-assets/tablecraft-primer/cover.webp",
     "contentDescriptors": [],
     "creatorId": "",
@@ -198,7 +198,7 @@ export const RUNTIME_CATALOG_PRODUCTS = Object.freeze([
     "saleStart": "",
     "rulesComplexity": "",
     "slug": "tablecraft-primer",
-    "status": "legacy-not-for-sale",
+    "status": "available-direct",
     "title": "Tablecraft Primer",
     "updateEligible": true,
     "version": "2026 catalog preview"

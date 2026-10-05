@@ -12,10 +12,10 @@ async function main() {
   const free = await importModule("functions/_lib/free-download.mjs");
   const agencyPage = fs.readFileSync(path.join(ROOT, "store/products/agency/index.html"), "utf8");
   const janniPage = fs.readFileSync(path.join(ROOT, "store/products/janni/index.html"), "utf8");
-  assert.match(agencyPage, /Legacy Not For Sale/, "The unpublished legacy free record must display an unavailable state.");
-  assert.doesNotMatch(agencyPage, /Download Free PDF|data-cart-add="agency"/, "The unpublished legacy free record must not offer acquisition.");
-  assert.match(janniPage, /Legacy Not For Sale/, "The unpublished legacy paid record must display an unavailable state.");
-  assert.doesNotMatch(janniPage, /data-cart-add="janni"/, "The unpublished legacy paid record must not offer acquisition.");
+  assert.match(agencyPage, /Download Free PDF/, "The free Agency record should offer direct acquisition.");
+  assert.match(agencyPage, /data-cart-add="agency"/, "The free Agency record should expose its cart/download control.");
+  assert.match(janniPage, /Available Direct/, "The paid Janni record should display an available direct state.");
+  assert.match(janniPage, /data-cart-add="janni"/, "The paid Janni record should expose its cart control.");
   assert.deepEqual(getDeliveryProduct("janni"), {
     contentType: "application/pdf",
     customerFilename: "Janni.pdf",
@@ -27,8 +27,9 @@ async function main() {
   const bucket = createBucket();
   const openEnv = { DOWNLOAD_SIGNING_SECRET: SECRET, STRIPE_SECRET_KEY: { get value() { stripeCalls += 1; return ""; } }, TRG_ORDERS: stateDatabase("OPEN"), TRG_PRODUCTS: bucket };
   const issued = await free.handleFreeDownloadRequest(new Request("https://example.com/store/free-download?product=agency"), openEnv, { nowMs: 1000000, allowLegacyAnonymousAcquisition: true });
-  assert.equal(issued.status, 404, "OPEN must not resurrect an unpublished legacy free acquisition.");
-  assert.equal(stripeCalls, 0, "Rejected free fulfillment must never inspect or call Stripe.");
+  assert.equal(issued.status, 303, "OPEN should issue a private redirect for an available free acquisition.");
+  assert.match(issued.headers.get("location") || "", /\/store\/free-download-file\?credential=/);
+  assert.equal(stripeCalls, 0, "Free fulfillment must never inspect or call Stripe.");
   let response = await free.handleFreeDownloadFileRequest(new Request("https://example.com/store/free-download-file"), openEnv, { nowMs: 1001000 });
   assert.equal(response.status, 403, "Private R2 content must require a valid credential.");
 

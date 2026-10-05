@@ -573,6 +573,7 @@ const requiredSections = [
 ];
 for (const id of requiredSections) assert.match(page, new RegExp(`id="${id}"`), `Missing required storefront section: ${id}`);
 assert.doesNotMatch(page, /New Arrivals/);
-assert.match(page, /No eligible new releases are on the public shelf yet/);
+assert.match(page, /data-cart-add="janni"/);
+assert.match(page, /Available Direct/);
 
 console.log("Tobacco Road Games storefront mockup-alignment tests passed.");

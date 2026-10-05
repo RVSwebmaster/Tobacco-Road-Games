@@ -4,7 +4,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const HISTORICAL = ["agency", "circle-of-cinder", "janni", "ringbound", "tablecraft-primer"];
+const DIRECT_PRODUCTS = ["agency", "circle-of-cinder", "janni", "ringbound", "tablecraft-primer"];
 const REMOVED = [
   "sirrocans",
   "spriggans",
@@ -25,34 +25,29 @@ async function main() {
     .map((match) => match[2]);
 
   assert.equal(seededSlugs.length, 12, "The compatibility inventory should retain every migration-seeded D1 listing.");
-  for (const slug of HISTORICAL) {
+  for (const slug of DIRECT_PRODUCTS) {
     const product = productMap.get(slug);
-    assert.ok(product, `${slug} should retain its historical static record.`);
-    if (!product.productIdentityId) {
-      assert.equal(SALEABLE_STATUSES.has(product.status), false, `${slug} must not use a saleable status before current publication.`);
-      assert.equal(SALEABLE_BUY_MODES.has(product.buyMode), false, `${slug} must not use a saleable buy mode before current publication.`);
-    }
+    assert.ok(product, `${slug} should retain its static product record.`);
+    assert.equal(SALEABLE_STATUSES.has(product.status), true, `${slug} should use a saleable status.`);
+    assert.equal(SALEABLE_BUY_MODES.has(product.buyMode), true, `${slug} should use a saleable buy mode.`);
   }
 
-  for (const slug of HISTORICAL) {
+  for (const slug of DIRECT_PRODUCTS) {
     const product = productMap.get(slug);
-    assert.equal(product.status, "legacy-not-for-sale");
-    assert.equal(product.buyMode, "retired");
+    assert.equal(product.status, "available-direct");
+    assert.notEqual(product.buyMode, "retired");
     assert.equal(product.saleEnabled, false);
 
     const directPage = read(`store/products/${slug}/index.html`);
-    assert.match(directPage, /Legacy Not For Sale/);
-    assert.match(directPage, /historical catalog record and is not currently available for purchase/);
-    assert.doesNotMatch(directPage, new RegExp(`data-cart-add=["']${slug}["']`));
-    assert.doesNotMatch(directPage, new RegExp(`/product-assets/${slug}/`));
+    assert.match(directPage, /Available Direct/);
+    assert.match(directPage, new RegExp(`data-cart-add=["']${slug}["']`));
 
-    for (const activePage of ["store/index.html", "store/catalog/index.html", "store/cart/index.html", "store/sitemap.xml"]) {
-      assert.doesNotMatch(read(activePage), new RegExp(`/store/products/${slug}/`), `${slug} must stay out of ${activePage}.`);
+    for (const activePage of ["store/index.html", "store/catalog/index.html", "store/sitemap.xml"]) {
+      assert.match(read(activePage), new RegExp(`/store/products/${slug}/`), `${slug} should appear in ${activePage}.`);
     }
   }
 
   const activePages = [
-    "index.html",
     "authors/rv-sawyer/index.html",
     "store/index.html",
     "store/catalog/index.html",
@@ -70,8 +65,8 @@ async function main() {
   }
 
   const homepage = JSON.parse(read("data/homepage.json"));
-  assert.equal([...HISTORICAL, ...REMOVED].includes(homepage.featuredSlug), false);
-  assert.deepEqual(homepage.workInProgressSlugs.filter((slug) => [...HISTORICAL, ...REMOVED].includes(slug)), []);
+  assert.equal(REMOVED.includes(homepage.featuredSlug), false);
+  assert.deepEqual(homepage.workInProgressSlugs.filter((slug) => REMOVED.includes(slug)), []);
 
   assert.match(read("functions/_lib/cart-checkout.mjs"), /publication_state!=='published'/, "Checkout must continue rejecting unpublished Creator listings.");
 

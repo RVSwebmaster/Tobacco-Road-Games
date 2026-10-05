@@ -39,8 +39,8 @@
     "saleLabel": "",
     "saleEnabled": false,
     "currency": "USD",
-    "status": "legacy-not-for-sale",
-    "statusLabel": "Legacy Not For Sale",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
     "coverImage": "/product-assets/tablecraft-primer/cover.webp",
     "previewImage": "/product-assets/tablecraft-primer/preview.webp",
     "thumbnailImage": "",
@@ -48,9 +48,9 @@
     "previewImages": [],
     "previewPdf": "",
     "teaserVideo": "",
-    "buyMode": "retired",
+    "buyMode": "free-download",
     "buyUrl": "",
-    "fulfillmentNote": "",
+    "fulfillmentNote": "Digital delivery is handled through the Tobacco Road Games cart and customer library.",
     "shortDescription": "Product summary coming soon.",
     "longDescription": "Product summary coming soon.",
     "features": [],
@@ -70,7 +70,7 @@
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
-    "excludeFromBundles": true
+    "excludeFromBundles": false
   },
   {
     "slug": "circle-of-cinder",
@@ -110,8 +110,8 @@
     "saleLabel": "",
     "saleEnabled": false,
     "currency": "USD",
-    "status": "legacy-not-for-sale",
-    "statusLabel": "Legacy Not For Sale",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
     "coverImage": "/product-assets/circle-of-cinder/cover.webp",
     "previewImage": "/product-assets/circle-of-cinder/preview.webp",
     "thumbnailImage": "",
@@ -119,9 +119,9 @@
     "previewImages": [],
     "previewPdf": "",
     "teaserVideo": "",
-    "buyMode": "retired",
+    "buyMode": "cart",
     "buyUrl": "",
-    "fulfillmentNote": "",
+    "fulfillmentNote": "Digital delivery is handled through the Tobacco Road Games cart and customer library.",
     "shortDescription": "Product summary coming soon.",
     "longDescription": "Product summary coming soon.",
     "features": [],
@@ -140,7 +140,7 @@
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
-    "excludeFromBundles": true,
+    "excludeFromBundles": false,
     "series": "",
     "seriesSlug": ""
   },
@@ -182,8 +182,8 @@
     "saleLabel": "",
     "saleEnabled": false,
     "currency": "USD",
-    "status": "legacy-not-for-sale",
-    "statusLabel": "Legacy Not For Sale",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
     "coverImage": "/product-assets/ringbound/cover.webp",
     "previewImage": "/product-assets/ringbound/preview.webp",
     "thumbnailImage": "",
@@ -191,9 +191,9 @@
     "previewImages": [],
     "previewPdf": "",
     "teaserVideo": "",
-    "buyMode": "retired",
+    "buyMode": "cart",
     "buyUrl": "",
-    "fulfillmentNote": "",
+    "fulfillmentNote": "Digital delivery is handled through the Tobacco Road Games cart and customer library.",
     "shortDescription": "Ringbound introduces a complete 5e-compatible martial class built to control the battlefield with strength, balance, and sheer presence. Claim enemy attention, protect your allies, break opposing momentum, and choose from five distinct Subclass Paths that shape how you hold the line.",
     "longDescription": "Ringbound is a complete martial class for 5e-compatible fantasy roleplaying, built for players who want to control the fight without relying on armor, spellcasting, or oversized weapon damage.\r\n\r\nA Ringbound is a champion of weight, balance, contest, and claimed ground. Where fighters master weapons and monks master motion, the Ringbound masters the space between bodies. They break enemy momentum, interrupt movement, protect nearby allies, and make dangerous foes deal with them first.\r\n\r\nThe class is built around Balance, a renewable resource used to brace against forced movement, drive enemies across the battlefield, break their footing, lock them into a clinch, and weather attacks that would put a lesser warrior down. Its signature Claim Focus feature lets the Ringbound seize an enemy’s attention, punish attempts to disengage, and make attacking anyone else a costly mistake.\r\n\r\nAs the Ringbound advances, raw physical presence grows into something nearly mythic. The class becomes harder to move, capable of controlling increasingly massive enemies, and eventually able to declare the surrounding battlefield as its personal ring. This is not a class designed to chase the highest damage total. It is designed to hold the line, shape enemy choices, and keep the rest of the party alive long enough to win.\r\n\r\nFive Subclass Paths provide distinct approaches to ringcraft:\r\n\r\nThe Path of the Driving Palm drives, herds, and scatters enemy formations.\r\n\r\nThe Path of the Iron Clinch seizes opponents, denies escape, and turns close combat into a cage.\r\n\r\nThe Path of the Salt Bearer marks sacred ground, protects allies, and makes crossing the line carry a price.\r\n\r\nThe Path of the Thunder Hand breaks rhythm and courage through concussive, battlefield-shaking force.\r\n\r\nThe Path of the Turning Step redirects attacks, manipulates position, and lets enemy momentum become its own punishment.\r\n\r\nRingbound is for players who want to be the wall the enemy cannot ignore, the hand that decides where the fight happens, and the last person still standing when the dust settles.\r\n\r\nThe Ringbound is the line.",
     "features": [
@@ -222,7 +222,7 @@
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
-    "excludeFromBundles": true
+    "excludeFromBundles": false
   },
   {
     "slug": "agency",
@@ -264,8 +264,8 @@
     "saleLabel": "",
     "saleEnabled": false,
     "currency": "USD",
-    "status": "legacy-not-for-sale",
-    "statusLabel": "Legacy Not For Sale",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
     "coverImage": "/product-assets/agency/cover.webp",
     "previewImage": "/product-assets/agency/preview.webp",
     "thumbnailImage": "",
@@ -273,7 +273,7 @@
     "previewImages": [],
     "previewPdf": "",
     "teaserVideo": "",
-    "buyMode": "retired",
+    "buyMode": "free-download",
     "buyUrl": "",
     "fulfillmentNote": "Digital PDF delivered via email immediately after payment is completed",
     "shortDescription": "What does \"player agency\" actually mean? *Agency: Share the Wheel or Crash the Game* cuts through the arguments to explore one of tabletop roleplaying's most misunderstood ideas. Learn how player choice, Game Master authority, meaningful consequences, and shared responsibility work together to create games where decisions matter, worlds push back, and every session belongs to everyone at the table. Practical, system-neutral, and written from decades of experience behind the screen, this is a guide to building campaigns driven by choice instead of control.",
@@ -305,7 +305,7 @@
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
-    "excludeFromBundles": true
+    "excludeFromBundles": false
   },
   {
     "slug": "janni",
@@ -345,8 +345,8 @@
     "saleLabel": "",
     "saleEnabled": false,
     "currency": "USD",
-    "status": "legacy-not-for-sale",
-    "statusLabel": "Legacy Not For Sale",
+    "status": "available-direct",
+    "statusLabel": "Available Direct",
     "coverImage": "/product-assets/janni/cover.webp",
     "previewImage": "/product-assets/janni/preview.webp",
     "thumbnailImage": "",
@@ -354,9 +354,9 @@
     "previewImages": [],
     "previewPdf": "",
     "teaserVideo": "",
-    "buyMode": "retired",
+    "buyMode": "cart",
     "buyUrl": "",
-    "fulfillmentNote": "",
+    "fulfillmentNote": "Digital delivery is handled through the Tobacco Road Games cart and customer library.",
     "shortDescription": "Born of mortal flesh and elemental blood, the Janni live between two worlds without fully belonging to either. They hunger, dream, bleed, and die like mortals, yet death may not be the end. Janni: A Mortal Kind of Immortality introduces a complete 5E-compatible player character ancestry with four elemental heritages, each carrying the mark of an immortal parent and the burden of a life that may begin again.",
     "longDescription": "Born of mortal flesh and elemental blood, the Janni stand between two worlds without fully belonging to either. Each is the child of a Jinn and a mortal, carrying an inheritance that marks the body, shapes the spirit, and refuses to let an ordinary life remain ordinary.\r\n\r\nJanni eat, sleep, dream, bleed, and die as mortals do. Age does not claim them so easily, and death may prove less final than expected. Yet every gift carried from an immortal parent comes with a cost, and even a life that begins again cannot continue forever.\r\n\r\nJanni: A Mortal Kind of Immortality presents a complete player character ancestry for 5E-compatible fantasy roleplaying, including four elemental heritages tied to Air, Earth, Fire, and Water. Each heritage bears the unmistakable touch of its Jinn lineage, but none determines the Jann’s personality, loyalties, morality, or destiny.\r\n\r\nWithin these pages, players and Game Masters will find the history, nature, and strange inheritance of the Janni, along with the rules needed to bring one into play. Their lives may stretch far beyond those of ordinary mortals, but survival is never guaranteed, and some doors should not be opened merely because death failed to keep them closed.\r\n\r\nA Jann is not a lesser Jinn.\r\n\r\nThey are not a mortal who merely brushed against elemental power.\r\n\r\nThey are something rarer, stranger, and far more dangerous to underestimate.",
     "features": [
@@ -382,6 +382,6 @@
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
-    "excludeFromBundles": true
+    "excludeFromBundles": false
   }
 ]
