@@ -28,7 +28,7 @@ const assertInOrder = (source, orderedNeedles, label) => {
   }
 };
 
-assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20260908-shelf-baseline5/);
+assert.match(page, /\/assets\/tobacco-road-games-logo\.png\?v=20261004-frozen-cabinet1/);
 assert.match(page, /<span class="brand__name">Tobacco Road Games<\/span>/);
 assert.doesNotMatch(page, /brand__tag/);
 assert.match(page, />Explore<\/a><a href="\/forum">Community Forum<\/a><a href="\/authors\.html">Creators<\/a><a href="\/creator\/">Creator Login \/ Sign Up<\/a><a href="\/ai-policy\.html">AI Policy<\/a><a href="\/support\.html">Support<\/a><a href="\/account\.html">Join \/ Sign In<\/a><a href="\/store\/cart\/">Cart/);
@@ -42,7 +42,8 @@ assert.ok(logo.length < 100_000, "The header logo should remain lightweight.");
 assert.match(build, /brandLogo: "\/assets\/tobacco-road-games-logo\.png"/);
 assert.doesNotMatch(build, /brandTag: "Great games\. Open roads\."/);
 assert.match(build, /AI Policy/);
-assert.match(build, /Purchasing remains closed while this marketplace preview is prepared/);
+assert.doesNotMatch(build, /Purchasing remains closed while this marketplace preview is prepared/);
+assert.match(build, /Legal, support, library, cart, and account destinations remain available below the discovery floor/);
 
 assert.match(css, /Approved storefront mockup alignment/);
 assert.match(css, /body:has\(\.shelf-storefront\) \.page-shell\{width:min\(1500px,100%\)/);

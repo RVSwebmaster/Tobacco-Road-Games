@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS runtime_settings (
 );
 
 INSERT OR IGNORE INTO runtime_settings (setting_key, setting_value, updated_at, updated_by)
-VALUES ('store_state', 'CLOSED', datetime('now'), 'migration');
+VALUES ('store_state', 'OPEN', datetime('now'), 'migration');

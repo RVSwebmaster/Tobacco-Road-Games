@@ -5,7 +5,7 @@ const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 
 const page = read("store/index.html"), css = read("styles.css"), storefront = read("assets/js/storefront.js"), sponsor = read("assets/js/sponsor-marquee.js"), rotation = read("functions/_lib/ad-rotation.mjs"), middleware = read("functions/_middleware.js"), build = read("scripts/build-store.js");
-assert.match(page, /styles\.css\?v=20260908-shelf-baseline5/); assert.match(page, /storefront\.js\?v=20260908-shelf-baseline5/);
+assert.match(page, /styles\.css\?v=20261004-frozen-cabinet1/); assert.match(page, /storefront\.js\?v=20261004-frozen-cabinet1/);
 const order = ["id=\"shop-window\"", "id=\"browse-by-path\"", "class=\"sponsor-marquee", "id=\"new-this-week-heading\"", "id=\"best-sellers\"", "id=\"open-rules-pwyw\"", "id=\"product-lines\"", "id=\"creator-feature\"", "id=\"find-the-right-game\"", "id=\"back-room\"", "id=\"lower-shop\""];
 for (let index = 1; index < order.length; index += 1) assert.ok(page.indexOf(order[index - 1]) < page.indexOf(order[index]), `${order[index - 1]} must precede ${order[index]}.`);
 const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]); assert.equal(new Set(ids).size, ids.length, "Storefront section IDs must remain unique.");

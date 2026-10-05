@@ -1086,7 +1086,7 @@ function renderStorefrontBackRoom() {
 function renderStorefrontLowerShop() {
   return `
         <section class="store-lower storefront-lower-shop" id="lower-shop" aria-labelledby="store-information-heading">
-          <div class="store-lower__intro"><p class="section-heading__kicker">Lower shop</p><h2 id="store-information-heading">Information, help, and account links</h2><p>Legal, support, library, and cart destinations remain available below the discovery floor.</p><p class="store-lower__notice"><strong>Shop notice:</strong> Purchasing remains closed while this marketplace preview is prepared.</p></div>
+          <div class="store-lower__intro"><p class="section-heading__kicker">Lower shop</p><h2 id="store-information-heading">Information, help, and account links</h2><p>Legal, support, library, cart, and account destinations remain available below the discovery floor.</p></div>
           <nav class="store-lower__links" aria-label="Store information"><a href="/authors.html"><strong>Creators</strong><span>Meet the people behind the games.</span></a><a href="/store/catalog/"><strong>Full Catalog</strong><span>Open the serious search and filter view.</span></a><a href="/account.html"><strong>Account &amp; Library</strong><span>Sign in and find your games.</span></a><a href="/store/cart/"><strong>Cart</strong><span>Review your selected products.</span></a><a href="/support.html"><strong>Support</strong><span>Customer support and accessibility help.</span></a><a href="/#commitment"><strong>Policies &amp; Principles</strong><span>Marketplace, privacy, and legal guidance.</span></a></nav>
         </section>`;
 }
