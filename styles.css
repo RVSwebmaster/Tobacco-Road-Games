@@ -3538,6 +3538,16 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   text-shadow: 0 1px 0 rgba(255, 241, 194, 0.7);
 }
 
+.shop-wall-plaque h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.shop-wall-plaque h2 a:focus-visible {
+  outline: 2px solid #f4d184;
+  outline-offset: 10px;
+}
+
 /* Brass signs surround the accepted label boxes without shifting the shelves
    or the text. The wood header and existing downlighting stay behind them. */
 .shop-wall-plaque h2::before {
@@ -3559,6 +3569,20 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     inset 1px 0 0 rgba(255, 239, 181, 0.4),
     0 2px 4px rgba(24, 10, 4, 0.45);
   pointer-events: none;
+}
+
+.shop-wall-sign-hit-area {
+  position: absolute;
+  z-index: 8;
+  display: block;
+  border-radius: 2px;
+  text-indent: -9999px;
+}
+
+.shop-wall-sign-hit-area:focus-visible {
+  outline: 3px solid #f4d184;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(36, 17, 6, 0.55);
 }
 
 .shop-wall-shelves {
@@ -5551,6 +5575,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 .shop-wall-cabinet-art > img { display: block; width: 100%; height: auto; max-width: none; }
 .shop-wall-fixed-cabinet { --cabinet-width: 1452; --cabinet-height: 474.333344; }
+.shop-wall-fixed-cabinet .shop-wall-sign-hit-area--open-rules {
+  left: 1048px;
+  top: 26px;
+  width: 340px;
+  height: 42px;
+}
 .shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
   position: absolute; left: 0px; top: 68px; right: auto; bottom: auto; width: 470px; height: 169.166672px;
 }
@@ -5565,6 +5595,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 @media (max-width: 1023px) {
 .shop-wall-fixed-cabinet { --cabinet-width: 836.666687; --cabinet-height: 637; }
+.shop-wall-fixed-cabinet .shop-wall-sign-hit-area--open-rules {
+  left: 514px;
+  top: 27px;
+  width: 250px;
+  height: 34px;
+}
 .shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
   position: absolute; left: 0px; top: 373px; right: auto; bottom: auto; width: 404.333344px; height: 98px;
 }
@@ -5580,6 +5616,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 @media (max-width: 699px) {
 .shop-wall-fixed-cabinet { --cabinet-width: 346.666687; --cabinet-height: 913.770874; }
+.shop-wall-fixed-cabinet .shop-wall-sign-hit-area--open-rules {
+  left: 65px;
+  top: 559px;
+  width: 218px;
+  height: 32px;
+}
 .shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
   position: absolute; left: 0px; top: 367.770844px; right: auto; bottom: auto; width: 346.666687px; height: 84px;
 }
@@ -5783,4 +5825,82 @@ a.shop-wall-hero-book:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   a.shop-wall-hero-book,
   .shop-wall-sale-spine { transition: none; }
+}
+
+.open-rules-library-page {
+  display: grid;
+  gap: 30px;
+}
+
+.open-rules-library-shelf {
+  display: grid;
+  gap: 24px;
+}
+
+.open-rules-library-fixture {
+  overflow: hidden;
+  border: 8px solid #3b1b0b;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(22, 9, 3, 0.36), transparent 9%, transparent 91%, rgba(22, 9, 3, 0.36)),
+    repeating-linear-gradient(90deg, transparent 0 78px, rgba(42, 18, 7, 0.25) 78px 80px),
+    linear-gradient(180deg, #7b4823, #5d2c13);
+  box-shadow:
+    inset 0 10px 18px rgba(23, 10, 4, 0.35),
+    0 18px 28px rgba(20, 9, 4, 0.3);
+}
+
+.open-rules-library-fixture .shop-wall-plaque {
+  min-height: 64px;
+}
+
+.open-rules-library-fixture__shelves {
+  position: relative;
+  min-height: 380px;
+  padding: 42px min(5vw, 64px) 58px;
+}
+
+.open-rules-library-fixture__shelves::before,
+.open-rules-library-fixture__shelves::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background:
+    linear-gradient(180deg, rgba(238, 178, 92, 0.46), rgba(65, 28, 11, 0.52)),
+    linear-gradient(90deg, #5a2a12, #9a5c2b 42%, #4a210e);
+  box-shadow: 0 -3px 8px rgba(255, 199, 106, 0.24), 0 6px 10px rgba(22, 9, 3, 0.45);
+}
+
+.open-rules-library-fixture__shelves::before { top: 50%; }
+.open-rules-library-fixture__shelves::after { bottom: 22px; }
+
+.open-rules-library-empty-shelf {
+  display: grid;
+  grid-template-columns: repeat(42, minmax(5px, 1fr));
+  align-items: end;
+  min-height: 300px;
+  gap: 0;
+}
+
+.open-rules-library-empty-shelf .shop-wall-stock-spine {
+  height: clamp(150px, 24vw, 230px);
+}
+
+.open-rules-library-books {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 700px) {
+  .open-rules-library-fixture__shelves {
+    min-height: 300px;
+    padding-inline: 22px;
+  }
+
+  .open-rules-library-empty-shelf {
+    grid-template-columns: repeat(21, minmax(6px, 1fr));
+  }
 }

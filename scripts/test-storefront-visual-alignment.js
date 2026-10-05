@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 const page = read("store/index.html");
 const homepage = read("index.html");
+const openRulesLibraryPage = read("store/open-rules-library/index.html");
 const css = read("styles.css");
 const build = read("scripts/build-store.js");
 const storefront = read("assets/js/storefront.js");
@@ -82,6 +83,12 @@ assert.match(css, /\.shop-wall-product-mock--spine\s*\{[\s\S]*--mock-product-wid
 assert.doesNotMatch(homepage, /\/assets\/products\/spriggans\/spine\.png/, "The cleared launch storefront must not expose the old Spriggans mock spine.");
 assert.doesNotMatch(homepage, /SHELF STOCK|Decorative shelf stock|product spine mockup/i, "Decorative empty-shelf stock must stay generic and hidden from visitors.");
 const openRulesBay = homepage.match(/<section[^>]*aria-labelledby="open-rules-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
+assert.match(openRulesBay, /<h2 id="open-rules-library-heading"><a href="\/store\/open-rules-library\/">OPEN RULES LIBRARY<\/a><\/h2>/, "Open Rules Library brass sign must link to its shelf page.");
+assert.match(homepage, /class="shop-wall-sign-hit-area shop-wall-sign-hit-area--open-rules" href="\/store\/open-rules-library\/"/, "The frozen visible Open Rules sign must have a clickable hit area.");
+assert.match(css, /\.shop-wall-fixed-cabinet \.shop-wall-sign-hit-area--open-rules\s*\{[\s\S]*left:\s*1048px;[\s\S]*width:\s*340px;/, "Desktop Open Rules sign hit area must stay aligned to the visible brass sign.");
+assert.match(openRulesLibraryPage, /<main id="top" class="open-rules-library-page">/, "Open Rules Library shelf page must be generated.");
+assert.match(openRulesLibraryPage, /<h1 id="open-rules-library-page-heading">Open Rules Library<\/h1>/, "Open Rules Library shelf page needs its heading.");
+assert.match(openRulesLibraryPage, /class="open-rules-library-fixture"/, "Open Rules Library page must render a shelf-style fixture.");
 assert.doesNotMatch(openRulesBay, /shop-wall-view-link|View All/, "Open Rules Library must not contain the View All sign or link.");
 assert.doesNotMatch(build, /title: "OPEN RULES LIBRARY"[^\n]*viewAllHref/, "The homepage generator must not restore the Open Rules Library View All link.");
 const yourLibraryBay = homepage.match(/<section[^>]*aria-labelledby="your-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
@@ -503,7 +510,7 @@ for (const approved of frozenAssets) {
   assert.equal(asset.readUInt32BE(20), approved.height);
   assert.ok(frozenPicture(homepage).includes('/' + file));
 }
-assert.equal(approvedDressingHash(normalizeDressing(css.split('/* Frozen upper cabinet:')[1].split('/* End frozen upper cabinet. */')[0])), "45819cb68808b1d52dc6574d30f32eac49a67a79e19821ed0c6fd6eafde0f0fe", "Frozen cabinet geometry changed; RV approval is required.");
+assert.equal(approvedDressingHash(normalizeDressing(css.split('/* Frozen upper cabinet:')[1].split('/* End frozen upper cabinet. */')[0])), "32e3666c58c26d010bcb3fe27a40901014a266b533f316636752174f9f51d6a0", "Frozen cabinet geometry changed; RV approval is required.");
 const frozenResize = storefront.match(/document\.querySelectorAll\("\[data-fixed-cabinet\]"\)\.forEach\(\(cabinet\) => \{[\s\S]*?\n  \}\);/)?.[0];
 assert.equal(approvedDressingHash(normalizeDressing(frozenResize)), "c30f8b9c22150eda5a341209789e53e6df3d60e70c17813579a9c6884cdb3cbc", "The artwork and books must scale together as one fixed scene.");
 

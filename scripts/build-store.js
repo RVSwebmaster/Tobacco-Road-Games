@@ -119,6 +119,7 @@ function main() {
 
   writeFile("store/index.html", renderShelfStoreHome(publicCatalogProducts, indexes));
   writeFile("store/catalog/index.html", renderCatalogPage(publicCatalogProducts, indexes));
+  writeFile("store/open-rules-library/index.html", renderOpenRulesLibraryPage(publicCatalogProducts));
   writeFile("store/cart/index.html", renderCartPage(publicCatalogProducts));
   writeFile("ai-policy.html", renderAiPolicyPage());
 
@@ -1155,7 +1156,8 @@ function renderHomepageShopWallMain(products) {
         </picture>
         ${renderHomepageLibraryBay()}
         ${renderHomepageIdentityBay()}
-        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules })}
+        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, plaqueHref: "/store/open-rules-library/" })}
+        <a class="shop-wall-sign-hit-area shop-wall-sign-hit-area--open-rules" href="/store/open-rules-library/" aria-label="Open the Open Rules Library shelf page"></a>
         ${renderHomepageShelfFixtures()}
       </section>
       </div>
@@ -1279,7 +1281,7 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "" }) {
   const visibleProducts = products.slice(0, 5);
   const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
   const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
@@ -1331,7 +1333,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
           </div>`;
   return `
         <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
-          ${renderShopWallPlaque(title, id)}
+          ${renderShopWallPlaque(title, id, plaqueHref)}
 
           ${shelves}
         </section>`;
@@ -1391,8 +1393,64 @@ function renderHomepageMerchandisingBooks(products, heroProductId = null) {
               </div>`;
 }
 
-function renderShopWallPlaque(title, id) {
-  return `<div class="shop-wall-plaque"><h2 id="${escapeAttribute(id)}">${escapeHtml(title)}</h2></div>`;
+function renderShopWallPlaque(title, id, href = "") {
+  const titleMarkup = href
+    ? `<a href="${escapeAttribute(href)}">${escapeHtml(title)}</a>`
+    : escapeHtml(title);
+  return `<div class="shop-wall-plaque"><h2 id="${escapeAttribute(id)}">${titleMarkup}</h2></div>`;
+}
+
+function renderOpenRulesLibraryPage(products) {
+  const openRules = products
+    .filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer"))
+    .slice(0, 24);
+  const shelfRows = openRules.length
+    ? `<div class="open-rules-library-books">${openRules.map((product) => renderProductCard(product)).join("")}</div>`
+    : `<div class="open-rules-library-empty-shelf" aria-label="Open Rules Library shelf awaiting books">
+        ${Array.from({ length: 42 }, () => '<figure class="shop-wall-stock-spine" data-decorative-stock aria-hidden="true"></figure>').join("")}
+      </div>`;
+
+  return renderLayout({
+    pageTitle: `Open Rules Library | ${STORE_TITLE}`,
+    description: "Open rules library shelf for public rules references and free tabletop resources at Tobacco Road Games.",
+    canonicalPath: "/store/open-rules-library/",
+    ogImage: "/assets/tobacco-road-games-logo.png",
+    currentNav: "store",
+    structuredData: [
+      renderBreadcrumbSchema([
+        { label: "Store", href: "/store/" },
+        { label: "Open Rules Library", href: "/store/open-rules-library/" }
+      ]),
+      renderWebPageSchema({
+        name: "Open Rules Library",
+        description: "Open rules library shelf for public rules references and free tabletop resources at Tobacco Road Games.",
+        url: `${BASE_URL}/store/open-rules-library/`
+      })
+    ],
+    content: `
+      <main id="top" class="open-rules-library-page">
+        ${renderBreadcrumbs([
+          { label: "Store", href: "/store/" },
+          { label: "Open Rules Library" }
+        ])}
+
+        <section class="store-section open-rules-library-shelf" aria-labelledby="open-rules-library-page-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Open Rules Library</p>
+            <h1 id="open-rules-library-page-heading">Open Rules Library</h1>
+            <p>Public rules references and open tabletop resources will live here as the shelf is stocked.</p>
+          </div>
+
+          <div class="open-rules-library-fixture" aria-label="Open Rules Library bookshelf">
+            <div class="shop-wall-plaque"><h2>OPEN RULES LIBRARY</h2></div>
+            <div class="open-rules-library-fixture__shelves">
+              ${shelfRows}
+            </div>
+          </div>
+        </section>
+      </main>
+    `
+  });
 }
 
 function renderAiPolicyPage() {
@@ -2493,6 +2551,7 @@ function renderStoreSitemap(products, indexes, bundleRules) {
   const urls = [
     "/store/",
     "/store/catalog/",
+    "/store/open-rules-library/",
     "/store/cart/",
     ...products.map((product) => product.url),
     ...indexes.systems.map((system) => `/store/systems/${system.slug}/`),
