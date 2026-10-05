@@ -4858,6 +4858,22 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   filter: drop-shadow(0 12px 8px rgba(16, 7, 3, 0.58));
   pointer-events: none;
   user-select: none;
+  background:
+    linear-gradient(90deg, rgba(255, 231, 165, 0.18), transparent 18%, transparent 76%, rgba(21, 9, 4, 0.34)),
+    repeating-linear-gradient(90deg,
+      #213f32 0 13px,
+      #d4b25f 13px 15px,
+      #5b281f 15px 29px,
+      #cfae5f 29px 31px,
+      #17374a 31px 46px,
+      #cfaa58 46px 48px,
+      #2f412a 48px 62px,
+      #d7b766 62px 64px);
+  border: 1px solid rgba(42, 23, 10, 0.82);
+  border-radius: 2px 2px 1px 1px;
+  box-shadow:
+    inset 2px 0 2px rgba(255, 233, 171, 0.28),
+    inset -3px 0 4px rgba(17, 8, 3, 0.4);
 }
 
 .shop-wall-product-mock::before {
@@ -4963,6 +4979,20 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   display: flex;
   align-items: flex-end;
   gap: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(42, 18, 6, 0.14), transparent 7%, transparent 92%, rgba(42, 18, 6, 0.2)),
+    repeating-linear-gradient(90deg,
+      #1e3f31 0 10px,
+      #caa85a 10px 12px,
+      #5a2b20 12px 23px,
+      #d5b86c 23px 25px,
+      #17374a 25px 37px,
+      #c8a151 37px 39px,
+      #2f412b 39px 51px,
+      #d7b766 51px 53px);
+  background-position: bottom left;
+  background-size: auto 100%;
 }
 
 .shop-wall-product-row--right > .shop-wall-library-books {
@@ -5595,10 +5625,31 @@ body:has(.shop-wall-product-row--hero) { overflow-x: clip; }
   overflow: hidden;
   border: 1px solid #30210d;
   border-radius: 1px;
-  background: #163a31;
+  background:
+    linear-gradient(90deg, rgba(255, 231, 165, 0.18), transparent 24%, transparent 76%, rgba(8, 3, 1, 0.34)),
+    repeating-linear-gradient(180deg, rgba(247, 215, 143, 0.18) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #224433, #173b31 44%, #09261f);
   color: #ecd496;
   box-shadow: inset 2px 0 3px #a98b4b, inset -3px 0 4px #051914;
   text-decoration: none;
+}
+.shop-wall-stock-spine:nth-child(4n + 2) {
+  background:
+    linear-gradient(90deg, rgba(255, 231, 165, 0.16), transparent 24%, transparent 76%, rgba(8, 3, 1, 0.34)),
+    repeating-linear-gradient(180deg, rgba(247, 215, 143, 0.16) 0 1px, transparent 1px 10px),
+    linear-gradient(180deg, #6a2b22, #4d211c 46%, #2b120f);
+}
+.shop-wall-stock-spine:nth-child(4n + 3) {
+  background:
+    linear-gradient(90deg, rgba(255, 231, 165, 0.16), transparent 24%, transparent 76%, rgba(8, 3, 1, 0.34)),
+    repeating-linear-gradient(180deg, rgba(247, 215, 143, 0.16) 0 1px, transparent 1px 11px),
+    linear-gradient(180deg, #163e54, #0d3349 46%, #08202f);
+}
+.shop-wall-stock-spine:nth-child(4n) {
+  background:
+    linear-gradient(90deg, rgba(255, 231, 165, 0.16), transparent 24%, transparent 76%, rgba(8, 3, 1, 0.34)),
+    repeating-linear-gradient(180deg, rgba(247, 215, 143, 0.16) 0 1px, transparent 1px 10px),
+    linear-gradient(180deg, #3c4829, #2c371f 46%, #171e10);
 }
 .shop-wall-stock-spine img {
   position: absolute;
