@@ -1156,7 +1156,7 @@ function renderHomepageShopWallMain(products) {
         </picture>
         ${renderHomepageLibraryBay()}
         ${renderHomepageIdentityBay()}
-        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, plaqueHref: "/store/open-rules-library/" })}
+        ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, hidePlaque: true })}
         <a class="shop-wall-sign-hotspot shop-wall-sign-hotspot--open-rules" href="/store/open-rules-library/" aria-label="Open the Open Rules Library shelf page"></a>
         ${renderHomepageShelfFixtures()}
       </section>
@@ -1281,7 +1281,7 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "" }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false }) {
   const visibleProducts = products.slice(0, 5);
   const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
   const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
@@ -1333,7 +1333,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
           </div>`;
   return `
         <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="${escapeAttribute(id)}">
-          ${renderShopWallPlaque(title, id, plaqueHref)}
+          ${hidePlaque ? `<h2 class="shop-wall-heading-hidden" id="${escapeAttribute(id)}">${escapeHtml(title)}</h2>` : renderShopWallPlaque(title, id, plaqueHref)}
 
           ${shelves}
         </section>`;

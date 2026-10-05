@@ -83,7 +83,8 @@ assert.match(css, /\.shop-wall-product-mock--spine\s*\{[\s\S]*--mock-product-wid
 assert.doesNotMatch(homepage, /\/assets\/products\/spriggans\/spine\.png/, "The cleared launch storefront must not expose the old Spriggans mock spine.");
 assert.doesNotMatch(homepage, /SHELF STOCK|Decorative shelf stock|product spine mockup/i, "Decorative empty-shelf stock must stay generic and hidden from visitors.");
 const openRulesBay = homepage.match(/<section[^>]*aria-labelledby="open-rules-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
-assert.match(openRulesBay, /<h2 id="open-rules-library-heading"><a href="\/store\/open-rules-library\/">OPEN RULES LIBRARY<\/a><\/h2>/, "Open Rules Library brass sign must link to its shelf page.");
+assert.match(openRulesBay, /<h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY<\/h2>/, "Open Rules Library must keep an accessible heading without drawing a second brass sign.");
+assert.doesNotMatch(openRulesBay, /class="shop-wall-plaque"/, "Open Rules Library must use the original cabinet sign, not draw a second brass plaque.");
 assert.match(homepage, /class="shop-wall-sign-hotspot shop-wall-sign-hotspot--open-rules" href="\/store\/open-rules-library\/"[^>]*><\/a>/, "The original visible Open Rules sign must have a sign-sized transparent link target.");
 assert.match(css, /\.shop-wall-fixed-cabinet \.shop-wall-sign-hotspot--open-rules\s*\{[\s\S]*left:\s*1042px;[\s\S]*width:\s*348px;/, "Desktop Open Rules hotspot must stay aligned to the original brass sign.");
 assert.match(openRulesLibraryPage, /<main id="top" class="open-rules-library-page">/, "Open Rules Library shelf page must be generated.");
