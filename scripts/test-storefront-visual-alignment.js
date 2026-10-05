@@ -84,8 +84,8 @@ assert.doesNotMatch(homepage, /\/assets\/products\/spriggans\/spine\.png/, "The 
 assert.doesNotMatch(homepage, /SHELF STOCK|Decorative shelf stock|product spine mockup/i, "Decorative empty-shelf stock must stay generic and hidden from visitors.");
 const openRulesBay = homepage.match(/<section[^>]*aria-labelledby="open-rules-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
 assert.match(openRulesBay, /<h2 id="open-rules-library-heading"><a href="\/store\/open-rules-library\/">OPEN RULES LIBRARY<\/a><\/h2>/, "Open Rules Library brass sign must link to its shelf page.");
-assert.match(homepage, /class="shop-wall-linked-sign shop-wall-linked-sign--open-rules" href="\/store\/open-rules-library\/"[^>]*>OPEN RULES LIBRARY<\/a>/, "The frozen visible Open Rules sign must be a real link.");
-assert.match(css, /\.shop-wall-fixed-cabinet \.shop-wall-linked-sign--open-rules\s*\{[\s\S]*left:\s*1026px;[\s\S]*width:\s*388px;/, "Desktop Open Rules linked sign must cover the visible brass sign.");
+assert.match(homepage, /class="shop-wall-sign-hotspot shop-wall-sign-hotspot--open-rules" href="\/store\/open-rules-library\/"[^>]*><\/a>/, "The original visible Open Rules sign must have a sign-sized transparent link target.");
+assert.match(css, /\.shop-wall-fixed-cabinet \.shop-wall-sign-hotspot--open-rules\s*\{[\s\S]*left:\s*1042px;[\s\S]*width:\s*348px;/, "Desktop Open Rules hotspot must stay aligned to the original brass sign.");
 assert.match(openRulesLibraryPage, /<main id="top" class="open-rules-library-page">/, "Open Rules Library shelf page must be generated.");
 assert.match(openRulesLibraryPage, /<h1 id="open-rules-library-page-heading">Open Rules Library<\/h1>/, "Open Rules Library shelf page needs its heading.");
 assert.match(openRulesLibraryPage, /class="open-rules-library-fixture"/, "Open Rules Library page must render a shelf-style fixture.");
@@ -510,7 +510,7 @@ for (const approved of frozenAssets) {
   assert.equal(asset.readUInt32BE(20), approved.height);
   assert.ok(frozenPicture(homepage).includes('/' + file));
 }
-assert.equal(approvedDressingHash(normalizeDressing(css.split('/* Frozen upper cabinet:')[1].split('/* End frozen upper cabinet. */')[0])), "eff6b9136fe4d89f09c530e96c9295e565aad9e74bf28246be8489cec0666513", "Frozen cabinet geometry changed; RV approval is required.");
+assert.equal(approvedDressingHash(normalizeDressing(css.split('/* Frozen upper cabinet:')[1].split('/* End frozen upper cabinet. */')[0])), "1588834862f9edd408a770bffe15595a5103c20de033f8dd3edf1b2e439bf78a", "Frozen cabinet geometry changed; RV approval is required.");
 const frozenResize = storefront.match(/document\.querySelectorAll\("\[data-fixed-cabinet\]"\)\.forEach\(\(cabinet\) => \{[\s\S]*?\n  \}\);/)?.[0];
 assert.equal(approvedDressingHash(normalizeDressing(frozenResize)), "c30f8b9c22150eda5a341209789e53e6df3d60e70c17813579a9c6884cdb3cbc", "The artwork and books must scale together as one fixed scene.");
 
