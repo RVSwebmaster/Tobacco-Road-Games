@@ -1410,16 +1410,63 @@ function renderShopWallPlaque(title, id) {
 function renderAiPolicyPage() {
   return renderLayout({
     pageTitle: `AI Policy | ${SITE_NAME}`,
-    description: "Tobacco Road Games AI Policy.",
+    description: "Tobacco Road Games marketplace policy on AI and creative tools.",
     canonicalPath: "/ai-policy.html",
     currentNav: "ai-policy",
     content: `
       <main id="top">
-        <section class="statement-page" aria-labelledby="ai-policy-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Policy</p>
+        <section class="policy-page" aria-labelledby="ai-policy-heading">
+          <div class="policy-notice">
+            <header class="policy-notice__header">
+              <p class="section-heading__kicker">House Policy</p>
             <h1 id="ai-policy-heading">AI Policy</h1>
-            <p class="statement-intro">The approved Tobacco Road Games AI Policy text is awaiting insertion.</p>
+              <p class="statement-intro">Tobacco Road Games marketplace policy on AI and creative tools.</p>
+            </header>
+
+            <div class="policy-content policy-prose" aria-label="Tobacco Road Games marketplace policy on AI and creative tools">
+              <p>Tobacco Road Games does not impose an AI purity test.</p>
+              <p>That is not an oversight, a loophole, or a temporary exception. It is a deliberate policy choice.</p>
+              <p>A creator does not have to prove that a work was written, illustrated, edited, laid out, coded, or otherwise produced using an approved set of tools. Tobacco Road Games is not interested in policing whether a creator used a pencil, a word processor, stock art, commissioned art, digital painting, procedural tools, generative AI, automation, or something stranger.</p>
+              <p>Production method is the creator's business.</p>
+              <p>The creator is responsible for what they put on the shelf.</p>
+              <p>Tobacco Road Games is not the creator's lawyer, rights-clearance service, copyright investigator, creative director, or ideological referee. Sellers are expected to understand their own obligations, permissions, licenses, risks, and limitations. Tobacco Road Games is not going to build a marketplace around trying to pre-police every seller's creative process or every possible dispute before one exists.</p>
+              <p>We are also not going to adopt another platform's standards simply because those standards have become fashionable, common, or loudly defended within the industry.</p>
+              <p>The current anti-AI purity culture in tabletop publishing is not our standard.</p>
+              <p>Tobacco Road Games exists in part because we reject the idea that a marketplace should decide which creative tools are acceptable before allowing a creator to sell their work.</p>
+              <p>We are not interested in purity tests.</p>
+              <p>We are interested in whether the marketplace itself is being abused.</p>
+              <p>That means Tobacco Road Games may act when there is a concrete marketplace problem such as fraud, malware, deliberately deceptive listings, broken or malicious files, abuse of marketplace systems, or another issue that directly affects customers or the operation of the marketplace.</p>
+              <p>That is marketplace operation.</p>
+              <p>It is not production-method policing.</p>
+              <p>We do not require creators to disclose AI use simply because AI was involved in making a product.</p>
+              <p>We do not require an AI confession during seller registration.</p>
+              <p>We do not require one in a creator profile.</p>
+              <p>We do not require one merely to list a product.</p>
+              <p>We do not classify creators into moral categories based on the tools they use.</p>
+              <p>A creator is free to discuss their process if they want to. They are free to make claims such as "human-made," "AI-assisted," "hand-drawn," "traditionally illustrated," or anything similar if they choose to make production method part of their marketing.</p>
+              <p>They are also free not to make production method part of their marketing at all.</p>
+              <p>Customers are equally free to care.</p>
+              <p>A buyer may refuse to purchase anything involving generative AI.</p>
+              <p>Another buyer may actively seek it out.</p>
+              <p>Another may not care in the slightest.</p>
+              <p>Tobacco Road Games does not need to settle that argument for them.</p>
+              <p>The marketplace provides access.</p>
+              <p>The creator decides what to make and how to make it.</p>
+              <p>The customer decides whether it is worth buying.</p>
+              <p>That principle reaches well beyond AI.</p>
+              <p>As RV Sawyer put it:</p>
+              <blockquote>
+                <p>If someone wants to try selling an RPG supplement encoded in semaphore, smoke signals, Morse code, interpretive dance, or a stack of punched cards, that is their problem to market and the buyer's problem to understand.</p>
+              </blockquote>
+              <p>That is the philosophy.</p>
+              <p>Tobacco Road Games does not need to understand or approve the creator's method.</p>
+              <p>Tobacco Road Games does not need to endorse the work.</p>
+              <p>Tobacco Road Games does not need to certify that the creator made every good decision available to them.</p>
+              <p>Tobacco Road Games does not exist to protect creators from their own choices, or customers from having to exercise judgment.</p>
+              <p>The seller puts the work on the shelf.</p>
+              <p>The buyer decides whether to take it down.</p>
+              <p class="policy-final">Tobacco Road Games provides the marketplace. Creators are responsible for what they sell. Customers are responsible for what they buy.</p>
+            </div>
           </div>
         </section>
       </main>`

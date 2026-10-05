@@ -1,11 +1,7 @@
 {
   "globalDefaults": {
-    "authors": [
-      "RV Sawyer"
-    ],
-    "authorSlugs": [
-      "rv-sawyer"
-    ],
+    "authors": [],
+    "authorSlugs": [],
     "publisher": "Tobacco Road Games",
     "currency": "USD",
     "status": "preview-available",
@@ -13,118 +9,18 @@
     "buyMode": "preview-only",
     "buyUrl": "",
     "fulfillmentNote": "",
-    "shortDescription": "Product summary coming soon.",
-    "longDescription": "Product summary coming soon.",
-    "creationMethod": "Human-authored by RV Sawyer.",
+    "shortDescription": "",
+    "longDescription": "",
+    "creationMethod": "",
     "legalNote": "",
-    "version": "2026 catalog preview",
-    "libraryEligible": true,
-    "updateEligible": true,
+    "version": "",
+    "libraryEligible": false,
+    "updateEligible": false,
     "bundleEligible": false,
     "bundleMinPriceCents": 100,
     "bundleGroup": "standard-digital",
     "allowSeasonalBundle": false,
     "excludeFromBundles": true
   },
-  "products": [
-    {
-      "slug": "agency",
-      "folder": "agency",
-      "title": "Agency",
-      "subtitle": "Share the wheel or crash the game",
-      "featured": false,
-      "gameSystem": "System Agnotic",
-      "gameSystemSlug": "system-agnotic",
-      "productLine": "Tablecraft",
-      "productLineSlug": "tablecraft",
-      "series": "Tablecraft",
-      "seriesSlug": "tablecraft",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Tablecraft"
-      ]
-    },
-    {
-      "slug": "circle-of-cinder",
-      "folder": "circleofcinder",
-      "title": "Circle of Cinder",
-      "subtitle": "A Tobacco Road Games catalog preview",
-      "featured": false,
-      "gameSystem": "System TBD",
-      "gameSystemSlug": "system-tbd",
-      "productLine": "Other Games & Experiments",
-      "productLineSlug": "other-games-experiments",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Preview"
-      ],
-      "series": "",
-      "seriesSlug": ""
-    },
-    {
-      "folder": "janni",
-      "slug": "janni",
-      "title": "Janni",
-      "subtitle": "A Mortal Kind of Immortality",
-      "featured": false,
-      "gameSystem": "5E Compatible",
-      "gameSystemSlug": "5e-compatible",
-      "productLine": "Fifth Edition Fantasy Roleplaying",
-      "productLineSlug": "fifth-edition-fantasy-roleplaying",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Fantasy",
-        "Supplement",
-        "Dungeons & Dragons",
-        "SRD 5.1"
-      ]
-    },
-    {
-      "slug": "ringbound",
-      "folder": "ringbound",
-      "title": "Ringbound",
-      "subtitle": "A Tobacco Road Games Charater Class",
-      "featured": false,
-      "gameSystem": "5e Fantasy Role Playing",
-      "gameSystemSlug": "5e-fantasy-role-playing",
-      "productLine": "Nippon Folio",
-      "productLineSlug": "nippon-folio",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Nippon Folio",
-        "Fantasy",
-        "Supplement",
-        "SRD 5.1",
-        "Preview"
-      ]
-    },
-    {
-      "slug": "tablecraft-primer",
-      "folder": "Tablecraft Primer",
-      "title": "Tablecraft Primer",
-      "subtitle": "Practical Tools For Better Play",
-      "featured": false,
-      "gameSystem": "System Neutral",
-      "gameSystemSlug": "system-neutral",
-      "productLine": "Tablecraft",
-      "productLineSlug": "tablecraft",
-      "series": "Tablecraft",
-      "seriesSlug": "tablecraft",
-      "format": [
-        "PDF"
-      ],
-      "tags": [
-        "Tablecraft",
-        "Preview"
-      ]
-    }
-  ]
+  "products": []
 }

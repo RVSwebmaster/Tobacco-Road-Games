@@ -1,19 +1,6 @@
 import { getRuntimeCatalogProduct } from "./runtime-catalog.mjs";
 
-const DELIVERY_PRODUCTS = Object.freeze({
-  agency: Object.freeze({
-    contentType: "application/pdf",
-    customerFilename: "Agency.pdf",
-    productSlug: "agency",
-    r2ObjectKey: "agency/product.pdf"
-  }),
-  janni: Object.freeze({
-    contentType: "application/pdf",
-    customerFilename: "Janni.pdf",
-    productSlug: "janni",
-    r2ObjectKey: "janni/product.pdf"
-  })
-});
+const DELIVERY_PRODUCTS = Object.freeze({});
 
 export function getDeliveryProduct(productSlug) {
   const slug=String(productSlug||"").trim().toLowerCase();

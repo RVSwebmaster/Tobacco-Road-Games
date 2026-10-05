@@ -4,8 +4,13 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const DIRECT_PRODUCTS = ["agency", "circle-of-cinder", "janni", "ringbound", "tablecraft-primer"];
+const DIRECT_PRODUCTS = [];
 const REMOVED = [
+  "agency",
+  "circle-of-cinder",
+  "janni",
+  "ringbound",
+  "tablecraft-primer",
   "sirrocans",
   "spriggans",
   "final-flame",
@@ -25,27 +30,7 @@ async function main() {
     .map((match) => match[2]);
 
   assert.equal(seededSlugs.length, 12, "The compatibility inventory should retain every migration-seeded D1 listing.");
-  for (const slug of DIRECT_PRODUCTS) {
-    const product = productMap.get(slug);
-    assert.ok(product, `${slug} should retain its static product record.`);
-    assert.equal(SALEABLE_STATUSES.has(product.status), true, `${slug} should use a saleable status.`);
-    assert.equal(SALEABLE_BUY_MODES.has(product.buyMode), true, `${slug} should use a saleable buy mode.`);
-  }
-
-  for (const slug of DIRECT_PRODUCTS) {
-    const product = productMap.get(slug);
-    assert.equal(product.status, "available-direct");
-    assert.notEqual(product.buyMode, "retired");
-    assert.equal(product.saleEnabled, false);
-
-    const directPage = read(`store/products/${slug}/index.html`);
-    assert.match(directPage, /Available Direct/);
-    assert.match(directPage, new RegExp(`data-cart-add=["']${slug}["']`));
-
-    for (const activePage of ["store/index.html", "store/catalog/index.html", "store/sitemap.xml"]) {
-      assert.match(read(activePage), new RegExp(`/store/products/${slug}/`), `${slug} should appear in ${activePage}.`);
-    }
-  }
+  assert.equal(productMap.size, 0, "The launch catalog should start from a tabula-rasa static product source.");
 
   const activePages = [
     "authors/rv-sawyer/index.html",

@@ -60,8 +60,8 @@ async function renderPaidOrderBody(order, env) {
     if (entitlement && isDownloadSigningSecretConfigured(env.DOWNLOAD_SIGNING_SECRET)) {
       const credential = await createDownloadCredential(entitlement, env.DOWNLOAD_SIGNING_SECRET);
       fulfillmentBody = `
-        <p class="cart-summary__copy">Your Agency PDF is ready.</p>
-        <p class="cart-summary__copy"><a class="button" href="/store/download?credential=${encodeURIComponent(credential)}">Download Agency PDF</a></p>
+        <p class="cart-summary__copy">Your PDF is ready.</p>
+        <p class="cart-summary__copy"><a class="button" href="/store/download?credential=${encodeURIComponent(credential)}">Download PDF</a></p>
         <p class="cart-summary__copy">This private download link expires shortly. Browser retries are allowed while it remains active.</p>
       `;
     }

@@ -32,16 +32,16 @@
   });
 
   const KEYWORDS = Object.freeze({
-    advice: ["advice", "guide", "gm advice", "game master", "referee", "tablecraft", "campaign design", "agency", "spotlight", "player choice", "consequence", "session", "running games"],
+    advice: ["advice", "guide", "gm advice", "game master", "referee", "campaign design", "spotlight", "player choice", "consequence", "session", "running games"],
     adventure: ["adventure", "scenario", "module", "encounter", "quest", "crawl", "heist", "mission"],
     rules: ["rules", "subclass", "class", "ancestry", "race", "species", "monster", "spell", "feat", "equipment", "expansion", "character option", "player option"],
     setting: ["setting", "gazetteer", "kingdom", "region", "world", "lore book", "campaign setting"],
     fullGame: ["full game", "standalone", "core book", "core rules", "roleplaying game", "complete game"],
     assetPack: ["asset pack", "token pack", "map pack", "handout pack", "card deck", "cards", "tiles", "portraits"],
-    evergreen: ["agency", "campaign", "spotlight", "player choice", "consequence", "table use", "game master", "gm", "referee", "session", "toolkit"],
+    evergreen: ["campaign", "spotlight", "player choice", "consequence", "table use", "game master", "gm", "referee", "session", "toolkit"],
     tools: ["tool", "tools", "procedure", "checklist", "worksheet", "generator", "oracle", "framework", "reference table"],
     playerFacing: ["player", "character", "class", "subclass", "ancestry", "race", "species", "feat", "build"],
-    experienced: ["agency", "campaign", "consequence", "spotlight", "table dynamics", "shared responsibility", "design"]
+    experienced: ["campaign", "consequence", "spotlight", "table dynamics", "shared responsibility", "design"]
   });
 
   function normalizeText(value) {
@@ -186,7 +186,7 @@
     if (hasAny(text, KEYWORDS.advice) || normalizeText(listing.raw.series) === "tablecraft") {
       return {
         key: "advice_booklet",
-        label: hasAny(text, ["gm", "game master", "referee", "agency", "campaign"]) ? "GM Advice" : TYPE_LABELS.advice_booklet,
+        label: hasAny(text, ["gm", "game master", "referee", "campaign"]) ? "GM Advice" : TYPE_LABELS.advice_booklet,
         certainty: 0.87
       };
     }
@@ -253,10 +253,6 @@
 
     if (productType.label === "GM Advice" || hasAny(text, ["gm", "game master", "referee"])) {
       tags.push("GM Advice");
-    }
-
-    if (titleTokens.some((token) => token === "agency")) {
-      tags.push("Agency");
     }
 
     if (hasAny(text, ["player choice", "choice", "decisions matter"])) {

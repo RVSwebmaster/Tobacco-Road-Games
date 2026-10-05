@@ -1,10 +1,4 @@
-export const PRODUCT_FOLDER_MAP = Object.freeze({
-  "agency": "agency",
-  "circle-of-cinder": "circleofcinder",
-  "janni": "janni",
-  "ringbound": "ringbound",
-  "tablecraft-primer": "Tablecraft Primer"
-});
+export const PRODUCT_FOLDER_MAP = Object.freeze({});
 
 export function getFolderForSlug(slug) {
   return PRODUCT_FOLDER_MAP[normalizeSlug(slug)] || "";
