@@ -1157,7 +1157,7 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageLibraryBay()}
         ${renderHomepageIdentityBay()}
         ${renderHomepageProductBay({ title: "OPEN RULES LIBRARY", id: "open-rules-library-heading", products: openRules, plaqueHref: "/store/open-rules-library/" })}
-        <a class="shop-wall-sign-hit-area shop-wall-sign-hit-area--open-rules" href="/store/open-rules-library/" aria-label="Open the Open Rules Library shelf page"></a>
+        <a class="shop-wall-linked-sign shop-wall-linked-sign--open-rules" href="/store/open-rules-library/" aria-label="Open the Open Rules Library shelf page">OPEN RULES LIBRARY</a>
         ${renderHomepageShelfFixtures()}
       </section>
       </div>

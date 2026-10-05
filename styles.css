@@ -3571,15 +3571,41 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   pointer-events: none;
 }
 
-.shop-wall-sign-hit-area {
+.shop-wall-linked-sign {
   position: absolute;
   z-index: 8;
-  display: block;
+  display: grid;
+  place-items: center;
   border-radius: 2px;
-  text-indent: -9999px;
+  border: 1px solid #705020;
+  background:
+    radial-gradient(circle 1.5px at 6px 50%, #674a20 70%, rgba(255, 236, 168, 0.7) 100%, transparent 120%),
+    radial-gradient(circle 1.5px at calc(100% - 6px) 50%, #674a20 70%, rgba(255, 236, 168, 0.7) 100%, transparent 120%),
+    repeating-linear-gradient(0deg, rgba(255, 241, 191, 0.07) 0 1px, rgba(99, 69, 22, 0.05) 1px 2px, transparent 2px 4px),
+    linear-gradient(115deg, transparent 12%, rgba(255, 245, 195, 0.38) 32%, transparent 52%, rgba(100, 67, 20, 0.12) 76%, transparent 92%),
+    linear-gradient(180deg, #e4ce88 0%, #c9ac5b 42%, #b18b3b 74%, #d4b86d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 208, 0.8),
+    inset 0 -1px 0 rgba(84, 53, 16, 0.5),
+    inset 1px 0 0 rgba(255, 239, 181, 0.4),
+    0 2px 4px rgba(24, 10, 4, 0.45);
+  color: #211507;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  text-shadow: 0 1px 0 rgba(255, 241, 194, 0.7);
+  text-transform: uppercase;
 }
 
-.shop-wall-sign-hit-area:focus-visible {
+.shop-wall-linked-sign:hover {
+  filter: brightness(1.08);
+}
+
+.shop-wall-linked-sign:focus-visible {
   outline: 3px solid #f4d184;
   outline-offset: 3px;
   box-shadow: 0 0 0 4px rgba(36, 17, 6, 0.55);
@@ -5575,11 +5601,11 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 .shop-wall-cabinet-art > img { display: block; width: 100%; height: auto; max-width: none; }
 .shop-wall-fixed-cabinet { --cabinet-width: 1452; --cabinet-height: 474.333344; }
-.shop-wall-fixed-cabinet .shop-wall-sign-hit-area--open-rules {
-  left: 1048px;
-  top: 26px;
-  width: 340px;
-  height: 42px;
+.shop-wall-fixed-cabinet .shop-wall-linked-sign--open-rules {
+  left: 1044px;
+  top: 25px;
+  width: 348px;
+  height: 43px;
 }
 .shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
   position: absolute; left: 0px; top: 68px; right: auto; bottom: auto; width: 470px; height: 169.166672px;
@@ -5595,11 +5621,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 @media (max-width: 1023px) {
 .shop-wall-fixed-cabinet { --cabinet-width: 836.666687; --cabinet-height: 637; }
-.shop-wall-fixed-cabinet .shop-wall-sign-hit-area--open-rules {
-  left: 514px;
-  top: 27px;
-  width: 250px;
-  height: 34px;
+.shop-wall-fixed-cabinet .shop-wall-linked-sign--open-rules {
+  left: 509px;
+  top: 26px;
+  width: 260px;
+  height: 35px;
+  font-size: 14px;
 }
 .shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
   position: absolute; left: 0px; top: 373px; right: auto; bottom: auto; width: 404.333344px; height: 98px;
@@ -5616,11 +5643,12 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 @media (max-width: 699px) {
 .shop-wall-fixed-cabinet { --cabinet-width: 346.666687; --cabinet-height: 913.770874; }
-.shop-wall-fixed-cabinet .shop-wall-sign-hit-area--open-rules {
-  left: 65px;
-  top: 559px;
-  width: 218px;
-  height: 32px;
+.shop-wall-fixed-cabinet .shop-wall-linked-sign--open-rules {
+  left: 62px;
+  top: 558px;
+  width: 224px;
+  height: 34px;
+  font-size: 12px;
 }
 .shop-wall-fixed-cabinet [aria-labelledby="your-library-heading"] .shop-wall-shelf-level--upper > .shop-wall-product-row--library {
   position: absolute; left: 0px; top: 367.770844px; right: auto; bottom: auto; width: 346.666687px; height: 84px;
