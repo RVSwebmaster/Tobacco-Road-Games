@@ -79,7 +79,8 @@ assert.match(css, /\.shelf-storefront \.shop-wall-books\s*\{[\s\S]*justify-conte
 assert.match(css, /\.shelf-storefront \.shop-wall-books::before,[\s\S]*\.shelf-storefront \.shop-wall-books::after\s*\{[\s\S]*content:\s*none;/);
 assert.match(css, /\.shop-wall-product-mock\s*\{[\s\S]*z-index:\s*5;[\s\S]*filter:\s*drop-shadow/);
 assert.match(css, /\.shop-wall-product-mock--spine\s*\{[\s\S]*--mock-product-width:\s*calc\(var\(--mock-product-height\) \* 203 \/ 1774\);/);
-assert.match(homepage, /\/assets\/products\/spriggans\/spine\.png/);
+assert.doesNotMatch(homepage, /\/assets\/products\/spriggans\/spine\.png/, "The cleared launch storefront must not expose the old Spriggans mock spine.");
+assert.doesNotMatch(homepage, /SHELF STOCK|Decorative shelf stock|product spine mockup/i, "Decorative empty-shelf stock must stay generic and hidden from visitors.");
 const openRulesBay = homepage.match(/<section[^>]*aria-labelledby="open-rules-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
 assert.doesNotMatch(openRulesBay, /shop-wall-view-link|View All/, "Open Rules Library must not contain the View All sign or link.");
 assert.doesNotMatch(build, /title: "OPEN RULES LIBRARY"[^\n]*viewAllHref/, "The homepage generator must not restore the Open Rules Library View All link.");
@@ -312,7 +313,6 @@ assertInOrder(build, [
   'NEW THIS WEEK',
   'renderHomepageBricABracShelf()',
   'BEST SELLERS',
-  'productMock',
   'FREE & PWYW',
   'storefront-news-chiron'
 ], "Generated storefront sequence");

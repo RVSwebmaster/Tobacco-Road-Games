@@ -1126,7 +1126,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261004-center-books1");
+  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261005-tabula-rasa1");
   const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
@@ -1165,7 +1165,7 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
         ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
         ${renderHomepageBricABracShelf()}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], productMock: { src: "/assets/products/spriggans/spine.png", alt: "Spriggans product spine mockup", label: "Spriggans product spine mockup", modifier: "spine" } })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
         ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true, wallArt: [{ src: "/assets/justifiers-framed-cover.png", alt: "Framed Justifiers RPG cover on the shelf back wall" }, { src: "/assets/charlie-daniels-framed-art.png", alt: "Framed Charlie Daniels Band artwork on the shelf back wall", placement: "center" }, { src: "/assets/drolla-framed-cover.png", alt: "Framed Drolla Core Rulebook artwork on the shelf back wall", placement: "right" }] })}
       </section>
       ${renderHomepageNewsChyron()}
@@ -1251,12 +1251,7 @@ function renderHomepageShelfFixtures() {
 }
 
 function renderHomepageLibraryBay() {
-  const productMockMarkup = renderHomepageProductMock({
-    src: "/assets/products/spriggans/spine.png",
-    alt: "Spriggans product spine mockup",
-    label: "Spriggans product spine mockup",
-    modifier: "spine"
-  }, { library: true, alignRight: true });
+  const productMockMarkup = renderHomepageProductMock({ modifier: "spine" }, { library: true, alignRight: true });
   return `
         <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
@@ -1291,12 +1286,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
   const libraryBooks = id === "open-rules-library-heading";
   const wallArtItems = wallArt ? (Array.isArray(wallArt) ? wallArt : [wallArt]) : [];
   const wallArtMarkup = wallArtItems.map((art) => `<img class="shop-wall-back-wall-art${["center", "right"].includes(art.placement) ? ` shop-wall-back-wall-art--${art.placement}` : ""}" src="${escapeAttribute(art.src)}" alt="${escapeAttribute(art.alt)}" loading="lazy" decoding="async">`).join("\n              ");
-  const shelfMock = productMock || ((singleShelf && wallArtItems.length === 3) || libraryBooks ? {
-    src: "/assets/products/spriggans/spine.png",
-    alt: "Spriggans product spine mockup",
-    label: "Spriggans product spine mockup",
-    modifier: "spine"
-  } : null);
+  const shelfMock = productMock || ((singleShelf && wallArtItems.length === 3) || libraryBooks ? { modifier: "spine" } : null);
   const productMockMarkup = shelfMock ? renderHomepageProductMock(shelfMock, { library: libraryBooks }) : "";
   const bambooIncenseMarkup = bambooIncense ? `<figure class="shop-wall-bamboo-incense" aria-hidden="true">
                 <img class="shop-wall-bamboo-incense__plant" src="/assets/images/storefront-shelf-dressing/bamboo-incense-planter-niche.png" alt="" loading="eager" decoding="async" draggable="false">
@@ -1350,9 +1340,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
 function renderHomepageProductMock(mock, { library = false, alignRight = false } = {}) {
   const rowModifier = (library ? " shop-wall-product-row--library" : "") + (alignRight ? " shop-wall-product-row--right" : "");
   const modifier = mock.modifier ? ` shop-wall-product-mock--${escapeAttribute(mock.modifier)}` : "";
-  const bookMarkup = `<figure class="shop-wall-product-mock${modifier}" aria-label="${escapeAttribute(mock.label)}">
-                  <img src="${escapeAttribute(mock.src)}" alt="${escapeAttribute(mock.alt)}" loading="eager" decoding="async">
-                </figure>`;
+  const bookMarkup = `<figure class="shop-wall-product-mock${modifier}" aria-hidden="true"></figure>`;
   if (library) return `<div class="shop-wall-product-row${rowModifier}">
                 <div class="shop-wall-library-books" data-fill-library>
                   ${bookMarkup}
@@ -1389,13 +1377,13 @@ function renderHomepageMerchandisingBooks(products, heroProductId = null) {
   const { hero, left, right } = selectHomepageShelfBooks(products, heroProductId);
   const renderSpines = (run, side) => `<div class="shop-wall-spine-run" data-spine-run="${side}" data-spine-slots="21">${Array.from({ length: 21 }, (_, slot) => {
     const product = run[slot];
-    if (!product) return `<figure class="shop-wall-stock-spine" data-decorative-stock aria-label="Decorative shelf stock"><img src="/assets/products/spriggans/spine.png" alt="" loading="lazy" decoding="async"><span aria-hidden="true">SHELF STOCK</span></figure>`;
+    if (!product) return `<figure class="shop-wall-stock-spine" data-decorative-stock aria-hidden="true"></figure>`;
     const height = Math.round(bookshelfDimensions(product).height * 188 / 314);
     return `<a class="shop-wall-sale-spine" data-product-card data-slug="${escapeAttribute(product.slug)}" data-product-id="${escapeAttribute(homepageProductId(product))}" href="${escapeAttribute(product.url)}" aria-label="Open ${escapeAttribute(product.title)} product page" title="${escapeAttribute(product.title)}" style="--merch-book-height:${height}px"><span aria-hidden="true">${escapeHtml(product.title)}</span></a>`;
   }).join("")}</div>`;
   const heroMarkup = hero
     ? `<a class="shop-wall-hero-book" data-product-card data-slug="${escapeAttribute(hero.slug)}" data-product-id="${escapeAttribute(homepageProductId(hero))}" href="${escapeAttribute(hero.url)}" aria-label="Open ${escapeAttribute(hero.title)} product page" title="${escapeAttribute(hero.title)}"><img src="${escapeAttribute(hero.assetSet.cover)}" alt="${escapeAttribute(hero.title)} cover" loading="lazy" decoding="async"></a>`
-    : `<figure class="shop-wall-hero-book shop-wall-hero-book--stock" data-decorative-stock aria-label="Decorative face-out shelf stock, not a marketplace product"><div class="shop-wall-stock-cover" aria-hidden="true"><span>DECORATIVE</span><img src="/assets/tobacco-road-games-logo.png" alt="" loading="lazy" decoding="async"><strong>SHELF<br>STOCK</strong></div></figure>`;
+    : `<figure class="shop-wall-hero-book shop-wall-hero-book--stock" data-decorative-stock aria-hidden="true"><div class="shop-wall-stock-cover" aria-hidden="true"><img src="/assets/tobacco-road-games-logo.png" alt="" loading="lazy" decoding="async"></div></figure>`;
   return `<div class="shop-wall-product-row shop-wall-product-row--hero" data-overhang-spine data-book-units="50">
                 ${renderSpines(left, "left")}
                 <div class="shop-wall-hero-bay" data-hero-units="8">${heroMarkup}</div>
