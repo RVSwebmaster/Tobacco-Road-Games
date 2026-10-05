@@ -84,7 +84,7 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
     }
 
     const formData = await request.formData();
-    const parsed = parsePublishForm(formData);
+    const parsed = parsePublishForm(formData, options.productFolderMap);
     if (!parsed.valid) {
       return jsonResponse({
         error: parsed.userMessage
@@ -140,7 +140,7 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
   }
 }
 
-function parsePublishForm(formData) {
+function parsePublishForm(formData, productFolderMap = {}) {
   const errors = [];
   const metadata = {};
 
@@ -252,8 +252,14 @@ function parsePublishForm(formData) {
 
   applyMarketplaceMetadata(formData, payload.metadata, errors);
 
-  payload.isExistingProduct = hasFolderForSlug(slug);
-  payload.existingFolder = getFolderForSlug(slug);
+  const hasProductFolder = typeof productFolderMap.hasFolderForSlug === "function"
+    ? productFolderMap.hasFolderForSlug
+    : hasFolderForSlug;
+  const getProductFolder = typeof productFolderMap.getFolderForSlug === "function"
+    ? productFolderMap.getFolderForSlug
+    : getFolderForSlug;
+  payload.isExistingProduct = hasProductFolder(slug);
+  payload.existingFolder = getProductFolder(slug);
   const requireAllFiles = !payload.isExistingProduct || payload.existingFolder !== folder;
 
   for (const [fieldName, label, expectedType, expectedExtension] of REQUIRED_FILE_FIELDS) {

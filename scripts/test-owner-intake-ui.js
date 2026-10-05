@@ -73,13 +73,13 @@ async function testTablecraftListingStillLoadsWithProductLine() {
 
   assert.ok(getSelectOptionLabels(harness.fields.line).includes("Tablecraft"), "Tablecraft should stay available in the Product Line selector.");
 
-  harness.fields.existingSelect.value = "tablecraft-primer";
+  harness.fields.existingSelect.value = "fixture-beta";
   harness.buttons.loadExisting.click();
 
   assert.equal(harness.fields.line.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve productLine.");
   assert.equal(harness.fields.series.value, "Tablecraft", "Loading an existing Tablecraft listing should preserve series separately.");
-  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Tablecraft Primer", "Tablecraft listings should still load into existing-listing mode.");
-  assert.equal(harness.fields.title.value, "Tablecraft Primer", "The existing Tablecraft listing should still populate the form.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Beta", "Tablecraft listings should still load into existing-listing mode.");
+  assert.equal(harness.fields.title.value, "Fixture Beta", "The existing Tablecraft listing should still populate the form.");
 }
 
 async function testExistingListingLoadsMatchingTagCheckboxes() {
@@ -88,7 +88,7 @@ async function testExistingListingLoadsMatchingTagCheckboxes() {
 
   assert.ok(findTagCheckbox(harness, "Nippon Folio"), "Nippon Folio should be available as a Product Lines tag checkbox.");
 
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
   assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, true, "Existing known tags should load as checked checkboxes.");
@@ -219,7 +219,7 @@ async function testListingDetailsStayHiddenUntilWorkStarts() {
 
   assert.equal(harness.outputs.listingDetails.hidden, true, "Listing details should stay hidden on first load.");
 
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
   assert.equal(harness.outputs.listingDetails.hidden, false, "Loading an existing listing should reveal the listing details workspace.");
 
@@ -235,7 +235,7 @@ async function testBackToListingsLeavesUnchangedExistingListing() {
   const harness = createHarness();
   await harness.flush();
 
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
   assert.equal(harness.confirmMessages.length, 0, "Loading an existing listing should not prompt for confirmation.");
 
@@ -252,7 +252,7 @@ async function testBackToListingsConfirmsEditedExistingListing() {
   const harness = createHarness();
   await harness.flush();
 
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
   harness.fields.shortDescription.value = "Changed copy";
   harness.fields.shortDescription.dispatch("input");
@@ -261,7 +261,7 @@ async function testBackToListingsConfirmsEditedExistingListing() {
   harness.buttons.leaveListing.click();
   assert.equal(harness.confirmMessages.length, 1, "Leaving an edited existing listing should ask for confirmation.");
   assert.equal(harness.outputs.listingDetails.hidden, false, "Canceling the discard should keep the workspace open.");
-  assert.equal(harness.fields.slug.value, "agency", "Canceling the discard should preserve the loaded listing.");
+  assert.equal(harness.fields.slug.value, "fixture-alpha", "Canceling the discard should preserve the loaded listing.");
 
   harness.confirmResponse = true;
   harness.buttons.leaveListing.click();
@@ -274,16 +274,16 @@ async function testBackToListingsConfirmsEditedExistingListing() {
 async function testIntakeModeSpecificLabels() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
-  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Agency", "Loading an existing product should switch the prominent mode indicator.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Alpha", "Loading an existing product should switch the prominent mode indicator.");
   assert.match(harness.outputs.outputHeading.textContent, /Review Listing Changes/, "Existing-listing mode should use a review heading for updates.");
   assert.equal(harness.buttons.analyze.textContent, "Check Existing Listing", "Existing-listing mode should relabel the check action.");
   assert.equal(harness.buttons.review.textContent, "Review Listing Changes", "Existing-listing mode should relabel the review action.");
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Existing-listing mode should relabel the publish action.");
   assert.equal(harness.buttons.reset.textContent, "Discard Listing Changes", "Existing-listing mode should relabel the discard action.");
-  assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Agency/i, "Existing-listing mode should explain that the owner is updating a current listing.");
+  assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Fixture Alpha/i, "Existing-listing mode should explain that the owner is updating a current listing.");
 }
 
 async function testGeneratedJsonToggle() {
@@ -327,7 +327,7 @@ async function testAssetChecklistToggle() {
 async function testIntakeReviewAndDiscardConfirmation() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
   harness.fields.shortDescription.value = "Updated preview copy";
@@ -352,17 +352,17 @@ async function testIntakeReviewAndDiscardConfirmation() {
 async function testExistingListingDraftRestoresAfterReload() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "ringbound";
+  harness.fields.existingSelect.value = "fixture-gamma";
   harness.buttons.loadExisting.click();
 
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
   harness.buttons.analyze.click();
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Checking an existing listing must not fall back to the new-product publish action.");
-  assert.equal(harness.fields.slug.value, "ringbound", "Checking an existing listing must preserve the loaded slug.");
+  assert.equal(harness.fields.slug.value, "fixture-gamma", "Checking an existing listing must preserve the loaded slug.");
   const generatedBeforeReload = JSON.parse(harness.outputs.json.value);
-  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Editing Ringbound should stay in existing-listing mode before reload.");
-  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Ringbound should not offer a new-product publish action.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Editing Fixture Gamma should stay in existing-listing mode before reload.");
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Fixture Gamma should not offer a new-product publish action.");
   assert.equal(generatedBeforeReload.productLineSlug, "other-games-and-experiments", "Editing an existing listing should preserve the original product-line slug when the visible label is unchanged.");
   assert.equal(generatedBeforeReload.priceCents, null, "Editing an existing listing should not convert an empty regular price into zero cents.");
   assert.equal(generatedBeforeReload.salePriceCents, null, "Editing an existing listing should not convert an empty sale price into zero cents.");
@@ -375,15 +375,15 @@ async function testExistingListingDraftRestoresAfterReload() {
   await reloadedHarness.flush();
   const generatedAfterReload = JSON.parse(reloadedHarness.outputs.json.value);
 
-  assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Ringbound", "Reloading should restore the loaded Ringbound listing.");
+  assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Reloading should restore the loaded Fixture Gamma listing.");
   assert.equal(reloadedHarness.outputs.listingDetails.hidden, false, "Reloading a persisted existing-listing draft should reveal the listing details workspace.");
   assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "A restored existing listing must not show the new-product publish action.");
   assert.equal(reloadedHarness.buttons.reset.textContent, "Discard Listing Changes", "A restored existing listing must keep the existing-listing discard action.");
-  assert.equal(reloadedHarness.fields.title.value, "Ringbound", "Reloading should preserve the loaded title.");
-  assert.equal(reloadedHarness.fields.slug.value, "ringbound", "Reloading should preserve the loaded slug.");
+  assert.equal(reloadedHarness.fields.title.value, "Fixture Gamma", "Reloading should preserve the loaded title.");
+  assert.equal(reloadedHarness.fields.slug.value, "fixture-gamma", "Reloading should preserve the loaded slug.");
   assert.equal(reloadedHarness.fields.pageCount.value, "12", "Reloading should preserve the unsaved page-count edit.");
   assert.equal(findTagCheckbox(reloadedHarness, "Fantasy")?.checked, true, "Reloading should preserve the checked tag selector state.");
-  assert.match(reloadedHarness.outputs.status.textContent, /Restored Ringbound for editing after the page was reloaded\./, "Reloading should explain why the existing listing remained active.");
+  assert.match(reloadedHarness.outputs.status.textContent, /Restored Fixture Gamma for editing after the page was reloaded\./, "Reloading should explain why the existing listing remained active.");
   assert.equal(reloadedHarness.api.hasUnsavedChanges(), true, "Reloading should preserve the unsaved-changes baseline.");
   assert.equal(reloadedHarness.api.validateRequiredFields().length, 0, "Reloading should not fall back to new-product validation errors for a restored existing listing.");
   assert.equal(generatedAfterReload.productLineSlug, "other-games-and-experiments", "Reloading should preserve the original product-line slug.");
@@ -393,14 +393,14 @@ async function testExistingListingDraftRestoresAfterReload() {
   assert.equal(Object.prototype.hasOwnProperty.call(generatedAfterReload, "seriesSlug"), false, "Reloading should not invent empty series slug fields.");
 
   reloadedHarness.buttons.review.click();
-  assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Ringbound draft should still work.");
+  assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Fixture Gamma draft should still work.");
   assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "Reviewing the restored draft must not relabel the publish action.");
 }
 
 async function testExistingListingPublishPreservesUnknownTags() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
   const fantasyCheckbox = findTagCheckbox(harness, "Fantasy");
@@ -419,7 +419,7 @@ async function testExistingListingPublishPreservesUnknownTags() {
 async function testExistingListingReopenRestoresSavedTagCheckboxes() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
   const fantasyCheckbox = findTagCheckbox(harness, "Fantasy");
@@ -434,7 +434,7 @@ async function testExistingListingReopenRestoresSavedTagCheckboxes() {
   await harness.api.loadAvailableProductsForTests();
   await harness.flush();
 
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
   assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, false, "Reopened listings should clear tags that were unchecked in the saved update.");
@@ -445,7 +445,7 @@ async function testExistingListingReopenRestoresSavedTagCheckboxes() {
 async function testExistingListingPublishOmitsUndefinedSeriesFields() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "ringbound";
+  harness.fields.existingSelect.value = "fixture-gamma";
   harness.buttons.loadExisting.click();
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
@@ -463,7 +463,7 @@ async function testExistingListingSuccessfulUpdateReturnsToPicker() {
   const deferred = createDeferred();
   harness.mockPublishResponse = deferred.promise;
   await harness.flush();
-  harness.fields.existingSelect.value = "ringbound";
+  harness.fields.existingSelect.value = "fixture-gamma";
   harness.buttons.loadExisting.click();
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
@@ -490,14 +490,14 @@ async function testExistingListingSuccessfulUpdateReturnsToPicker() {
   assert.equal(harness.fields.slug.value, "", "A successful existing-listing update should clear the loaded slug.");
   assert.equal(harness.buttons.publish.textContent, "Publish New Product", "A successful existing-listing update should restore the default publish action after returning to the picker.");
   assert.equal(harness.buttons.publish.disabled, false, "A successful existing-listing update should re-enable the publish button.");
-  assert.match(harness.outputs.status.textContent, /Ringbound updated successfully\./, "A successful existing-listing update should show a clear success confirmation.");
+  assert.match(harness.outputs.status.textContent, /Fixture Gamma updated successfully\./, "A successful existing-listing update should show a clear success confirmation.");
   assert.match(harness.outputs.status.textContent, /back at the listing picker/i, "A successful existing-listing update should explain that the editor closed and returned to the picker.");
 }
 
 async function testNonJsonPublishErrorsShowHttpDetails() {
   const harness = createHarness();
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
   harness.fields.shortDescription.value = "Updated preview copy";
   harness.fields.shortDescription.dispatch("input");
@@ -511,7 +511,7 @@ async function testNonJsonPublishErrorsShowHttpDetails() {
   assert.match(harness.outputs.status.textContent, /HTTP 500/, "Non-JSON publish failures should include the HTTP status.");
   assert.match(harness.outputs.status.textContent, /text\/html/, "Non-JSON publish failures should include the response content type.");
   assert.match(harness.outputs.status.textContent, /Failure Origin publish failed hard/i, "Non-JSON publish failures should include a safe body summary.");
-  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Agency", "Failed existing-listing updates should keep the editor open.");
+  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Alpha", "Failed existing-listing updates should keep the editor open.");
   assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Failed existing-listing updates should restore the update button label.");
   assert.equal(harness.buttons.publish.disabled, false, "Failed existing-listing updates should re-enable the update button.");
 }
@@ -757,12 +757,12 @@ function createHarness(options = {}) {
     {
       buyMode: "preview-only",
       buyUrl: "",
-      coverImage: "/product-assets/agency/cover.webp",
+      coverImage: "/product-assets/fixture-alpha/cover.webp",
       creationMethod: "Human-authored by RV Sawyer.",
       currency: "USD",
       features: ["Feature one"],
-      fileList: ["Agency.pdf"],
-      folder: "agency",
+      fileList: ["Fixture Alpha.pdf"],
+      folder: "fixture-alpha",
       format: ["PDF"],
       fulfillmentNote: "Manual note",
       gameSystem: "5E Compatible",
@@ -772,7 +772,7 @@ function createHarness(options = {}) {
       longDescription: "Long description",
       pageCount: 24,
       price: "4.99",
-      previewImage: "/product-assets/agency/preview.webp",
+      previewImage: "/product-assets/fixture-alpha/preview.webp",
       previewImages: [],
       productLine: "Fifth Edition Fantasy Roleplaying",
       productLineSlug: "fifth-edition-fantasy-roleplaying",
@@ -783,22 +783,22 @@ function createHarness(options = {}) {
       series: "",
       seriesSlug: "",
       shortDescription: "Original preview copy",
-      slug: "agency",
+      slug: "fixture-alpha",
       status: "preview-available",
       subtitle: "A test product",
       tags: ["Fantasy", "Preview"],
-      title: "Agency",
+      title: "Fixture Alpha",
       version: "1.0"
     },
     {
       buyMode: "preview-only",
       buyUrl: "",
-      coverImage: "/product-assets/ringbound/cover.webp",
+      coverImage: "/product-assets/fixture-gamma/cover.webp",
       creationMethod: "Human-authored by RV Sawyer.",
       currency: "USD",
       features: [],
       fileList: ["PDF details coming soon"],
-      folder: "ringbound",
+      folder: "fixture-gamma",
       format: ["PDF"],
       fulfillmentNote: "",
       gameSystem: "System TBD",
@@ -808,7 +808,7 @@ function createHarness(options = {}) {
       longDescription: "Product summary coming soon.",
       pageCount: null,
       price: "",
-      previewImage: "/product-assets/ringbound/preview.webp",
+      previewImage: "/product-assets/fixture-gamma/preview.webp",
       previewImages: [],
       productLine: "Other Games & Experiments",
       productLineSlug: "other-games-and-experiments",
@@ -817,22 +817,22 @@ function createHarness(options = {}) {
       saleEnabled: false,
       salePrice: "",
       shortDescription: "Product summary coming soon.",
-      slug: "ringbound",
+      slug: "fixture-gamma",
       status: "preview-available",
       subtitle: "A Tobacco Road Games catalog preview",
       tags: ["Fantasy", "Preview"],
-      title: "Ringbound",
+      title: "Fixture Gamma",
       version: "2026 catalog preview"
     },
     {
       buyMode: "preview-only",
       buyUrl: "",
-      coverImage: "/product-assets/tablecraft-primer/cover.webp",
+      coverImage: "/product-assets/fixture-beta/cover.webp",
       creationMethod: "Human-authored by RV Sawyer.",
       currency: "USD",
       features: ["Practical GM advice"],
-      fileList: ["Tablecraft Primer.pdf"],
-      folder: "tablecraft-primer",
+      fileList: ["Fixture Beta.pdf"],
+      folder: "fixture-beta",
       format: ["PDF"],
       fulfillmentNote: "",
       gameSystem: "System Neutral",
@@ -842,7 +842,7 @@ function createHarness(options = {}) {
       longDescription: "System-neutral game-master advice.",
       pageCount: 32,
       price: "",
-      previewImage: "/product-assets/tablecraft-primer/preview.webp",
+      previewImage: "/product-assets/fixture-beta/preview.webp",
       previewImages: [],
       productLine: "Tablecraft",
       productLineSlug: "tablecraft",
@@ -853,27 +853,27 @@ function createHarness(options = {}) {
       series: "Tablecraft",
       seriesSlug: "tablecraft",
       shortDescription: "A short Tablecraft guide.",
-      slug: "tablecraft-primer",
+      slug: "fixture-beta",
       status: "preview-available",
       subtitle: "A practical guide for steadier tables",
       tags: ["Tablecraft", "GM Advice"],
-      title: "Tablecraft Primer",
+      title: "Fixture Beta",
       version: "1.0"
     }
   ];
   const intakeMap = {
     products: [
       {
-        folder: "agency",
-        slug: "agency"
+        folder: "fixture-alpha",
+        slug: "fixture-alpha"
       },
       {
-        folder: "ringbound",
-        slug: "ringbound"
+        folder: "fixture-gamma",
+        slug: "fixture-gamma"
       },
       {
-        folder: "tablecraft-primer",
-        slug: "tablecraft-primer"
+        folder: "fixture-beta",
+        slug: "fixture-beta"
       }
     ]
   };

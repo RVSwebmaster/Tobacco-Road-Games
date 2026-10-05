@@ -8,6 +8,18 @@ const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
 const FileCtor = globalThis.File || require("node:buffer").File;
+const NEUTRAL_FIXTURE_FOLDER_MAP = {
+  getFolderForSlug(slug) {
+    return {
+      "fixture-alpha": "fixture-alpha",
+      "fixture-beta": "Fixture Beta",
+      "fixture-gamma": "fixture-gamma"
+    }[String(slug || "").trim().toLowerCase()] || "";
+  },
+  hasFolderForSlug(slug) {
+    return Boolean(NEUTRAL_FIXTURE_FOLDER_MAP.getFolderForSlug(slug));
+  }
+};
 
 async function main() {
   const ownerAuth = await importModule("functions/_lib/owner-auth.mjs");
@@ -295,8 +307,8 @@ async function testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, env) {
 async function testMissingFiles(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -315,9 +327,9 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
 async function testAccessPublishDeniedUnauthorized(ownerPublish, env) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(new Request("https://example.com/owner/api/publish", {
     body: formData,
@@ -342,9 +354,9 @@ async function testAccessPublishDeniedUnauthorized(ownerPublish, env) {
 async function testWrongFileType(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
   formData.set("previewFile", new FileCtor(["preview"], "preview.png", { type: "image/png" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -368,9 +380,9 @@ async function testCartPublishAcceptedWithoutBuyUrl(ownerPublish, env, cookieHea
     price: "4.99",
     status: "available-direct"
   });
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const originalRandomUuid = crypto.randomUUID;
   const originalDateNow = Date.now;
@@ -424,9 +436,9 @@ async function testCartPublishRejectsMissingPrice(ownerPublish, env, cookieHeade
     price: "",
     status: "available-direct"
   });
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -449,9 +461,9 @@ async function testCartPublishRejectsInvalidStatus(ownerPublish, env, cookieHead
     price: "4.99",
     status: "coming-soon"
   });
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -493,7 +505,7 @@ async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieH
 
   const formData = new FormData();
   addRequiredTextFields(formData, {
-    folder: "Tablecraft Primer",
+    folder: "Fixture Beta",
     gameSystem: "5E Compatible",
     gameSystemSlug: "5e-compatible",
     longDescription: "Metadata-only update for an existing listing.",
@@ -502,9 +514,9 @@ async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieH
     series: "",
     seriesSlug: "",
     shortDescription: "Metadata-only update for an existing listing.",
-    slug: "tablecraft-primer",
+    slug: "fixture-beta",
     subtitle: "Updated existing product",
-    title: "Tablecraft Primer"
+    title: "Fixture Beta"
   });
 
   const originalRandomUuid = crypto.randomUUID;
@@ -516,6 +528,7 @@ async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieH
       ...env,
       TRG_PRODUCTS: bucket
     }, {
+      productFolderMap: NEUTRAL_FIXTURE_FOLDER_MAP,
       dispatchOptions: {
         fetchImpl,
         pollIntervalMs: 1,
@@ -554,7 +567,7 @@ async function testOwnerPricingPublishAccepted(ownerPricing, env, cookieHeader) 
       salePrice: "3.99",
       salePriceCents: 399,
       saleStart: "2026-07-01",
-      slug: "tablecraft-primer"
+      slug: "fixture-beta"
     }, cookieHeader), env, {
       dispatchOptions: {
         fetchImpl: async (url, options = {}) => {
@@ -587,7 +600,7 @@ async function testOwnerPricingPublishAccepted(ownerPricing, env, cookieHeader) 
     assert.ok(dispatchCall, "Pricing updates should dispatch the GitHub publish workflow.");
     const dispatchPayload = JSON.parse(dispatchCall.options.body);
     assert.equal(dispatchPayload.client_payload.operation, "pricing_update", "Pricing updates should use a dedicated workflow operation.");
-    assert.equal(dispatchPayload.client_payload.metadata.slug, "tablecraft-primer", "Pricing updates should dispatch the target product slug.");
+    assert.equal(dispatchPayload.client_payload.metadata.slug, "fixture-beta", "Pricing updates should dispatch the target product slug.");
     assert.equal(dispatchPayload.client_payload.metadata.priceCents, 499, "Pricing updates should dispatch derived price cents.");
   } finally {
     Date.now = originalDateNow;
@@ -606,7 +619,7 @@ async function testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, env, c
     salePrice: "",
     salePriceCents: null,
     saleStart: "",
-    slug: "tablecraft-primer"
+    slug: "fixture-beta"
   }, cookieHeader), env, {
     dispatchOptions: {
       fetchImpl: async () => new Response(null, { status: 204 })
@@ -622,9 +635,9 @@ async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieH
   const bucket = createMockBucket();
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const originalRandomUuid = crypto.randomUUID;
   const originalDateNow = Date.now;
@@ -710,9 +723,9 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
 
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const originalRandomUuid = crypto.randomUUID;
   const originalDateNow = Date.now;
@@ -749,7 +762,7 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
   const bucket = createMockBucket();
   const formData = new FormData();
   addRequiredTextFields(formData, {
-    folder: "Tablecraft Primer",
+    folder: "Fixture Beta",
     gameSystem: "5E Compatible",
     gameSystemSlug: "5e-compatible",
     longDescription: "Pending workflow metadata-only update.",
@@ -758,9 +771,9 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
     series: "",
     seriesSlug: "",
     shortDescription: "Pending workflow metadata-only update.",
-    slug: "tablecraft-primer",
+    slug: "fixture-beta",
     subtitle: "Pending workflow subtitle",
-    title: "Tablecraft Primer"
+    title: "Fixture Beta"
   });
 
   const originalRandomUuid = crypto.randomUUID;
@@ -770,6 +783,7 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
       ...env,
       TRG_PRODUCTS: bucket
     }, {
+      productFolderMap: NEUTRAL_FIXTURE_FOLDER_MAP,
       dispatchOptions: {
         fetchImpl: async (url) => {
           if (String(url).endsWith("/dispatches")) {
@@ -798,9 +812,9 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
 async function testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "agency-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "agency-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Agency.pdf", { type: "application/pdf" }));
+  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -857,38 +871,38 @@ async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHe
 
 async function testProductAdvisorSuggestions(productAdvisor) {
   const result = productAdvisor.analyzeProductListing({
-    coverImage: "/product-assets/agency/cover.webp",
+    coverImage: "/product-assets/fixture-alpha/cover.webp",
     features: [
-      "A practical definition of player agency.",
+      "A practical definition of player choice.",
       "Advice for creating meaningful choices and honest consequences.",
       "System-neutral guidance usable in virtually any tabletop RPG."
     ],
-    fileList: ["Agency.pdf"],
+    fileList: ["Fixture Alpha.pdf"],
     gameSystem: "System Agnotic",
-    longDescription: "Agency: Share the Wheel or Crash the Game is a system-neutral tabletop roleplaying supplement about player choice, Game Master authority, and shared responsibility in campaign play.",
+    longDescription: "Fixture Alpha is a system-neutral tabletop roleplaying supplement about player choice, Game Master authority, and shared responsibility in campaign play.",
     page_count: 9,
-    previewImage: "/product-assets/agency/preview.webp",
+    previewImage: "/product-assets/fixture-alpha/preview.webp",
     productLine: "Tablecraft",
     series: "Tablecraft",
     short_description: "A practical system-neutral guide to player choice, consequence, and campaign design.",
-    subtitle: "Share the wheel or crash the game",
+    subtitle: "A neutral advice fixture",
     tags: ["Tablecraft"],
-    title: "Agency"
+    title: "Fixture Alpha"
   }, {
     catalog: [
       {
         productLine: "Tablecraft",
         series: "Tablecraft",
-        slug: "tablecraft-primer",
+        slug: "fixture-beta",
         tags: ["Tablecraft", "GM Advice"],
-        title: "Tablecraft Primer"
+        title: "Fixture Beta"
       },
       {
         productLine: "Fifth Edition Fantasy Roleplaying",
         series: "",
-        slug: "tablecraft-primer",
+        slug: "fixture-beta",
         tags: ["5E", "Ancestry"],
-        title: "Tablecraft Primer"
+        title: "Fixture Beta"
       }
     ]
   });
@@ -898,22 +912,22 @@ async function testProductAdvisorSuggestions(productAdvisor) {
   assert.equal(result.product_type, "GM Advice", "Advisor should identify the GM advice format.");
   assert.equal(result.series_fit, "Tablecraft", "Advisor should detect the Tablecraft fit.");
   assert.ok(result.price_confidence >= 0.8, "Advisor confidence should be high for a well-described listing.");
-  assert.ok(result.suggested_tags.includes("Agency"), "Advisor should include title-driven tags.");
   assert.ok(result.suggested_tags.includes("GM Advice"), "Advisor should include advice classification tags.");
-  assert.ok(result.suggested_cross_sells.includes("tablecraft-primer"), "Advisor should suggest same-series cross-sells.");
+  assert.ok(result.suggested_cross_sells.includes("fixture-beta"), "Advisor should suggest same-series cross-sells.");
 }
 
 async function testExistingProductUpdatePreservesFields(publishScript) {
   const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
   const tempProductsPath = path.join(tempRoot, "data", "products.json");
   const tempProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
-  tempProducts[0].saleEnabled = true;
-  tempProducts[0].saleLabel = "Summer Sale";
-  tempProducts[0].bundleEligible = true;
+  const originalFixtureBeta = tempProducts.find((product) => product.slug === "fixture-beta");
+  originalFixtureBeta.saleEnabled = true;
+  originalFixtureBeta.saleLabel = "Summer Sale";
+  originalFixtureBeta.bundleEligible = true;
   fs.writeFileSync(tempProductsPath, `${JSON.stringify(tempProducts, null, 2)}\n`);
 
   await publishScript.applyPublishPayload(tempRoot, {
-    folder: "Tablecraft Primer",
+    folder: "Fixture Beta",
     metadata: {
       buyMode: "preview-only",
       gameSystem: "5E Compatible",
@@ -922,16 +936,16 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
       productLine: "Fifth Edition Fantasy Roleplaying",
       productLineSlug: "fifth-edition-fantasy-roleplaying",
       shortDescription: "Updated short copy.",
-      slug: "tablecraft-primer",
+      slug: "fixture-beta",
       status: "preview-available",
       subtitle: "Updated subtitle",
-      title: "Tablecraft Primer",
+      title: "Fixture Beta",
       version: "2026 release file"
     }
   });
 
   const updatedProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
-  const tablecraftPrimer = updatedProducts.find((product) => product.slug === "tablecraft-primer");
+  const tablecraftPrimer = updatedProducts.find((product) => product.slug === "fixture-beta");
   assert.equal(tablecraftPrimer.saleEnabled, true, "Existing sale flags should survive publish.");
   assert.equal(tablecraftPrimer.saleLabel, "Summer Sale", "Existing sale labels should survive publish.");
   assert.equal(tablecraftPrimer.bundleEligible, true, "Existing bundle flags should survive publish.");
@@ -944,26 +958,26 @@ async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript)
   const tempIntakeMapPath = path.join(tempRoot, "data", "product-intake-map.json");
   const originalProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
   const originalIntakeMap = JSON.parse(fs.readFileSync(tempIntakeMapPath, "utf8"));
-  const ringboundProduct = originalProducts.find((product) => product.slug === "ringbound");
-  const ringboundIntake = Array.isArray(originalIntakeMap.products)
-    ? originalIntakeMap.products.find((product) => product.slug === "ringbound")
+  const fixtureGammaProduct = originalProducts.find((product) => product.slug === "fixture-gamma");
+  const fixtureGammaIntake = Array.isArray(originalIntakeMap.products)
+    ? originalIntakeMap.products.find((product) => product.slug === "fixture-gamma")
     : null;
 
-  assert.ok(ringboundProduct, "Ringbound fixture should exist in the product catalog.");
-  assert.ok(ringboundIntake, "Ringbound fixture should exist in the intake map.");
+  assert.ok(fixtureGammaProduct, "Fixture Gamma fixture should exist in the product catalog.");
+  assert.ok(fixtureGammaIntake, "Fixture Gamma fixture should exist in the intake map.");
 
-  ringboundProduct.series = "undefined";
-  ringboundProduct.seriesSlug = "undefined";
-  ringboundProduct.productLineSlug = "other-games-and-experiments";
+  fixtureGammaProduct.series = "undefined";
+  fixtureGammaProduct.seriesSlug = "undefined";
+  fixtureGammaProduct.productLineSlug = "other-games-and-experiments";
   fs.writeFileSync(tempProductsPath, `${JSON.stringify(originalProducts, null, 2)}\n`);
 
-  ringboundIntake.series = "undefined";
-  ringboundIntake.seriesSlug = "undefined";
-  ringboundIntake.productLineSlug = "other-games-and-experiments";
+  fixtureGammaIntake.series = "undefined";
+  fixtureGammaIntake.seriesSlug = "undefined";
+  fixtureGammaIntake.productLineSlug = "other-games-and-experiments";
   fs.writeFileSync(tempIntakeMapPath, `${JSON.stringify(originalIntakeMap, null, 2)}\n`);
 
   await publishScript.applyPublishPayload(tempRoot, {
-    folder: "ringbound",
+    folder: "fixture-gamma",
     metadata: {
       buyMode: "preview-only",
       gameSystem: "System TBD",
@@ -973,35 +987,35 @@ async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript)
       productLine: "Other Games & Experiments",
       productLineSlug: "other-games-and-experiments",
       shortDescription: "Product summary coming soon.",
-      slug: "ringbound",
+      slug: "fixture-gamma",
       status: "preview-available",
       subtitle: "A Tobacco Road Games catalog preview",
-      title: "Ringbound",
+      title: "Fixture Gamma",
       version: "2026 catalog preview"
     }
   });
 
   const updatedProducts = JSON.parse(fs.readFileSync(tempProductsPath, "utf8"));
   const updatedIntakeMap = JSON.parse(fs.readFileSync(tempIntakeMapPath, "utf8"));
-  const ringbound = updatedProducts.find((product) => product.slug === "ringbound");
-  const ringboundIntakeAfter = Array.isArray(updatedIntakeMap.products)
-    ? updatedIntakeMap.products.find((product) => product.slug === "ringbound")
+  const fixtureGamma = updatedProducts.find((product) => product.slug === "fixture-gamma");
+  const fixtureGammaIntakeAfter = Array.isArray(updatedIntakeMap.products)
+    ? updatedIntakeMap.products.find((product) => product.slug === "fixture-gamma")
     : null;
-  assert.equal(ringbound.productLineSlug, "other-games-and-experiments", "Existing metadata-only updates should preserve the original product-line slug when the visible label is unchanged.");
-  assert.equal(Object.prototype.hasOwnProperty.call(ringbound, "series"), false, "Existing metadata-only updates should not invent empty series fields.");
-  assert.equal(Object.prototype.hasOwnProperty.call(ringbound, "seriesSlug"), false, "Existing metadata-only updates should not invent empty series slug fields.");
-  assert.equal(ringbound.pageCount, 12, "The requested page-count change should still apply.");
-  assert.ok(ringboundIntakeAfter, "The Ringbound intake-map record should still exist after publish.");
-  assert.equal(ringboundIntakeAfter.productLineSlug, "other-games-and-experiments", "Existing intake-map metadata should preserve the original product-line slug when the visible label is unchanged.");
-  assert.equal(Object.prototype.hasOwnProperty.call(ringboundIntakeAfter, "series"), false, "Existing intake-map updates should not invent empty series fields.");
-  assert.equal(Object.prototype.hasOwnProperty.call(ringboundIntakeAfter, "seriesSlug"), false, "Existing intake-map updates should not invent empty series slug fields.");
+  assert.equal(fixtureGamma.productLineSlug, "other-games-and-experiments", "Existing metadata-only updates should preserve the original product-line slug when the visible label is unchanged.");
+  assert.equal(Object.prototype.hasOwnProperty.call(fixtureGamma, "series"), false, "Existing metadata-only updates should not invent empty series fields.");
+  assert.equal(Object.prototype.hasOwnProperty.call(fixtureGamma, "seriesSlug"), false, "Existing metadata-only updates should not invent empty series slug fields.");
+  assert.equal(fixtureGamma.pageCount, 12, "The requested page-count change should still apply.");
+  assert.ok(fixtureGammaIntakeAfter, "The Fixture Gamma intake-map record should still exist after publish.");
+  assert.equal(fixtureGammaIntakeAfter.productLineSlug, "other-games-and-experiments", "Existing intake-map metadata should preserve the original product-line slug when the visible label is unchanged.");
+  assert.equal(Object.prototype.hasOwnProperty.call(fixtureGammaIntakeAfter, "series"), false, "Existing intake-map updates should not invent empty series fields.");
+  assert.equal(Object.prototype.hasOwnProperty.call(fixtureGammaIntakeAfter, "seriesSlug"), false, "Existing intake-map updates should not invent empty series slug fields.");
 }
 
 async function testPricingUpdatePreservesUnrelatedFields(publishScript) {
   const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
   const productsPath = path.join(tempRoot, "data", "products.json");
   const originalProducts = JSON.parse(fs.readFileSync(productsPath, "utf8"));
-  const original = originalProducts.find((product) => product.slug === "agency");
+  const original = originalProducts.find((product) => product.slug === "fixture-alpha");
 
   await publishScript.applyPublishPayload(tempRoot, {
     metadata: {
@@ -1014,7 +1028,7 @@ async function testPricingUpdatePreservesUnrelatedFields(publishScript) {
       salePrice: "4.99",
       salePriceCents: 499,
       saleStart: "2026-07-01",
-      slug: "agency"
+      slug: "fixture-alpha"
     },
     operation: "pricing_update",
     pricingConfirmation: {
@@ -1024,7 +1038,7 @@ async function testPricingUpdatePreservesUnrelatedFields(publishScript) {
 
   const updatedProducts = JSON.parse(fs.readFileSync(productsPath, "utf8"));
   assert.equal(updatedProducts.length, originalProducts.length, "Pricing updates must not create duplicate product records.");
-  const updated = updatedProducts.find((product) => product.slug === "agency");
+  const updated = updatedProducts.find((product) => product.slug === "fixture-alpha");
   assert.equal(updated.price, "6.99", "Pricing updates should change the regular display price.");
   assert.equal(updated.priceCents, 699, "Pricing updates should change the regular cent value.");
   assert.equal(updated.regularPrice, "6.99", "Pricing updates should synchronize the derived regular price display.");
@@ -1056,7 +1070,7 @@ async function testPricingUpdateRejectsInvalidMoney(publishScript) {
         salePrice: "",
         salePriceCents: null,
         saleStart: "",
-        slug: "agency"
+        slug: "fixture-alpha"
       },
       operation: "pricing_update",
       pricingConfirmation: {
@@ -1082,7 +1096,7 @@ async function testPricingUpdateRejectsSaleAboveRegular(publishScript) {
         salePrice: "4.99",
         salePriceCents: 499,
         saleStart: "",
-        slug: "agency"
+        slug: "fixture-alpha"
       },
       operation: "pricing_update",
       pricingConfirmation: {
@@ -1108,7 +1122,7 @@ async function testPricingUpdateRejectsInvalidDates(publishScript) {
         salePrice: "3.99",
         salePriceCents: 399,
         saleStart: "2026-07-15",
-        slug: "agency"
+        slug: "fixture-alpha"
       },
       operation: "pricing_update",
       pricingConfirmation: {
@@ -1134,7 +1148,7 @@ async function testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publish
         salePrice: "4.99",
         salePriceCents: 499,
         saleStart: "",
-        slug: "tablecraft-primer"
+        slug: "fixture-beta"
       },
       operation: "pricing_update",
       pricingConfirmation: {
@@ -1149,6 +1163,9 @@ async function testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publish
 async function testPricingUpdateBuildConsistency(publishScript) {
   const tempRoot = createTempRepo([
     "data/authors.js",
+    "data/bb1-creator-ad-preview.json",
+    "data/homepage-ad-preview.json",
+    "data/homepage-news-preview.json",
     "data/products.json",
     "scripts/build-runtime-catalog.mjs",
     "scripts/build-store.js",
@@ -1156,11 +1173,11 @@ async function testPricingUpdateBuildConsistency(publishScript) {
   ]);
   const productsPath = path.join(tempRoot, "data", "products.json");
   const products = JSON.parse(fs.readFileSync(productsPath, "utf8"));
-  const fixtureAgency = products.find((product) => product.slug === "agency");
-  fixtureAgency.status = "available-direct";
-  fixtureAgency.statusLabel = "Available Direct";
-  fixtureAgency.buyMode = "fixed-price";
-  fixtureAgency.buyUrl = "https://example.com/buy/agency";
+  const fixtureAlpha = products.find((product) => product.slug === "fixture-alpha");
+  fixtureAlpha.status = "available-direct";
+  fixtureAlpha.statusLabel = "Available Direct";
+  fixtureAlpha.buyMode = "fixed-price";
+  fixtureAlpha.buyUrl = "https://example.com/buy/fixture-alpha";
   fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
 
   await publishScript.applyPublishPayload(tempRoot, {
@@ -1174,7 +1191,7 @@ async function testPricingUpdateBuildConsistency(publishScript) {
       salePrice: "4.99",
       salePriceCents: 499,
       saleStart: "2026-08-01",
-      slug: "agency"
+      slug: "fixture-alpha"
     },
     operation: "pricing_update",
     pricingConfirmation: {
@@ -1189,11 +1206,11 @@ async function testPricingUpdateBuildConsistency(publishScript) {
   assert.equal(build.status, 0, `Pricing update build should succeed. ${build.stderr || build.stdout}`);
 
   const runtimeCatalogModule = await import(`${pathToFileURL(path.join(tempRoot, "shared", "runtime-catalog.mjs")).href}?cacheBust=${Date.now()}`);
-  const runtimeAgency = runtimeCatalogModule.RUNTIME_CATALOG_PRODUCTS.find((product) => product.slug === "agency");
-  assert.equal(runtimeAgency.priceCents, 699, "Runtime catalog should regenerate with the updated regular price.");
-  assert.equal(runtimeAgency.salePriceCents, 499, "Runtime catalog should regenerate with the updated sale price.");
+  const runtimeFixtureAlpha = runtimeCatalogModule.RUNTIME_CATALOG_PRODUCTS.find((product) => product.slug === "fixture-alpha");
+  assert.equal(runtimeFixtureAlpha.priceCents, 699, "Runtime catalog should regenerate with the updated regular price.");
+  assert.equal(runtimeFixtureAlpha.salePriceCents, 499, "Runtime catalog should regenerate with the updated sale price.");
 
-  const productPagePath = path.join(tempRoot, "store", "products", "agency", "index.html");
+  const productPagePath = path.join(tempRoot, "store", "products", "fixture-alpha", "index.html");
   assert.ok(fs.existsSync(productPagePath), "Generated store pages should be rebuilt after a pricing update.");
 }
 
@@ -1247,6 +1264,9 @@ async function testPublishScriptNormalizesCartBuyUrl(publishScript) {
 async function testNewProductBuildAndSharedMap(publishScript) {
   const tempRoot = createTempRepo([
     "data/authors.js",
+    "data/bb1-creator-ad-preview.json",
+    "data/homepage-ad-preview.json",
+    "data/homepage-news-preview.json",
     "data/product-intake-map.json",
     "data/products.json",
     "scripts/build-runtime-catalog.mjs",
@@ -1384,7 +1404,110 @@ function createTempRepo(relativePaths) {
     fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
     fs.copyFileSync(sourcePath, destinationPath);
   }
+  seedNeutralFixtureCatalog(tempRoot);
   return tempRoot;
+}
+
+function seedNeutralFixtureCatalog(tempRoot) {
+  const productsPath = path.join(tempRoot, "data", "products.json");
+  if (!fs.existsSync(productsPath)) return;
+
+  const products = [
+    createFixtureProduct("fixture-alpha", "Fixture Alpha", {
+      buyMode: "preview-only",
+      productLine: "Fifth Edition Fantasy Roleplaying",
+      productLineSlug: "fifth-edition-fantasy-roleplaying",
+      series: "",
+      seriesSlug: "",
+      tags: ["Fantasy", "Preview"]
+    }),
+    createFixtureProduct("fixture-beta", "Fixture Beta", {
+      productLine: "Tablecraft",
+      productLineSlug: "tablecraft",
+      series: "Tablecraft",
+      seriesSlug: "tablecraft",
+      tags: ["Tablecraft", "GM Advice"]
+    }),
+    createFixtureProduct("fixture-gamma", "Fixture Gamma", {
+      productLine: "Other Games & Experiments",
+      productLineSlug: "other-games-and-experiments",
+      series: "",
+      seriesSlug: "",
+      tags: ["Fantasy", "Preview"]
+    })
+  ];
+  fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
+
+  const intakeMapPath = path.join(tempRoot, "data", "product-intake-map.json");
+  if (fs.existsSync(intakeMapPath)) {
+    const intakeMap = JSON.parse(fs.readFileSync(intakeMapPath, "utf8"));
+    intakeMap.products = products.map((product) => ({
+      folder: product.folder,
+      gameSystem: product.gameSystem,
+      gameSystemSlug: product.gameSystemSlug,
+      productLine: product.productLine,
+      productLineSlug: product.productLineSlug,
+      series: product.series,
+      seriesSlug: product.seriesSlug,
+      slug: product.slug,
+      tags: product.tags,
+      title: product.title
+    }));
+    fs.writeFileSync(intakeMapPath, `${JSON.stringify(intakeMap, null, 2)}\n`);
+  }
+
+  const folderMapPath = path.join(tempRoot, "shared", "product-folder-map.mjs");
+  if (fs.existsSync(folderMapPath)) {
+    const entries = products
+      .map((product) => `  ${JSON.stringify(product.slug)}: ${JSON.stringify(product.folder)}`)
+      .join(",\n");
+    fs.writeFileSync(folderMapPath, `export const PRODUCT_FOLDER_MAP = Object.freeze({\n${entries}\n});\n\nexport function getFolderForSlug(slug) {\n  return PRODUCT_FOLDER_MAP[normalizeSlug(slug)] || "";\n}\n\nexport function hasFolderForSlug(slug) {\n  return Boolean(getFolderForSlug(slug));\n}\n\nexport function listProductFolderEntries() {\n  return Object.entries(PRODUCT_FOLDER_MAP);\n}\n\nexport function normalizeSlug(value) {\n  return String(value || "").trim().toLowerCase();\n}\n`);
+  }
+}
+
+function createFixtureProduct(slug, title, overrides = {}) {
+  return {
+    authors: ["Fixture Author"],
+    authorSlugs: ["fixture-author"],
+    buyMode: "preview-only",
+    buyUrl: "",
+    coverImage: `/product-assets/${slug}/cover.webp`,
+    creationMethod: "Test fixture.",
+    currency: "USD",
+    excludeFromBundles: true,
+    features: ["Test fixture feature."],
+    fileList: [`${title}.pdf`],
+    folder: slug,
+    format: ["PDF"],
+    fulfillmentNote: "Test fixture fulfillment note.",
+    gameSystem: "System Neutral",
+    gameSystemSlug: "system-neutral",
+    longDescription: `${title} is a neutral test fixture for owner intake coverage.`,
+    pageCount: 24,
+    previewImage: `/product-assets/${slug}/preview.webp`,
+    previewImages: [],
+    price: "4.99",
+    priceCents: 499,
+    productLine: "Other Games & Experiments",
+    productLineSlug: "other-games-and-experiments",
+    publisher: "Tobacco Road Games",
+    releaseDate: "2026-01-01",
+    saleEnabled: false,
+    salePrice: "",
+    salePriceCents: null,
+    series: "",
+    seriesSlug: "",
+    shortDescription: `${title} short fixture copy.`,
+    slug,
+    status: "preview-available",
+    statusLabel: "Preview Available",
+    subtitle: "A neutral test fixture",
+    tags: ["Preview"],
+    title,
+    updateEligible: true,
+    version: "1.0",
+    ...overrides
+  };
 }
 
 function cookieHeaderFromSetCookies(setCookies) {

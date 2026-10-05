@@ -41,19 +41,19 @@ async function testPricingEditorLoadsExistingProduct() {
       salePrice: "",
       salePriceCents: null,
       saleStart: "",
-      slug: "agency",
+      slug: "fixture-alpha",
       status: "coming-soon",
-      title: "Agency"
+      title: "Fixture Alpha"
     }
   ];
 
   const harness = createHarness(products);
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.load.click();
 
-  assert.equal(harness.fields.currentTitle.textContent, "Agency", "Loading a product should show the current title.");
-  assert.equal(harness.fields.currentSlug.textContent, "agency", "Loading a product should show the current slug.");
+  assert.equal(harness.fields.currentTitle.textContent, "Fixture Alpha", "Loading a product should show the current title.");
+  assert.equal(harness.fields.currentSlug.textContent, "fixture-alpha", "Loading a product should show the current slug.");
   assert.equal(harness.inputs.regularPrice.value, "4.99", "Loading a product should hydrate the current regular price.");
   assert.equal(harness.inputs.currency.value, "USD", "Loading a product should hydrate the current currency.");
   assert.equal(harness.inputs.saleEnabled.checked, false, "Loading a product should hydrate the current sale flag.");
@@ -72,9 +72,9 @@ async function testPricingEditorReviewAndPublish() {
       salePrice: "",
       salePriceCents: null,
       saleStart: "",
-      slug: "agency",
+      slug: "fixture-alpha",
       status: "coming-soon",
-      title: "Agency"
+      title: "Fixture Alpha"
     }
   ];
 
@@ -91,7 +91,7 @@ async function testPricingEditorReviewAndPublish() {
     });
   });
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.load.click();
 
   harness.inputs.regularPrice.value = "6.99";
@@ -120,7 +120,7 @@ async function testPricingEditorReviewAndPublish() {
   assert.equal(requests.length, 1, "Publishing should send a single pricing update request.");
   assert.equal(requests[0].url, "/owner/api/pricing", "Pricing editor should post to the dedicated pricing endpoint.");
   const body = JSON.parse(requests[0].options.body);
-  assert.equal(body.slug, "agency", "Pricing editor should publish the loaded product slug.");
+  assert.equal(body.slug, "fixture-alpha", "Pricing editor should publish the loaded product slug.");
   assert.equal(body.price, "6.99", "Pricing editor should publish the revised regular price.");
   assert.equal(body.priceCents, 699, "Pricing editor should derive integer regular-price cents.");
   assert.equal(body.salePrice, "4.99", "Pricing editor should publish the revised sale price.");
@@ -145,18 +145,18 @@ async function testPricingEditorConfirmationAndDiscard() {
       salePrice: "",
       salePriceCents: null,
       saleStart: "",
-      slug: "agency",
+      slug: "fixture-alpha",
       status: "coming-soon",
-      title: "Agency"
+      title: "Fixture Alpha"
     }
   ];
 
   const harness = createHarness(products);
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.load.click();
 
-  assert.equal(harness.fields.modeIndicator.textContent, "Editing Existing Listing: Agency", "Loading a product should update the mode indicator.");
+  assert.equal(harness.fields.modeIndicator.textContent, "Editing Existing Listing: Fixture Alpha", "Loading a product should update the mode indicator.");
 
   harness.inputs.regularPrice.value = "6.99";
   harness.inputs.regularPrice.dispatch("input");
@@ -164,8 +164,8 @@ async function testPricingEditorConfirmationAndDiscard() {
   assert.equal(harness.fields.pricingStatus.textContent, "Pricing looks valid so far. Nothing has been saved or published.", "Check Pricing should validate without publishing.");
 
   harness.buttons.review.click();
-  assert.equal(harness.fields.confirmTitle.textContent, "Agency", "Confirmation should include the product title.");
-  assert.equal(harness.fields.confirmSlug.textContent, "agency", "Confirmation should include the product slug.");
+  assert.equal(harness.fields.confirmTitle.textContent, "Fixture Alpha", "Confirmation should include the product title.");
+  assert.equal(harness.fields.confirmSlug.textContent, "fixture-alpha", "Confirmation should include the product slug.");
   assert.equal(harness.fields.confirmCurrentEffective.textContent, "$4.99", "Confirmation should include the current effective price.");
   assert.equal(harness.fields.confirmNextEffective.textContent, "$6.99", "Confirmation should include the resulting effective price.");
   assert.match(harness.fields.confirmPreservation.textContent, /will not change/i, "Confirmation should include the unrelated-field preservation statement.");
@@ -194,15 +194,15 @@ async function testPricingEditorValidation() {
       salePrice: "",
       salePriceCents: null,
       saleStart: "",
-      slug: "agency",
+      slug: "fixture-alpha",
       status: "available-direct",
-      title: "Agency"
+      title: "Fixture Alpha"
     }
   ];
 
   const harness = createHarness(products);
   await harness.flush();
-  harness.fields.existingSelect.value = "agency";
+  harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.load.click();
 
   harness.inputs.regularPrice.value = "4.999";
