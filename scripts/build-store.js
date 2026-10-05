@@ -1403,11 +1403,6 @@ function renderOpenRulesLibraryPage(products) {
   const openRules = products
     .filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer"))
     .slice(0, 24);
-  const shelfRows = openRules.length
-    ? `<div class="open-rules-library-books">${openRules.map((product) => renderProductCard(product)).join("")}</div>`
-    : `<div class="open-rules-library-empty-shelf" aria-label="Open Rules Library shelf awaiting books">
-        ${Array.from({ length: 42 }, () => '<figure class="shop-wall-stock-spine" data-decorative-stock aria-hidden="true"></figure>').join("")}
-      </div>`;
 
   return renderLayout({
     pageTitle: `Open Rules Library | ${STORE_TITLE}`,
@@ -1427,25 +1422,28 @@ function renderOpenRulesLibraryPage(products) {
       })
     ],
     content: `
-      <main id="top" class="open-rules-library-page">
+      <main id="top" class="open-rules-library-page homepage-shop-wall shelf-storefront" aria-labelledby="open-rules-library-page-heading">
         ${renderBreadcrumbs([
           { label: "Store", href: "/store/" },
           { label: "Open Rules Library" }
         ])}
 
-        <section class="store-section open-rules-library-shelf" aria-labelledby="open-rules-library-page-heading">
-          <div class="section-heading">
+        <section class="store-section open-rules-library-intro" aria-labelledby="open-rules-library-page-heading">
+          <div class="section-heading open-rules-library-intro__heading">
             <p class="section-heading__kicker">Open Rules Library</p>
             <h1 id="open-rules-library-page-heading">Open Rules Library</h1>
             <p>Public rules references and open tabletop resources will live here as the shelf is stocked.</p>
           </div>
+        </section>
 
-          <div class="open-rules-library-fixture" aria-label="Open Rules Library bookshelf">
-            <div class="shop-wall-plaque"><h2>OPEN RULES LIBRARY</h2></div>
-            <div class="open-rules-library-fixture__shelves">
-              ${shelfRows}
-            </div>
-          </div>
+        <section class="shop-wall-row shop-wall-row--merchandising open-rules-library-wall" aria-label="Open Rules Library shelf">
+          ${renderHomepageProductBay({
+            title: "OPEN RULES LIBRARY",
+            id: "open-rules-library-shelf-heading",
+            products: openRules,
+            singleShelf: true,
+            productMock: { modifier: "spine" }
+          })}
         </section>
       </main>
     `

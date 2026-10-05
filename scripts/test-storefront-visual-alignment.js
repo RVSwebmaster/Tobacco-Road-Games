@@ -87,9 +87,11 @@ assert.match(openRulesBay, /<h2 class="shop-wall-heading-hidden" id="open-rules-
 assert.doesNotMatch(openRulesBay, /class="shop-wall-plaque"/, "Open Rules Library must use the original cabinet sign, not draw a second brass plaque.");
 assert.doesNotMatch(homepage, /shop-wall-sign-hotspot|shop-wall-linked-sign/, "The homepage must not draw or overlay any fake Open Rules sign.");
 assert.doesNotMatch(css, /shop-wall-sign-hotspot|shop-wall-linked-sign/, "The stylesheet must not keep fake Open Rules sign overlay rules.");
-assert.match(openRulesLibraryPage, /<main id="top" class="open-rules-library-page">/, "Open Rules Library shelf page must be generated.");
+assert.match(openRulesLibraryPage, /<main id="top" class="open-rules-library-page homepage-shop-wall shelf-storefront"/, "Open Rules Library shelf page must be generated in the homepage shelf shell.");
 assert.match(openRulesLibraryPage, /<h1 id="open-rules-library-page-heading">Open Rules Library<\/h1>/, "Open Rules Library shelf page needs its heading.");
-assert.match(openRulesLibraryPage, /class="open-rules-library-fixture"/, "Open Rules Library page must render a shelf-style fixture.");
+assert.match(openRulesLibraryPage, /class="open-rules-library-page homepage-shop-wall shelf-storefront"/, "Open Rules Library page must use the homepage shelf shell.");
+assert.match(openRulesLibraryPage, /class="shop-wall-row shop-wall-row--merchandising open-rules-library-wall"/, "Open Rules Library page must render a homepage-shaped shelf row.");
+assert.match(openRulesLibraryPage, /id="open-rules-library-shelf-heading"/, "Open Rules Library page must render a dedicated shelf heading.");
 assert.doesNotMatch(openRulesBay, /shop-wall-view-link|View All/, "Open Rules Library must not contain the View All sign or link.");
 assert.doesNotMatch(build, /title: "OPEN RULES LIBRARY"[^\n]*viewAllHref/, "The homepage generator must not restore the Open Rules Library View All link.");
 const yourLibraryBay = homepage.match(/<section[^>]*aria-labelledby="your-library-heading"[\s\S]*?<\/section>/)?.[0] || "";
