@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 const page = read("store/index.html");
 const homepage = read("index.html");
+const catalogPage = read("store/catalog/index.html");
 const openRulesLibraryPage = read("store/open-rules-library/index.html");
 const css = read("styles.css");
 const build = read("scripts/build-store.js");
@@ -92,6 +93,8 @@ assert.match(openRulesLibraryPage, /<h1 id="open-rules-library-page-heading">Ope
 assert.match(openRulesLibraryPage, /class="open-rules-library-page homepage-shop-wall shelf-storefront"/, "Open Rules Library page must use the homepage shelf shell.");
 assert.match(openRulesLibraryPage, /class="shop-wall-row shop-wall-row--merchandising open-rules-library-wall"/, "Open Rules Library page must render a homepage-shaped shelf row.");
 assert.match(openRulesLibraryPage, /id="open-rules-library-shelf-heading"/, "Open Rules Library page must render a dedicated shelf heading.");
+assert.match(page, /data-storefront-path="open-rules" href="\/store\/open-rules-library\/"/, "Storefront Explore paths must link to the Open Rules Library page.");
+assert.match(catalogPage, /<a class="browse-card" href="\/store\/open-rules-library\/"><strong>Open Rules Library<\/strong>/, "Explore catalog page must provide a path to the Open Rules Library.");
 assert.doesNotMatch(openRulesBay, /shop-wall-view-link|View All/, "Open Rules Library must not contain the View All sign or link.");
 assert.doesNotMatch(build, /title: "OPEN RULES LIBRARY"[^\n]*viewAllHref/, "The homepage generator must not restore the Open Rules Library View All link.");
 const yourLibraryBay = homepage.match(/<section[^>]*aria-labelledby="your-library-heading"[\s\S]*?<\/section>/)?.[0] || "";

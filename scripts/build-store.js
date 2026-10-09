@@ -592,6 +592,9 @@ function renderCatalogPage(products, indexes) {
             <h1 id="catalog-heading">Search and browse Tobacco Road Games titles.</h1>
             <p>Browse by creator, game system, category or line, series, release status, format, and price type.</p>
           </div>
+          <nav class="browse-card-grid catalog-library-paths" aria-label="Library paths">
+            <a class="browse-card" href="/store/open-rules-library/"><strong>Open Rules Library</strong><span>Public rules references and open tabletop resources from Tobacco Road Games.</span></a>
+          </nav>
           ${renderStoreBrowser(sortedProducts, indexes, {
             browserId: "catalog-browser",
             showShelf: false,
@@ -1010,7 +1013,7 @@ function renderStorefrontShopWindow({ eligible }) {
 function renderStorefrontBrowseByPath({ indexes }) {
   const supportedPaths = [
     { id: "free-pwyw", label: "Free / PWYW", note: "No-cost and pay-what-you-want listings when eligible.", href: "#pwyw-free-shelf-heading", active: true },
-    { id: "open-rules", label: "Open Rules", note: "Tobacco Road Games house rules and table tools.", href: "#open-rules-shelf-heading", active: true },
+    { id: "open-rules", label: "Open Rules", note: "Tobacco Road Games house rules and table tools.", href: "/store/open-rules-library/", active: true },
     { id: "system-neutral", label: "System Neutral", note: "A catalog path reserved for matching metadata.", href: "#search-results-heading", active: indexes.systems.some((entry) => /system neutral/i.test(entry.name)) }
   ];
 
