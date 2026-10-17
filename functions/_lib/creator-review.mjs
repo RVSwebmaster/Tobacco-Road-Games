@@ -1,18 +1,18 @@
-import { SESSION_COOKIE_NAME, getOwnerSecrets, jsonResponse, readCookie, verifySessionToken } from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { jsonResponse } from "./owner-auth.mjs";
+import { verifyAuthenticatedOwnerMutationRequest, verifyAuthenticatedOwnerReadRequest } from "./owner-mutation-auth.mjs";
 
 export async function handleCreatorReviewRequest(request, env = {}, options = {}) {
   const database=options.database||env.TRG_ORDERS;
   let actor="operator";
   if(request.method==="GET"){
-    const secrets=getOwnerSecrets(env), verified=await verifySessionToken(readCookie(request,SESSION_COOKIE_NAME),secrets.sessionSecret,options.nowMs||Date.now());
-    if(!verified.valid)return jsonResponse({error:"Operator access required."},403); actor=verified.username;
+    const verified=await verifyAuthenticatedOwnerReadRequest(request,env,options);
+    if(!verified.valid)return jsonResponse({error:verified.userMessage},verified.status); actor=verified.username;
     const result=await database.prepare(`SELECT cl.id,cl.slug,cl.title,cl.lifecycle_state,cl.publication_state,cl.publication_errors_json,cl.public_product_slug,cl.listed_price_cents,cl.media_type,cl.review_note,cl.submitted_at,c.display_name creator_name,c.slug creator_slug,(SELECT COUNT(*) FROM creator_listing_files f WHERE f.listing_id=cl.id AND f.validation_state='accepted') accepted_files,(SELECT COUNT(*) FROM creator_listing_files f WHERE f.listing_id=cl.id AND f.validation_state='rejected') rejected_files FROM creator_listings cl JOIN marketplace_creators c ON c.id=cl.creator_id WHERE cl.lifecycle_state IN ('submitted','active','needs_changes','rejected') OR cl.publication_state IN ('approved','waiting_for_files','ready','failed') ORDER BY cl.submitted_at`).all();
     const files=await database.prepare("SELECT id,listing_id,purpose,normalized_filename,content_type,size_bytes,validation_state,validation_message,uploaded_at,validated_at FROM creator_listing_files WHERE validation_state<>'superseded' ORDER BY uploaded_at DESC").all();
     return jsonResponse({listings:result.results||[],files:files.results||[]});
   }
   if(request.method!=="POST")return jsonResponse({error:"Use GET or POST."},405);
-  const auth=await verifyAuthenticatedOwnerMutationRequest(request,env,{nowMs:options.nowMs});if(!auth.valid)return jsonResponse({error:auth.userMessage},auth.status);actor=auth.username;
+  const auth=await verifyAuthenticatedOwnerMutationRequest(request,env,options);if(!auth.valid)return jsonResponse({error:auth.userMessage},auth.status);actor=auth.username;
   let body={};try{body=await request.json();}catch{}
   const action=String(body.action||""), next={approve:"active",request_changes:"needs_changes",reject:"rejected"}[action];if(!next)return jsonResponse({error:"Review action is invalid."},400);
   const listing=await database.prepare("SELECT id,creator_id,lifecycle_state FROM creator_listings WHERE id=?").bind(String(body.listingId||"")).first();if(!listing||listing.lifecycle_state!=="submitted")return jsonResponse({error:"Submitted listing not found."},404);

@@ -1,21 +1,11 @@
-import { verifyAuthenticatedOwnerMutationRequest } from "../../_lib/owner-mutation-auth.mjs";
-import {
-  SESSION_COOKIE_NAME,
-  getOwnerSecrets,
-  jsonResponse,
-  readCookie,
-  verifySessionToken,
-} from "../../_lib/owner-auth.mjs";
+import { verifyAuthenticatedOwnerMutationRequest, verifyAuthenticatedOwnerReadRequest } from "../../_lib/owner-mutation-auth.mjs";
+import { jsonResponse } from "../../_lib/owner-auth.mjs";
 import { refundCreatorBalancePurchase } from "../../_lib/creator-balance.mjs";
 import { correctCreatorServicePurchase } from "../../_lib/creator-service-refunds.mjs";
 export async function onRequestGet({ request, env }) {
-  const auth = await verifySessionToken(
-    readCookie(request, SESSION_COOKIE_NAME),
-    getOwnerSecrets(env).sessionSecret,
-    Date.now(),
-  );
+  const auth = await verifyAuthenticatedOwnerReadRequest(request, env);
   if (!auth.valid)
-    return jsonResponse({ error: "Operator access required." }, 403);
+    return jsonResponse({ error: auth.userMessage }, auth.status);
   const result = await env.TRG_ORDERS.prepare(
     "SELECT s.order_public_id,s.gross_cents,s.marketplace_commission_cents,s.seller_net_cents,s.currency,s.status,s.settled_at,s.refunded_at,c.display_name buyer_creator FROM creator_balance_settlements s JOIN marketplace_creators c ON c.id=s.buyer_creator_id ORDER BY s.settled_at DESC LIMIT 250",
   ).all();

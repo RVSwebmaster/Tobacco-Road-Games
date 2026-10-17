@@ -1,80 +1,47 @@
 import {
-  CSRF_COOKIE_NAME,
-  SESSION_COOKIE_NAME,
-  buildOwnerLoginLocation,
-  clearCookie,
-  verifySessionToken
-} from "./owner-auth.mjs";
-import {
   attachOwnerAccessCsrfCookie,
   buildOwnerAccessDeniedResponse,
   buildOwnerAccessLogoutUrl,
   getOwnerAccessConfig,
   verifyOwnerAccessRequest
 } from "./owner-access.mjs";
+import { getLocalOwnerAccessState } from "./owner-local-access.mjs";
+
+const RETIRED_AUTH_MESSAGE = "Internal Owner login is retired. Owner tools remain unavailable until an approved external authentication replacement is configured.";
 
 export async function handleOwnerMiddleware(context) {
   const request = context.request;
   const requestUrl = new URL(request.url);
   const pathname = requestUrl.pathname;
   const ownerIntakeAliases = new Set(["/owner/intake", "/owner/intake/"]);
+  const apiPath = pathname.startsWith("/owner/api/");
   const finish = (response) => withOwnerBuildHeaders(response, context.env);
 
   if (!pathname.startsWith("/owner")) {
     return context.next();
   }
 
-  const accessConfig = getOwnerAccessConfig(context.env);
-  if (accessConfig.enabled) {
-    return handleOwnerAccessMiddleware(context, accessConfig);
-  }
-
-  if (pathname === "/owner" || pathname === "/owner/") {
-    const hasSession = await hasValidOwnerSession(request, context.env);
-    if (hasSession) {
-      return finish(await context.next());
-    }
-    return finish(redirectToOwnerLogin(request));
-  }
-
-  if (ownerIntakeAliases.has(pathname)) {
-    const session = await readOwnerSession(request, context.env);
-    if (session.valid) {
-      return finish(Response.redirect(new URL("/owner/product-intake.html", request.url).toString(), 303));
-    }
-    return finish(redirectToOwnerLogin(request, session.reason === "expired" || session.reason === "bad_signature"));
-  }
-
-  if (pathname === "/owner/login" || pathname === "/owner/logout" || pathname.startsWith("/owner/api/")) {
-    return finish(await context.next());
-  }
-
-  const session = await readOwnerSession(request, context.env);
-  if (session.valid) {
-    return finish(await context.next());
-  }
-
-  return finish(redirectToOwnerLogin(request, session.reason === "expired" || session.reason === "bad_signature"));
-}
-
-async function handleOwnerAccessMiddleware(context, accessConfig) {
-  const request = context.request;
-  const requestUrl = new URL(request.url);
-  const pathname = requestUrl.pathname;
-  const apiPath = pathname.startsWith("/owner/api/");
-  const ownerIntakeAliases = new Set(["/owner/intake", "/owner/intake/"]);
-  const finish = (response) => withOwnerBuildHeaders(response, context.env);
-
-  if (!accessConfig.ready) {
-    return finish(buildOwnerAccessDeniedResponse(request, {
-      reason: "config_incomplete",
-      userMessage: "Owner access is partially configured. Add OWNER_ACCESS_TEAM_DOMAIN and OWNER_ACCESS_AUD together."
-    }, apiPath));
-  }
-
-  const accessState = await verifyOwnerAccessRequest(request, context.env);
+  let accessState = getLocalOwnerAccessState(request, context.env);
   if (!accessState.valid) {
-    return finish(buildOwnerAccessDeniedResponse(request, accessState, apiPath));
+    const accessConfig = getOwnerAccessConfig(context.env);
+    if (!accessConfig.enabled) {
+      return finish(buildOwnerAccessDeniedResponse(request, {
+        reason: "config_incomplete",
+        userMessage: RETIRED_AUTH_MESSAGE
+      }, apiPath));
+    }
+
+    if (!accessConfig.ready) {
+      return finish(buildOwnerAccessDeniedResponse(request, {
+        reason: "config_incomplete",
+        userMessage: "Owner access is partially configured. Add OWNER_ACCESS_TEAM_DOMAIN and OWNER_ACCESS_AUD together."
+      }, apiPath));
+    }
+
+    accessState = await verifyOwnerAccessRequest(request, context.env);
+    if (!accessState.valid) {
+      return finish(buildOwnerAccessDeniedResponse(request, accessState, apiPath));
+    }
   }
 
   if (pathname === "/owner" || pathname === "/owner/" || pathname === "/owner/login") {
@@ -89,61 +56,14 @@ async function handleOwnerAccessMiddleware(context, accessConfig) {
   }
 
   if (pathname === "/owner/logout") {
+    if (accessState.localBypass) {
+      return finish(Response.redirect(new URL("/owner/", request.url).toString(), 303));
+    }
     return finish(Response.redirect(buildOwnerAccessLogoutUrl(request), 303));
   }
 
   const response = await context.next();
   return finish(await attachOwnerAccessCsrfCookie(response, request, context.env, accessState));
-}
-
-export async function readOwnerSession(request, env) {
-  const secret = String(env.OWNER_SESSION_SECRET || "");
-  const token = getCookie(request.headers.get("cookie"), SESSION_COOKIE_NAME);
-  if (!secret || !token) {
-    return { valid: false, reason: "missing" };
-  }
-  return verifySessionToken(token, secret);
-}
-
-async function hasValidOwnerSession(request, env) {
-  const session = await readOwnerSession(request, env);
-  return session.valid;
-}
-
-function redirectToOwnerLogin(request, clearInvalidCookies = false) {
-  const requestUrl = new URL(request.url);
-  const nextPath = requestUrl.pathname + requestUrl.search;
-  const headers = new Headers({
-    location: buildOwnerLoginLocation(requestUrl.toString(), nextPath)
-  });
-
-  if (clearInvalidCookies) {
-    headers.append("set-cookie", clearCookie(SESSION_COOKIE_NAME, {
-      httpOnly: true,
-      path: "/",
-      sameSite: "Strict"
-    }));
-    headers.append("set-cookie", clearCookie(CSRF_COOKIE_NAME, {
-      path: "/owner",
-      sameSite: "Strict"
-    }));
-  }
-
-  return new Response(null, {
-    status: 303,
-    headers
-  });
-}
-
-function getCookie(cookieHeader, name) {
-  const raw = String(cookieHeader || "");
-  for (const part of raw.split(";")) {
-    const [cookieName, ...cookieValue] = part.trim().split("=");
-    if (cookieName === name) {
-      return cookieValue.join("=");
-    }
-  }
-  return "";
 }
 
 function withOwnerBuildHeaders(response, env) {

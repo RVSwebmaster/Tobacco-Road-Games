@@ -149,9 +149,10 @@ for (const basename of suppliedArtwork) {
 assert.equal(new Set(Object.values(themes.ASSET_SOURCES)).size, suppliedArtwork.length, "Every supplied artwork derivative should be active in the shelf theme map.");
 assert.equal(fs.existsSync(path.join(ROOT, "assets", "images", "storefront-shelf-dressing.svg")), false, "The obsolete simplified sprite must be retired.");
 
-assert.match(page, /storefront-shelf-themes\.js\?v=20260908-shelf-baseline5/);
-assert.match(page, /storefront-shelf-dressing\.js\?v=20260908-shelf-baseline5/);
-assert.match(build, /const STOREFRONT_CACHE_BUST = "20260908-shelf-baseline5"/);
+const cacheBust = build.match(/const STOREFRONT_CACHE_BUST = "([^"]+)"/);
+assert.ok(cacheBust, "The storefront builder must define a shared cache-bust token.");
+assert.match(page, new RegExp(`storefront-shelf-themes\\.js\\?v=${cacheBust[1]}`));
+assert.match(page, new RegExp(`storefront-shelf-dressing\\.js\\?v=${cacheBust[1]}`));
 assert.match(build, /storefront-shelf-themes\.js/);
 assert.match(build, /storefront-shelf-dressing\.js/);
 assert.match(runtime, /aria-hidden/);

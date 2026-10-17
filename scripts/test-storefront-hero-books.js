@@ -35,7 +35,7 @@ for (const n of [0, 1, 2, 20, 21, 22, 42, 43, 44, 60]) {
   assert.equal(count(html, /class="shop-wall-hero-book(?: shop-wall-hero-book--stock)?"/g), 1);
   for (const filler of html.matchAll(/<figure\b[\s\S]*?<\/figure>/g)) {
     assert.doesNotMatch(filler[0], /href=|tabindex=|data-product|price|<a\b|<button\b/);
-    assert.match(filler[0], /Decorative/);
+    assert.match(filler[0], /aria-hidden="true"/);
   }
   const productIds = [...html.matchAll(/data-product-id="([^"]+)"/g)].map(match => match[1]);
   assert.equal(new Set(productIds).size, productIds.length);

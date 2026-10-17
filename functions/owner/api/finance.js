@@ -1,10 +1,5 @@
-import {
-  SESSION_COOKIE_NAME,
-  getOwnerSecrets,
-  jsonResponse,
-  readCookie,
-  verifySessionToken,
-} from "../../_lib/owner-auth.mjs";
+import { jsonResponse } from "../../_lib/owner-auth.mjs";
+import { verifyAuthenticatedOwnerReadRequest } from "../../_lib/owner-mutation-auth.mjs";
 import {
   getMarketplaceCreatorLiability,
   getPayoutCompletionCapacity,
@@ -19,13 +14,9 @@ import { reconcileCreatorFinance } from "../../_lib/creator-finance.mjs";
 import { listCreatorClosures } from "../../_lib/creator-closure.mjs";
 
 export async function onRequestGet({ request, env }) {
-  const auth = await verifySessionToken(
-    readCookie(request, SESSION_COOKIE_NAME),
-    getOwnerSecrets(env).sessionSecret,
-    Date.now(),
-  );
+  const auth = await verifyAuthenticatedOwnerReadRequest(request, env);
   if (!auth.valid)
-    return jsonResponse({ error: "Operator access required." }, 403);
+    return jsonResponse({ error: auth.userMessage }, auth.status);
   const url = new URL(request.url),
     creatorId = url.searchParams.get("creator"),
     reference = url.searchParams.get("reference");

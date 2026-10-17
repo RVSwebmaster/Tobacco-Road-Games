@@ -43,7 +43,12 @@ async function main() {
       headers: { "content-type": "application/json", origin: "https://example.com" },
       method: "POST"
     }), { TRG_ORDERS: stateDatabase("CLOSED") });
-  assert.equal(unauthorized.status, 401, "Unauthenticated users must not alter store status.");
+  assert.equal(unauthorized.status, 503, "Retired internal Owner authentication must fail closed before store status can be altered.");
+  const unauthorizedRead = await ownerApi.handleOwnerStoreStatusGet(
+    new Request("https://example.com/owner/api/store-status"),
+    { TRG_ORDERS: stateDatabase("CLOSED") }
+  );
+  assert.equal(unauthorizedRead.status, 503, "Owner store-state reads must also fail closed while internal authentication is retired.");
 
   const generatedCatalog = fs.readFileSync(path.join(ROOT, "store", "catalog", "index.html"), "utf8");
   const statusScript = fs.readFileSync(path.join(ROOT, "assets", "js", "store-status.js"), "utf8");

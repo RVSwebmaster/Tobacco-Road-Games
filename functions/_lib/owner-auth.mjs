@@ -1,70 +1,12 @@
 const SESSION_COOKIE_NAME = "trg_owner_session";
 const CSRF_COOKIE_NAME = "trg_owner_csrf";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
-const PASSWORD_HASH_PREFIX = "pbkdf2_sha256";
-const PASSWORD_HASH_ITERATIONS = 310000;
 
 export {
   CSRF_COOKIE_NAME,
-  PASSWORD_HASH_ITERATIONS,
-  PASSWORD_HASH_PREFIX,
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS
 };
-
-export function inspectPasswordHash(storedHash) {
-  const parts = String(storedHash || "")
-    .trim()
-    .split("$")
-    .map((part) => part.trim());
-
-  if (parts.length !== 4 || parts[0] !== PASSWORD_HASH_PREFIX) {
-    return { valid: false, reason: "unsupported_format" };
-  }
-
-  const iterations = Number(parts[1]);
-  if (!Number.isInteger(iterations) || iterations <= 0) {
-    return { valid: false, reason: "bad_iterations" };
-  }
-
-  try {
-    const saltBytes = fromBase64Url(parts[2]);
-    const expectedBytes = fromBase64Url(parts[3]);
-    if (!saltBytes.length || !expectedBytes.length) {
-      return { valid: false, reason: "empty_components" };
-    }
-
-    return {
-      valid: true,
-      expectedBytes,
-      iterations,
-      saltBytes
-    };
-  } catch {
-    return { valid: false, reason: "bad_encoding" };
-  }
-}
-
-export async function createPasswordHash(password, options = {}) {
-  const saltBytes = options.saltBytes || randomBytes(16);
-  const iterations = Number.isFinite(options.iterations) ? options.iterations : PASSWORD_HASH_ITERATIONS;
-  const hashBytes = await derivePasswordHash(password, saltBytes, iterations);
-  return `${PASSWORD_HASH_PREFIX}$${iterations}$${toBase64Url(saltBytes)}$${toBase64Url(hashBytes)}`;
-}
-
-export async function verifyPasswordHash(password, storedHash) {
-  const parsed = inspectPasswordHash(storedHash);
-  if (!parsed.valid) {
-    return false;
-  }
-
-  try {
-    const actualBytes = await derivePasswordHash(password, parsed.saltBytes, parsed.iterations, parsed.expectedBytes.length * 8);
-    return constantTimeEqual(actualBytes, parsed.expectedBytes);
-  } catch {
-    return false;
-  }
-}
 
 export async function createSessionToken(username, secret, nowMs = Date.now(), ttlSeconds = SESSION_TTL_SECONDS) {
   const payload = {
@@ -233,16 +175,8 @@ export function jsonResponse(payload, status = 200, extraHeaders = {}) {
 export function getOwnerSecrets(env) {
   return {
     csrfSecret: String(env.OWNER_CSRF_SECRET || env.OWNER_SESSION_SECRET || ""),
-    passwordHash: String(env.OWNER_PASSWORD_HASH || ""),
-    sessionSecret: String(env.OWNER_SESSION_SECRET || ""),
-    username: String(env.OWNER_USERNAME || "")
+    sessionSecret: String(env.OWNER_SESSION_SECRET || "")
   };
-}
-
-export function buildOwnerLoginLocation(requestUrl, nextPath = "/owner/") {
-  const url = new URL("/owner/login", requestUrl);
-  url.searchParams.set("next", nextPath);
-  return url.toString();
 }
 
 export function getSafeOwnerNextPath(rawNextPath) {
@@ -282,30 +216,6 @@ function randomBytes(length) {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return bytes;
-}
-
-async function derivePasswordHash(password, saltBytes, iterations, bitLength = 256) {
-  const passwordBytes = new TextEncoder().encode(String(password || ""));
-  const baseKey = await crypto.subtle.importKey(
-    "raw",
-    passwordBytes,
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
-
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      hash: "SHA-256",
-      iterations,
-      name: "PBKDF2",
-      salt: saltBytes
-    },
-    baseKey,
-    bitLength
-  );
-
-  return new Uint8Array(derivedBits);
 }
 
 async function signStructuredPayload(payload, secret) {

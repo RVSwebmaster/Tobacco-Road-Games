@@ -1,6 +1,5 @@
-import { getOwnerAccessConfig, verifyOwnerAccessRequest } from "./owner-access.mjs";
-import { SESSION_COOKIE_NAME, getOwnerSecrets, jsonResponse, readCookie, verifySessionToken } from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { jsonResponse } from "./owner-auth.mjs";
+import { verifyAuthenticatedOwnerMutationRequest, verifyAuthenticatedOwnerReadRequest } from "./owner-mutation-auth.mjs";
 import { createAndSendIntentionalResend, listOrderEmailOutbox } from "./order-delivery.mjs";
 import {
   getActiveOrderAccessCredential,
@@ -24,7 +23,7 @@ export async function handleOwnerOrdersRequest(request, env = {}, options = {}) 
 }
 
 async function handleLookup(request, env, options) {
-  const auth = await resolveOwnerReadIdentity(request, env, options);
+  const auth = await verifyAuthenticatedOwnerReadRequest(request, env, options);
   if (!auth.valid) {
     return jsonResponse({ error: auth.userMessage }, auth.status);
   }
@@ -47,6 +46,7 @@ async function handleLookup(request, env, options) {
 
 async function handleMutation(request, env, options) {
   const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, {
+    ...options,
     csrfExpiredMessage: "The order recovery security token expired. Reload the page and try again.",
     csrfMismatchMessage: "The order recovery security token did not match. Reload the page and try again.",
     missingCsrfSecretMessage: "Owner order recovery is missing OWNER_CSRF_SECRET in Cloudflare.",
@@ -77,7 +77,10 @@ async function handleMutation(request, env, options) {
         await recordOwnerAudit(env.TRG_ORDERS, { ...auditBase, details: { reason: "order_not_paid" }, outcome: "rejected" }, options);
         return jsonResponse({ error: "Only a verified paid order can have fulfillment repaired." }, 409);
       }
-      result = await repairPaidOrderFulfillment(env.TRG_ORDERS, env.TRG_PRODUCTS, Number(order.id), { nowMs: options.nowMs });
+      result = await repairPaidOrderFulfillment(env.TRG_ORDERS, env.TRG_PRODUCTS, Number(order.id), {
+        deliveryProducts: options.deliveryProducts,
+        nowMs: options.nowMs
+      });
       if (!result.ready) {
         throw new Error(result.result || "fulfillment_repair_failed");
       }
@@ -205,22 +208,6 @@ export async function recordOwnerAudit(database, input, options = {}) {
     JSON.stringify(input.details || {}),
     nowIso(options.nowMs)
   ).run();
-}
-
-async function resolveOwnerReadIdentity(request, env, options = {}) {
-  const accessConfig = getOwnerAccessConfig(env);
-  if (accessConfig.enabled) {
-    const state = await verifyOwnerAccessRequest(request, env);
-    return state.valid
-      ? { valid: true, username: state.email || state.csrfSubject }
-      : { valid: false, status: 403, userMessage: state.userMessage };
-  }
-  const secrets = getOwnerSecrets(env);
-  const token = readCookie(request, SESSION_COOKIE_NAME);
-  const state = token && secrets.sessionSecret ? await verifySessionToken(token, secrets.sessionSecret, options.nowMs) : { valid: false };
-  return state.valid
-    ? { valid: true, username: state.username }
-    : { valid: false, status: 401, userMessage: "Owner authentication is required." };
 }
 
 function safeAuditDetails(result) {

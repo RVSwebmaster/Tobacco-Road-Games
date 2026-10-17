@@ -16,6 +16,13 @@ const MIGRATION_PATHS = [
 const NOW = Date.parse("2026-07-14T16:00:00.000Z");
 const WEBHOOK_SECRET = "whsec_test_signing_secret";
 const STRIPE_API_VERSION = "2026-06-24.dahlia";
+const FIXTURE_PRODUCT = Object.freeze({
+  contentType: "application/pdf",
+  customerFilename: "Webhook Fixture Product.pdf",
+  productSlug: "webhook-fixture-product",
+  r2ObjectKey: "test-fixtures/webhook-fixture-product/product.pdf"
+});
+const DELIVERY_PRODUCTS = Object.freeze({ [FIXTURE_PRODUCT.productSlug]: FIXTURE_PRODUCT });
 let fixtureSequence = 0;
 let eventSequence = 0;
 
@@ -92,7 +99,7 @@ async function testCompletedPaidAndDuplicate(webhook, ordersD1) {
   assert.equal(record.attempt_count, 1, "A duplicate processed event must not be processed twice.");
   assert.equal(await countRows(fixture.d1, "download_entitlements"), 1, "Duplicate paid webhook delivery must keep one entitlement.");
   order = await getOrder(fixture.d1, fixture.order.id);
-  assert.equal(order.fulfillment_status, "ready", "A paid Agency order with an existing R2 object should become fulfillment-ready.");
+  assert.equal(order.fulfillment_status, "ready", "A paid fixture order with an existing R2 object should become fulfillment-ready.");
   assert.equal(order.fulfillment_updated_at, originalFulfillmentUpdatedAt, "Duplicate webhook repair must preserve the original fulfillment timestamp.");
 }
 
@@ -274,8 +281,8 @@ async function createFixture(ordersD1) {
     lineTotalCents: 400,
     listPriceCents: 500,
     primaryAuthorSlug: "rv-sawyer",
-    productSlug: "agency",
-    productTitleSnapshot: "Agency",
+    productSlug: FIXTURE_PRODUCT.productSlug,
+    productTitleSnapshot: "Webhook Fixture Product",
     quantity: 1,
     versionSnapshot: "2026.1"
   }]);
@@ -325,7 +332,7 @@ async function deliver(webhook, d1, event, envOverrides = {}) {
     body: rawBody,
     headers: { "stripe-signature": signature },
     method: "POST"
-  }), { ...webhookEnv(d1), ...envOverrides }, { nowMs: NOW });
+  }), { ...webhookEnv(d1), ...envOverrides }, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
 }
 
 function webhookEnv(d1) {
@@ -335,7 +342,7 @@ function webhookEnv(d1) {
     TRG_ORDERS: d1,
     TRG_PRODUCTS: {
       async head(key) {
-        return key === "agency/product.pdf" ? { size: 9630946 } : null;
+        return key === FIXTURE_PRODUCT.r2ObjectKey ? { size: 9630946 } : null;
       }
     }
   };

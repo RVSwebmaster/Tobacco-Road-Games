@@ -8,6 +8,7 @@ const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
 const FileCtor = globalThis.File || require("node:buffer").File;
+let activeAccessToken = "";
 const NEUTRAL_FIXTURE_FOLDER_MAP = {
   getFolderForSlug(slug) {
     return {
@@ -25,25 +26,22 @@ async function main() {
   const ownerAuth = await importModule("functions/_lib/owner-auth.mjs");
   const ownerLogin = await importModule("functions/_lib/owner-login.mjs");
   const ownerMiddleware = await importModule("functions/_lib/owner-middleware.mjs");
+  const ownerPublicBypass = await importModule("functions/_lib/owner-public-bypass.mjs");
   const ownerPublish = await importModule("functions/_lib/owner-publish.mjs");
   const ownerPricing = await importModule("functions/_lib/owner-pricing-publish.mjs");
   const productAdvisor = require(path.join(ROOT, "shared", "product-advisor.js"));
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
   const accessContext = await createAccessTestContext();
+  activeAccessToken = accessContext.token;
 
   try {
-    const passwordHash = await ownerAuth.createPasswordHash("correct horse battery staple");
-    assert.equal(await ownerAuth.verifyPasswordHash("correct horse battery staple", passwordHash), true, "Generated password hash should validate the correct password.");
-    assert.equal(await ownerAuth.verifyPasswordHash("wrong password", passwordHash), false, "Generated password hash should reject the wrong password.");
     const baseEnv = {
       GITHUB_PUBLISH_REF: "owner-intake-test",
       GITHUB_REPO_NAME: "Tobacco-Road-Games",
       GITHUB_REPO_OWNER: "RVSwebmaster",
       GITHUB_TOKEN: "test-token",
       OWNER_CSRF_SECRET: "csrf-secret",
-      OWNER_PASSWORD_HASH: passwordHash,
-      OWNER_SESSION_SECRET: "session-secret",
-      OWNER_USERNAME: "rv-owner"
+      OWNER_SESSION_SECRET: "session-secret"
     };
     const accessEnv = {
       ...baseEnv,
@@ -52,31 +50,26 @@ async function main() {
       OWNER_ACCESS_TEAM_DOMAIN: accessContext.teamDomain
     };
 
-    await testWrongUsername(ownerLogin, baseEnv);
-    await testBadLogin(ownerLogin, baseEnv);
-    const authCookies = await testGoodLogin(ownerLogin, baseEnv);
-    await testMalformedHash(ownerLogin, baseEnv);
-    await testMissingSecret(ownerLogin, baseEnv);
-    await testUnexpectedLoginException(ownerLogin, baseEnv);
-    await testAlteredCookie(ownerMiddleware, baseEnv, authCookies);
-    await testExpiredCookie(ownerMiddleware, ownerAuth, baseEnv);
-    await testOwnerIntakeAliasRedirects(ownerMiddleware, baseEnv, authCookies);
-    await testMissingFiles(ownerPublish, baseEnv, authCookies);
-    await testWrongFileType(ownerPublish, baseEnv, authCookies);
-    await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, authCookies);
-    await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, authCookies);
-    await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, authCookies);
-    await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, authCookies);
-    await testOwnerPricingPublishAccepted(ownerPricing, baseEnv, authCookies);
-    await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, baseEnv, authCookies);
-    await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
-    await testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, baseEnv, authCookies);
-    await testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, baseEnv, authCookies);
-    await testUnexpectedPublishExceptionHandled(ownerPublish, baseEnv, authCookies);
+    await testRetiredLoginFailsClosed(ownerLogin, baseEnv);
+    await testRetiredMiddlewareFailsClosed(ownerMiddleware, baseEnv);
+    await testRetiredSessionCannotBypassPublicStore(ownerAuth, ownerPublicBypass, baseEnv);
     await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
     const accessCookies = await testAccessMiddlewareAllowsAuthorized(ownerMiddleware, accessEnv, accessContext.token);
     await testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, accessEnv);
+    await testOwnerIntakeAliasRedirects(ownerMiddleware, accessEnv, accessContext.token);
     await testAccessPublishDeniedUnauthorized(ownerPublish, accessEnv);
+    await testMissingFiles(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testWrongFileType(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testCartPublishRejectsMissingPrice(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testCartPublishRejectsInvalidStatus(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testExistingProductMetadataOnlyPublish(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testOwnerPricingPublishAccepted(ownerPricing, accessEnv, accessCookies, accessContext.token);
+    await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, accessEnv, accessCookies, accessContext.token);
+    await testR2UploadAndGithubDispatch(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, accessEnv, accessCookies, accessContext.token);
+    await testUnexpectedPublishExceptionHandled(ownerPublish, accessEnv, accessCookies, accessContext.token);
     await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
     await testProductAdvisorSuggestions(productAdvisor);
     await testExistingProductUpdatePreservesFields(publishScript);
@@ -97,118 +90,50 @@ async function main() {
   }
 }
 
-async function testWrongUsername(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", "not-the-owner");
-  formData.set("password", "correct horse battery staple");
-
+async function testRetiredLoginFailsClosed(ownerLogin, env) {
   const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
+    method: "GET"
   }), env);
 
-  assert.equal(response.status, 401, "Wrong username should return 401.");
+  assert.equal(response.status, 503, "Retired internal Owner login should fail closed.");
   const body = await response.text();
-  assert.match(body, /did not work/i, "Wrong username should show a human-readable error.");
+  assert.match(body, /retired|unavailable/i, "Retired login should explain that Owner tools are unavailable.");
 }
 
-async function testBadLogin(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "wrong password");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), env);
-
-  assert.equal(response.status, 401, "Bad login should return 401.");
-  const body = await response.text();
-  assert.match(body, /did not work/i, "Bad login should show a human-readable error.");
-}
-
-async function testGoodLogin(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "correct horse battery staple");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login?next=%2Fowner%2Fproduct-intake.html", {
-    body: formData,
-    method: "POST"
-  }), env);
-
-  assert.equal(response.status, 303, "Good login should redirect.");
-  const cookies = extractSetCookies(response.headers);
-  assert.equal(cookies.length, 2, "Good login should set session and CSRF cookies.");
-  assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_session=") && cookie.includes("HttpOnly") && cookie.includes("SameSite=Strict")), "Session cookie should be secure and HttpOnly.");
-  assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_csrf=") && cookie.includes("SameSite=Strict")), "CSRF cookie should be secure and strict.");
-  return cookieHeaderFromSetCookies(cookies);
-}
-
-async function testMalformedHash(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "wrong password");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), {
-    ...env,
-    OWNER_PASSWORD_HASH: "pbkdf2_sha256$310000$bad***$also***"
-  });
-
-  assert.equal(response.status, 503, "Malformed password hash should return 503 instead of throwing.");
-  const body = await response.text();
-  assert.match(body, /OWNER_PASSWORD_HASH|not configured correctly/i, "Malformed password hash should show a configuration error.");
-}
-
-async function testMissingSecret(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "wrong password");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), {
-    ...env,
-    OWNER_SESSION_SECRET: ""
-  });
-
-  assert.equal(response.status, 503, "Missing owner secrets should return 503.");
-  const body = await response.text();
-  assert.match(body, /not configured yet/i, "Missing owner secrets should show a configuration error.");
-}
-
-async function testUnexpectedLoginException(ownerLogin, env) {
-  const captured = [];
-  const originalConsoleError = console.error;
-  console.error = (entry) => {
-    captured.push(String(entry));
-  };
-
-  try {
-    const response = await ownerLogin.handleOwnerLoginRequest({
-      formData() {
-        throw new Error("synthetic login failure");
+async function testRetiredMiddlewareFailsClosed(ownerMiddleware, env) {
+  const protectedPaths = [
+    "/owner/",
+    "/owner/login",
+    "/owner/logout",
+    "/owner/product-intake.html",
+    "/owner/api/store-status",
+    "/owner/api/finance"
+  ];
+  for (const protectedPath of protectedPaths) {
+    let reachedOwnerRoute = false;
+    const response = await ownerMiddleware.handleOwnerMiddleware({
+      env,
+      next: () => {
+        reachedOwnerRoute = true;
+        return new Response("unsafe");
       },
-      headers: new Headers({
-        "cf-ray": "test-ray-id"
-      }),
-      method: "POST",
-      url: "https://example.com/owner/login"
-    }, env);
-
-    assert.equal(response.status, 500, "Unexpected login exceptions should be caught and turned into a normal response.");
-    const body = await response.text();
-    assert.match(body, /could not be completed/i, "Unexpected login exceptions should show a safe error.");
-    assert.equal(captured.length, 1, "Unexpected login exceptions should be logged once.");
-    assert.match(captured[0], /owner_login_exception/, "Unexpected login exceptions should use the safe event log.");
-    assert.doesNotMatch(captured[0], /correct horse battery staple|session-secret|csrf-secret|pbkdf2_sha256/, "Safe login logs must not include secrets or credentials.");
-  } finally {
-    console.error = originalConsoleError;
+      request: new Request(`https://example.com${protectedPath}`)
+    });
+    assert.equal(response.status, 503, `${protectedPath} should fail closed when external authentication is unavailable.`);
+    assert.equal(reachedOwnerRoute, false, `${protectedPath} must not reach Owner content or handlers.`);
   }
+}
+
+async function testRetiredSessionCannotBypassPublicStore(ownerAuth, ownerPublicBypass, env) {
+  const legacySession = await ownerAuth.createSessionToken("retired-owner", env.OWNER_SESSION_SECRET);
+  const request = new Request("https://example.com/api/store/status", {
+    headers: { cookie: `${ownerAuth.SESSION_COOKIE_NAME}=${legacySession}` }
+  });
+  assert.equal(
+    await ownerPublicBypass.isAuthenticatedOwnerRequest(request, env),
+    false,
+    "A legacy signed Owner session must not bypass public store restrictions without configured Cloudflare Access."
+  );
 }
 
 async function testAccessLoginRedirect(ownerLogin, env, accessToken) {
@@ -219,49 +144,18 @@ async function testAccessLoginRedirect(ownerLogin, env, accessToken) {
     method: "GET"
   }), env);
 
-  assert.equal(response.status, 303, "Access-protected login should redirect into the intake page.");
+  const failureBody = response.status === 303 ? "" : await response.clone().text();
+  assert.equal(response.status, 303, `Access-protected login should redirect into the intake page. ${failureBody}`);
   assert.match(response.headers.get("location") || "", /\/owner\/product-intake\.html$/, "Access-protected login should redirect to the owner intake.");
 }
 
-async function testAlteredCookie(ownerMiddleware, env, cookieHeader) {
-  const tamperedCookie = cookieHeader.replace(/trg_owner_session=([^;]+)/, "trg_owner_session=$1tampered");
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok"),
-    request: new Request("https://example.com/owner/product-intake.html", {
-      headers: {
-        cookie: tamperedCookie
-      }
-    })
-  });
-
-  assert.equal(response.status, 303, "Altered owner page cookie should redirect to login.");
-  assert.match(response.headers.get("location") || "", /\/owner\/login/, "Altered cookie redirect should go to login.");
-}
-
-async function testExpiredCookie(ownerMiddleware, ownerAuth, env) {
-  const expiredSession = await ownerAuth.createSessionToken(env.OWNER_USERNAME, env.OWNER_SESSION_SECRET, Date.now() - 9 * 60 * 60 * 1000);
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok"),
-    request: new Request("https://example.com/owner/product-intake.html", {
-      headers: {
-        cookie: `trg_owner_session=${expiredSession}`
-      }
-    })
-  });
-
-  assert.equal(response.status, 303, "Expired cookie should redirect to login.");
-  assert.match(response.headers.get("location") || "", /\/owner\/login/, "Expired cookie redirect should go to login.");
-}
-
-async function testOwnerIntakeAliasRedirects(ownerMiddleware, env, cookieHeader) {
+async function testOwnerIntakeAliasRedirects(ownerMiddleware, env, accessToken) {
   const response = await ownerMiddleware.handleOwnerMiddleware({
     env,
     next: () => new Response("ok"),
     request: new Request("https://example.com/owner/intake", {
       headers: {
-        cookie: cookieHeader
+        "cf-access-jwt-assertion": accessToken
       }
     })
   });
@@ -845,6 +739,7 @@ async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHe
         throw new Error("synthetic publish failure");
       },
       headers: new Headers({
+        "cf-access-jwt-assertion": activeAccessToken,
         "cf-ray": "publish-test-ray",
         cookie: cookieHeader,
         origin: "https://example.com",
@@ -1347,6 +1242,7 @@ function buildAuthenticatedPublishRequest(formData, cookieHeader) {
   return new Request("https://example.com/owner/api/publish", {
     body: formData,
     headers: {
+      "cf-access-jwt-assertion": activeAccessToken,
       cookie: cookieHeader,
       origin: "https://example.com",
       "x-csrf-token": csrfToken
@@ -1360,6 +1256,7 @@ function buildAuthenticatedPricingRequest(payload, cookieHeader) {
   return new Request("https://example.com/owner/api/pricing", {
     body: JSON.stringify(payload),
     headers: {
+      "cf-access-jwt-assertion": activeAccessToken,
       "content-type": "application/json",
       cookie: cookieHeader,
       origin: "https://example.com",

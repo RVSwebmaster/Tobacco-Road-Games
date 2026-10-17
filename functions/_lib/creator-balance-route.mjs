@@ -228,7 +228,9 @@ export async function handleCreatorBalanceRequest(
   }
   const mappings = [];
   for (const item of resolution.items) {
-    const product = getDeliveryProduct(item.productSlug);
+    const product =
+      options.deliveryProducts?.[item.productSlug] ||
+      getDeliveryProduct(item.productSlug);
     if (!product)
       return json(
         { error: `${item.productSlug} is not configured for secure delivery.` },

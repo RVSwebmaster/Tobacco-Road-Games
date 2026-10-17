@@ -1,9 +1,7 @@
 import { getSessionFromRequest, validateSameOriginRequest } from "./account-auth.mjs";
 import { buildCookie, readCookie } from "./owner-auth.mjs";
 import { hmacIpFingerprint } from "./forum-rate-limits.mjs";
-import { readOwnerSession } from "./owner-middleware.mjs";
-import { getOwnerAccessConfig, verifyOwnerAccessRequest } from "./owner-access.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { verifyAuthenticatedOwnerMutationRequest, verifyAuthenticatedOwnerReadRequest } from "./owner-mutation-auth.mjs";
 
 const CURIOS = Object.freeze({
   harimafuji: { name: "Yokozuna Harimafuji", shelfId: "bric-a-brac-1", x: 0.5, y: 0.5 }
@@ -75,9 +73,7 @@ export async function handleOwnerShelfCuriosRequest(request, env, options = {}) 
   try {
     const auth = request.method === "POST"
       ? await verifyAuthenticatedOwnerMutationRequest(request, env, options)
-      : getOwnerAccessConfig(env).enabled
-        ? await verifyOwnerAccessRequest(request, env)
-        : await readOwnerSession(request, env);
+      : await verifyAuthenticatedOwnerReadRequest(request, env, options);
     if (!auth.valid) return error(auth.userMessage || "Owner sign-in is required.", auth.status || 401);
     const db = requireDb(env);
     if (request.method === "POST") {

@@ -21,11 +21,13 @@ async function createFixture() {
     .run(await auth.hashToken('member-session'), await auth.hashToken('member-csrf'), now, new Date(NOW + 86400000).toISOString(), now);
   const env = {
     TRG_ORDERS: d1(raw), FORUM_RATE_LIMIT_SECRET: 'test-forum-secret-at-least-32-characters',
-    OWNER_SESSION_SECRET: 'test-owner-session-at-least-32-characters', OWNER_CSRF_SECRET: 'test-owner-csrf-at-least-32-characters'
+    OWNER_SESSION_SECRET: 'test-owner-session-at-least-32-characters', OWNER_CSRF_SECRET: 'test-owner-csrf-at-least-32-characters',
+    OWNER_ACCESS_AUD: 'test-audience', OWNER_ACCESS_EMAIL: 'rv@example.test', OWNER_ACCESS_TEAM_DOMAIN: 'https://access.example.test'
   };
   const ownerSession = await owner.createSessionToken('RV', env.OWNER_SESSION_SECRET);
   const ownerCsrf = await owner.createCsrfToken('RV', env.OWNER_CSRF_SECRET);
-  const fixture = { raw, env, api, now: NOW, ownerSession, ownerCsrf };
+  const ownerOptions = { verifyOwnerAccessRequest: async () => ({ valid: true, csrfSubject: 'RV', email: 'rv@example.test' }) };
+  const fixture = { raw, env, api, now: NOW, ownerSession, ownerCsrf, ownerOptions };
   const response = await api.handleShelfCuriosRequest(new Request(`${ORIGIN}/api/curios`), env);
   assert.equal(response.status, 200);
   fixture.csrf = (await response.json()).csrfToken;
@@ -106,16 +108,16 @@ async function main() {
   }
   assert.equal((await api.handleShelfCuriosRequest(new Request(`${ORIGIN}/api/curios`, { method: 'DELETE' }), env)).status, 405);
   assert.equal((await api.handleShelfCuriosRequest(new Request(`${ORIGIN}/api/curios`), {})).status, 503);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(new Request(`${ORIGIN}/owner/api/curios`), env)).status, 401);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { cookie: `${fixture.cookie}; __Host-trg_session=member-session` }), env)).status, 401);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { 'x-csrf-token': 'wrong' }), env)).status, 403);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { origin: 'https://evil.example' }), env)).status, 403);
-  response = await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture), env);
+  assert.equal((await api.handleOwnerShelfCuriosRequest(new Request(`${ORIGIN}/owner/api/curios`), env)).status, 403);
+  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { cookie: `${fixture.cookie}; __Host-trg_session=member-session` }), env)).status, 403);
+  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { 'x-csrf-token': 'wrong' }), env, fixture.ownerOptions)).status, 403);
+  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { origin: 'https://evil.example' }), env, fixture.ownerOptions)).status, 403);
+  response = await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture), env, fixture.ownerOptions);
   assert.equal(response.status, 200);
   const activity = await response.json();
   assert.equal(activity.counts.moves, 2);
   assert.ok(!JSON.stringify(activity).includes('private@example.com') && !JSON.stringify(activity).includes('visitor-network:'), 'Private owner activity must not expose emails or network hashes.');
-  response = await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true), env);
+  response = await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true), env, fixture.ownerOptions);
   assert.equal(response.status, 200);
   const reset = (await response.json()).curios[0];
   assert.equal(reset.x, 0.5); assert.equal(reset.y, 0.5); assert.equal(reset.revision, 3);
@@ -144,7 +146,7 @@ async function main() {
   assert.equal((await fixture.api.handleShelfCuriosRequest(moveRequest(fixture, placement), fixture.env)).status, 503);
   assert.equal(fixture.raw.prepare('SELECT revision FROM shelf_curios').get().revision, 0);
   assert.equal(fixture.raw.prepare('SELECT COUNT(*) AS count FROM shelf_curio_events').get().count, 0, 'Failed saves must roll back activity and placement together.');
-  assert.equal((await fixture.api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true), fixture.env)).status, 503);
+  assert.equal((await fixture.api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true), fixture.env, fixture.ownerOptions)).status, 503);
   assert.equal(fixture.raw.prepare('SELECT COUNT(*) AS count FROM shelf_curio_events').get().count, 0, 'Failed reset must roll back its audit event.');
   console.log('Shared shelf curios: public movement, years-long persistence, member attribution, bounds, CSRF, concurrency, abuse limits, owner reset, and atomic rollback passed.');
 }

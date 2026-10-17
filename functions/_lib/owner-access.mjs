@@ -183,7 +183,8 @@ export async function attachOwnerAccessCsrfCookie(response, request, env, access
   headers.append("set-cookie", buildCookie(CSRF_COOKIE_NAME, csrfToken, {
     maxAge: SESSION_TTL_SECONDS,
     path: "/owner",
-    sameSite: "Strict"
+    sameSite: "Strict",
+    secure: !accessState.localBypass
   }));
   const sessionSecret = String(env.OWNER_SESSION_SECRET || csrfSecret);
   const sessionToken = await createSessionToken(accessState.csrfSubject, sessionSecret);
@@ -191,7 +192,8 @@ export async function attachOwnerAccessCsrfCookie(response, request, env, access
     httpOnly: true,
     maxAge: SESSION_TTL_SECONDS,
     path: "/",
-    sameSite: "Strict"
+    sameSite: "Strict",
+    secure: !accessState.localBypass
   }));
 
   return new Response(response.body, {

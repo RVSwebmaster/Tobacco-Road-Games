@@ -1,14 +1,16 @@
 import { jsonResponse } from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { verifyAuthenticatedOwnerMutationRequest, verifyAuthenticatedOwnerReadRequest } from "./owner-mutation-auth.mjs";
 import { normalizeStoreState, readStoreState, writeStoreState } from "./store-state.mjs";
 
-export async function handleOwnerStoreStatusGet(request, env) {
+export async function handleOwnerStoreStatusGet(request, env, options = {}) {
+  const auth = await verifyAuthenticatedOwnerReadRequest(request, env, options);
+  if (!auth.valid) return jsonResponse({ error: auth.userMessage }, auth.status);
   const result = await readStoreState(env);
   return jsonResponse(result.available ? { state: result.state, updatedAt: result.updatedAt, updatedBy: result.updatedBy } : { error: "Store status could not be read. Purchasing is being refused safely.", state: "CLOSED" }, result.available ? 200 : 503);
 }
 
-export async function handleOwnerStoreStatusPost(request, env) {
-  const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, { sameOriginMessage: "Store status changes must come from the Tobacco Road Games owner site." });
+export async function handleOwnerStoreStatusPost(request, env, options = {}) {
+  const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, { ...options, sameOriginMessage: "Store status changes must come from the Tobacco Road Games owner site." });
   if (!auth.valid) return jsonResponse({ error: auth.userMessage }, auth.status);
   let payload;
   try { payload = await request.json(); } catch { return jsonResponse({ error: "Store status changes must be valid JSON." }, 400); }

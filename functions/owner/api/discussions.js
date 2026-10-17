@@ -1,7 +1,9 @@
 import { createAuthorReply, listDiscussions } from "../../_lib/author-discussions.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "../../_lib/owner-mutation-auth.mjs";
+import { verifyAuthenticatedOwnerMutationRequest, verifyAuthenticatedOwnerReadRequest } from "../../_lib/owner-mutation-auth.mjs";
 
-export function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env }) {
+  const auth = await verifyAuthenticatedOwnerReadRequest(request, env);
+  if (!auth.valid) return Response.json({ error: auth.userMessage }, { status: auth.status });
   return listDiscussions(request, env);
 }
 

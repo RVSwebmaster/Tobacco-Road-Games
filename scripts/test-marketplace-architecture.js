@@ -12,7 +12,6 @@ function main() {
   const homepage = read("index.html");
   const profile = read("authors/rv-sawyer/index.html");
   const alias = read("creators/rv-sawyer/index.html");
-  const product = read("store/products/agency/index.html");
   const account = read("account.html");
   const forumNavigation = read("functions/_lib/public-navigation.mjs");
 
@@ -33,11 +32,12 @@ function main() {
   assert.match(build, /data-creator-template="catalog"/, "The catalog creator template must remain available.");
   assert.match(directory, /Explore creators publishing through the Tobacco Road Games marketplace/, "The creator directory must be marketplace-facing.");
   assert.match(alias, /compatibility alias/, "The creators URL must remain a safe compatibility alias.");
-  assert.match(product, /<dt>Creator<\/dt>/, "Product pages must render Creator separately.");
-  assert.match(product, /<dt>Publisher \/ Imprint<\/dt>/, "Product pages must render Publisher / Imprint separately.");
+  assert.match(build, /renderIdentityItem\("Creator", product\.authors\.join/, "The product-page generator must render Creator separately.");
+  assert.match(build, /renderIdentityItem\("Publisher \/ Imprint", product\.publisher\)/, "The product-page generator must render Publisher / Imprint separately.");
   assert.match(account, /Account \/ My Library/, "The account page body must preserve current account behavior.");
   assert.doesNotMatch(account, />Authors<\/a>/, "Public navigation must not expose Author terminology.");
-  assert.match(read("ai-policy.html"), /approved Tobacco Road Games AI Policy text is awaiting insertion/, "AI Policy placeholder must avoid fabricated policy copy.");
+  assert.match(build, /function renderAiPolicyPage\(/, "The generated AI Policy route must remain generator-owned.");
+  assert.match(read("ai-policy.html"), /id="ai-policy-heading"/, "The generated AI Policy page must retain its accessible heading.");
   assert.match(homepage, /homepage-shop-wall/, "The homepage must render the upper shop wall.");
   assert.doesNotMatch(homepage, /homepage-clear-deck/, "The homepage must not render the temporary clear-deck marker.");
   assert.doesNotMatch(homepage, /Tobacco Road Games storefront redesign in progress\./, "The homepage must remove the modest staging marker.");

@@ -16,7 +16,10 @@ export async function repairPaidOrderFulfillment(database, productsBucket, order
   }
 
   const items = await getOrderItems(database, normalizedOrderId);
-  const deliveries = items.map((item) => ({ item, product: getDeliveryProduct(item.product_slug) }));
+  const deliveries = items.map((item) => ({
+    item,
+    product: options.deliveryProducts?.[item.product_slug] || getDeliveryProduct(item.product_slug)
+  }));
   if (!deliveries.length || deliveries.some(({ product }) => !product)) {
     const failedOrder = await markFulfillmentFailure(
       database,

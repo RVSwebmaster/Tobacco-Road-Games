@@ -479,7 +479,7 @@ async function main() {
   assert.match(js, /owner\/api\/finance/);
   assert.match(js, /completion blocked by current hold/);
   assert.match(js, /FINANCIAL INTEGRITY EXCEPTION/);
-  assert.match(api, /verifySessionToken/);
+  assert.match(api, /verifyAuthenticatedOwnerReadRequest/);
   console.log("Finance integrity and owner ledger tests passed.");
 }
 function dispute(raw, creatorId, disputeId, amount) {
