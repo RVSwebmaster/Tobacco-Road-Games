@@ -19,8 +19,8 @@ export async function handleOwnerListingFiles(request, env = {}, options = {}) {
     const auth = await verifyOwnerRead(request, env, options);
     if (!auth.valid) return json({ error: auth.message }, auth.status);
     const url = new URL(request.url), fileId = url.searchParams.get("download");
-    if (fileId) return downloadFile(request, db, env.TRG_PRODUCTS, fileId);
-    return lookup(db, env.TRG_PRODUCTS, url.searchParams);
+    if (fileId) return downloadFile(request, db, env.TRG_PRODUCTS, fileId, auth.actorId, options.nowMs);
+    return lookup(db, env.TRG_PRODUCTS, url.searchParams, auth.actorId, options.nowMs);
   }
   if (request.method !== "POST") return json({ error: "Use GET or POST." }, 405);
   const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, { nowMs: options.nowMs });
@@ -37,7 +37,7 @@ export async function handleOwnerListingFiles(request, env = {}, options = {}) {
   return replaceFile(request, db, env.TRG_PRODUCTS, auth.username, options.nowMs);
 }
 
-async function lookup(db, bucket, params) {
+async function lookup(db, bucket, params, actorId, nowMs) {
   const query = String(params.get("q") || "").trim().toLowerCase().slice(0, 160),
     listingId = String(params.get("listingId") || "").trim(),
     state = String(params.get("state") || "").trim(),
@@ -66,12 +66,17 @@ async function lookup(db, bucket, params) {
       file.downloadUrl = `/owner/api/listing-files?download=${encodeURIComponent(file.id)}`;
       delete file.quarantine_key;
     }
+    await recordOwnerReviewAccess(db, selected, actorId, "owner_listing_inspected", {
+      lifecycleState: selected.lifecycle_state,
+      publicationState: selected.publication_state,
+      fileCount: files.length,
+    }, nowMs);
     return json({ listing: selected, listings, files });
   }
   return json({ listing: null, listings, files: [] });
 }
 
-async function downloadFile(request, db, bucket, fileId) {
+async function downloadFile(request, db, bucket, fileId, actorId, nowMs) {
   const file = await db.prepare("SELECT f.*,l.title listing_title,c.display_name creator_name FROM creator_listing_files f JOIN creator_listings l ON l.id=f.listing_id AND l.creator_id=f.creator_id JOIN marketplace_creators c ON c.id=f.creator_id WHERE f.id=?").bind(String(fileId)).first();
   if (!file) return json({ error: "Listing file not found." }, 404);
   const key = file.validation_state === "accepted" && file.delivery_object_key
@@ -87,7 +92,23 @@ async function downloadFile(request, db, bucket, fileId) {
     "x-content-type-options": "nosniff",
   });
   if (Number.isInteger(Number(object.size))) headers.set("content-length", String(object.size));
+  await recordOwnerReviewAccess(db, file, actorId, "owner_file_downloaded", {
+    fileId: file.id,
+    purpose: file.purpose,
+    filename: file.normalized_filename,
+    contentType: file.content_type,
+    sizeBytes: Number(file.size_bytes),
+    validationState: file.validation_state,
+    method: request.method,
+  }, nowMs);
   return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers });
+}
+
+async function recordOwnerReviewAccess(db, record, actorId, action, context, nowMs) {
+  const now = new Date(Number.isFinite(nowMs) ? nowMs : Date.now()).toISOString();
+  await db.prepare("INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'operator',?,?,?,?)")
+    .bind(record.listing_id || record.id, record.creator_id, String(actorId || "operator"), action, JSON.stringify(context), now)
+    .run();
 }
 
 async function replaceFile(request, db, bucket, actorId, nowMs) {
@@ -129,7 +150,8 @@ async function replaceFile(request, db, bucket, actorId, nowMs) {
 async function verifyOwnerRead(request, env, options) {
   const access = getOwnerAccessConfig(env);
   if (access.enabled) {
-    const result = await verifyOwnerAccessRequest(request, env);
+    const accessVerifier = options.verifyOwnerAccessRequest || verifyOwnerAccessRequest;
+    const result = await accessVerifier(request, env);
     return result.valid ? { valid: true, actorId: result.email || result.csrfSubject } : { valid: false, status: result.reason === "config_incomplete" ? 503 : 403, message: result.userMessage };
   }
   const secrets = getOwnerSecrets(env), result = await verifySessionToken(readCookie(request, SESSION_COOKIE_NAME), secrets.sessionSecret, options.nowMs || Date.now());
