@@ -934,6 +934,8 @@ function publicListing(row) {
     lifecycleState: row.lifecycle_state,
     publicationState: row.publication_state || "not_approved",
     publicationErrors: JSON.parse(row.publication_errors_json || "[]"),
+    reviewNote: row.review_note || "",
+    reviewedAt: row.reviewed_at || null,
     priceCents:
       row.listed_price_cents ??
       current?.effectivePriceCents ??
