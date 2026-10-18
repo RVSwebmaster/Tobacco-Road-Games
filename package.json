@@ -4,6 +4,8 @@
   "description": "Tobacco Road Games storefront and Pages Functions",
   "main": "releases.js",
   "scripts": {
+    "build:pages": "node scripts/build-pages-output.mjs",
+    "test:pages-build": "node scripts/test-pages-build-output.js",
     "test:shelf-curios": "node scripts/test-shelf-curios.js",
     "test:storefront-design": "node scripts/test-storefront-shelf-design.js",
     "test:storefront-themes": "node scripts/test-storefront-shelf-themes.js",

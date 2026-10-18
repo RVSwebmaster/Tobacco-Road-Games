@@ -1,0 +1,43 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
+
+const repositoryRoot = path.resolve(__dirname, "..");
+const outputDirectory = path.join(repositoryRoot, ".wrangler", "test-pages-output");
+
+async function main() {
+  const builder = await import(pathToFileURL(path.join(__dirname, "build-pages-output.mjs")));
+  try {
+    const result = builder.buildPagesOutput(outputDirectory);
+    assert.equal(result.outputDirectory, outputDirectory);
+    assert.ok(result.fileCount > 0);
+
+    for (const relativePath of builder.publicRootFiles) {
+      assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing root file: ${relativePath}`);
+    }
+    for (const relativePath of builder.publicDirectories) {
+      assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing public directory: ${relativePath}`);
+    }
+    for (const relativePath of builder.excludedPublicFiles) {
+      assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `excluded file was copied: ${relativePath}`);
+    }
+    for (const relativePath of ["tmp", "videos", "node_modules", ".git", "docs", "scripts", "functions"]) {
+      assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `non-public path was copied: ${relativePath}`);
+    }
+    assert.ok(fs.existsSync(path.join(repositoryRoot, "functions")), "Pages Functions source is missing");
+    assert.throws(
+      () => builder.buildPagesOutput(path.join(repositoryRoot, "unsafe-output")),
+      /dedicated \*pages-output directory/,
+    );
+  } finally {
+    fs.rmSync(outputDirectory, { recursive: true, force: true });
+  }
+  console.log("Pages build output allowlist test passed.");
+}
+
+main().catch((error) => {
+  fs.rmSync(outputDirectory, { recursive: true, force: true });
+  console.error(error);
+  process.exitCode = 1;
+});
