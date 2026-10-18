@@ -11,7 +11,14 @@ const NOW = Date.parse("2026-07-14T20:00:00.000Z");
 const ACCESS_SECRET = "order-access-signing-secret-at-least-thirty-two-bytes";
 const DOWNLOAD_SECRET = "download-signing-secret-at-least-thirty-two-bytes";
 const RESEND_SECRET = `whsec_${Buffer.from("resend-webhook-test-key-material").toString("base64")}`;
-const PDF = new TextEncoder().encode("%PDF-1.7\nAgency test\n%%EOF\n");
+const FIXTURE_PRODUCT = Object.freeze({
+  contentType: "application/pdf",
+  customerFilename: "Customer Delivery Fixture.pdf",
+  productSlug: "customer-delivery-fixture",
+  r2ObjectKey: "test-fixtures/customer-delivery-fixture/product.pdf"
+});
+const DELIVERY_PRODUCTS = Object.freeze({ [FIXTURE_PRODUCT.productSlug]: FIXTURE_PRODUCT });
+const PDF = new TextEncoder().encode("%PDF-1.7\nCustomer delivery fixture\n%%EOF\n");
 let sequence = 0;
 
 async function main() {
@@ -65,7 +72,7 @@ async function testOutboxAndProviderIdempotency(modules) {
   assert.equal(payload.from, "Tobacco Road Games <orders@tobaccoroadgames.com>");
   assert.equal(payload.reply_to, "support@example.com");
   assert.match(payload.text, /TRG-DELIVERY-/);
-  assert.match(payload.text, /Agency/);
+  assert.match(payload.text, /Customer Delivery Fixture/);
   assert.match(payload.text, /\$4\.00/);
   assert.match(payload.html, /Access your downloads/);
   assert.doesNotMatch(payload.html, /<img|tracking|marketing/i);
@@ -145,13 +152,13 @@ async function testOrderAccessAndDownloads(modules) {
   assert.equal(response.status, 200, "The emailed link must work without a checkout cookie.");
   assert.equal(response.headers.get("set-cookie"), null);
   const html = await response.text();
-  assert.match(html, /Download Agency\.pdf/);
+  assert.match(html, /Download Customer Delivery Fixture\.pdf/);
   const match = html.match(/\/store\/download\?credential=([^"&]+)/);
   assert.ok(match);
   response = await modules.download.handleAuthorizedDownload(
     new Request(`https://staging.example/store/download?credential=${match[1]}`),
     { DOWNLOAD_SIGNING_SECRET: DOWNLOAD_SECRET, TRG_ORDERS: fixture.d1, TRG_PRODUCTS: bucket() },
-    { nowMs: NOW + 1000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
   );
   assert.equal(response.status, 200);
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -169,11 +176,12 @@ async function testOrderAccessAndDownloads(modules) {
 async function testOwnerControlsAndAudit(modules) {
   const fixture = await paidReadyFixture(modules);
   const env = { ...deliveryEnv(fixture.d1), DOWNLOAD_SIGNING_SECRET: DOWNLOAD_SECRET, OWNER_CSRF_SECRET: "owner-csrf-secret-long-enough", OWNER_SESSION_SECRET: "owner-session-secret-long-enough", TRG_PRODUCTS: bucket() };
+  const ownerOptions = { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW };
   await modules.delivery.deliverPaidOrderEmail(fixture.d1, env, fixture.order.id, { fetchImpl: async () => json({ id: "owner_initial" }, 200), nowMs: NOW });
   const session = await modules.ownerAuth.createSessionToken("rv", env.OWNER_SESSION_SECRET, NOW);
   const csrf = await modules.ownerAuth.createCsrfToken("rv", env.OWNER_CSRF_SECRET, NOW);
   const cookie = `trg_owner_session=${session}; trg_owner_csrf=${csrf}`;
-  let response = await modules.ownerOrders.handleOwnerOrdersRequest(new Request(`https://staging.example/owner/api/orders?query=${fixture.order.public_id}`, { headers: { cookie } }), env, { nowMs: NOW });
+  let response = await modules.ownerOrders.handleOwnerOrdersRequest(new Request(`https://staging.example/owner/api/orders?query=${fixture.order.public_id}`, { headers: { cookie } }), env, ownerOptions);
   assert.equal(response.status, 200);
   let body = await response.json();
   assert.equal(body.orders[0].publicId, fixture.order.public_id);
@@ -181,20 +189,20 @@ async function testOwnerControlsAndAudit(modules) {
   assert.equal(body.orders[0].entitlements.length, 1);
 
   const ownerFetch = async () => json({ id: "owner_intentional_resend" }, 200);
-  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "resend_delivery", { fetchImpl: ownerFetch });
+  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "resend_delivery", { ...ownerOptions, fetchImpl: ownerFetch });
   assert.equal(response.status, 200);
   assert.equal(await count(fixture.d1, "email_outbox"), 2, "An intentional owner resend creates exactly one new logical message.");
-  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "repair_fulfillment");
+  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "repair_fulfillment", ownerOptions);
   assert.equal(response.status, 200);
-  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "revoke_access");
+  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "revoke_access", ownerOptions);
   assert.equal(response.status, 200);
-  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "regenerate_access");
+  response = await ownerMutation(modules.ownerOrders, env, cookie, csrf, fixture.order.public_id, "regenerate_access", ownerOptions);
   assert.equal(response.status, 200);
   assert.ok(await count(fixture.d1, "owner_order_audit") >= 5, "Lookups and owner mutations must be audited.");
 
   const unpaid = await orderFixture(modules.orders, false);
   const unpaidEnv = { ...env, TRG_ORDERS: unpaid.d1 };
-  response = await ownerMutation(modules.ownerOrders, unpaidEnv, cookie, csrf, unpaid.order.public_id, "repair_fulfillment");
+  response = await ownerMutation(modules.ownerOrders, unpaidEnv, cookie, csrf, unpaid.order.public_id, "repair_fulfillment", ownerOptions);
   assert.equal(response.status, 409, "Owner repair must reject an unpaid order.");
   assert.equal(await count(unpaid.d1, "download_entitlements"), 0);
   assert.equal((await unpaid.d1.prepare("SELECT outcome FROM owner_order_audit").first()).outcome, "rejected");
@@ -218,6 +226,7 @@ async function testDuplicateStripeDelivery(modules) {
     return modules.stripeWebhook.handleStripeWebhookRequest(new Request("https://staging.example/api/stripe/webhook", {
       body: raw, headers: { "stripe-signature": signature }, method: "POST"
     }), env, {
+      deliveryProducts: DELIVERY_PRODUCTS,
       deliveryFetchImpl: async () => { providerCalls += 1; return json({ id: "stripe_delivery_email" }, 200); },
       nowMs: NOW
     });
@@ -234,7 +243,7 @@ async function testDuplicateStripeDelivery(modules) {
 
 async function paidReadyFixture(modules) {
   const fixture = await orderFixture(modules.orders, true);
-  const repaired = await modules.fulfillment.repairPaidOrderFulfillment(fixture.d1, bucket(), fixture.order.id, { nowMs: NOW });
+  const repaired = await modules.fulfillment.repairPaidOrderFulfillment(fixture.d1, bucket(), fixture.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
   assert.equal(repaired.ready, true);
   fixture.order = repaired.order;
   return fixture;
@@ -250,7 +259,7 @@ async function orderFixture(orders, paid) {
     customerEmail: "buyer@example.com", customerEmailHash: `hash-${suffix}`,
     customerEmailNormalized: "buyer@example.com", publicId: `TRG-DELIVERY-${suffix}`,
     subtotalCents: 400, totalCents: 400
-  }, [{ authorSlugsJson: '["rv-sawyer"]', currency: "USD", effectiveUnitPriceCents: 400, lastUpdatedSnapshot: "2026-07-01", lineTotalCents: 400, listPriceCents: 400, primaryAuthorSlug: "rv-sawyer", productSlug: "agency", productTitleSnapshot: "Agency", quantity: 1, versionSnapshot: "1.0" }]);
+  }, [{ authorSlugsJson: '["rv-sawyer"]', currency: "USD", effectiveUnitPriceCents: 400, lastUpdatedSnapshot: "2026-07-01", lineTotalCents: 400, listPriceCents: 400, primaryAuthorSlug: "rv-sawyer", productSlug: FIXTURE_PRODUCT.productSlug, productTitleSnapshot: "Customer Delivery Fixture", quantity: 1, versionSnapshot: "1.0" }]);
   order = await orders.attachStripeCheckoutSession(d1, order.id, { id: `cs_test_delivery_${suffix}`, url: `https://checkout.stripe.com/${suffix}` }, { updatedAt: new Date(NOW).toISOString() });
   if (paid) {
     order = await orders.updateOrderPaymentStatus(d1, order.id, { paidAt: new Date(NOW).toISOString(), paymentStatus: "paid", stripePaymentIntentId: `pi_test_delivery_${suffix}` });
@@ -263,7 +272,7 @@ function deliveryEnv(d1) {
 }
 
 function bucket() {
-  return { async get(key) { return key === "agency/product.pdf" ? { body: PDF, size: PDF.length } : null; }, async head(key) { return key === "agency/product.pdf" ? { size: PDF.length } : null; } };
+  return { async get(key) { return key === FIXTURE_PRODUCT.r2ObjectKey ? { body: PDF, size: PDF.length } : null; }, async head(key) { return key === FIXTURE_PRODUCT.r2ObjectKey ? { size: PDF.length } : null; } };
 }
 
 function resendEvent(type, emailId) {
@@ -278,7 +287,11 @@ async function sendResendWebhook(webhook, d1, event, options = {}) {
 }
 
 async function ownerMutation(handler, env, cookie, csrf, publicOrderId, action, options = {}) {
-  return handler.handleOwnerOrdersRequest(new Request("https://staging.example/owner/api/orders", { body: JSON.stringify({ action, publicOrderId }), headers: { "content-type": "application/json", cookie, origin: "https://staging.example", "x-csrf-token": csrf }, method: "POST" }), env, { fetchImpl: options.fetchImpl, nowMs: NOW });
+  return handler.handleOwnerOrdersRequest(new Request("https://staging.example/owner/api/orders", { body: JSON.stringify({ action, publicOrderId }), headers: { "content-type": "application/json", cookie, origin: "https://staging.example", "x-csrf-token": csrf }, method: "POST" }), env, {
+    deliveryProducts: options.deliveryProducts,
+    fetchImpl: options.fetchImpl,
+    nowMs: NOW
+  });
 }
 
 function stripeEvent(order) {

@@ -81,6 +81,7 @@ export async function handleStripeWebhookRequest(request, env = {}, options = {}
       productsBucket: env.TRG_PRODUCTS,
       deliveryEnv: env,
       deliveryFetchImpl: options.deliveryFetchImpl,
+      deliveryProducts: options.deliveryProducts,
       feePolicy: await getEffectiveFeePolicy(env.TRG_ORDERS,env,options.nowMs)
     });
     return jsonResponse({
@@ -168,7 +169,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       database,
       eventRecord.event,
       options.productsBucket,
-      options.nowMs
+      { deliveryProducts: options.deliveryProducts, nowMs: options.nowMs }
     );
     const delivery = await deliverProcessedPaidOrder(
       database,
@@ -196,7 +197,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
         database,
         claimed.event,
         options.productsBucket,
-        options.nowMs
+        { deliveryProducts: options.deliveryProducts, nowMs: options.nowMs }
       );
       const delivery = await deliverProcessedPaidOrder(
         database,
@@ -553,6 +554,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
 
   const fulfillment = orderAction === "paid"
     ? await repairPaidOrderFulfillment(database, options.productsBucket, Number(order.id), {
+      deliveryProducts: options.deliveryProducts,
       nowMs: options.nowMs
     })
     : null;
@@ -597,7 +599,7 @@ async function deliverProcessedPaidOrder(database, eventRecord, fulfillment, opt
   }
 }
 
-async function repairProcessedPaidOrder(database, eventRecord, productsBucket, nowMs) {
+async function repairProcessedPaidOrder(database, eventRecord, productsBucket, options = {}) {
   const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
   if (!orderId || eventRecord?.processing_status !== "processed") {
     return null;
@@ -606,7 +608,10 @@ async function repairProcessedPaidOrder(database, eventRecord, productsBucket, n
   if (!order || order.payment_status !== "paid") {
     return null;
   }
-  return repairPaidOrderFulfillment(database, productsBucket, orderId, { nowMs });
+  return repairPaidOrderFulfillment(database, productsBucket, orderId, {
+    deliveryProducts: options.deliveryProducts,
+    nowMs: options.nowMs
+  });
 }
 
 async function finalizeWebhookEvent(database, eventRecord, processingToken, outcome) {

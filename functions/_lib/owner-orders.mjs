@@ -77,7 +77,10 @@ async function handleMutation(request, env, options) {
         await recordOwnerAudit(env.TRG_ORDERS, { ...auditBase, details: { reason: "order_not_paid" }, outcome: "rejected" }, options);
         return jsonResponse({ error: "Only a verified paid order can have fulfillment repaired." }, 409);
       }
-      result = await repairPaidOrderFulfillment(env.TRG_ORDERS, env.TRG_PRODUCTS, Number(order.id), { nowMs: options.nowMs });
+      result = await repairPaidOrderFulfillment(env.TRG_ORDERS, env.TRG_PRODUCTS, Number(order.id), {
+        deliveryProducts: options.deliveryProducts,
+        nowMs: options.nowMs
+      });
       if (!result.ready) {
         throw new Error(result.result || "fulfillment_repair_failed");
       }

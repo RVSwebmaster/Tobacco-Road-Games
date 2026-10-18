@@ -21,7 +21,8 @@ export async function handleAuthorizedDownload(request, env = {}, options = {}) 
   }
 
   const entitlement = await getEntitlementById(env.TRG_ORDERS, authorization.entitlementId);
-  const product = getDeliveryProduct(authorization.productSlug);
+  const product = options.deliveryProducts?.[authorization.productSlug]
+    || getDeliveryProduct(authorization.productSlug);
   const authorized = Boolean(
     entitlement
       && entitlement.status === "active"

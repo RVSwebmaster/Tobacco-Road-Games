@@ -16,6 +16,13 @@ const MIGRATION_PATHS = [
 const SECRET = "secure-download-test-secret-which-is-long-enough";
 const NOW = Date.parse("2026-07-14T18:00:00.000Z");
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nsecure test PDF\n%%EOF\n");
+const FIXTURE_PRODUCT = Object.freeze({
+  contentType: "application/pdf",
+  customerFilename: "Secure Download Fixture.pdf",
+  productSlug: "secure-download-fixture",
+  r2ObjectKey: "test-fixtures/secure-download-fixture/product.pdf"
+});
+const DELIVERY_PRODUCTS = Object.freeze({ [FIXTURE_PRODUCT.productSlug]: FIXTURE_PRODUCT });
 let fixtureSequence = 0;
 
 async function main() {
@@ -36,7 +43,7 @@ async function main() {
   await testCompletionPageStates(orders, fulfillment, checkoutPages, checkoutCookie);
   await testNoPublicPdfAccess(publicAssetPolicy);
 
-  console.log("Secure Agency download tests passed.");
+  console.log("Secure fixture-product download tests passed.");
 }
 
 async function testOperationalRepairRoute(orders, fulfillmentRepairRoute) {
@@ -64,11 +71,13 @@ async function testOperationalRepairRoute(orders, fulfillmentRepairRoute) {
   };
 
   let response = await fulfillmentRepairRoute.handleFulfillmentRepairRequest(request(), env, {
+    deliveryProducts: DELIVERY_PRODUCTS,
     fetchImpl,
     nowMs: NOW
   });
   assert.equal(response.status, 200, "A server-verified paid Stripe Session should repair fulfillment.");
   response = await fulfillmentRepairRoute.handleFulfillmentRepairRequest(request(), env, {
+    deliveryProducts: DELIVERY_PRODUCTS,
     fetchImpl,
     nowMs: NOW + 1000
   });
@@ -112,17 +121,17 @@ async function testOperationalRepairRoute(orders, fulfillmentRepairRoute) {
 
 async function testPaidUnpaidDuplicateAndRepair(orders, fulfillment) {
   const unpaid = await createFixture(orders, false);
-  let result = await fulfillment.repairPaidOrderFulfillment(unpaid.d1, createBucket(), unpaid.order.id, { nowMs: NOW });
+  let result = await fulfillment.repairPaidOrderFulfillment(unpaid.d1, createBucket(), unpaid.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
   assert.equal(result.result, "order_not_paid", "Unpaid orders must not receive entitlements.");
   assert.equal(await countRows(unpaid.d1, "download_entitlements"), 0);
 
   const paid = await createFixture(orders, true);
   const paidAt = (await orders.getOrderById(paid.d1, paid.order.id)).paid_at;
-  result = await fulfillment.repairPaidOrderFulfillment(paid.d1, createBucket(), paid.order.id, { nowMs: NOW });
-  assert.equal(result.ready, true, "A paid Agency order should be repairable into a ready state.");
+  result = await fulfillment.repairPaidOrderFulfillment(paid.d1, createBucket(), paid.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
+  assert.equal(result.ready, true, "A paid fixture order should be repairable into a ready state.");
   assert.equal(result.entitlements.length, 1, "Paid repair should create one entitlement per order item.");
   const originalFulfillmentUpdatedAt = result.order.fulfillment_updated_at;
-  result = await fulfillment.repairPaidOrderFulfillment(paid.d1, createBucket(), paid.order.id, { nowMs: NOW + 1000 });
+  result = await fulfillment.repairPaidOrderFulfillment(paid.d1, createBucket(), paid.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 });
   assert.equal(result.ready, true, "Repeating paid repair should be safe.");
   assert.equal(result.result, "already_fulfillment_ready", "A ready order should take the timestamp-preserving no-op path.");
   assert.equal(await countRows(paid.d1, "download_entitlements"), 1, "Duplicate repair must not duplicate entitlements.");
@@ -134,7 +143,7 @@ async function testPaidUnpaidDuplicateAndRepair(orders, fulfillment) {
 
 async function testMissingObject(orders, fulfillment) {
   const fixture = await createFixture(orders, true);
-  const result = await fulfillment.repairPaidOrderFulfillment(fixture.d1, createBucket({ missing: true }), fixture.order.id, { nowMs: NOW });
+  const result = await fulfillment.repairPaidOrderFulfillment(fixture.d1, createBucket({ missing: true }), fixture.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
   assert.equal(result.result, "object_missing", "A missing private object should create a recoverable fulfillment failure.");
   const order = await orders.getOrderById(fixture.d1, fixture.order.id);
   assert.equal(order.payment_status, "paid", "A storage failure must preserve verified paid status.");
@@ -145,7 +154,7 @@ async function testMissingObject(orders, fulfillment) {
 
 async function testCredentialsAndDelivery(orders, fulfillment, authorization, download) {
   const fixture = await createFixture(orders, true);
-  const repaired = await fulfillment.repairPaidOrderFulfillment(fixture.d1, createBucket(), fixture.order.id, { nowMs: NOW });
+  const repaired = await fulfillment.repairPaidOrderFulfillment(fixture.d1, createBucket(), fixture.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
   const entitlement = repaired.entitlements[0];
   const credential = await authorization.createDownloadCredential(entitlement, SECRET, { nowMs: NOW });
   const bucket = createBucket();
@@ -154,10 +163,10 @@ async function testCredentialsAndDelivery(orders, fulfillment, authorization, do
     DOWNLOAD_SIGNING_SECRET: SECRET,
     TRG_ORDERS: fixture.d1,
     TRG_PRODUCTS: bucket
-  }, { nowMs: NOW + 1000 });
+  }, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 });
   assert.equal(response.status, 200, "A valid credential should retrieve the entitled PDF.");
   assert.equal(response.headers.get("content-type"), "application/pdf");
-  assert.match(response.headers.get("content-disposition") || "", /filename="Agency\.pdf"/);
+  assert.match(response.headers.get("content-disposition") || "", /filename="Secure Download Fixture\.pdf"/);
   assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.equal(response.headers.get("content-length"), String(PDF_BYTES.length));
@@ -167,7 +176,7 @@ async function testCredentialsAndDelivery(orders, fulfillment, authorization, do
     DOWNLOAD_SIGNING_SECRET: SECRET,
     TRG_ORDERS: fixture.d1,
     TRG_PRODUCTS: bucket
-  }, { nowMs: NOW + 2000 });
+  }, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 2000 });
   assert.equal(response.status, 200, "The same unexpired credential must allow a browser retry.");
   await response.arrayBuffer();
   assert.equal(await countRows(fixture.d1, "download_attempts"), 2, "Both successful retrievals should be recorded.");
@@ -179,7 +188,7 @@ async function testCredentialsAndDelivery(orders, fulfillment, authorization, do
   response = await download.handleAuthorizedDownload(
     new Request(`https://example.com/store/download?credential=${altered}`),
     { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: fixture.d1, TRG_PRODUCTS: bucket },
-    { nowMs: NOW + 1000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
   );
   assert.equal(response.status, 403, "An altered credential must fail.");
 
@@ -190,7 +199,7 @@ async function testCredentialsAndDelivery(orders, fulfillment, authorization, do
   response = await download.handleAuthorizedDownload(
     new Request(`https://example.com/store/download?credential=${shortCredential}`),
     { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: fixture.d1, TRG_PRODUCTS: bucket },
-    { nowMs: NOW + 2000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 2000 }
   );
   assert.equal(response.status, 410, "An expired credential must fail.");
 
@@ -198,12 +207,12 @@ async function testCredentialsAndDelivery(orders, fulfillment, authorization, do
     id: 999999,
     order_id: entitlement.order_id,
     order_item_id: entitlement.order_item_id,
-    product_slug: "agency"
+    product_slug: FIXTURE_PRODUCT.productSlug
   }, SECRET, { nowMs: NOW });
   response = await download.handleAuthorizedDownload(
     new Request(`https://example.com/store/download?credential=${unknownCredential}`),
     { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: fixture.d1, TRG_PRODUCTS: bucket },
-    { nowMs: NOW + 1000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
   );
   assert.equal(response.status, 403, "An unknown entitlement must fail.");
 }
@@ -214,7 +223,7 @@ async function testSubstitutionAndRevocation(orders, fulfillment, authorization,
     crossProductFixture.d1,
     createBucket(),
     crossProductFixture.order.id,
-    { nowMs: NOW }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW }
   );
   let entitlement = repaired.entitlements[0];
   let credential = await authorization.createDownloadCredential({
@@ -224,7 +233,7 @@ async function testSubstitutionAndRevocation(orders, fulfillment, authorization,
   let response = await download.handleAuthorizedDownload(
     new Request(`https://example.com/store/download?credential=${credential}`),
     { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: crossProductFixture.d1, TRG_PRODUCTS: createBucket() },
-    { nowMs: NOW + 1000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
   );
   assert.equal(response.status, 403, "A validly signed cross-product credential must fail.");
 
@@ -235,12 +244,12 @@ async function testSubstitutionAndRevocation(orders, fulfillment, authorization,
   response = await download.handleAuthorizedDownload(
     new Request(`https://example.com/store/download?credential=${credential}`),
     { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: crossProductFixture.d1, TRG_PRODUCTS: createBucket() },
-    { nowMs: NOW + 1000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
   );
   assert.equal(response.status, 403, "An entitlement with a substituted R2 key must fail before R2 access.");
 
   const revokedFixture = await createFixture(orders, true);
-  repaired = await fulfillment.repairPaidOrderFulfillment(revokedFixture.d1, createBucket(), revokedFixture.order.id, { nowMs: NOW });
+  repaired = await fulfillment.repairPaidOrderFulfillment(revokedFixture.d1, createBucket(), revokedFixture.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
   entitlement = repaired.entitlements[0];
   credential = await authorization.createDownloadCredential(entitlement, SECRET, { nowMs: NOW });
   await revokedFixture.d1.prepare(`
@@ -249,7 +258,7 @@ async function testSubstitutionAndRevocation(orders, fulfillment, authorization,
   response = await download.handleAuthorizedDownload(
     new Request(`https://example.com/store/download?credential=${credential}`),
     { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: revokedFixture.d1, TRG_PRODUCTS: createBucket() },
-    { nowMs: NOW + 1000 }
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
   );
   assert.equal(response.status, 403, "A revoked entitlement must fail.");
 }
@@ -274,7 +283,7 @@ async function testCompletionPageStates(orders, fulfillment, checkoutPages, chec
   let response = await checkoutPages.handleCheckoutCompletePage(request(), baseEnv);
   let body = await response.text();
   assert.match(body, /Payment processing/i);
-  assert.doesNotMatch(body, /Download Agency PDF/i, "Unpaid orders must not display a download control.");
+  assert.doesNotMatch(body, />Download PDF<\/a>/i, "Unpaid orders must not display a download control.");
 
   await orders.updateOrderPaymentStatus(fixture.d1, fixture.order.id, {
     paidAt: new Date(NOW).toISOString(),
@@ -284,7 +293,7 @@ async function testCompletionPageStates(orders, fulfillment, checkoutPages, chec
   response = await checkoutPages.handleCheckoutCompletePage(request(), baseEnv);
   body = await response.text();
   assert.match(body, /download is being prepared/i, "Paid orders awaiting fulfillment should show preparation.");
-  assert.doesNotMatch(body, /Download Agency PDF/i);
+  assert.doesNotMatch(body, />Download PDF<\/a>/i);
 
   await fixture.d1.prepare(`
     UPDATE orders SET fulfillment_status = 'failed', fulfillment_failure_code = 'object_missing' WHERE id = ?
@@ -294,10 +303,10 @@ async function testCompletionPageStates(orders, fulfillment, checkoutPages, chec
   assert.match(body, /download needs attention/i, "Fulfillment failures should show a support-oriented message.");
   assert.doesNotMatch(body, /object_missing/i, "Internal failure codes must not be exposed.");
 
-  await fulfillment.repairPaidOrderFulfillment(fixture.d1, createBucket(), fixture.order.id, { nowMs: NOW });
+  await fulfillment.repairPaidOrderFulfillment(fixture.d1, createBucket(), fixture.order.id, { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW });
   response = await checkoutPages.handleCheckoutCompletePage(request(), baseEnv);
   body = await response.text();
-  assert.match(body, /Download Agency PDF/i, "A ready active entitlement should display the download button.");
+  assert.match(body, />Download PDF<\/a>/i, "A ready active entitlement should display the download button.");
   assert.match(body, /\/store\/download\?credential=/i, "The completion page should use the private server download route.");
 }
 
@@ -333,8 +342,8 @@ async function createFixture(orders, paid) {
     lineTotalCents: 400,
     listPriceCents: 500,
     primaryAuthorSlug: "rv-sawyer",
-    productSlug: "agency",
-    productTitleSnapshot: "Agency",
+    productSlug: FIXTURE_PRODUCT.productSlug,
+    productTitleSnapshot: "Secure Download Fixture",
     quantity: 1,
     versionSnapshot: "2026.1"
   }]);
@@ -355,13 +364,13 @@ async function createFixture(orders, paid) {
 function createBucket(options = {}) {
   return {
     async get(key) {
-      if (options.missing || key !== "agency/product.pdf") {
+      if (options.missing || key !== FIXTURE_PRODUCT.r2ObjectKey) {
         return null;
       }
       return { body: PDF_BYTES, size: PDF_BYTES.length };
     },
     async head(key) {
-      if (options.missing || key !== "agency/product.pdf") {
+      if (options.missing || key !== FIXTURE_PRODUCT.r2ObjectKey) {
         return null;
       }
       return { size: 9630946 };

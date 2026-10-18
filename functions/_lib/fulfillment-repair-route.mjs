@@ -50,7 +50,10 @@ export async function handleFulfillmentRepairRequest(request, env = {}, options 
     env.TRG_ORDERS,
     env.TRG_PRODUCTS,
     Number(order.id),
-    { nowMs: options.nowMs }
+    {
+      deliveryProducts: options.deliveryProducts,
+      nowMs: options.nowMs
+    }
   );
   if (!fulfillment.ready) {
     return jsonResponse({
