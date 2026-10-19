@@ -891,7 +891,42 @@ function load(relativePath) {
   );
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  ROOT,
+  NOW_MS,
+  CREATOR_A,
+  CREATOR_B,
+  OWNER_ID,
+  PDF_BYTES,
+  COVER_BYTES,
+  REAL_CATALOG_FILES,
+  createSubmittedProduct,
+  createCreator,
+  createHistoricalEntitlement,
+  creatorRequest,
+  creatorFileRequest,
+  createSuccessfulDispatch,
+  assertAudit,
+  commerceSnapshot,
+  cleanupDatabase,
+  listingRecord,
+  fileRecord,
+  activeListingCount,
+  catalogProduct,
+  countFor,
+  countAll,
+  applyMigrations,
+  createD1,
+  createLocalBucket,
+  copyCatalogFixture,
+  hashFiles,
+  sha256,
+  load
+};
