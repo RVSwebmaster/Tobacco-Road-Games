@@ -28,6 +28,8 @@ async function main() {
     "022_connect_sandbox_and_payout_batches.sql",
     "023_marketplace_policy_alignment.sql",
     "024_product_inactivity_lifecycle.sql",
+    "031_launch_week_creator_reputation.sql",
+    "053_creator_listing_inactivity_exemption.sql",
   ])
     raw.exec(fs.readFileSync(path.join(ROOT, "migrations", name), "utf8"));
   const db = d1(raw),
@@ -73,7 +75,7 @@ async function main() {
     raw
       .prepare("SELECT inactivity_state FROM creator_listings WHERE id='free'")
       .get().inactivity_state,
-    "active",
+    "warning",
   );
   assert.equal(
     raw
@@ -83,7 +85,10 @@ async function main() {
       .get(line).activity_type,
     "free_acquisition",
   );
-  await inactivity.runInactivityCheck(db, { nowMs: NOW + 30 * 86400000 });
+  await inactivity.runInactivityCheck(db, {
+    nowMs: NOW + 30 * 86400000,
+    getCatalogProduct: () => ({ saleEnabled: false, buyMode: "retired" }),
+  });
   assert.equal(
     raw
       .prepare("SELECT inactivity_state FROM creator_listings WHERE id='paid'")

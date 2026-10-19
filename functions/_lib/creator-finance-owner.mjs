@@ -31,6 +31,7 @@ import {
 import {
   listInactivityOperations,
   runInactivityCheck,
+  setListingInactivityExemption,
 } from "./product-inactivity.mjs";
 import {
   listCreatorAuditOperations,
@@ -238,7 +239,21 @@ export async function handleCreatorFinanceOwnerRequest(
     if (body.action === "run_inactivity_check")
       return json({
         ok: true,
-        result: await runInactivityCheck(db, { nowMs: options.nowMs }),
+        result: await runInactivityCheck(db, {
+          nowMs: options.nowMs,
+          env,
+          dispatchOptions: options.dispatchOptions || {},
+        }),
+      });
+    if (body.action === "set_inactivity_exemption")
+      return json({
+        ok: true,
+        result: await setListingInactivityExemption(db, {
+          listingId: body.listingId,
+          exemptionKind: body.exemptionKind,
+          actorId: auth.username,
+          nowMs: options.nowMs,
+        }),
       });
     if (body.action === "run_account_audits")
       return json({
