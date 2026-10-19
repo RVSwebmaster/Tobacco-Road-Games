@@ -29,7 +29,11 @@ async function main() {
   assert.equal((await creatorRoute.handleCreatorRequest(get("operator", "preferred"), env, { database: db, nowMs: NOW })).status, 403);
 
   const product = { authorSlugs: ["seller"], buyMode: "cart", creatorId: annual.creatorId, currency: "USD", effectivePriceCents: 500, fulfillmentEligible: true, lastUpdated: "2026-09-07", listedPriceCents: 500, mediaType: "digital", priceCents: 500, saleEnabled: false, slug: "agency", status: "available-direct", title: "Identity Test Product", version: "1" }, catalogMap = new Map([["agency", product]]), deliveryProducts = { agency: { contentType: "application/pdf", customerFilename: "Identity Test Product.pdf", productSlug: "agency", r2ObjectKey: "agency/product.pdf" } }, deliveryHeads = { agency: { size: 100 } }, routeOptions = { database: db, nowMs: NOW, catalogMap, deliveryProducts, deliveryHeads, emailHashSecret: "identity-test-email-secret" };
-  raw.prepare("UPDATE creator_listings SET creator_id=?,public_product_slug='agency',lifecycle_state='active',publication_state='published',updated_at=? WHERE source_product_slug='agency'").run(annual.creatorId, ISO);
+  raw.prepare(`INSERT INTO creator_listings(
+    id,creator_id,slug,source_product_slug,public_product_slug,title,lifecycle_state,publication_state,
+    inactivity_state,listed_price_cents,media_type,pricing_model,first_published_at,published_at,created_at,updated_at
+  ) VALUES('listing-preferred-purchase-agency',?,'agency','agency','agency','Identity Test Product',
+    'active','published','active',500,'digital','fixed',?,?,?,?)`).run(annual.creatorId, ISO, ISO, ISO, ISO);
   raw.prepare("UPDATE runtime_settings SET setting_value='OPEN',updated_at=?,updated_by='test' WHERE setting_key='store_state'").run(ISO);
   response = await balanceRoute.handleCreatorBalanceRequest(get("operator", `balance?creator=${annual.creatorId}&product=agency`), env, routeOptions); payload = await response.json();
   assert.equal(payload.internalPurchase.creator.id, annual.creatorId); assert.equal(payload.internalPurchase.canUseBalance, true); assert.equal(payload.internalPurchase.allProductsEligible, true); assert.equal(payload.balance.availableCents, 50000);
