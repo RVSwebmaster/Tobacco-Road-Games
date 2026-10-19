@@ -7,6 +7,7 @@ const { pathToFileURL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
 const ROOT = path.resolve(__dirname, "..");
+const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
 const CREATOR_ID = "creator-mock-publication-task5";
 const CREATOR_USER_ID = "user-mock-publication-task5";
 const CREATOR_EMAIL = "mock-task5@example.invalid";
@@ -160,21 +161,26 @@ async function main() {
       sha256(COVER_BYTES)
     );
 
+    const ownerFixture = await createOwnerAuthFixture({
+      ownerAuth,
+      ownerId: OWNER_ID,
+      nowMs: NOW_MS,
+      sessionSecret: OWNER_SESSION_SECRET,
+      csrfSecret: OWNER_CSRF_SECRET
+    });
     const ownerEnvironment = {
       ...creatorEnvironment,
-      OWNER_SESSION_SECRET,
-      OWNER_CSRF_SECRET,
+      ...ownerFixture.environment,
       GITHUB_PUBLISH_REF: "staging",
       GITHUB_REPO_OWNER: "mock-owner",
       GITHUB_REPO_NAME: "mock-repository",
       GITHUB_TOKEN: "mock-task5-token"
     };
-    const ownerSession = await ownerAuth.createSessionToken(
-      OWNER_ID,
-      OWNER_SESSION_SECRET,
-      NOW_MS
-    );
-    const ownerOptions = { database: d1, nowMs: NOW_MS };
+    const ownerOptions = {
+      database: d1,
+      nowMs: NOW_MS,
+      ...ownerFixture.options
+    };
     const dispatch = createSuccessfulDispatch();
     const publicationOptions = {
       ...ownerOptions,
@@ -188,7 +194,7 @@ async function main() {
     const storageKeysBeforeNegativePublish = bucket.keys();
 
     response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, ownerSession, {
+      ownerRequest(ownerFixture, {
         action: "publish",
         listingId: productId
       }),
@@ -208,7 +214,7 @@ async function main() {
     assert.equal(stagedProductFile.delivery_object_key, null);
 
     response = await creatorReview.handleCreatorReviewRequest(
-      await ownerRequest(ownerAuth, ownerSession, {
+      ownerRequest(ownerFixture, {
         action: "approve",
         listingId: productId,
         note: "Approved for the Task 5 publication sandbox."
@@ -225,7 +231,7 @@ async function main() {
 
     for (const fileId of [productFileId, coverFileId]) {
       response = await creatorPublication.handleCreatorPublicationRequest(
-        await ownerRequest(ownerAuth, ownerSession, {
+        ownerRequest(ownerFixture, {
           action: "accept_file",
           fileId
         }),
@@ -237,7 +243,7 @@ async function main() {
     }
 
     response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, ownerSession, {
+      ownerRequest(ownerFixture, {
         action: "publish",
         listingId: productId
       }),
@@ -617,27 +623,12 @@ function creatorFileRequest(
   );
 }
 
-async function ownerRequest(
-  ownerAuth,
-  ownerSession,
+function ownerRequest(
+  ownerFixture,
   body,
   route = "/owner/api/creator-publication"
 ) {
-  const csrf = await ownerAuth.createCsrfToken(
-    OWNER_ID,
-    OWNER_CSRF_SECRET,
-    NOW_MS
-  );
-  return new Request(`https://example.com${route}`, {
-    method: "POST",
-    headers: {
-      origin: "https://example.com",
-      cookie: `${ownerAuth.SESSION_COOKIE_NAME}=${ownerSession}; ${ownerAuth.CSRF_COOKIE_NAME}=${csrf}`,
-      "x-csrf-token": csrf,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
+  return ownerFixture.jsonRequest(route, body);
 }
 
 function listingRecord(database, listingId) {
