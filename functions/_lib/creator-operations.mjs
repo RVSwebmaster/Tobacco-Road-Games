@@ -8,6 +8,7 @@ import { getCreatorFinance, statementCsv } from "./creator-finance.mjs";
 import { getCreatorPayoutStatus } from "./creator-payout-readiness.mjs";
 import { reactivateListing } from "./product-inactivity.mjs";
 import { recordListingDeclaration } from "./publication-readiness.mjs";
+import { pauseListingPublication } from "./creator-publication.mjs";
 import {
   getCreatorBusinessReport,
   creatorBusinessReportCsv,
@@ -176,13 +177,21 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       route.split("/")[1],
       "submitted",
     );
-  if (request.method === "POST" && /^listings\/[^/]+\/pause$/.test(route))
+  if (request.method === "POST" && /^listings\/[^/]+\/withdraw$/.test(route))
     return changeListingState(
       request,
       database,
       creator,
       route.split("/")[1],
-      "paused",
+      "withdrawn",
+    );
+  if (request.method === "POST" && /^listings\/[^/]+\/pause$/.test(route))
+    return pauseCreatorListing(
+      database,
+      creator,
+      route.split("/")[1],
+      env,
+      options,
     );
   if (
     request.method === "POST" &&
@@ -637,7 +646,7 @@ async function changeListingState(request, db, creator, id, state) {
   if (!["manager", "editor"].includes(creator.permission)) return forbidden();
   const current = await db
     .prepare(
-      "SELECT lifecycle_state FROM creator_listings WHERE id=? AND creator_id=?",
+      "SELECT * FROM creator_listings WHERE id=? AND creator_id=?",
     )
     .bind(id, creator.id)
     .first();
@@ -646,8 +655,12 @@ async function changeListingState(request, db, creator, id, state) {
     return invalid("Tobacco Road Games has placed this listing on Owner Review Hold. Corrective edits and file replacement remain available, but only Tobacco Road Games can restore saleability.");
   if (state === "submitted" && !EDITABLE_STATES.has(current.lifecycle_state))
     return invalid("This listing cannot be submitted from its current state.");
-  if (state === "paused" && current.lifecycle_state !== "active")
-    return invalid("Only an active listing can be paused.");
+  if (
+    state === "withdrawn" &&
+    (current.lifecycle_state !== "submitted" ||
+      current.publication_state !== "not_approved")
+  )
+    return invalid("Only a pending submission can be withdrawn.");
   const now = new Date().toISOString();
   if (state === "submitted") {
     let schema = true;
@@ -674,12 +687,13 @@ async function changeListingState(request, db, creator, id, state) {
       }
     }
   }
+  const nextState = state === "withdrawn" ? "draft" : state;
   await db.batch([
     db
       .prepare(
         `UPDATE creator_listings SET lifecycle_state=?,submitted_at=CASE WHEN ?='submitted' THEN ? ELSE submitted_at END,updated_at=? WHERE id=? AND creator_id=?`,
       )
-      .bind(state, state, now, now, id, creator.id),
+      .bind(nextState, nextState, now, now, id, creator.id),
     db
       .prepare(
         "INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'creator',?,?,?,?)",
@@ -688,12 +702,36 @@ async function changeListingState(request, db, creator, id, state) {
         id,
         creator.id,
         creator.user_id,
-        state === "submitted" ? "submitted" : "pause_requested",
-        JSON.stringify({ from: current.lifecycle_state, to: state }),
+        state === "submitted" ? "submitted" : "submission_withdrawn",
+        JSON.stringify({ from: current.lifecycle_state, to: nextState }),
         now,
       ),
   ]);
-  return json({ ok: true, state });
+  return json({ ok: true, state: nextState });
+}
+
+async function pauseCreatorListing(db, creator, id, env, options) {
+  if (!["manager", "editor"].includes(creator.permission)) return forbidden();
+  const listing = await db
+    .prepare("SELECT * FROM creator_listings WHERE id=? AND creator_id=?")
+    .bind(id, creator.id)
+    .first();
+  if (!listing) return notFound();
+  if (
+    listing.lifecycle_state !== "active" ||
+    listing.publication_state !== "published" ||
+    !listing.public_product_slug
+  )
+    return invalid("Only an active published listing can be taken off sale.");
+  return pauseListingPublication({
+    listing,
+    database: db,
+    env,
+    actorType: "creator",
+    actorId: creator.user_id,
+    nowMs: options.nowMs,
+    dispatchOptions: options.dispatchOptions || {},
+  });
 }
 async function analytics(db, creator) {
   const totals = await salesRows(db, creator.id);
