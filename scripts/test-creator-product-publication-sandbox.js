@@ -7,13 +7,14 @@ const { pathToFileURL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
 const ROOT = path.resolve(__dirname, "..");
+const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
 const CREATOR_ID = "creator-mock-publication-task5";
 const CREATOR_USER_ID = "user-mock-publication-task5";
 const CREATOR_EMAIL = "mock-task5@example.invalid";
 const CREATOR_SESSION = "mock-task5-creator-session";
 const CREATOR_CSRF = "mock-task5-creator-csrf";
 const OWNER_ID = "owner-publication-task5@example.invalid";
-const OWNER_ACCESS_TOKEN = "mock-task5-owner-access-token";
+const OWNER_SESSION_SECRET = "mock-task5-owner-session-secret-32-bytes";
 const OWNER_CSRF_SECRET = "mock-task5-owner-csrf-secret-32-bytes";
 const PRODUCT_SLUG = "mock-creator-publication-task5";
 const PRODUCT_TITLE = "Mock Creator Publication Product Task 5";
@@ -160,12 +161,16 @@ async function main() {
       sha256(COVER_BYTES)
     );
 
+    const ownerFixture = await createOwnerAuthFixture({
+      ownerAuth,
+      ownerId: OWNER_ID,
+      nowMs: NOW_MS,
+      sessionSecret: OWNER_SESSION_SECRET,
+      csrfSecret: OWNER_CSRF_SECRET
+    });
     const ownerEnvironment = {
       ...creatorEnvironment,
-      OWNER_ACCESS_AUD: "mock-task5-audience",
-      OWNER_ACCESS_EMAIL: OWNER_ID,
-      OWNER_ACCESS_TEAM_DOMAIN: "https://access.example.invalid",
-      OWNER_CSRF_SECRET,
+      ...ownerFixture.environment,
       GITHUB_PUBLISH_REF: "staging",
       GITHUB_REPO_OWNER: "mock-owner",
       GITHUB_REPO_NAME: "mock-repository",
@@ -174,18 +179,7 @@ async function main() {
     const ownerOptions = {
       database: d1,
       nowMs: NOW_MS,
-      verifyOwnerAccessRequest: async (request) => {
-        if (
-          request.headers.get("cf-access-jwt-assertion") !== OWNER_ACCESS_TOKEN
-        ) {
-          return {
-            valid: false,
-            reason: "missing_token",
-            userMessage: "Owner access was not authorized."
-          };
-        }
-        return { valid: true, csrfSubject: OWNER_ID, email: OWNER_ID };
-      }
+      ...ownerFixture.options
     };
     const dispatch = createSuccessfulDispatch();
     const publicationOptions = {
@@ -200,7 +194,7 @@ async function main() {
     const storageKeysBeforeNegativePublish = bucket.keys();
 
     response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, {
+      ownerRequest(ownerFixture, {
         action: "publish",
         listingId: productId
       }),
@@ -220,7 +214,7 @@ async function main() {
     assert.equal(stagedProductFile.delivery_object_key, null);
 
     response = await creatorReview.handleCreatorReviewRequest(
-      await ownerRequest(ownerAuth, {
+      ownerRequest(ownerFixture, {
         action: "approve",
         listingId: productId,
         note: "Approved for the Task 5 publication sandbox."
@@ -237,7 +231,7 @@ async function main() {
 
     for (const fileId of [productFileId, coverFileId]) {
       response = await creatorPublication.handleCreatorPublicationRequest(
-        await ownerRequest(ownerAuth, {
+        ownerRequest(ownerFixture, {
           action: "accept_file",
           fileId
         }),
@@ -249,7 +243,7 @@ async function main() {
     }
 
     response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, {
+      ownerRequest(ownerFixture, {
         action: "publish",
         listingId: productId
       }),
@@ -629,27 +623,12 @@ function creatorFileRequest(
   );
 }
 
-async function ownerRequest(
-  ownerAuth,
+function ownerRequest(
+  ownerFixture,
   body,
   route = "/owner/api/creator-publication"
 ) {
-  const csrf = await ownerAuth.createCsrfToken(
-    OWNER_ID,
-    OWNER_CSRF_SECRET,
-    NOW_MS
-  );
-  return new Request(`https://example.com${route}`, {
-    method: "POST",
-    headers: {
-      origin: "https://example.com",
-      cookie: `${ownerAuth.CSRF_COOKIE_NAME}=${csrf}`,
-      "x-csrf-token": csrf,
-      "cf-access-jwt-assertion": OWNER_ACCESS_TOKEN,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
+  return ownerFixture.jsonRequest(route, body);
 }
 
 function listingRecord(database, listingId) {

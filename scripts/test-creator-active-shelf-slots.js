@@ -7,6 +7,7 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
+const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
 const NOW_MS = Date.parse("2026-10-18T22:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const STANDARD_CAP = 20;
@@ -16,6 +17,7 @@ const STANDARD_USER = "user-mock-shelf-standard";
 const PREFERRED_CREATOR = "creator-mock-shelf-preferred";
 const PREFERRED_USER = "user-mock-shelf-preferred";
 const OWNER_ID = "rv-local-owner";
+const OWNER_SESSION_SECRET = "mock-task6-owner-session-secret-32-bytes";
 const OWNER_CSRF_SECRET = "mock-task6-owner-csrf-secret-32-bytes";
 const REAL_CATALOG_FILES = Object.freeze([
   "data/products.json",
@@ -108,11 +110,18 @@ async function main() {
     );
     copyCatalogFixture(catalogRoot);
 
+    const ownerFixture = await createOwnerAuthFixture({
+      ownerAuth,
+      ownerId: OWNER_ID,
+      nowMs: NOW_MS,
+      sessionSecret: OWNER_SESSION_SECRET,
+      csrfSecret: OWNER_CSRF_SECRET,
+      origin: "http://127.0.0.1"
+    });
     const environment = {
       TRG_ORDERS: d1,
       TRG_PRODUCTS: bucket,
-      LOCAL_OWNER_BYPASS: "1",
-      OWNER_CSRF_SECRET,
+      ...ownerFixture.environment,
       GITHUB_PUBLISH_REF: "staging",
       GITHUB_REPO_OWNER: "mock-owner",
       GITHUB_REPO_NAME: "mock-repository",
@@ -122,6 +131,7 @@ async function main() {
     const publicationOptions = {
       database: d1,
       nowMs: NOW_MS,
+      ...ownerFixture.options,
       dispatchOptions: {
         fetchImpl: dispatch.fetchImpl,
         pollIntervalMs: 1,
@@ -136,7 +146,7 @@ async function main() {
         dispatch,
         environment,
         listing,
-        ownerAuth,
+        ownerFixture,
         publicationOptions,
         publishIntake,
         catalogRoot
@@ -154,7 +164,7 @@ async function main() {
       standardOverflow
     );
     let response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, {
+      ownerRequest(ownerFixture, {
         action: "publish",
         listingId: standardOverflow.id
       }),
@@ -179,7 +189,7 @@ async function main() {
       dispatch,
       environment,
       listing: preferredListings[0],
-      ownerAuth,
+      ownerFixture,
       publicationOptions,
       publishIntake,
       catalogRoot
@@ -193,7 +203,7 @@ async function main() {
         dispatch,
         environment,
         listing,
-        ownerAuth,
+        ownerFixture,
         publicationOptions,
         publishIntake,
         catalogRoot
@@ -211,7 +221,7 @@ async function main() {
       preferredOverflow
     );
     response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, {
+      ownerRequest(ownerFixture, {
         action: "publish",
         listingId: preferredOverflow.id
       }),
@@ -235,7 +245,7 @@ async function main() {
     const beforePause = listingRecord(database, pausedListing.id);
     const pausedPdfHash = sha256(bucket.read(`${pausedListing.slug}/product.pdf`));
     response = await creatorPublication.handleCreatorPublicationRequest(
-      await ownerRequest(ownerAuth, {
+      ownerRequest(ownerFixture, {
         action: "pause_publication",
         listingId: pausedListing.id
       }),
@@ -285,7 +295,7 @@ async function main() {
       dispatch,
       environment,
       listing: standardOverflow,
-      ownerAuth,
+      ownerFixture,
       publicationOptions,
       publishIntake,
       catalogRoot
@@ -572,14 +582,14 @@ async function publishListing({
   dispatch,
   environment,
   listing,
-  ownerAuth,
+  ownerFixture,
   publicationOptions,
   publishIntake,
   catalogRoot
 }) {
   const beforeDispatch = dispatch.count();
   const response = await creatorPublication.handleCreatorPublicationRequest(
-    await ownerRequest(ownerAuth, {
+    ownerRequest(ownerFixture, {
       action: "publish",
       listingId: listing.id
     }),
@@ -633,22 +643,8 @@ function createSuccessfulDispatch() {
   };
 }
 
-async function ownerRequest(ownerAuth, body) {
-  const csrf = await ownerAuth.createCsrfToken(
-    OWNER_ID,
-    OWNER_CSRF_SECRET,
-    NOW_MS
-  );
-  return new Request("http://127.0.0.1/owner/api/creator-publication", {
-    method: "POST",
-    headers: {
-      origin: "http://127.0.0.1",
-      cookie: `${ownerAuth.CSRF_COOKIE_NAME}=${csrf}`,
-      "x-csrf-token": csrf,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
+function ownerRequest(ownerFixture, body) {
+  return ownerFixture.jsonRequest("/owner/api/creator-publication", body);
 }
 
 function captureBlockedState(

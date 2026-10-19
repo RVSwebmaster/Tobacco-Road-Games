@@ -7,13 +7,14 @@ const { pathToFileURL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
 const ROOT = path.resolve(__dirname, "..");
+const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
 const CREATOR_ID = "creator-mock-review-task4b";
 const CREATOR_USER_ID = "user-mock-review-task4b";
 const CREATOR_EMAIL = "mock-task4b@example.invalid";
 const CREATOR_SESSION = "mock-task4b-creator-session";
 const CREATOR_CSRF = "mock-task4b-creator-csrf";
 const OWNER_ID = "owner-review-task4b@example.invalid";
-const OWNER_ACCESS_TOKEN = "mock-task4b-owner-access-token";
+const OWNER_SESSION_SECRET = "mock-task4b-owner-session-secret-32-bytes";
 const OWNER_CSRF_SECRET = "mock-task4b-owner-csrf-secret-32-bytes";
 const NOW_MS = Date.parse("2026-10-18T19:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
@@ -96,32 +97,25 @@ async function main() {
       earningsCents: 0
     });
 
+    const ownerFixture = await createOwnerAuthFixture({
+      ownerAuth,
+      ownerId: OWNER_ID,
+      nowMs: NOW_MS,
+      sessionSecret: OWNER_SESSION_SECRET,
+      csrfSecret: OWNER_CSRF_SECRET
+    });
     const ownerEnvironment = {
       ...creatorEnvironment,
-      OWNER_ACCESS_AUD: "mock-task4b-audience",
-      OWNER_ACCESS_EMAIL: OWNER_ID,
-      OWNER_ACCESS_TEAM_DOMAIN: "https://access.example.invalid",
-      OWNER_CSRF_SECRET
+      ...ownerFixture.environment
     };
     const ownerOptions = {
       database: d1,
       nowMs: NOW_MS,
-      verifyOwnerAccessRequest: async (request) => {
-        if (
-          request.headers.get("cf-access-jwt-assertion") !== OWNER_ACCESS_TOKEN
-        ) {
-          return {
-            valid: false,
-            reason: "missing_token",
-            userMessage: "Owner access was not authorized."
-          };
-        }
-        return { valid: true, csrfSubject: OWNER_ID, email: OWNER_ID };
-      }
+      ...ownerFixture.options
     };
 
     let response = await creatorReview.handleCreatorReviewRequest(
-      ownerReadRequest(),
+      ownerFixture.readRequest("/owner/api/creator-reviews"),
       ownerEnvironment,
       ownerOptions
     );
@@ -145,12 +139,16 @@ async function main() {
       ownerOptions
     );
     const unauthorizedStatus = response.status;
-    assert.equal(unauthorizedStatus, 403);
+    assert.equal(unauthorizedStatus, ownerFixture.unauthorizedStatus);
     assert.equal(listingState(database, ids.approval).lifecycle_state, "submitted");
     assert.equal(decisionAuditCount(database), auditCountBeforeUnauthorized);
 
     response = await creatorReview.handleCreatorReviewRequest(
-      await ownerDecisionRequest(ownerAuth, ids.approval, "publish", "Invalid"),
+      ownerFixture.jsonRequest("/owner/api/creator-reviews", {
+        listingId: ids.approval,
+        action: "publish",
+        note: "Invalid"
+      }),
       ownerEnvironment,
       ownerOptions
     );
@@ -161,12 +159,11 @@ async function main() {
 
     const approvalNote = "Approved after Owner review.";
     response = await creatorReview.handleCreatorReviewRequest(
-      await ownerDecisionRequest(
-        ownerAuth,
-        ids.approval,
-        "approve",
-        approvalNote
-      ),
+      ownerFixture.jsonRequest("/owner/api/creator-reviews", {
+        listingId: ids.approval,
+        action: "approve",
+        note: approvalNote
+      }),
       ownerEnvironment,
       ownerOptions
     );
@@ -180,12 +177,11 @@ async function main() {
     const rejectionNote =
       "Rejected: submitted PDF does not match the listing representation.";
     response = await creatorReview.handleCreatorReviewRequest(
-      await ownerDecisionRequest(
-        ownerAuth,
-        ids.rejection,
-        "reject",
-        rejectionNote
-      ),
+      ownerFixture.jsonRequest("/owner/api/creator-reviews", {
+        listingId: ids.rejection,
+        action: "reject",
+        note: rejectionNote
+      }),
       ownerEnvironment,
       ownerOptions
     );
@@ -267,7 +263,11 @@ async function main() {
       [ids.rejection, "reject", "Repeated rejection"]
     ]) {
       response = await creatorReview.handleCreatorReviewRequest(
-        await ownerDecisionRequest(ownerAuth, ...attempt),
+        ownerFixture.jsonRequest("/owner/api/creator-reviews", {
+          listingId: attempt[0],
+          action: attempt[1],
+          note: attempt[2]
+        }),
         ownerEnvironment,
         ownerOptions
       );
@@ -604,31 +604,6 @@ function creatorHeaders(json) {
     "x-csrf-token": CREATOR_CSRF,
     ...(json ? { "content-type": "application/json" } : {})
   };
-}
-
-function ownerReadRequest() {
-  return new Request("https://example.com/owner/api/creator-reviews", {
-    headers: { "cf-access-jwt-assertion": OWNER_ACCESS_TOKEN }
-  });
-}
-
-async function ownerDecisionRequest(ownerAuth, listingId, action, note) {
-  const csrf = await ownerAuth.createCsrfToken(
-    OWNER_ID,
-    OWNER_CSRF_SECRET,
-    NOW_MS
-  );
-  return new Request("https://example.com/owner/api/creator-reviews", {
-    method: "POST",
-    headers: {
-      origin: "https://example.com",
-      cookie: `${ownerAuth.CSRF_COOKIE_NAME}=${csrf}`,
-      "x-csrf-token": csrf,
-      "cf-access-jwt-assertion": OWNER_ACCESS_TOKEN,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({ listingId, action, note })
-  });
 }
 
 function unauthorizedCreatorDecisionRequest(listingId) {
