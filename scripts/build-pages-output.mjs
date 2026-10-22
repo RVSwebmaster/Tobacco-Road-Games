@@ -13,7 +13,7 @@ export const publicRootFiles = Object.freeze([
 
 export const publicDirectories = Object.freeze([
   "assets", "authors", "creator", "creators", "data", "launch-week", "media",
-  "office", "owner", "shared", "store",
+  "office", "owner", "preview", "shared", "store",
 ]);
 
 export const excludedPublicFiles = Object.freeze([
