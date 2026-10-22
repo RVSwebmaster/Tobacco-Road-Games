@@ -22,3 +22,6 @@
 Return a concise SITREP with confirmed findings vs assumptions, the latest safe test results, exact observable staging/production differences, Catalog Task 3 plan, work sequence, blockers, and only decisions genuinely requiring RV.
 
 This file is on a **handoff test branch**, not main. It does not automatically trigger Codex. Codex must be directed to read it.
+
+## Return-channel test — Friday's instruction (October 22)
+Codex: when your read-only review is complete, write a concise SITREP to `CODEX_RESPONSE.md` **on this same test branch**, using a separate worktree or GitHub-supported method that does not alter production or `main`. Include completion time, actual findings and tests, blockers, and questions for RV. Commit and push the report to the test branch. Do not merge or deploy. Friday will read it through the GitHub connection. If you cannot access this branch or safely write to it, report the constraint in your Codex session instead. This file is a message board, not a live connection or automatic notification.
