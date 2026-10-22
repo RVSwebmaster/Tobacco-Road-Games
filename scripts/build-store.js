@@ -975,7 +975,7 @@ function buildStorefrontHomeModel(products, indexes) {
   const openRules = products.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 12);
   const newThisWeek = chooseNewReleases(eligible).slice(0, 12);
   const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
-  const creatorFeature = indexes.authors.find((author) => author.products.length > 0) || null;
+  const creatorFeature = indexes.authors.find((author) => author.slug !== "rv-sawyer" && author.products.length > 0) || null;
 
   return { products, indexes, eligible, openRules, newThisWeek, pwywFree, creatorFeature };
 }
@@ -1145,7 +1145,9 @@ function renderHomepageShopWallMain(products) {
   const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
   const featuredConfig = HOMEPAGE_MERCHANDISING["featured-creator-wall-heading"] || {};
   const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
-  const featuredCreator = featuredConfig.creatorSlug || (designated || chooseFeaturedProduct(eligible))?.authorSlugs?.[0];
+  const configuredCreator = featuredConfig.creatorSlug === "rv-sawyer" ? null : featuredConfig.creatorSlug;
+  const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
+  const featuredCreator = configuredCreator || fallbackFeatured;
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
   const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 8);
 
@@ -1979,12 +1981,13 @@ function renderAuthorsIndexPage(authors) {
 }
 
 function renderAuthorProfilePage(author) {
+  const isRvSawyer = author.slug === "rv-sawyer";
   return renderPublicLayout({
     pageTitle: `${author.name} | Tobacco Road Games`,
     description: author.shortBio || `Meet ${author.name} at Tobacco Road Games.`,
     canonicalPath: author.url,
     currentNav: "authors",
-    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js"],
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js", ...(isRvSawyer ? ["/assets/js/public-creator-profile.js?v=" + CACHE_BUST] : [])],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Home", href: "/" },
@@ -1994,7 +1997,7 @@ function renderAuthorProfilePage(author) {
       renderPersonSchema(author)
     ],
     content: `
-      <main id="top">
+      <main id="top"${isRvSawyer ? ' class="public-creator-profile" data-public-creator-profile="rv-sawyer"' : ""}>
         ${renderBreadcrumbs([
           { label: "Home", href: "/" },
           { label: "Creators", href: "/authors.html" },
@@ -2021,6 +2024,7 @@ function renderAuthorProfilePage(author) {
               <h2>${author.blogPosts.length} published note${author.blogPosts.length === 1 ? "" : "s"}</h2>
               <p>Short field notes, essays, and workshop updates live here without pretending to be a full portal.</p>
             </article>
+            ${isRvSawyer ? '<div class="creator-profile-posters" data-public-profile-posters hidden aria-label="RV Sawyer profile posters"></div>' : ""}
           </aside>
         </section>
 
@@ -2041,6 +2045,15 @@ function renderAuthorProfilePage(author) {
           </div>
           ${renderCreatorProducts(author)}
         </section>
+
+        ${isRvSawyer ? `<section class="store-section" aria-labelledby="author-shelved-heading">
+          <div class="section-heading">
+            <p class="section-heading__kicker">Selected Shelf</p>
+            <h2 id="author-shelved-heading">Shelved by RV Sawyer</h2>
+            <p>Up to twelve currently available products selected for this Creator profile.</p>
+          </div>
+          <div class="public-creator-profile__shelf" data-public-profile-shelf><p class="shelf-empty">No products are currently selected for this Creator shelf.</p></div>
+        </section>` : ""}
 
         <section class="store-section" aria-labelledby="author-posts-heading">
           <div class="section-heading">

@@ -3833,6 +3833,62 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   letter-spacing: 0;
 }
 
+/* Account-profile presentation is additive and does not alter the locked storefront cabinet. */
+.owner-profile,
+.public-creator-profile {
+  --profile-wallpaper-color: #20150f;
+  --profile-wallpaper-image: none;
+  --profile-wallpaper-saturation: 100%;
+  position: relative;
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+  background-color: var(--profile-wallpaper-color);
+  background-image: linear-gradient(rgba(15, 10, 7, .34), rgba(15, 10, 7, .34)), var(--profile-wallpaper-image);
+  background-size: cover;
+  background-attachment: local;
+  filter: saturate(var(--profile-wallpaper-saturation));
+}
+.owner-profile[data-appearance="day"],
+.public-creator-profile[data-appearance="day"] { color-scheme: light; }
+.owner-profile__hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; }
+.owner-profile__tabs { display: flex; flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 10; padding: 12px; border: 1px solid rgba(242,216,170,.2); border-radius: 14px; background: rgba(18,12,8,.94); }
+.owner-profile__tabs a { padding: 8px 12px; border-radius: 999px; color: var(--accent-strong); text-decoration: none; }
+.owner-profile__section { display: grid; gap: 16px; }
+.owner-profile__choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.owner-profile__choice { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid rgba(242,216,170,.16); border-radius: 12px; background: rgba(12,8,6,.62); }
+.owner-profile__choice span { display: grid; gap: 3px; }
+.owner-profile__choice small { color: var(--muted); }
+.owner-profile__cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.owner-profile__card { padding: 16px; border: 1px solid rgba(242,216,170,.16); border-radius: 14px; background: rgba(12,8,6,.62); }
+.owner-profile__card h3 { margin-top: 0; }
+.owner-profile__form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 16px; border: 1px solid rgba(242,216,170,.16); border-radius: 14px; background: rgba(12,8,6,.62); }
+.owner-profile__form label { display: grid; gap: 7px; }
+.owner-profile__form .button { align-self: end; justify-self: start; }
+.owner-profile__status { min-height: 1.5rem; padding: 10px 14px; border-radius: 10px; background: rgba(12,8,6,.7); }
+.owner-profile__status[data-state="error"] { color: #ffd5ce; border: 1px solid #b65b4c; }
+.owner-profile__poster-preview,
+.creator-profile-posters { display: flex; gap: 12px; align-items: end; }
+.owner-profile__poster-preview img,
+.creator-profile-poster img { display: block; width: auto; max-width: 140px; max-height: 190px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.45)); }
+.public-creator-profile__shelf { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.shop-wall-library-book { display: grid; place-items: center; align-self: end; width: clamp(11px, 1.35vw, 22px); height: calc(78% + (var(--library-title-index, 1) % 5) * 3%); min-height: 62%; overflow: hidden; border: 1px solid rgba(218,177,100,.5); border-radius: 2px 2px 0 0; background: linear-gradient(90deg,#201612,#4d3120 45%,#241611); box-shadow: inset 2px 0 rgba(255,255,255,.08), 2px 1px 4px rgba(0,0,0,.45); color: #ead7a6; text-decoration: none; }
+.shop-wall-library-book:nth-child(4n+2) { background: linear-gradient(90deg,#101f1a,#274639 45%,#13241e); }
+.shop-wall-library-book:nth-child(4n+3) { background: linear-gradient(90deg,#261318,#61302d 45%,#2b1719); }
+.shop-wall-library-book:nth-child(4n) { background: linear-gradient(90deg,#101b26,#29435b 45%,#13202c); }
+.shop-wall-library-book span { writing-mode: vertical-rl; transform: rotate(180deg); max-height: 90%; overflow: hidden; font: 600 clamp(5px,.48vw,8px)/1 Georgia,serif; letter-spacing: .03em; text-overflow: ellipsis; }
+@media (max-width: 800px) {
+  .owner-profile__hero,
+  .owner-profile__choices,
+  .owner-profile__form { grid-template-columns: 1fr; }
+  .owner-profile__cards,
+  .public-creator-profile__shelf { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 520px) {
+  .owner-profile__cards,
+  .public-creator-profile__shelf { grid-template-columns: 1fr; }
+}
+
 .bb1-poster--folk {
   left: 9%;
   top: 5px;

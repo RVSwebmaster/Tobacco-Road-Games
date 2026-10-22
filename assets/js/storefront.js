@@ -76,6 +76,34 @@
     new ResizeObserver(refresh).observe(row);
   });
 
+  let ownerLibraryEnabled = false;
+  try { ownerLibraryEnabled = localStorage.getItem('trg-owner-library-shelves') === 'enabled'; } catch { ownerLibraryEnabled = false; }
+  if (document.querySelector('.homepage-shop-wall') && ownerLibraryEnabled) {
+    fetch('/owner/api/profile', { headers: { accept: 'application/json' }, cache: 'no-store', credentials: 'same-origin' })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((profile) => {
+        const selected = (profile?.purchases || []).filter((item) => item.selected).sort((a, b) => a.position - b.position).slice(0, 36);
+        if (!selected.length) return;
+        const rows = [...document.querySelectorAll('.shop-wall-bay--library [data-fill-library]')];
+        rows.forEach((row, rowIndex) => {
+          const items = selected.slice(rowIndex * 18, (rowIndex + 1) * 18);
+          row.replaceChildren(...items.map((item) => {
+            const book = document.createElement('a');
+            book.className = 'shop-wall-library-book';
+            book.href = `/store/products/${encodeURIComponent(item.productSlug)}/`;
+            book.title = item.productTitle;
+            book.setAttribute('aria-label', item.productTitle);
+            book.style.setProperty('--library-title-index', String(item.position || 1));
+            const label = document.createElement('span');
+            label.textContent = item.productTitle;
+            book.append(label);
+            return book;
+          }));
+        });
+      })
+      .catch(() => { /* Decorative books remain the required fallback. */ });
+  }
+
   document.querySelectorAll(".shop-wall-jesus-figurine").forEach((figurine) => {
     const restoreSpeech = () => figurine.classList.remove("is-speech-dismissed");
     figurine.addEventListener("mouseenter", restoreSpeech);
