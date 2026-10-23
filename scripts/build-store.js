@@ -36,6 +36,13 @@ const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "account", href: "/account.html", label: "Join / Sign In" },
   { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
 ]);
+const GUEST_NAV_ITEMS = Object.freeze([
+  { key: "explore", href: "/store/catalog/", label: "Explore" },
+  { key: "support", href: SUPPORT_URL, label: "Support" },
+  { key: "account", href: "/account.html", label: "Login/Signup" },
+  { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
+]);
+const HOMEPAGE_NAV_ITEMS = Object.freeze(PUBLIC_NAV_ITEMS.filter((item) => item.key !== "ai-policy"));
 const MARKETPLACE_METADATA_ENUMS = Object.freeze({
   gmMode: new Set(["required", "optional", "gm-less"]),
   prepBurden: new Set(["none", "low", "moderate", "high"]),
@@ -89,6 +96,7 @@ function main() {
   fs.mkdirSync(STORE_DIR, { recursive: true });
   fs.rmSync(path.join(ROOT, "authors"), { recursive: true, force: true });
   fs.rmSync(path.join(ROOT, "creators"), { recursive: true, force: true });
+  fs.rmSync(path.join(ROOT, "guest"), { recursive: true, force: true });
 
   writeFile("authors.html", renderAuthorsIndexPage(indexes.authors));
   writeFile("creators/index.html", renderCreatorDirectoryAlias());
@@ -128,6 +136,7 @@ function main() {
   }
 
   buildHomepage(publicCatalogProducts, indexes, bundleRules);
+  buildGuestLandingPage(publicCatalogProducts);
   buildAccountPage();
   buildStaticPublicPage("support.html", "");
 
@@ -1119,15 +1128,15 @@ function buildHomepage(products, indexes, bundleRules) {
   if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
   const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
-  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
+  const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
   const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
   let next = html
-    .replace(navPattern, `${renderSharedPublicNav("home", "Primary")}\n    `)
-    .replace(mainPattern, `\n${renderHomepageShopWallMain(products)}\n`)
+    .replace(navPattern, `${renderSharedPublicNav("home", "Primary", HOMEPAGE_NAV_ITEMS)}\n    `)
+    .replace(mainPattern, renderHomepageShopWallMain(products).trimStart())
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
   next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261005-tabula-rasa2");
@@ -1136,6 +1145,100 @@ function buildHomepage(products, indexes, bundleRules) {
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
   fs.writeFileSync(homepagePath, stripPublicBrandTag(next).replace(/^[ \t]+$/gm, ""));
+}
+
+function buildGuestLandingPage(products) {
+  const homepagePath = path.join(ROOT, "index.html");
+  if (!fs.existsSync(homepagePath)) return;
+  const html = fs.readFileSync(homepagePath, "utf8");
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
+  const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
+  if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
+  if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
+
+  const guestStylesheet = '  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261023-stage1">\n';
+  const next = html
+    .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
+    .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
+    .replace('<link rel="canonical" href="https://tobaccoroadgames.com/">', '<link rel="canonical" href="https://tobaccoroadgames.com/guest/">')
+    .replace("</head>", `${guestStylesheet}</head>`)
+    .replace(navPattern, `${renderSharedPublicNav("", "Primary", GUEST_NAV_ITEMS)}\n    `)
+    .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`);
+
+  writeFile("guest/index.html", next.replace(/^[ \t]+$/gm, ""));
+}
+
+function renderGuestLandingShopWallMain(products) {
+  const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
+  const newThisWeek = sortProducts(eligible, "newest");
+  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling"));
+  const featuredConfig = HOMEPAGE_MERCHANDISING["featured-creator-wall-heading"] || {};
+  const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
+  const configuredCreator = featuredConfig.creatorSlug === "rv-sawyer" ? null : featuredConfig.creatorSlug;
+  const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
+  const featuredCreator = configuredCreator || fallbackFeatured;
+  const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
+  const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 36);
+
+  return `    <main id="top" class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing aria-labelledby="homepage-shop-wall-heading">
+      <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
+      <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
+        <picture class="shop-wall-cabinet-art" aria-hidden="true">
+          <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1">
+          <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1">
+          <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
+        </picture>
+        ${renderGuestLibraryBay()}
+        ${renderHomepageIdentityBay()}
+        ${renderGuestOpenRulesBay(openRules)}
+        ${renderHomepageShelfFixtures()}
+      </section>
+      </div>
+      ${renderHomepageBricABracShelf({ sumo: true })}
+      ${renderHomepageAdMarquee()}
+      <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageBricABracShelf()}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
+      </section>
+      ${renderHomepageNewsChyron()}
+    </main>`;
+}
+
+function renderGuestLibraryBay() {
+  return `
+        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading">
+          ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
+          <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty Guest personal library shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row">
+                <p class="guest-library-sign">Your shelves look a little bare.<br>Log in or sign up to make them your own.</p>
+              </div>
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" aria-hidden="true"></div>
+            </div>
+          </div>
+        </section>`;
+}
+
+function renderGuestOpenRulesBay(products) {
+  const renderShelf = (shelfProducts, startPosition) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
+                ${shelfProducts.length ? `<div class="bookshelf-grid shop-wall-books guest-open-rules-books" style="--shelf-items:${shelfProducts.length}">${shelfProducts.map((product, index) => renderBookshelfBook(product, { withDataset: true, centerExamination: true }).replace('class="bookshelf-book', `data-library-position="${startPosition + index}" class="bookshelf-book`)).join("")}</div>` : ""}
+              </div>`;
+  return `
+        <section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay" aria-labelledby="open-rules-library-heading">
+          <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
+          <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              ${renderShelf(products.slice(0, 18), 1)}
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              ${renderShelf(products.slice(18, 36), 19)}
+            </div>
+          </div>
+        </section>`;
 }
 
 function renderHomepageShopWallMain(products) {
@@ -3386,4 +3489,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, loadProducts, loadAuthors, buildAuthorLookup };
+module.exports = { selectHomepageShelfBooks, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, loadProducts, loadAuthors, buildAuthorLookup };

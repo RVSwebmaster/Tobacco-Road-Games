@@ -1,0 +1,106 @@
+/* Stage 1 Guest Landing Page adjustments. All selectors are guest-route scoped. */
+.guest-landing-page .guest-library-empty-row {
+  align-items: flex-start;
+  justify-content: center;
+  overflow: visible;
+  filter: none;
+}
+
+.guest-landing-page .guest-library-sign {
+  position: relative;
+  z-index: 8;
+  width: min(310px, 72%);
+  margin: 38px 0 0;
+  padding: 10px 13px;
+  border: 2px solid #6d421f;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(3deg, rgba(61, 31, 12, .06) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #c89553, #8c562b);
+  box-shadow: inset 0 0 0 1px rgba(244, 205, 132, .2), 0 7px 9px rgba(16, 6, 2, .5);
+  color: #241106;
+  font: 700 15px/1.25 Georgia, "Times New Roman", serif;
+  text-align: center;
+  text-shadow: 0 1px rgba(234, 198, 132, .32);
+  transform: rotate(-1.8deg);
+}
+
+.guest-landing-page .guest-library-sign::before,
+.guest-landing-page .guest-library-sign::after {
+  position: absolute;
+  bottom: 100%;
+  width: 1px;
+  height: 32px;
+  background: #6e4a27;
+  box-shadow: 1px 0 rgba(24, 11, 4, .55);
+  content: "";
+  transform-origin: bottom;
+}
+
+.guest-landing-page .guest-library-sign::before { left: 25%; transform: rotate(19deg); }
+.guest-landing-page .guest-library-sign::after { right: 25%; transform: rotate(-19deg); }
+
+.guest-landing-page .guest-open-rules-row {
+  overflow: visible;
+  filter: none;
+}
+
+.guest-landing-page .guest-open-rules-books {
+  justify-content: flex-start;
+  gap: 1px;
+  min-height: 100%;
+  overflow: visible;
+}
+
+.guest-landing-page .guest-open-rules-books .bookshelf-book {
+  --guest-shelf-count: max(1, var(--shelf-items));
+  flex-basis: min(var(--book-spine-width, 58px), calc(100% / var(--guest-shelf-count)));
+  width: min(var(--book-spine-width, 58px), calc(100% / var(--guest-shelf-count)));
+  max-width: calc(100% / var(--guest-shelf-count));
+}
+
+@media (max-width: 1023px) {
+  .guest-landing-page .guest-library-sign {
+    width: min(270px, 70%);
+    margin-top: 24px;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+  .guest-landing-page .guest-library-sign::before,
+  .guest-landing-page .guest-library-sign::after { height: 20px; }
+}
+
+@media (max-width: 699px) {
+  body:has(.guest-landing-page) .site-nav {
+    justify-content: center;
+    gap: 2px;
+  }
+  body:has(.guest-landing-page) .site-header .site-nav a {
+    flex: 0 0 auto;
+    padding: 8px 4px;
+    font-size: clamp(.62rem, 2.8vw, .72rem);
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  body:has(.guest-landing-page) .site-header .site-nav a[href="/support.html"] {
+    display: flex;
+  }
+  body:has(.guest-landing-page) .site-header .site-nav a[href="/account.html"] {
+    font-size: clamp(.62rem, 2.8vw, .72rem);
+  }
+  body:has(.guest-landing-page) .site-header .site-nav a[href="/account.html"]::after {
+    content: none;
+  }
+  .guest-landing-page .guest-library-sign {
+    width: min(235px, 68%);
+    margin-top: 20px;
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+  .guest-landing-page .guest-library-sign::before,
+  .guest-landing-page .guest-library-sign::after { height: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-landing-page .guest-library-sign { scroll-behavior: auto; }
+}
