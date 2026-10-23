@@ -1224,8 +1224,18 @@ function renderGuestLibraryBay() {
 }
 
 function renderGuestOpenRulesBay(products) {
+  const renderMockBook = (position) => {
+    const height = 72 + ((position * 7) % 21);
+    return `<span class="guest-open-rules-mock-book guest-open-rules-mock-book--tone-${((position - 1) % 6) + 1}" data-library-position="${position}" data-mock-open-rule="true" style="--mock-book-height:${height}%" aria-hidden="true"><span class="guest-open-rules-mock-book__label">OPEN RULES</span></span>`;
+  };
   const renderShelf = (shelfProducts, startPosition) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
-                ${shelfProducts.length ? `<div class="bookshelf-grid shop-wall-books guest-open-rules-books" style="--shelf-items:${shelfProducts.length}">${shelfProducts.map((product, index) => renderBookshelfBook(product, { withDataset: true, centerExamination: true }).replace('class="bookshelf-book', `data-library-position="${startPosition + index}" class="bookshelf-book`)).join("")}</div>` : ""}
+                <div class="bookshelf-grid shop-wall-books guest-open-rules-books" style="--shelf-items:18">${Array.from({ length: 18 }, (_, index) => {
+                  const position = startPosition + index;
+                  const product = shelfProducts[index];
+                  return product
+                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true }).replace('class="bookshelf-book', `data-library-position="${position}" class="bookshelf-book`)
+                    : renderMockBook(position);
+                }).join("")}</div>
               </div>`;
   return `
         <section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay" aria-labelledby="open-rules-library-heading">
