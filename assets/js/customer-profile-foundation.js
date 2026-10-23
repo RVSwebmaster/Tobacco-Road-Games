@@ -1,11 +1,9 @@
 (() => {
   const CABINET_MARKUP = `
-    <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
+    <div class="shop-wall-fixed-cabinet customer-profile-cabinet" data-fixed-cabinet>
       <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games customer profile foundation">
         <picture class="shop-wall-cabinet-art" aria-hidden="true">
-          <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1">
-          <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1">
-          <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
+          <img src="/assets/images/customer-profile/customer-profile-cabinet-clean.png?v=20261023-clean1" alt="" width="1144" height="454" fetchpriority="high" decoding="async" draggable="false">
         </picture>
 
         <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
@@ -31,10 +29,6 @@
         <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="customer-profile-foundation-heading">
           <div class="shop-wall-identity-space">
             <h1 id="customer-profile-foundation-heading"><span>Tobacco Road</span><span>Games</span></h1>
-          </div>
-          <div class="shop-wall-identity-sign" aria-hidden="true">
-            <img src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=20261003-golden-d20-1" alt="" loading="eager" decoding="async">
-            <p class="shop-wall-identity-title"><span>Tobacco Road</span><span>Games</span></p>
           </div>
         </section>
 

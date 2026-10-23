@@ -5700,6 +5700,43 @@ body:has(.customer-profile-foundation) .page-shell {
   display: block;
 }
 
+.customer-profile-cabinet {
+  --cabinet-width: 1144;
+  --cabinet-height: 454;
+}
+
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="upper-left"] > .shop-wall-product-row--library {
+  position: absolute;
+  top: 53px;
+  left: 16px;
+  width: 360px;
+  height: 141px;
+}
+
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="lower-left"] > .shop-wall-product-row--library {
+  position: absolute;
+  top: 203px;
+  left: 16px;
+  width: 360px;
+  height: 139px;
+}
+
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="upper-right"] > .shop-wall-product-row--library {
+  position: absolute;
+  top: 53px;
+  left: 750px;
+  width: 373px;
+  height: 141px;
+}
+
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="lower-right"] > .shop-wall-product-row--library {
+  position: absolute;
+  top: 203px;
+  left: 750px;
+  width: 373px;
+  height: 139px;
+}
+
 @media (max-width: 699px) {
   .customer-profile-foundation > .shop-wall-fixed-cabinet {
     width: calc(100vw - 28px);

@@ -22,12 +22,14 @@ for (const href of ["/store/catalog/", "/forum", "/authors.html", "/creator/", "
 
 for (const asset of ["upper-cabinet-desktop.png", "upper-cabinet-tablet.png", "upper-cabinet-mobile.png"]) {
   assert.match(homepage, new RegExp(asset.replace(".", "\\.")));
-  assert.match(foundation, new RegExp(asset.replace(".", "\\.")));
+  assert.doesNotMatch(foundation, new RegExp(asset.replace(".", "\\.")));
 }
 
 assert.match(foundation, /shop-wall-fixed-cabinet/);
 assert.match(foundation, /shop-wall-bay shop-wall-bay--identity/);
-assert.match(foundation, /golden-d20-lantern-logo\.png/);
+assert.match(foundation, /customer-profile-cabinet-clean\.png/);
+assert.doesNotMatch(foundation, /golden-d20-lantern-logo\.png/);
+assert.ok(fs.existsSync(path.join(root, "assets/images/customer-profile/customer-profile-cabinet-clean.png")));
 assert.equal((foundation.match(/data-profile-shelf="(?:upper|lower)-(?:left|right)"/g) || []).length, 4);
 for (const position of ["upper-left", "lower-left", "upper-right", "lower-right"]) {
   assert.match(foundation, new RegExp(`data-profile-shelf="${position}"`));
@@ -36,6 +38,7 @@ for (const position of ["upper-left", "lower-left", "upper-right", "lower-right"
 assert.doesNotMatch(foundation, /fetch\s*\(|XMLHttpRequest|\/api\/|localStorage|sessionStorage/);
 assert.doesNotMatch(foundation, /owner-profile__tabs|profile-poster|data-profile-tab|admin|financial/i);
 assert.match(styles, /\.customer-profile-foundation > \.shop-wall-fixed-cabinet/);
+assert.match(styles, /\.customer-profile-cabinet \{[\s\S]*?--cabinet-width: 1144;[\s\S]*?--cabinet-height: 454;/);
 assert.match(styles, /@media \(max-width: 699px\)[\s\S]*?\.customer-profile-foundation > \.shop-wall-fixed-cabinet/);
 assert.ok(!routes.include.some((route) => route === "/preview/*" || route.startsWith("/preview/")), "preview must remain outside Functions/Access routing");
 
