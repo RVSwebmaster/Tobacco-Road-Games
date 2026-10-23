@@ -5737,6 +5737,13 @@ body:has(.customer-profile-foundation) .page-shell {
   height: 139px;
 }
 
+/* Center the existing decorative book run within every profile shelf opening. */
+.shop-wall-fixed-cabinet.customer-profile-cabinet .shop-wall-library-books,
+.shop-wall-fixed-cabinet.customer-profile-cabinet .shop-wall-product-row--right > .shop-wall-library-books {
+  left: calc(var(--library-bookstop-clearance, 0px) / 2);
+  right: calc(var(--library-bookstop-clearance, 0px) / 2);
+}
+
 @media (max-width: 699px) {
   .customer-profile-foundation > .shop-wall-fixed-cabinet {
     width: calc(100vw - 28px);

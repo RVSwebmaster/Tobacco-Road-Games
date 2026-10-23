@@ -39,6 +39,7 @@ assert.doesNotMatch(foundation, /fetch\s*\(|XMLHttpRequest|\/api\/|localStorage|
 assert.doesNotMatch(foundation, /owner-profile__tabs|profile-poster|data-profile-tab|admin|financial/i);
 assert.match(styles, /\.customer-profile-foundation > \.shop-wall-fixed-cabinet/);
 assert.match(styles, /\.customer-profile-cabinet \{[\s\S]*?--cabinet-width: 1144;[\s\S]*?--cabinet-height: 454;/);
+assert.match(styles, /\.shop-wall-fixed-cabinet\.customer-profile-cabinet \.shop-wall-library-books,[\s\S]*?left: calc\(var\(--library-bookstop-clearance, 0px\) \/ 2\);[\s\S]*?right: calc\(var\(--library-bookstop-clearance, 0px\) \/ 2\);/);
 assert.match(styles, /@media \(max-width: 699px\)[\s\S]*?\.customer-profile-foundation > \.shop-wall-fixed-cabinet/);
 assert.ok(!routes.include.some((route) => route === "/preview/*" || route.startsWith("/preview/")), "preview must remain outside Functions/Access routing");
 
