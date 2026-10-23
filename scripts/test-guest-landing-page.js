@@ -1,0 +1,91 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { renderGuestLibraryBay, renderGuestOpenRulesBay } = require("./build-store.js");
+
+const ROOT = path.resolve(__dirname, "..");
+const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
+const homepage = read("index.html");
+const guest = read("guest/index.html");
+const guestCss = read("assets/css/guest-landing.css");
+const builder = read("scripts/build-store.js");
+const outputBuilder = read("scripts/build-pages-output.mjs");
+
+const nav = guest.match(/<nav class="site-nav" aria-label="Primary">([\s\S]*?)<\/nav>/)?.[1] || "";
+const navLabels = [...nav.matchAll(/<a [^>]*>([\s\S]*?)<\/a>/g)].map((match) => match[1].replace(/<span[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
+assert.deepEqual(navLabels, ["Explore", "Support", "Login/Signup", "Cart"]);
+assert.match(nav, /href="\/store\/catalog\/"[^>]*>Explore<\/a>/);
+assert.match(nav, /href="\/support\.html"[^>]*>Support<\/a>/);
+assert.match(nav, /href="\/account\.html"[^>]*>Login\/Signup<\/a>/);
+assert.match(nav, /href="\/store\/cart\/"[^>]*>Cart <span class="cart-count-badge" data-cart-count>0<\/span><\/a>/);
+
+assert.match(guest, /data-guest-landing/);
+assert.match(guest, /Your shelves look a little bare\.<br>Log in or sign up to make them your own\./);
+assert.equal((guest.match(/guest-library-sign/g) || []).length, 1);
+const guestLibrary = guest.match(/<section class="shop-wall-bay shop-wall-bay--library guest-library-bay"[\s\S]*?<\/section>/)?.[0] || "";
+assert.ok(guestLibrary);
+assert.doesNotMatch(guestLibrary, /bookshelf-book|shop-wall-product-mock|data-fill-library/);
+assert.equal((guestLibrary.match(/guest-library-empty-row/g) || []).length, 2);
+
+assert.match(guest, /id="open-rules-library-heading"/);
+assert.match(guest, /data-library-start-position="1"/);
+assert.match(guest, /data-library-start-position="19"/);
+assert.match(builder, /products\.slice\(0, 18\), 1/);
+assert.match(builder, /products\.slice\(18, 36\), 19/);
+assert.match(builder, /\.slice\(0, 36\)/);
+
+assert.doesNotMatch(guest, /id="free-pwyw-wall-heading"|aria-label="FREE &amp; PWYW shelf"/);
+assert.match(guest, /href="\/store\/catalog\/"/);
+assert.match(guest, /class="storefront-news-chiron"/);
+assert.equal(guest.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0], homepage.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0]);
+
+const cabinetPicture = (document) => document.match(/<picture class="shop-wall-cabinet-art"[\s\S]*?<\/picture>/)?.[0];
+assert.equal(cabinetPicture(guest), cabinetPicture(homepage));
+assert.match(guest, /\/assets\/js\/cart\.js/);
+assert.match(guest, /\/assets\/js\/storefront\.js/);
+assert.match(guest, /\/assets\/js\/news-chyron\.js/);
+assert.match(guest, /\/assets\/js\/shelf-curios\.js/);
+assert.match(guest, /\/assets\/css\/guest-landing\.css/);
+
+assert.doesNotMatch(homepage, /data-guest-landing|guest-library-sign|Login\/Signup/);
+assert.doesNotMatch(guestCss, /(^|\n)\s*(\.homepage-shop-wall|\.shop-wall-)/m);
+assert.match(guestCss, /\.guest-landing-page \.guest-library-sign/);
+assert.match(guestCss, /@media \(max-width: 1023px\)/);
+assert.match(guestCss, /@media \(max-width: 699px\)/);
+assert.match(guestCss, /body:has\(\.guest-landing-page\) \.site-nav/);
+assert.match(guestCss, /white-space: nowrap/);
+assert.match(guestCss, /a\[href="\/support\.html"\][\s\S]*display: flex/);
+assert.match(guestCss, /a\[href="\/account\.html"\]::after[\s\S]*content: none/);
+assert.match(guestCss, /@media \(prefers-reduced-motion: reduce\)/);
+assert.match(outputBuilder, /"guest"/);
+
+const mockProduct = (index) => ({
+  slug: `open-rule-${index}`,
+  title: `Open Rule ${index}`,
+  authors: ["Tobacco Road Games"],
+  publisher: "Tobacco Road Games",
+  status: "available-direct",
+  statusLabel: "Available Direct",
+  saleActive: false,
+  format: ["PDF"],
+  url: `/store/products/open-rule-${index}/`,
+  assetSet: { cover: `/covers/open-rule-${index}.webp` },
+  priceType: "fixed-price",
+  priceTypeLabel: "Fixed Price",
+  priceCents: 100,
+  effectivePriceCents: 100,
+  currency: "USD",
+  shortDescription: "Sandbox open rule.",
+  subtitle: "",
+  tags: [],
+  authorSlugs: ["rv-sawyer"]
+});
+const openRules = renderGuestOpenRulesBay(Array.from({ length: 40 }, (_, index) => mockProduct(index + 1)));
+const positions = [...openRules.matchAll(/data-library-position="(\d+)"/g)].map((match) => Number(match[1]));
+assert.deepEqual(positions, Array.from({ length: 36 }, (_, index) => index + 1));
+assert.equal(positions.length, 36);
+
+const library = renderGuestLibraryBay();
+assert.doesNotMatch(library, /data-fill-library|shop-wall-product-mock|bookshelf-book/);
+
+console.log("TRG Stage 1 Guest Landing Page tests passed.");
