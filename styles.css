@@ -5706,32 +5706,41 @@ body:has(.customer-profile-foundation) .page-shell {
   --cabinet-height: 454;
 }
 
-.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="upper-left"] > .shop-wall-product-row--library {
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf] {
   position: absolute;
+  display: block;
+  overflow: hidden;
+}
+
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf] > .shop-wall-product-row--library {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="upper-left"] {
   top: 53px;
   left: 16px;
   width: 360px;
   height: 141px;
 }
 
-.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="lower-left"] > .shop-wall-product-row--library {
-  position: absolute;
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="lower-left"] {
   top: 203px;
   left: 16px;
   width: 360px;
   height: 139px;
 }
 
-.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="upper-right"] > .shop-wall-product-row--library {
-  position: absolute;
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="upper-right"] {
   top: 53px;
   left: 750px;
   width: 373px;
   height: 141px;
 }
 
-.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="lower-right"] > .shop-wall-product-row--library {
-  position: absolute;
+.shop-wall-fixed-cabinet.customer-profile-cabinet [data-profile-shelf="lower-right"] {
   top: 203px;
   left: 750px;
   width: 373px;
@@ -5741,8 +5750,12 @@ body:has(.customer-profile-foundation) .page-shell {
 /* Center the existing decorative book run within every profile shelf opening. */
 .shop-wall-fixed-cabinet.customer-profile-cabinet .shop-wall-library-books,
 .shop-wall-fixed-cabinet.customer-profile-cabinet .shop-wall-product-row--right > .shop-wall-library-books {
+  top: auto;
+  bottom: 0;
   left: calc(var(--library-bookstop-clearance, 0px) / 2);
   right: calc(var(--library-bookstop-clearance, 0px) / 2);
+  height: 100%;
+  max-height: 100%;
 }
 
 @media (max-width: 699px) {

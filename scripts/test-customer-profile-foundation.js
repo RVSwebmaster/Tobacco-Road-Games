@@ -40,7 +40,28 @@ assert.doesNotMatch(foundation, /owner-profile__tabs|profile-poster|data-profile
 assert.match(styles, /\.customer-profile-foundation > \.shop-wall-fixed-cabinet/);
 assert.match(styles, /\.customer-profile-foundation \{[\s\S]*?min-height: calc\(200vh - 66px\);/);
 assert.match(styles, /\.customer-profile-cabinet \{[\s\S]*?--cabinet-width: 1144;[\s\S]*?--cabinet-height: 454;/);
-assert.match(styles, /\.shop-wall-fixed-cabinet\.customer-profile-cabinet \.shop-wall-library-books,[\s\S]*?left: calc\(var\(--library-bookstop-clearance, 0px\) \/ 2\);[\s\S]*?right: calc\(var\(--library-bookstop-clearance, 0px\) \/ 2\);/);
+assert.match(styles, /\.shop-wall-fixed-cabinet\.customer-profile-cabinet \[data-profile-shelf\] \{[\s\S]*?position: absolute;[\s\S]*?display: block;[\s\S]*?overflow: hidden;/);
+assert.match(styles, /\.shop-wall-fixed-cabinet\.customer-profile-cabinet \[data-profile-shelf\] > \.shop-wall-product-row--library \{[\s\S]*?position: absolute;[\s\S]*?inset: 0;[\s\S]*?width: auto;[\s\S]*?height: auto;/);
+assert.match(styles, /\.shop-wall-fixed-cabinet\.customer-profile-cabinet \.shop-wall-library-books,[\s\S]*?top: auto;[\s\S]*?bottom: 0;[\s\S]*?left: calc\(var\(--library-bookstop-clearance, 0px\) \/ 2\);[\s\S]*?right: calc\(var\(--library-bookstop-clearance, 0px\) \/ 2\);[\s\S]*?height: 100%;[\s\S]*?max-height: 100%;/);
+
+const expectedShelfGeometry = {
+  "upper-left": { top: 53, left: 16, width: 360, height: 141 },
+  "lower-left": { top: 203, left: 16, width: 360, height: 139 },
+  "upper-right": { top: 53, left: 750, width: 373, height: 141 },
+  "lower-right": { top: 203, left: 750, width: 373, height: 139 },
+};
+const shelfSurfacesByPageHeight = [720, 1440].map(() => Object.fromEntries(
+  Object.entries(expectedShelfGeometry).map(([position, geometry]) => [position, geometry.top + geometry.height]),
+));
+assert.deepEqual(shelfSurfacesByPageHeight[0], shelfSurfacesByPageHeight[1], "doubling page height must not move shelf surfaces");
+for (const [position, geometry] of Object.entries(expectedShelfGeometry)) {
+  const rule = styles.match(new RegExp(`\\[data-profile-shelf="${position}"\\] \\{([\\s\\S]*?)\\}`));
+  assert.ok(rule, `${position} must have a stable shelf container`);
+  assert.doesNotMatch(rule[1], /(?:v[hw]|%|calc\()/, `${position} must not depend on viewport or page dimensions`);
+  for (const [property, value] of Object.entries(geometry)) {
+    assert.match(rule[1], new RegExp(`${property}: ${value}px;`));
+  }
+}
 assert.match(styles, /@media \(max-width: 699px\)[\s\S]*?\.customer-profile-foundation > \.shop-wall-fixed-cabinet/);
 assert.ok(!routes.include.some((route) => route === "/preview/*" || route.startsWith("/preview/")), "preview must remain outside Functions/Access routing");
 
