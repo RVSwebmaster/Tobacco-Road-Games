@@ -48,7 +48,10 @@
 .guest-landing-page .guest-open-rules-books {
   justify-content: flex-start;
   gap: 1px;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0 12px;
+  box-sizing: border-box;
   overflow: visible;
 }
 
@@ -57,6 +60,74 @@
   flex-basis: min(var(--book-spine-width, 58px), calc(100% / var(--guest-shelf-count)));
   width: min(var(--book-spine-width, 58px), calc(100% / var(--guest-shelf-count)));
   max-width: calc(100% / var(--guest-shelf-count));
+}
+
+.guest-landing-page .guest-open-rules-mock-book {
+  position: relative;
+  z-index: 2;
+  align-self: flex-end;
+  box-sizing: border-box;
+  flex: 1 1 calc(100% / 18);
+  width: calc(100% / 18);
+  min-width: 0;
+  max-width: calc(100% / 18);
+  height: var(--mock-book-height, 82%);
+  border: 1px solid rgba(12, 7, 3, .88);
+  border-radius: 2px 2px 0 0;
+  background:
+    linear-gradient(90deg, rgba(255, 224, 141, .12), transparent 28%, rgba(0, 0, 0, .25) 88%),
+    linear-gradient(180deg, #31513e, #15251d);
+  box-shadow:
+    inset 1px 0 rgba(242, 201, 116, .18),
+    inset -2px 0 rgba(0, 0, 0, .35),
+    1px 0 1px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+
+.guest-landing-page .guest-open-rules-mock-book::before,
+.guest-landing-page .guest-open-rules-mock-book::after {
+  position: absolute;
+  right: 1px;
+  left: 1px;
+  height: 1px;
+  background: rgba(211, 167, 81, .72);
+  box-shadow: 0 1px rgba(27, 13, 4, .7);
+  content: "";
+}
+
+.guest-landing-page .guest-open-rules-mock-book::before { top: 9%; }
+.guest-landing-page .guest-open-rules-mock-book::after { bottom: 9%; }
+
+.guest-landing-page .guest-open-rules-mock-book__label {
+  position: absolute;
+  top: 17%;
+  right: 25%;
+  bottom: 17%;
+  left: 25%;
+  overflow: hidden;
+  color: #d8ad5f;
+  font: 700 clamp(3px, .34vw, 7px)/1 Georgia, "Times New Roman", serif;
+  letter-spacing: .06em;
+  text-align: center;
+  text-orientation: mixed;
+  text-shadow: 0 1px rgba(0, 0, 0, .8);
+  writing-mode: vertical-rl;
+}
+
+.guest-landing-page .guest-open-rules-mock-book--tone-2 {
+  background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #653326, #2f1510);
+}
+.guest-landing-page .guest-open-rules-mock-book--tone-3 {
+  background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #243f55, #111e29);
+}
+.guest-landing-page .guest-open-rules-mock-book--tone-4 {
+  background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #684a22, #30200e);
+}
+.guest-landing-page .guest-open-rules-mock-book--tone-5 {
+  background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #44314e, #211725);
+}
+.guest-landing-page .guest-open-rules-mock-book--tone-6 {
+  background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #4e552e, #222613);
 }
 
 @media (max-width: 1023px) {

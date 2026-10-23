@@ -84,6 +84,23 @@ const openRules = renderGuestOpenRulesBay(Array.from({ length: 40 }, (_, index) 
 const positions = [...openRules.matchAll(/data-library-position="(\d+)"/g)].map((match) => Number(match[1]));
 assert.deepEqual(positions, Array.from({ length: 36 }, (_, index) => index + 1));
 assert.equal(positions.length, 36);
+assert.equal((openRules.match(/data-mock-open-rule/g) || []).length, 0);
+
+const emptyOpenRules = renderGuestOpenRulesBay([]);
+const emptyPositions = [...emptyOpenRules.matchAll(/data-library-position="(\d+)"/g)].map((match) => Number(match[1]));
+assert.deepEqual(emptyPositions, Array.from({ length: 36 }, (_, index) => index + 1));
+assert.equal((emptyOpenRules.match(/data-mock-open-rule="true"/g) || []).length, 36);
+assert.doesNotMatch(emptyOpenRules, /href=|data-product-id=/);
+
+const partialOpenRules = renderGuestOpenRulesBay([mockProduct(1), mockProduct(2)]);
+assert.equal((partialOpenRules.match(/data-mock-open-rule="true"/g) || []).length, 34);
+assert.match(partialOpenRules, /data-library-position="1" class="bookshelf-book/);
+assert.match(partialOpenRules, /data-library-position="2" class="bookshelf-book/);
+assert.match(partialOpenRules, /data-library-position="3" data-mock-open-rule="true"/);
+
+assert.equal((guest.match(/data-mock-open-rule="true"/g) || []).length, 36);
+assert.doesNotMatch(guest.match(/<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/)?.[0] || "", /data-product-id=/);
+assert.match(guestCss, /\.guest-landing-page \.guest-open-rules-mock-book/);
 
 const library = renderGuestLibraryBay();
 assert.doesNotMatch(library, /data-fill-library|shop-wall-product-mock|bookshelf-book/);
