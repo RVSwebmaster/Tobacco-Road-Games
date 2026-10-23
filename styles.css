@@ -5687,6 +5687,7 @@ body:has(.customer-profile-foundation) .page-shell {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
+  min-height: calc(200vh - 66px);
   min-width: 0;
   margin-inline: 0;
 }
