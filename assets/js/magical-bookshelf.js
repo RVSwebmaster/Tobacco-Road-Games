@@ -227,9 +227,11 @@
         particle.style.setProperty("--spark-bottom", `${anchor.bottomPercent}%`);
         effect.appendChild(particle);
       }
+      effectHost.classList.add("has-magical-effect");
       effectHost.appendChild(effect);
       const timer = windowRef.setTimeout(() => {
         effect.remove();
+        if (!effectHost.querySelector(".guest-bookshelf-magic")) effectHost.classList.remove("has-magical-effect");
         effectTimers.delete(timer);
       }, 760);
       effectTimers.add(timer);

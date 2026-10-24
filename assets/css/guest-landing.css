@@ -157,6 +157,9 @@
     z-index: 12;
     pointer-events: none;
   }
+  .guest-landing-page .guest-open-rules-bay .shop-wall-shelf-level.has-magical-effect {
+    z-index: 7;
+  }
   .guest-landing-page .guest-bookshelf-magic__flash {
     position: absolute;
     left: calc(var(--flash-left) + var(--flash-x));
