@@ -14,6 +14,11 @@ assert.deepEqual(mixed.slice(0, 3).map((step) => step.bookIndexes), [[0, 1], [2,
 assert.ok(mixed.slice(0, 3).every((step) => step.shelfIndex === 1));
 assert.ok(mixed.slice(3).every((step) => step.shelfIndex === 2));
 
+const positionedBooks = [0, 1, 2, 3, 4].map((position) => ({ position }));
+assert.deepEqual(animation.orderBooksByDirection(positionedBooks, "left-to-right", (book) => book.position).map((book) => book.position), [0, 1, 2, 3, 4]);
+assert.deepEqual(animation.orderBooksByDirection(positionedBooks, "right-to-left", (book) => book.position).map((book) => book.position), [4, 3, 2, 1, 0]);
+assert.deepEqual(animation.orderBooksByDirection(positionedBooks, "outer-inward", (book) => book.position).map((book) => book.position), [0, 4, 1, 3, 2]);
+
 const palette = new Set(["#e8bd55", "#5ca9ff", "#a979ff", "#64c982", "#f18ab9", "#f1a447", "#ffffff"]);
 const deterministicValues = [0, 0, 0, 0, 0, .34, .16, .99, .99, .99, .67, .33, .5, .5, .5, .2];
 let deterministicIndex = 0;
@@ -38,6 +43,7 @@ assert.notDeepEqual(firstReplay, secondReplay);
 function createHarness(counts) {
   const steps = animation.buildRevealPlan(counts);
   const queues = [];
+  const scheduledDelays = [];
   const revealed = new Set();
   let effectsCleared = 0;
   let completed = 0;
@@ -53,13 +59,13 @@ function createHarness(counts) {
     },
     clearEffects() { effectsCleared += 1; },
     onComplete() { completed += 1; },
-    schedule(callback) { queues.push(callback); return callback; },
+    schedule(callback, delay) { queues.push(callback); scheduledDelays.push(delay); return callback; },
     cancel(callback) {
       const index = queues.indexOf(callback);
       if (index >= 0) queues.splice(index, 1);
     },
   });
-  return { completed: () => completed, effectsCleared: () => effectsCleared, queues, revealed, runner };
+  return { completed: () => completed, effectsCleared: () => effectsCleared, queues, revealed, runner, scheduledDelays };
 }
 
 const normal = createHarness([18, 18]);
@@ -68,6 +74,7 @@ while (normal.queues.length) normal.queues.shift()();
 assert.equal(normal.revealed.size, 36);
 assert.equal(normal.completed(), 1);
 assert.equal(normal.runner.isRunning(), false);
+assert.ok(normal.scheduledDelays.every((delay) => delay === 500));
 
 const firstPairSkip = createHarness([18]);
 firstPairSkip.runner.start();

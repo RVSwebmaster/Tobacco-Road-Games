@@ -133,11 +133,11 @@
 }
 
 @media (min-width: 1024px) {
-  html.trg-magical-shelves .guest-landing-page [data-magical-book].is-magical-pending {
+  html.trg-magical-shelves .guest-landing-page [data-magical-bookshelf] .is-magical-pending {
     visibility: hidden;
     opacity: 0;
   }
-  html.trg-magical-shelves .guest-landing-page [data-magical-book].is-magical-revealed {
+  html.trg-magical-shelves .guest-landing-page [data-magical-bookshelf] .is-magical-revealed {
     visibility: visible;
     opacity: 1;
     animation: guest-book-materialize 420ms cubic-bezier(.2, .8, .24, 1) both;
@@ -273,7 +273,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .guest-landing-page .guest-library-sign { scroll-behavior: auto; }
-  .guest-landing-page [data-magical-book].is-magical-revealed,
+  .guest-landing-page [data-magical-bookshelf] .is-magical-revealed,
   .guest-landing-page .guest-bookshelf-magic,
   .guest-landing-page .guest-bookshelf-magic__flash,
   .guest-landing-page .guest-bookshelf-magic i { animation: none !important; }
