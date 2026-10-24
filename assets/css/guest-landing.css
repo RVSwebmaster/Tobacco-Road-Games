@@ -157,7 +157,7 @@
     z-index: 12;
     pointer-events: none;
   }
-  .guest-landing-page .guest-open-rules-bay .shop-wall-shelves.has-magical-effect {
+  .guest-landing-page .shop-wall-fixed-cabinet.has-magical-effect {
     position: relative;
     z-index: 7;
   }
