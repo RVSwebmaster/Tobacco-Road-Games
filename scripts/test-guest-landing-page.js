@@ -74,7 +74,7 @@ assert.match(guestMagic, /orderBooksByDirection/);
 assert.match(guestMagic, /buildEffectAnchors/);
 assert.match(guestMagic, /closest\("\.shop-wall-shelf-level"\)/);
 assert.match(guestMagic, /has-magical-effect/);
-assert.match(guestCss, /guest-open-rules-bay \.shop-wall-shelf-level\.has-magical-effect/);
+assert.match(guestCss, /guest-open-rules-bay \.shop-wall-shelves\.has-magical-effect/);
 assert.match(guestMagic, /event\.code !== "Space"/);
 assert.match(guestMagic, /isTextEntryTarget\(event\.target\)/);
 assert.match(guestMagic, /prefers-reduced-motion: reduce/);
