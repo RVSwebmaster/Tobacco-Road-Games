@@ -46,11 +46,12 @@
 }
 
 .guest-landing-page .guest-open-rules-books {
+  --guest-library-book-width: min(clamp(11px, 1.35vw, 22px), calc((100% - 17px) / 18));
   justify-content: flex-start;
   gap: 1px;
   height: 100%;
   min-height: 0;
-  padding: 0 12px;
+  padding: 0 0 0 calc((188px * 203 / 1774) * 6);
   box-sizing: border-box;
   overflow: visible;
 }
@@ -67,10 +68,10 @@
   z-index: 2;
   align-self: flex-end;
   box-sizing: border-box;
-  flex: 1 1 calc(100% / 18);
-  width: calc(100% / 18);
+  flex: 0 0 var(--guest-library-book-width);
+  width: var(--guest-library-book-width);
   min-width: 0;
-  max-width: calc(100% / 18);
+  max-width: var(--guest-library-book-width);
   height: var(--mock-book-height, 82%);
   border: 1px solid rgba(12, 7, 3, .88);
   border-radius: 2px 2px 0 0;
