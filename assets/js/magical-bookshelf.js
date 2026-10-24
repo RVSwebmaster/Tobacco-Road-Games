@@ -17,6 +17,18 @@
 
   const DEFAULT_PAIR_SIZE = 2;
   const DEFAULT_INTERVAL_MS = 1000;
+  const FLASH_COLORS = ["#e8bd55", "#5ca9ff", "#a979ff", "#64c982", "#f18ab9", "#f1a447", "#ffffff"];
+
+  function createFlashDescriptors(random = Math.random) {
+    const flashCount = 1 + Math.floor(random() * 3);
+    return Array.from({ length: flashCount }, () => ({
+      color: FLASH_COLORS[Math.floor(random() * FLASH_COLORS.length)],
+      durationMs: 420 + Math.floor(random() * 181),
+      offsetX: -22 + Math.floor(random() * 45),
+      offsetY: -14 + Math.floor(random() * 29),
+      sizePx: 18 + Math.floor(random() * 17),
+    }));
+  }
 
   function buildRevealPlan(shelves, pairSize = DEFAULT_PAIR_SIZE) {
     const normalizedPairSize = Number.isInteger(pairSize) && pairSize > 0 ? pairSize : DEFAULT_PAIR_SIZE;
@@ -162,6 +174,16 @@
       effect.style.setProperty("--magic-left", `${((left + right) / 2 - shelfRect.left) / shelfRect.width * 100}%`);
       effect.style.setProperty("--magic-bottom", `${(shelfRect.bottom - top) / shelfRect.height * 100}%`);
       effect.style.setProperty("--magic-hue", String((sequenceIndex * 47 + 32) % 360));
+      createFlashDescriptors().forEach((flash) => {
+        const light = documentRef.createElement("span");
+        light.className = "guest-bookshelf-magic__flash";
+        light.style.setProperty("--flash-color", flash.color);
+        light.style.setProperty("--flash-duration", `${flash.durationMs}ms`);
+        light.style.setProperty("--flash-size", `${flash.sizePx}px`);
+        light.style.setProperty("--flash-x", `${flash.offsetX}px`);
+        light.style.setProperty("--flash-y", `${flash.offsetY}px`);
+        effect.appendChild(light);
+      });
       for (let spark = 0; spark < 8; spark += 1) {
         const particle = documentRef.createElement("i");
         particle.style.setProperty("--spark-angle", `${spark * 45}deg`);
@@ -229,6 +251,7 @@
 
   return {
     buildRevealPlan,
+    createFlashDescriptors,
     createSequenceRunner,
     initializeMagicalBookshelves,
     isStagingPreviewHost,

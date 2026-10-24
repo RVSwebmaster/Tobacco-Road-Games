@@ -65,6 +65,9 @@ assert.match(guestCss, /a\[href="\/account\.html"\]::after[\s\S]*content: none/)
 assert.match(guestCss, /@media \(prefers-reduced-motion: reduce\)/);
 assert.match(guestCss, /guest-book-materialize/);
 assert.match(guestCss, /guest-magic-spark/);
+assert.match(guestCss, /guest-bookshelf-magic__flash/);
+assert.match(guestMagic, /createFlashDescriptors/);
+assert.match(guestMagic, /1 \+ Math\.floor\(random\(\) \* 3\)/);
 assert.match(guestMagic, /event\.code !== "Space"/);
 assert.match(guestMagic, /isTextEntryTarget\(event\.target\)/);
 assert.match(guestMagic, /prefers-reduced-motion: reduce/);

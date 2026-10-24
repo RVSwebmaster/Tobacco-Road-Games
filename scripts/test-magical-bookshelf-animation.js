@@ -14,6 +14,27 @@ assert.deepEqual(mixed.slice(0, 3).map((step) => step.bookIndexes), [[0, 1], [2,
 assert.ok(mixed.slice(0, 3).every((step) => step.shelfIndex === 1));
 assert.ok(mixed.slice(3).every((step) => step.shelfIndex === 2));
 
+const palette = new Set(["#e8bd55", "#5ca9ff", "#a979ff", "#64c982", "#f18ab9", "#f1a447", "#ffffff"]);
+const deterministicValues = [0, 0, 0, 0, 0, .34, .16, .99, .99, .99, .67, .33, .5, .5, .5, .2];
+let deterministicIndex = 0;
+const flashes = animation.createFlashDescriptors(() => deterministicValues[deterministicIndex++ % deterministicValues.length]);
+assert.equal(flashes.length, 1);
+assert.ok(flashes.every((flash) => palette.has(flash.color)));
+assert.ok(flashes.every((flash) => flash.sizePx >= 18 && flash.sizePx <= 34));
+assert.ok(flashes.every((flash) => flash.offsetX >= -22 && flash.offsetX <= 22));
+assert.ok(flashes.every((flash) => flash.offsetY >= -14 && flash.offsetY <= 14));
+assert.ok(flashes.every((flash) => flash.durationMs >= 420 && flash.durationMs <= 600));
+
+for (const value of [0, .34, .67, .999]) {
+  const group = animation.createFlashDescriptors(() => value);
+  assert.ok(group.length >= 1 && group.length <= 3);
+  assert.ok(group.every((flash) => !Object.hasOwn(flash, "delayMs")));
+}
+
+const firstReplay = animation.createFlashDescriptors(() => .1);
+const secondReplay = animation.createFlashDescriptors(() => .8);
+assert.notDeepEqual(firstReplay, secondReplay);
+
 function createHarness(counts) {
   const steps = animation.buildRevealPlan(counts);
   const queues = [];
