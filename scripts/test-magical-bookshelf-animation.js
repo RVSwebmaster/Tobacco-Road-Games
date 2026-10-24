@@ -19,6 +19,15 @@ assert.deepEqual(animation.orderBooksByDirection(positionedBooks, "left-to-right
 assert.deepEqual(animation.orderBooksByDirection(positionedBooks, "right-to-left", (book) => book.position).map((book) => book.position), [4, 3, 2, 1, 0]);
 assert.deepEqual(animation.orderBooksByDirection(positionedBooks, "outer-inward", (book) => book.position).map((book) => book.position), [0, 4, 1, 3, 2]);
 
+const separatedAnchors = animation.buildEffectAnchors([
+  { left: 0, right: 20, top: 40, height: 120 },
+  { left: 980, right: 1000, top: 50, height: 100 },
+], { left: 0, right: 1000, top: 0, bottom: 200, width: 1000, height: 200 });
+assert.equal(separatedAnchors.length, 2);
+assert.ok(separatedAnchors[0].leftPercent < 5);
+assert.ok(separatedAnchors[1].leftPercent > 95);
+assert.equal(animation.buildEffectAnchors([{ left: 490, right: 510, top: 40, height: 120 }], { left: 0, right: 1000, top: 0, bottom: 200, width: 1000, height: 200 }).length, 1);
+
 const palette = new Set(["#e8bd55", "#5ca9ff", "#a979ff", "#64c982", "#f18ab9", "#f1a447", "#ffffff"]);
 const deterministicValues = [0, 0, 0, 0, 0, .34, .16, .99, .99, .99, .67, .33, .5, .5, .5, .2];
 let deterministicIndex = 0;

@@ -153,17 +153,14 @@
   }
   .guest-landing-page .guest-bookshelf-magic {
     position: absolute;
-    left: var(--magic-left);
-    bottom: var(--magic-bottom);
+    inset: 0;
     z-index: 12;
-    width: 1px;
-    height: 1px;
     pointer-events: none;
   }
   .guest-landing-page .guest-bookshelf-magic__flash {
     position: absolute;
-    left: var(--flash-x);
-    top: var(--flash-y);
+    left: calc(var(--flash-left) + var(--flash-x));
+    bottom: calc(var(--flash-bottom) - var(--flash-y));
     width: var(--flash-size);
     height: var(--flash-size);
     border-radius: 50%;
@@ -174,8 +171,8 @@
   }
   .guest-landing-page .guest-bookshelf-magic i {
     position: absolute;
-    left: -2px;
-    top: -2px;
+    left: calc(var(--spark-left) - 2px);
+    bottom: calc(var(--spark-bottom) - 2px);
     width: 4px;
     height: 4px;
     border-radius: 50%;
