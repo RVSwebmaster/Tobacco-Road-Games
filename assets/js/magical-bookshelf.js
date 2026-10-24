@@ -196,7 +196,10 @@
 
     const addEffect = (shelf, books, sequenceIndex) => {
       if (!books.length || reducedMotionQuery.matches) return;
-      const effectHost = shelf.closest(".shop-wall-shelf-level") || shelf;
+      const shelfLevel = shelf.closest(".shop-wall-shelf-level") || shelf;
+      const effectHost = documentRef.defaultView?.getComputedStyle(shelfLevel).display === "contents"
+        ? shelf.closest(".shop-wall-fixed-cabinet") || shelfLevel
+        : shelfLevel;
       const hostRect = effectHost.getBoundingClientRect();
       const bookRects = books.map((book) => book.getBoundingClientRect());
       const anchors = buildEffectAnchors(bookRects, hostRect);
@@ -229,13 +232,10 @@
         effect.appendChild(particle);
       }
       effectHost.classList.add("has-magical-effect");
-      const effectStack = effectHost.parentElement;
-      effectStack?.classList.add("has-magical-effect");
       effectHost.appendChild(effect);
       const timer = windowRef.setTimeout(() => {
         effect.remove();
         if (!effectHost.querySelector(".guest-bookshelf-magic")) effectHost.classList.remove("has-magical-effect");
-        if (effectStack && !effectStack.querySelector(".guest-bookshelf-magic")) effectStack.classList.remove("has-magical-effect");
         effectTimers.delete(timer);
       }, 760);
       effectTimers.add(timer);
