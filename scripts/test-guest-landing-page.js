@@ -102,7 +102,8 @@ assert.equal((guest.match(/data-mock-open-rule="true"/g) || []).length, 36);
 assert.doesNotMatch(guest.match(/<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/)?.[0] || "", /data-product-id=/);
 assert.match(guestCss, /\.guest-landing-page \.guest-open-rules-mock-book/);
 assert.match(guestCss, /--guest-library-book-width:\s*min\(clamp\(11px, 1\.35vw, 22px\), calc\(\(100% - 17px\) \/ 18\)\)/);
-assert.match(guestCss, /padding:\s*0 0 0 calc\(\(188px \* 203 \/ 1774\) \* 6\)/);
+assert.match(guestCss, /padding:\s*0 0 0 calc\(\(188px \* 203 \/ 1774\) \* 5\)/);
+assert.doesNotMatch(guestCss, /padding:\s*0 0 0 calc\(\(188px \* 203 \/ 1774\) \* 6\)/);
 assert.match(guestCss, /flex:\s*0 0 var\(--guest-library-book-width\)/);
 assert.doesNotMatch(guestCss, /\.guest-open-rules-mock-book\s*\{[^}]*flex:\s*1 1/s);
 

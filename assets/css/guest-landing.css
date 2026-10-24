@@ -51,7 +51,7 @@
   gap: 1px;
   height: 100%;
   min-height: 0;
-  padding: 0 0 0 calc((188px * 203 / 1774) * 6);
+  padding: 0 0 0 calc((188px * 203 / 1774) * 5);
   box-sizing: border-box;
   overflow: visible;
 }
