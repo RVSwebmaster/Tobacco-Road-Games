@@ -8,6 +8,7 @@ const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "u
 const homepage = read("index.html");
 const guest = read("guest/index.html");
 const guestCss = read("assets/css/guest-landing.css");
+const guestMagic = read("assets/js/magical-bookshelf.js");
 const builder = read("scripts/build-store.js");
 const outputBuilder = read("scripts/build-pages-output.mjs");
 
@@ -20,6 +21,11 @@ assert.match(nav, /href="\/account\.html"[^>]*>Login\/Signup<\/a>/);
 assert.match(nav, /href="\/store\/cart\/"[^>]*>Cart <span class="cart-count-badge" data-cart-count>0<\/span><\/a>/);
 
 assert.match(guest, /data-guest-landing/);
+assert.match(guest, /data-magical-bookshelf-demo/);
+assert.match(guest, /\/assets\/js\/magical-bookshelf\.js/);
+assert.equal((guest.match(/data-magical-bookshelf(?:\s|>)/g) || []).length, 4);
+assert.equal((guest.match(/data-magical-book(?:\s|>)/g) || []).length, 36);
+assert.match(guest, /data-magical-bookshelf-replay hidden>Replay bookshelf magic/);
 assert.match(guest, /Your shelves look a little bare\.<br>Log in or sign up to make them your own\./);
 assert.equal((guest.match(/guest-library-sign/g) || []).length, 1);
 const guestLibrary = guest.match(/<section class="shop-wall-bay shop-wall-bay--library guest-library-bay"[\s\S]*?<\/section>/)?.[0] || "";
@@ -57,6 +63,12 @@ assert.match(guestCss, /white-space: nowrap/);
 assert.match(guestCss, /a\[href="\/support\.html"\][\s\S]*display: flex/);
 assert.match(guestCss, /a\[href="\/account\.html"\]::after[\s\S]*content: none/);
 assert.match(guestCss, /@media \(prefers-reduced-motion: reduce\)/);
+assert.match(guestCss, /guest-book-materialize/);
+assert.match(guestCss, /guest-magic-spark/);
+assert.match(guestMagic, /event\.code !== "Space"/);
+assert.match(guestMagic, /isTextEntryTarget\(event\.target\)/);
+assert.match(guestMagic, /prefers-reduced-motion: reduce/);
+assert.match(guestMagic, /tobacco-road-games-staging\.pages\.dev/);
 assert.match(outputBuilder, /"guest"/);
 
 const mockProduct = (index) => ({
@@ -94,9 +106,9 @@ assert.doesNotMatch(emptyOpenRules, /href=|data-product-id=/);
 
 const partialOpenRules = renderGuestOpenRulesBay([mockProduct(1), mockProduct(2)]);
 assert.equal((partialOpenRules.match(/data-mock-open-rule="true"/g) || []).length, 34);
-assert.match(partialOpenRules, /data-library-position="1" class="bookshelf-book/);
-assert.match(partialOpenRules, /data-library-position="2" class="bookshelf-book/);
-assert.match(partialOpenRules, /data-library-position="3" data-mock-open-rule="true"/);
+assert.match(partialOpenRules, /data-library-position="1" data-magical-book class="bookshelf-book/);
+assert.match(partialOpenRules, /data-library-position="2" data-magical-book class="bookshelf-book/);
+assert.match(partialOpenRules, /data-library-position="3" data-magical-book data-mock-open-rule="true"/);
 
 assert.equal((guest.match(/data-mock-open-rule="true"/g) || []).length, 36);
 assert.doesNotMatch(guest.match(/<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/)?.[0] || "", /data-product-id=/);

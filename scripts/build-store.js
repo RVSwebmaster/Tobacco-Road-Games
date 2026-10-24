@@ -1156,7 +1156,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = '  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261024-library-sign-centering">\n';
+  const guestStylesheet = '  <script src="/assets/js/magical-bookshelf.js?v=20261024-erin-bookshelf1"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261024-erin-bookshelf1">\n';
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
@@ -1180,7 +1180,7 @@ function renderGuestLandingShopWallMain(products) {
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
   const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 36);
 
-  return `    <main id="top" class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing aria-labelledby="homepage-shop-wall-heading">
+  return `    <main id="top" class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo aria-labelledby="homepage-shop-wall-heading">
       <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
       <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
         <picture class="shop-wall-cabinet-art" aria-hidden="true">
@@ -1203,6 +1203,7 @@ function renderGuestLandingShopWallMain(products) {
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
       </section>
       ${renderHomepageNewsChyron()}
+      <button class="guest-magic-replay" type="button" data-magical-bookshelf-replay hidden>Replay bookshelf magic</button>
     </main>`;
 }
 
@@ -1212,12 +1213,12 @@ function renderGuestLibraryBay() {
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty Guest personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row">
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right">
                 <p class="guest-library-sign">Your shelves look a little bare.<br>Log in or sign up to make them your own.</p>
               </div>
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" aria-hidden="true"></div>
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"></div>
             </div>
           </div>
         </section>`;
@@ -1226,14 +1227,14 @@ function renderGuestLibraryBay() {
 function renderGuestOpenRulesBay(products) {
   const renderMockBook = (position) => {
     const height = 72 + ((position * 7) % 21);
-    return `<span class="guest-open-rules-mock-book guest-open-rules-mock-book--tone-${((position - 1) % 6) + 1}" data-library-position="${position}" data-mock-open-rule="true" style="--mock-book-height:${height}%" aria-hidden="true"><span class="guest-open-rules-mock-book__label">OPEN RULES</span></span>`;
+    return `<span class="guest-open-rules-mock-book guest-open-rules-mock-book--tone-${((position - 1) % 6) + 1}" data-library-position="${position}" data-magical-book data-mock-open-rule="true" style="--mock-book-height:${height}%" aria-hidden="true"><span class="guest-open-rules-mock-book__label">OPEN RULES</span></span>`;
   };
-  const renderShelf = (shelfProducts, startPosition) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
-                <div class="bookshelf-grid shop-wall-books guest-open-rules-books" style="--shelf-items:18">${Array.from({ length: 18 }, (_, index) => {
+  const renderShelf = (shelfProducts, startPosition, shelfOrder) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
+                <div class="bookshelf-grid shop-wall-books guest-open-rules-books" data-magical-bookshelf data-magical-shelf-order="${shelfOrder}" data-magical-direction="right-to-left" style="--shelf-items:18">${Array.from({ length: 18 }, (_, index) => {
                   const position = startPosition + index;
                   const product = shelfProducts[index];
                   return product
-                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true }).replace('class="bookshelf-book', `data-library-position="${position}" class="bookshelf-book`)
+                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true }).replace('class="bookshelf-book', `data-library-position="${position}" data-magical-book class="bookshelf-book`)
                     : renderMockBook(position);
                 }).join("")}</div>
               </div>`;
@@ -1242,10 +1243,10 @@ function renderGuestOpenRulesBay(products) {
           <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
           <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              ${renderShelf(products.slice(0, 18), 1)}
+              ${renderShelf(products.slice(0, 18), 1, 3)}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              ${renderShelf(products.slice(18, 36), 19)}
+              ${renderShelf(products.slice(18, 36), 19, 4)}
             </div>
           </div>
         </section>`;

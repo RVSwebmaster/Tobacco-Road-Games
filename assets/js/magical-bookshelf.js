@@ -1,0 +1,237 @@
+(function (globalScope, factory) {
+  const api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  globalScope.TRGMagicalBookshelf = api;
+
+  if (globalScope.document) {
+    globalScope.document.documentElement.classList.add("trg-magical-shelves");
+    const initialize = () => api.initializeMagicalBookshelves(globalScope.document);
+    if (globalScope.document.readyState === "loading") {
+      globalScope.document.addEventListener("DOMContentLoaded", initialize, { once: true });
+    } else {
+      initialize();
+    }
+  }
+})(typeof globalThis === "object" ? globalThis : this, function () {
+  "use strict";
+
+  const DEFAULT_PAIR_SIZE = 2;
+  const DEFAULT_INTERVAL_MS = 1000;
+
+  function buildRevealPlan(shelves, pairSize = DEFAULT_PAIR_SIZE) {
+    const normalizedPairSize = Number.isInteger(pairSize) && pairSize > 0 ? pairSize : DEFAULT_PAIR_SIZE;
+    const plan = [];
+    shelves.forEach((books, shelfIndex) => {
+      const count = Array.isArray(books) ? books.length : Number(books) || 0;
+      for (let start = 0; start < count; start += normalizedPairSize) {
+        plan.push({
+          bookIndexes: Array.from({ length: Math.min(normalizedPairSize, count - start) }, (_, offset) => start + offset),
+          shelfIndex,
+        });
+      }
+    });
+    return plan;
+  }
+
+  function createSequenceRunner({
+    steps = [],
+    intervalMs = DEFAULT_INTERVAL_MS,
+    revealStep = () => {},
+    revealAll = () => {},
+    clearEffects = () => {},
+    onComplete = () => {},
+    schedule = (callback, delay) => setTimeout(callback, delay),
+    cancel = (timer) => clearTimeout(timer),
+  } = {}) {
+    let index = 0;
+    let running = false;
+    let timer = null;
+
+    const cancelTimer = () => {
+      if (timer !== null) cancel(timer);
+      timer = null;
+    };
+
+    const tick = () => {
+      if (!running) return;
+      const step = steps[index];
+      if (!step) {
+        running = false;
+        timer = null;
+        onComplete();
+        return;
+      }
+      revealStep(step);
+      index += 1;
+      if (index >= steps.length) {
+        running = false;
+        timer = null;
+        onComplete();
+        return;
+      }
+      timer = schedule(tick, intervalMs);
+    };
+
+    return {
+      finish() {
+        if (!running && index >= steps.length) return;
+        cancelTimer();
+        revealAll();
+        clearEffects();
+        index = steps.length;
+        running = false;
+        onComplete();
+      },
+      isRunning() {
+        return running;
+      },
+      start() {
+        cancelTimer();
+        index = 0;
+        running = steps.length > 0;
+        if (!running) {
+          revealAll();
+          onComplete();
+          return;
+        }
+        tick();
+      },
+    };
+  }
+
+  function isTextEntryTarget(target) {
+    if (!target || typeof target.matches !== "function") return false;
+    return target.matches("input, textarea, select, button, [contenteditable]:not([contenteditable='false'])");
+  }
+
+  function isStagingPreviewHost(hostname) {
+    const host = String(hostname || "").toLowerCase();
+    return host === "localhost"
+      || host === "127.0.0.1"
+      || host === "tobacco-road-games-staging.pages.dev"
+      || host.endsWith(".tobacco-road-games-staging.pages.dev");
+  }
+
+  function initializeMagicalBookshelves(documentRef) {
+    const root = documentRef.querySelector("[data-magical-bookshelf-demo]");
+    if (!root) return null;
+
+    const windowRef = documentRef.defaultView || globalThis;
+    const desktopQuery = windowRef.matchMedia("(min-width: 1024px)");
+    const reducedMotionQuery = windowRef.matchMedia("(prefers-reduced-motion: reduce)");
+    const shelves = Array.from(root.querySelectorAll("[data-magical-bookshelf]"))
+      .sort((left, right) => Number(left.dataset.magicalShelfOrder || 0) - Number(right.dataset.magicalShelfOrder || 0));
+    const shelfBooks = shelves.map((shelf) => Array.from(shelf.querySelectorAll(":scope > [data-magical-book]")));
+    const plan = buildRevealPlan(shelfBooks);
+    const replay = root.querySelector("[data-magical-bookshelf-replay]");
+    const effectTimers = new Set();
+
+    const removeEffects = () => {
+      effectTimers.forEach((timer) => windowRef.clearTimeout(timer));
+      effectTimers.clear();
+      root.querySelectorAll("[data-magical-effect]").forEach((effect) => effect.remove());
+    };
+
+    const setPending = () => {
+      removeEffects();
+      shelfBooks.flat().forEach((book) => {
+        book.classList.add("is-magical-pending");
+        book.classList.remove("is-magical-revealed");
+      });
+      root.dataset.magicalState = "pending";
+    };
+
+    const revealAll = () => {
+      shelfBooks.flat().forEach((book) => {
+        book.classList.remove("is-magical-pending");
+        book.classList.add("is-magical-revealed");
+      });
+    };
+
+    const addEffect = (shelf, books, sequenceIndex) => {
+      if (!books.length || reducedMotionQuery.matches) return;
+      const shelfRect = shelf.getBoundingClientRect();
+      const bookRects = books.map((book) => book.getBoundingClientRect());
+      const left = Math.min(...bookRects.map((rect) => rect.left));
+      const right = Math.max(...bookRects.map((rect) => rect.right));
+      const top = Math.min(...bookRects.map((rect) => rect.top));
+      const effect = documentRef.createElement("span");
+      effect.className = "guest-bookshelf-magic";
+      effect.dataset.magicalEffect = "";
+      effect.setAttribute("aria-hidden", "true");
+      effect.style.setProperty("--magic-left", `${((left + right) / 2 - shelfRect.left) / shelfRect.width * 100}%`);
+      effect.style.setProperty("--magic-bottom", `${(shelfRect.bottom - top) / shelfRect.height * 100}%`);
+      effect.style.setProperty("--magic-hue", String((sequenceIndex * 47 + 32) % 360));
+      for (let spark = 0; spark < 8; spark += 1) {
+        const particle = documentRef.createElement("i");
+        particle.style.setProperty("--spark-angle", `${spark * 45}deg`);
+        particle.style.setProperty("--spark-distance", `${14 + (spark % 3) * 6}px`);
+        effect.appendChild(particle);
+      }
+      shelf.appendChild(effect);
+      const timer = windowRef.setTimeout(() => {
+        effect.remove();
+        effectTimers.delete(timer);
+      }, 760);
+      effectTimers.add(timer);
+    };
+
+    let revealedStepCount = 0;
+    const runner = createSequenceRunner({
+      steps: plan,
+      intervalMs: DEFAULT_INTERVAL_MS,
+      revealStep(step) {
+        const shelf = shelves[step.shelfIndex];
+        const books = step.bookIndexes.map((bookIndex) => shelfBooks[step.shelfIndex][bookIndex]).filter(Boolean);
+        books.forEach((book) => {
+          book.classList.remove("is-magical-pending");
+          book.classList.add("is-magical-revealed");
+        });
+        addEffect(shelf, books, revealedStepCount);
+        revealedStepCount += 1;
+      },
+      revealAll,
+      clearEffects: removeEffects,
+      onComplete() {
+        root.dataset.magicalState = "complete";
+      },
+      schedule: windowRef.setTimeout.bind(windowRef),
+      cancel: windowRef.clearTimeout.bind(windowRef),
+    });
+
+    const play = () => {
+      revealedStepCount = 0;
+      setPending();
+      if (!desktopQuery.matches || reducedMotionQuery.matches) {
+        revealAll();
+        root.dataset.magicalState = "complete";
+        return;
+      }
+      root.dataset.magicalState = "running";
+      runner.start();
+    };
+
+    if (replay && isStagingPreviewHost(windowRef.location.hostname)) {
+      replay.hidden = false;
+      replay.addEventListener("click", play);
+    }
+
+    documentRef.addEventListener("keydown", (event) => {
+      if (event.code !== "Space" || event.repeat || isTextEntryTarget(event.target) || !runner.isRunning()) return;
+      event.preventDefault();
+      runner.finish();
+    });
+
+    setPending();
+    windowRef.requestAnimationFrame(play);
+    return { play, runner, shelves };
+  }
+
+  return {
+    buildRevealPlan,
+    createSequenceRunner,
+    initializeMagicalBookshelves,
+    isStagingPreviewHost,
+    isTextEntryTarget,
+  };
+});
