@@ -133,6 +133,10 @@
 }
 
 @media (min-width: 1024px) {
+  .guest-landing-page .guest-library-bay .shop-wall-shelf-level--upper .guest-library-empty-row {
+    box-sizing: border-box;
+    padding-right: calc((169.166672px * 203 / 1774) * 6);
+  }
   .guest-landing-page .guest-open-rules-books {
     --guest-library-book-width: calc(100% / 18);
     flex-direction: row-reverse;
