@@ -71,6 +71,8 @@ assert.match(guestMagic, /createFlashDescriptors/);
 assert.match(guestMagic, /1 \+ Math\.floor\(random\(\) \* 3\)/);
 assert.match(guestMagic, /DEFAULT_INTERVAL_MS = 500/);
 assert.match(guestMagic, /orderBooksByDirection/);
+assert.match(guestMagic, /buildEffectAnchors/);
+assert.match(guestMagic, /closest\("\.shop-wall-shelf-level"\)/);
 assert.match(guestMagic, /event\.code !== "Space"/);
 assert.match(guestMagic, /isTextEntryTarget\(event\.target\)/);
 assert.match(guestMagic, /prefers-reduced-motion: reduce/);

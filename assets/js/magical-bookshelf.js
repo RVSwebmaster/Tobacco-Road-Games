@@ -64,6 +64,17 @@
     return outsideIn;
   }
 
+  function buildEffectAnchors(bookRects, hostRect) {
+    if (!hostRect?.width || !hostRect?.height) return [];
+    return Array.from(bookRects || []).map((rect) => {
+      const effectY = rect.top + Math.min(rect.height * .25, 36);
+      return {
+        bottomPercent: (hostRect.bottom - effectY) / hostRect.height * 100,
+        leftPercent: ((rect.left + rect.right) / 2 - hostRect.left) / hostRect.width * 100,
+      };
+    });
+  }
+
   function createSequenceRunner({
     steps = [],
     intervalMs = DEFAULT_INTERVAL_MS,
@@ -184,35 +195,39 @@
 
     const addEffect = (shelf, books, sequenceIndex) => {
       if (!books.length || reducedMotionQuery.matches) return;
-      const shelfRect = shelf.getBoundingClientRect();
+      const effectHost = shelf.closest(".shop-wall-shelf-level") || shelf;
+      const hostRect = effectHost.getBoundingClientRect();
       const bookRects = books.map((book) => book.getBoundingClientRect());
-      const left = Math.min(...bookRects.map((rect) => rect.left));
-      const right = Math.max(...bookRects.map((rect) => rect.right));
-      const top = Math.min(...bookRects.map((rect) => rect.top));
+      const anchors = buildEffectAnchors(bookRects, hostRect);
+      if (!anchors.length) return;
       const effect = documentRef.createElement("span");
       effect.className = "guest-bookshelf-magic";
       effect.dataset.magicalEffect = "";
       effect.setAttribute("aria-hidden", "true");
-      effect.style.setProperty("--magic-left", `${((left + right) / 2 - shelfRect.left) / shelfRect.width * 100}%`);
-      effect.style.setProperty("--magic-bottom", `${(shelfRect.bottom - top) / shelfRect.height * 100}%`);
       effect.style.setProperty("--magic-hue", String((sequenceIndex * 47 + 32) % 360));
-      createFlashDescriptors().forEach((flash) => {
+      createFlashDescriptors().forEach((flash, flashIndex) => {
+        const anchor = anchors[(sequenceIndex + flashIndex) % anchors.length];
         const light = documentRef.createElement("span");
         light.className = "guest-bookshelf-magic__flash";
         light.style.setProperty("--flash-color", flash.color);
         light.style.setProperty("--flash-duration", `${flash.durationMs}ms`);
+        light.style.setProperty("--flash-left", `${anchor.leftPercent}%`);
+        light.style.setProperty("--flash-bottom", `${anchor.bottomPercent}%`);
         light.style.setProperty("--flash-size", `${flash.sizePx}px`);
         light.style.setProperty("--flash-x", `${flash.offsetX}px`);
         light.style.setProperty("--flash-y", `${flash.offsetY}px`);
         effect.appendChild(light);
       });
       for (let spark = 0; spark < 8; spark += 1) {
+        const anchor = anchors[spark % anchors.length];
         const particle = documentRef.createElement("i");
         particle.style.setProperty("--spark-angle", `${spark * 45}deg`);
         particle.style.setProperty("--spark-distance", `${14 + (spark % 3) * 6}px`);
+        particle.style.setProperty("--spark-left", `${anchor.leftPercent}%`);
+        particle.style.setProperty("--spark-bottom", `${anchor.bottomPercent}%`);
         effect.appendChild(particle);
       }
-      shelf.appendChild(effect);
+      effectHost.appendChild(effect);
       const timer = windowRef.setTimeout(() => {
         effect.remove();
         effectTimers.delete(timer);
@@ -272,6 +287,7 @@
   }
 
   return {
+    buildEffectAnchors,
     buildRevealPlan,
     createFlashDescriptors,
     createSequenceRunner,
