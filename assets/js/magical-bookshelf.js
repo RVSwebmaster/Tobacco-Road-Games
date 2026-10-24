@@ -16,7 +16,7 @@
   "use strict";
 
   const DEFAULT_PAIR_SIZE = 2;
-  const DEFAULT_INTERVAL_MS = 1000;
+  const DEFAULT_INTERVAL_MS = 500;
   const FLASH_COLORS = ["#e8bd55", "#5ca9ff", "#a979ff", "#64c982", "#f18ab9", "#f1a447", "#ffffff"];
 
   function createFlashDescriptors(random = Math.random) {
@@ -43,6 +43,25 @@
       }
     });
     return plan;
+  }
+
+  function orderBooksByDirection(books, direction, positionOf = (book) => book.getBoundingClientRect().left) {
+    const ordered = Array.from(books || []).sort((left, right) => positionOf(left) - positionOf(right));
+    if (direction === "right-to-left") return ordered.reverse();
+    if (direction !== "outer-inward") return ordered;
+
+    const outsideIn = [];
+    let left = 0;
+    let right = ordered.length - 1;
+    while (left <= right) {
+      outsideIn.push(ordered[left]);
+      left += 1;
+      if (left <= right) {
+        outsideIn.push(ordered[right]);
+        right -= 1;
+      }
+    }
+    return outsideIn;
   }
 
   function createSequenceRunner({
@@ -133,7 +152,10 @@
     const reducedMotionQuery = windowRef.matchMedia("(prefers-reduced-motion: reduce)");
     const shelves = Array.from(root.querySelectorAll("[data-magical-bookshelf]"))
       .sort((left, right) => Number(left.dataset.magicalShelfOrder || 0) - Number(right.dataset.magicalShelfOrder || 0));
-    const shelfBooks = shelves.map((shelf) => Array.from(shelf.querySelectorAll(":scope > [data-magical-book]")));
+    const shelfBooks = shelves.map((shelf) => orderBooksByDirection(
+      Array.from(shelf.querySelectorAll("[data-magical-book], .bookshelf-book, .shop-wall-stock-spine, .shop-wall-sale-spine, .shop-wall-hero-book")),
+      shelf.dataset.magicalDirection
+    ));
     const plan = buildRevealPlan(shelfBooks);
     const replay = root.querySelector("[data-magical-bookshelf-replay]");
     const effectTimers = new Set();
@@ -256,5 +278,6 @@
     initializeMagicalBookshelves,
     isStagingPreviewHost,
     isTextEntryTarget,
+    orderBooksByDirection,
   };
 });

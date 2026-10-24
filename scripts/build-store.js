@@ -1156,7 +1156,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = '  <script src="/assets/js/magical-bookshelf.js?v=20261024-erin-flash2"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261024-erin-flash2">\n';
+  const guestStylesheet = '  <script src="/assets/js/magical-bookshelf.js?v=20261024-erin-all-shelves3"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261024-erin-all-shelves3">\n';
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
@@ -1197,10 +1197,10 @@ function renderGuestLandingShopWallMain(products) {
       ${renderHomepageBricABracShelf({ sumo: true })}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
-        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
-        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }], magicalShelfOrder: 5, magicalDirection: "outer-inward" })}
+        ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }], magicalShelfOrder: 6, magicalDirection: "outer-inward" })}
         ${renderHomepageBricABracShelf()}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], magicalShelfOrder: 7, magicalDirection: "outer-inward" })}
       </section>
       ${renderHomepageNewsChyron()}
       <button class="guest-magic-replay" type="button" data-magical-bookshelf-replay hidden>Replay bookshelf magic</button>
@@ -1397,7 +1397,7 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right" }) {
   const visibleProducts = products.slice(0, 5);
   const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
   const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
@@ -1426,7 +1426,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
               ${wallArtMarkup}
               ${bambooIncenseMarkup}
               ${dogwoodBonsaiMarkup}
-              ${merchandising ? renderHomepageMerchandisingBooks(products, configuredHero) : `${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}\n              ${productMockMarkup}`}
+              ${merchandising ? renderHomepageMerchandisingBooks(products, configuredHero, { magicalShelfOrder, magicalDirection }) : `${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}\n              ${productMockMarkup}`}
               ${jesusFigurineMarkup}
               ${puzzleCubeMarkup}
               ${dicePileMarkup}
@@ -1491,7 +1491,7 @@ function selectHomepageShelfBooks(products, heroProductId = null) {
   return { hero, left: spines.slice(0, 21), right: spines.slice(21, 42) };
 }
 
-function renderHomepageMerchandisingBooks(products, heroProductId = null) {
+function renderHomepageMerchandisingBooks(products, heroProductId = null, { magicalShelfOrder = null, magicalDirection = "left-to-right" } = {}) {
   const { hero, left, right } = selectHomepageShelfBooks(products, heroProductId);
   const renderSpines = (run, side) => `<div class="shop-wall-spine-run" data-spine-run="${side}" data-spine-slots="21">${Array.from({ length: 21 }, (_, slot) => {
     const product = run[slot];
@@ -1502,7 +1502,8 @@ function renderHomepageMerchandisingBooks(products, heroProductId = null) {
   const heroMarkup = hero
     ? `<a class="shop-wall-hero-book" data-product-card data-slug="${escapeAttribute(hero.slug)}" data-product-id="${escapeAttribute(homepageProductId(hero))}" href="${escapeAttribute(hero.url)}" aria-label="Open ${escapeAttribute(hero.title)} product page" title="${escapeAttribute(hero.title)}"><img src="${escapeAttribute(hero.assetSet.cover)}" alt="${escapeAttribute(hero.title)} cover" loading="lazy" decoding="async"></a>`
     : `<figure class="shop-wall-hero-book shop-wall-hero-book--stock" data-decorative-stock aria-hidden="true"><div class="shop-wall-stock-cover" aria-hidden="true"><img src="/assets/tobacco-road-games-logo.png" alt="" loading="lazy" decoding="async"></div></figure>`;
-  return `<div class="shop-wall-product-row shop-wall-product-row--hero" data-overhang-spine data-book-units="50">
+  const magicalAttributes = magicalShelfOrder === null ? "" : ` data-magical-bookshelf data-magical-shelf-order="${Number(magicalShelfOrder)}" data-magical-direction="${escapeAttribute(magicalDirection)}"`;
+  return `<div class="shop-wall-product-row shop-wall-product-row--hero" data-overhang-spine data-book-units="50"${magicalAttributes}>
                 ${renderSpines(left, "left")}
                 <div class="shop-wall-hero-bay" data-hero-units="8">${heroMarkup}</div>
                 ${renderSpines(right, "right")}
