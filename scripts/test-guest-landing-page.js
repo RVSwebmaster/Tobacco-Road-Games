@@ -111,6 +111,7 @@ assert.doesNotMatch(guestCss, /\.guest-open-rules-mock-book\s*\{[^}]*flex:\s*1 1
 assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*--guest-library-book-width:\s*calc\(100% \/ 18\)/);
 assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*flex-direction:\s*row-reverse/);
 assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*gap:\s*0/);
+assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*guest-library-bay[\s\S]*padding-right:\s*calc\(\(169\.166672px \* 203 \/ 1774\) \* 6\)/);
 
 const library = renderGuestLibraryBay();
 assert.doesNotMatch(library, /data-fill-library|shop-wall-product-mock|bookshelf-book/);
