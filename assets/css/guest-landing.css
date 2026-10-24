@@ -47,11 +47,12 @@
 
 .guest-landing-page .guest-open-rules-books {
   --guest-library-book-width: min(clamp(11px, 1.35vw, 22px), calc((100% - 17px) / 18));
+  --guest-bookstop-contact: calc((169.166672px * 203 / 1774) * 6);
   justify-content: flex-start;
   gap: 1px;
   height: 100%;
   min-height: 0;
-  padding: 0 0 0 calc((188px * 203 / 1774) * 5);
+  padding: 0 0 0 var(--guest-bookstop-contact);
   box-sizing: border-box;
   overflow: visible;
 }
@@ -132,6 +133,9 @@
 }
 
 @media (max-width: 1023px) {
+  .guest-landing-page .guest-open-rules-books {
+    --guest-bookstop-contact: calc((98px * 203 / 1774) * 6);
+  }
   .guest-landing-page .guest-library-sign {
     width: min(270px, 70%);
     margin-top: 24px;
@@ -143,6 +147,9 @@
 }
 
 @media (max-width: 699px) {
+  .guest-landing-page .guest-open-rules-books {
+    --guest-bookstop-contact: calc((84px * 203 / 1774) * 6);
+  }
   body:has(.guest-landing-page) .site-nav {
     justify-content: center;
     gap: 2px;
