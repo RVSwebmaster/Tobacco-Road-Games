@@ -175,6 +175,7 @@
       effectTimers.forEach((timer) => windowRef.clearTimeout(timer));
       effectTimers.clear();
       root.querySelectorAll("[data-magical-effect]").forEach((effect) => effect.remove());
+      root.querySelectorAll(".has-magical-effect").forEach((stack) => stack.classList.remove("has-magical-effect"));
     };
 
     const setPending = () => {
@@ -228,10 +229,13 @@
         effect.appendChild(particle);
       }
       effectHost.classList.add("has-magical-effect");
+      const effectStack = effectHost.parentElement;
+      effectStack?.classList.add("has-magical-effect");
       effectHost.appendChild(effect);
       const timer = windowRef.setTimeout(() => {
         effect.remove();
         if (!effectHost.querySelector(".guest-bookshelf-magic")) effectHost.classList.remove("has-magical-effect");
+        if (effectStack && !effectStack.querySelector(".guest-bookshelf-magic")) effectStack.classList.remove("has-magical-effect");
         effectTimers.delete(timer);
       }, 760);
       effectTimers.add(timer);
