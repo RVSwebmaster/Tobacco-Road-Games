@@ -132,6 +132,14 @@
   background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #4e552e, #222613);
 }
 
+@media (min-width: 1024px) {
+  .guest-landing-page .guest-open-rules-books {
+    --guest-library-book-width: calc(100% / 18);
+    flex-direction: row-reverse;
+    gap: 0;
+  }
+}
+
 @media (max-width: 1023px) {
   .guest-landing-page .guest-open-rules-books {
     --guest-bookstop-contact: calc((98px * 203 / 1774) * 6);

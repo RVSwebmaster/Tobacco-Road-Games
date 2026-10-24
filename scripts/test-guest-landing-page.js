@@ -108,6 +108,9 @@ assert.match(guestCss, /@media \(max-width: 1023px\)[\s\S]*--guest-bookstop-cont
 assert.match(guestCss, /@media \(max-width: 699px\)[\s\S]*--guest-bookstop-contact:\s*calc\(\(84px \* 203 \/ 1774\) \* 6\)/);
 assert.match(guestCss, /flex:\s*0 0 var\(--guest-library-book-width\)/);
 assert.doesNotMatch(guestCss, /\.guest-open-rules-mock-book\s*\{[^}]*flex:\s*1 1/s);
+assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*--guest-library-book-width:\s*calc\(100% \/ 18\)/);
+assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*flex-direction:\s*row-reverse/);
+assert.match(guestCss, /@media \(min-width: 1024px\)[\s\S]*gap:\s*0/);
 
 const library = renderGuestLibraryBay();
 assert.doesNotMatch(library, /data-fill-library|shop-wall-product-mock|bookshelf-book/);
