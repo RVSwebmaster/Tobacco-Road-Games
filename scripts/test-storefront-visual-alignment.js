@@ -244,9 +244,9 @@ assert.match(css, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.storefront
 assert.match(build, /ads\.map\(ad => renderHomepageAdItem\(ad, repeat \? "-repeat" : ""\)\)/);
 assert.match(build, /renderGroup\(true\)/);
 const newsChyron = homepage.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0] || "";
-assert.equal(previewHeadlines.length, 6, "The news preview must contain six short fictional headlines.");
-assert.match(newsChyron, /fictional test headlines/);
-assert.match(newsChyron, /TEST BULLETINS/);
+assert.equal(previewHeadlines.length, 6, "The retired preview fixture remains available only for historical test data.");
+assert.match(newsChyron, /data-news-api="\/api\/news"/);
+assert.match(newsChyron, /LIVE BULLETINS/);
 const flagHeaderArtwork = fs.readFileSync(path.join(ROOT, "assets", "images", "news", "american-flag-header.png"));
 assert.deepEqual([...flagHeaderArtwork.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], "The news header must include its American flag artwork locally.");
 assert.match(css, /\.storefront-news-chiron__bug\s*\{[^}]*url\("\/assets\/images\/news\/american-flag-header\.png"\) center \/ cover no-repeat;/);
@@ -255,14 +255,9 @@ assert.equal(newsSequences.length, 2, "The ticker must contain two identical seq
 assert.match(newsSequences[0][1], /data-news-sequence/);
 assert.match(newsSequences[1][1], /aria-hidden="true"/, "Repeated headlines must not be announced twice.");
 assert.equal(newsSequences[1][2], newsSequences[0][2], "Both sequences must match exactly at the loop boundary.");
-assert.equal((newsSequences[0][2].match(/<li /g) || []).length, previewHeadlines.length);
-for (const item of previewHeadlines) {
-  assert.ok(item.headline.length <= 65, "Test headlines must remain short.");
-  assert.ok(newsSequences[0][2].includes(item.label));
-  assert.ok(newsSequences[0][2].includes(item.headline));
-}
-assert.doesNotMatch(newsChyron, /<a\b|<article\b|<button\b/, "Fake headlines must not imply real articles or introduce controls.");
-assert.match(homepage, /news-chyron\.js\?v=20261001-news-chyron1/);
+assert.equal((newsSequences[0][2].match(/<li /g) || []).length, 0, "Live headlines must arrive from the public API, not static fictional markup.");
+assert.doesNotMatch(newsChyron, /fictional test headlines|TEST BULLETINS|Gen Con Event Registration/);
+assert.match(homepage, /news-chyron\.js\?v=20261024-news-feed1/);
 assert.match(css, /\.storefront-news-chiron__display\s*\{[^}]*height:\s*100%;[^}]*overflow:\s*hidden;/);
 assert.match(css, /\.storefront-news-chiron__viewport\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;/);
 assert.match(css, /animation:\s*storefront-news-right var\(--news-duration\) linear infinite;/);
@@ -275,16 +270,18 @@ assert.match(css, /overflow-x:\s*hidden;\s*overflow-y:\s*auto;/);
 const newsRenderer = build.match(/function renderHomepageNewsChyron\([\s\S]*?\n}\r?\n\r?\n(?=function renderHomepageAdMarquee)/)?.[0];
 const htmlEscaper = build.match(/function escapeHtml\(value\)\s*\{[\s\S]*?\n}/)?.[0];
 assert.ok(newsRenderer && htmlEscaper, "The homepage generator must preserve the reusable news renderer.");
-const newsRenderContext = { HOMEPAGE_NEWS_PREVIEW: previewHeadlines };
+const newsRenderContext = { HOMEPAGE_NEWS_PREVIEW: [] };
 vm.runInNewContext(`${htmlEscaper}\n${newsRenderer}\nresult = renderHomepageNewsChyron();`, newsRenderContext);
-assert.equal(newsRenderContext.result.replaceAll("\r\n", "\n"), newsChyron.replaceAll("\r\n", "\n"), "The generator and live homepage must render the same news stream.");
+const normalizeNewsMarkup = (markup) => markup.replace(/\s+/g, " ").trim();
+assert.equal(normalizeNewsMarkup(newsRenderContext.result), normalizeNewsMarkup(newsChyron), "The generator and live homepage must render the same news stream.");
 
 let measuredNewsWidth = 2400;
 let onNewsResize;
-const newsSequence = { getBoundingClientRect: () => ({ width: measuredNewsWidth }) };
+const newsSequence = { innerHTML: "", setAttribute: () => {}, getBoundingClientRect: () => ({ width: measuredNewsWidth }) };
 const newsRoot = { dataset: {}, style: { setProperty: (name, value) => { newsRoot.duration = value; } }, querySelector: () => newsSequence };
 vm.runInNewContext(newsScript, {
   document: { querySelectorAll: () => [newsRoot, { querySelector: () => null }] },
+  fetch: () => Promise.resolve({ json: () => Promise.resolve({ items: [] }) }),
   ResizeObserver: class { constructor(callback) { onNewsResize = callback; } observe(element) { assert.equal(element, newsSequence); } }
 });
 assert.equal(newsRoot.duration, "100s", "Ticker duration must maintain 24 pixels per second.");
