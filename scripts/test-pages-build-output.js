@@ -12,6 +12,7 @@ async function main() {
     const result = builder.buildPagesOutput(outputDirectory);
     assert.equal(result.outputDirectory, outputDirectory);
     assert.ok(result.fileCount > 0);
+    assert.match(fs.readFileSync(path.join(outputDirectory, "_redirects"), "utf8"), /^\/ \/guest\/ 200\s*$/m, "Pages output must preserve the Guest homepage rewrite.");
 
     for (const relativePath of builder.publicRootFiles) {
       assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing root file: ${relativePath}`);

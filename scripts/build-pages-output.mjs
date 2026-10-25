@@ -7,7 +7,7 @@ export const repositoryRoot = path.resolve(scriptDirectory, "..");
 const wranglerDirectory = path.join(repositoryRoot, ".wrangler");
 
 export const publicRootFiles = Object.freeze([
-  "_routes.json", "404.html", "account.html", "ad-depot.html", "ai-policy.html",
+  "_redirects", "_routes.json", "404.html", "account.html", "ad-depot.html", "ai-policy.html",
   "authors.html", "index.html", "robots.txt", "sitemap.xml", "styles.css", "support.html",
 ]);
 
