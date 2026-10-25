@@ -5837,13 +5837,17 @@ body:has(.shop-wall-product-row--hero) { overflow-x: clip; }
 .shop-wall-stock-cover span { font: 600 10px/1.2 Georgia, serif; }
 .shop-wall-stock-cover strong { font: 700 16px/1.2 Georgia, serif; }
 a.shop-wall-hero-book,
-.shop-wall-sale-spine {
+.shop-wall-sale-spine,
+.shop-wall-stock-spine,
+.shop-wall-hero-book--stock {
   transition: transform 200ms ease, filter 160ms ease;
 }
 a.shop-wall-hero-book:hover,
 a.shop-wall-hero-book:focus-visible,
 .shop-wall-sale-spine:hover,
-.shop-wall-sale-spine:focus-visible {
+.shop-wall-sale-spine:focus-visible,
+.shop-wall-stock-spine:hover,
+.shop-wall-hero-book--stock:hover {
   transform: translateY(-6px) scale(1.02);
   filter: brightness(1.08) drop-shadow(2px 4px 2px #160b0670);
   z-index: 3;
@@ -5863,11 +5867,15 @@ a.shop-wall-hero-book:focus-visible,
 }
 @media (prefers-reduced-motion: reduce) {
   a.shop-wall-hero-book,
-  .shop-wall-sale-spine { transition: none; }
+  .shop-wall-sale-spine,
+  .shop-wall-stock-spine,
+  .shop-wall-hero-book--stock { transition: none; }
   a.shop-wall-hero-book:hover,
   a.shop-wall-hero-book:focus-visible,
   .shop-wall-sale-spine:hover,
-  .shop-wall-sale-spine:focus-visible { transform: none; }
+  .shop-wall-sale-spine:focus-visible,
+  .shop-wall-stock-spine:hover,
+  .shop-wall-hero-book--stock:hover { transform: none; }
 }
 
 .open-rules-library-page {
