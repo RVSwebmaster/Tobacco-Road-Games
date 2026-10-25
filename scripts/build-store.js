@@ -1139,7 +1139,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, renderHomepageShopWallMain(products).trimStart())
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261005-tabula-rasa2");
+  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261025-guest-lower-hover1");
   const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
