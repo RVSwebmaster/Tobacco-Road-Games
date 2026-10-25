@@ -13,6 +13,31 @@ import {
   verifyOwnerAccessRequest
 } from "./owner-access.mjs";
 
+export async function verifyAuthenticatedOwnerReadRequest(request, env, options = {}) {
+  const accessConfig = getOwnerAccessConfig(env);
+  if (accessConfig.enabled) {
+    if (!accessConfig.ready) {
+      return { valid: false, status: 503, userMessage: "Owner access is partially configured. Add OWNER_ACCESS_TEAM_DOMAIN and OWNER_ACCESS_AUD together." };
+    }
+    const accessState = await verifyOwnerAccessRequest(request, env);
+    if (!accessState.valid) {
+      return { valid: false, status: accessState.reason === "config_incomplete" ? 503 : 403, userMessage: accessState.userMessage || "Owner access was not authorized." };
+    }
+    return { valid: true, csrfSubject: accessState.csrfSubject, username: accessState.email || accessState.csrfSubject };
+  }
+
+  const secrets = getOwnerSecrets(env);
+  const sessionToken = readCookie(request, SESSION_COOKIE_NAME);
+  if (!secrets.sessionSecret || !sessionToken) {
+    return { valid: false, status: 401, userMessage: options.missingSessionMessage || "Your owner session is missing. Please sign in again." };
+  }
+  const sessionState = await verifySessionToken(sessionToken, secrets.sessionSecret, options.nowMs);
+  if (!sessionState.valid) {
+    return { valid: false, status: 401, userMessage: options.invalidSessionMessage || "Your owner session is no longer valid. Please sign in again." };
+  }
+  return { valid: true, csrfSubject: sessionState.username, username: sessionState.username };
+}
+
 export async function verifyAuthenticatedOwnerMutationRequest(request, env, options = {}) {
   if (!validateSameOriginRequest(request)) {
     return {
