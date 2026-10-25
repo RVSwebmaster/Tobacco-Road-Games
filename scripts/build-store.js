@@ -1139,7 +1139,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, renderHomepageShopWallMain(products).trimStart())
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261025-guest-depth1");
+  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261025-guest-depth2");
   const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
@@ -1156,7 +1156,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = '  <script src="/assets/js/magical-bookshelf.js?v=20261024-erin-upper-effects7"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261025-guest-depth1">\n';
+  const guestStylesheet = '  <script src="/assets/js/magical-bookshelf.js?v=20261024-erin-upper-effects7"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261025-guest-depth2">\n';
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
