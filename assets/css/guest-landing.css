@@ -141,8 +141,8 @@
 
 .guest-landing-page .bookshelf-book:hover:not(.is-examining),
 .guest-landing-page .guest-open-rules-mock-book:hover {
-  transform: perspective(700px) translateY(-10px) translateZ(12px) scale(1.02);
-  filter: drop-shadow(0 8px 6px rgba(10, 5, 2, .48));
+  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
+  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
   z-index: 3;
 }
 
