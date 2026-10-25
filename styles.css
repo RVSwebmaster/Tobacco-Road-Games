@@ -4119,6 +4119,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   padding: 0 28px;
   white-space: nowrap;
 }
+.storefront-news-chiron__link { display: inline-flex; align-items: center; gap: inherit; color: inherit; text-decoration: none; }
 
 .storefront-news-chiron__item::after {
   position: absolute;

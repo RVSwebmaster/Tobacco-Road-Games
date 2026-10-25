@@ -19,8 +19,8 @@ const HOMEPAGE_MERCHANDISING_PATH = path.join(ROOT, "data", "homepage-merchandis
 const HOMEPAGE_MERCHANDISING = fs.existsSync(HOMEPAGE_MERCHANDISING_PATH) ? JSON.parse(fs.readFileSync(HOMEPAGE_MERCHANDISING_PATH, "utf8")) : {};
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
 const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "bb1-creator-ad-preview.json"), "utf8"));
-const HOMEPAGE_NEWS_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-news-preview.json"), "utf8"));
-const NEWS_CHYRON_CACHE_BUST = "20261001-news-chyron1";
+const HOMEPAGE_NEWS_PREVIEW = [];
+const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
@@ -1316,17 +1316,17 @@ function renderHomepageBricABracShelf({ sumo = false } = {}) {
 }
 
 function renderHomepageNewsChyron(headlines = HOMEPAGE_NEWS_PREVIEW) {
-  const renderSequence = (repeat = false) => `<ul class="storefront-news-chiron__sequence"${repeat ? ' aria-hidden="true"' : " data-news-sequence"}>
+  const renderSequence = (repeat = false) => `<ul class="storefront-news-chiron__sequence"${repeat ? ' data-news-sequence-repeat aria-hidden="true"' : " data-news-sequence"}>
                 ${headlines.map(item => `<li class="storefront-news-chiron__item"><span class="storefront-news-chiron__prefix">${escapeHtml(item.label)}</span><span class="storefront-news-chiron__headline">${escapeHtml(item.headline)}</span></li>`).join("\n                ")}
               </ul>`;
-  return `<aside class="storefront-news-chiron" id="ttrpg-news-chyron" data-news-chyron aria-label="TTRPG News Chyron: fictional test headlines">
+  return `<aside class="storefront-news-chiron" id="ttrpg-news-chyron" data-news-chyron data-news-api="/api/news" aria-label="TTRPG News Chyron">
         <div class="storefront-news-chiron__display">
           <div class="storefront-news-chiron__bug">
             <p class="storefront-news-chiron__brand">TTRPG</p>
             <h2 class="storefront-news-chiron__title">NEWS</h2>
-            <p class="storefront-news-chiron__edition">TEST BULLETINS</p>
+            <p class="storefront-news-chiron__edition">LIVE BULLETINS</p>
           </div>
-          <div class="storefront-news-chiron__viewport" tabindex="0" role="region" aria-label="Fictional TTRPG headline stream">
+          <div class="storefront-news-chiron__viewport" tabindex="0" role="region" aria-label="TTRPG headline stream">
             <div class="storefront-news-chiron__track">
               ${renderSequence()}
               ${renderSequence(true)}
