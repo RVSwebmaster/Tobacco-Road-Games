@@ -13,6 +13,10 @@ assert.equal(products.length, 2, "Staging preview must use two disposable produc
 assert.match(guest, /guest-product-preview\.js/);
 assert.match(client, /showModal\(\)/);
 assert.match(client, /data-guest-preview-close/);
+assert.match(client, /event\.key === "Escape"/);
+assert.match(client, /guest-open-rules-mock-book--preview/);
+assert.match(client, /LANTERNS/);
+assert.match(client, /OPEN ROADS/);
 assert.match(client, /event\.key !== "Enter"/);
 assert.match(client, /event\.key !== " "/);
 assert.match(client, /\?\.focus\?\.\(\)/);
@@ -20,6 +24,8 @@ assert.match(client, /dataset\.guestProductPreview/);
 assert.match(css, /\.guest-product-preview::backdrop/);
 assert.match(css, /\.guest-product-preview__summary/);
 assert.match(css, /\.guest-product-preview__close/);
+assert.match(css, /guest-open-rules-mock-book--preview/);
+assert.match(css, /content: "PREVIEW"/);
 for (const product of products) {
   assert.match(read("data/guest-preview-products.json"), new RegExp(product.slug));
   assert.match(client, /fullUrl/);
