@@ -16,6 +16,9 @@
     dialog.querySelector("[data-guest-preview-close]").addEventListener("click", close);
     dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
     dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && dialog?.open) close();
+    }, true);
   }
 
   function open(book) {
@@ -60,10 +63,14 @@
     .then((products) => {
       Array.from(page.querySelectorAll(".guest-open-rules-mock-book")).slice(0, products.length).forEach((book, index) => {
         book.dataset.guestProductPreview = JSON.stringify(products[index]);
+        book.classList.add("guest-open-rules-mock-book--preview");
+        book.setAttribute("title", `Preview ${products[index].title}`);
         book.removeAttribute("aria-hidden");
         book.setAttribute("tabindex", "0");
         book.setAttribute("role", "button");
         book.setAttribute("aria-label", `Preview ${products[index].title}`);
+        const label = book.querySelector(".guest-open-rules-mock-book__label");
+        if (label) label.textContent = index === 0 ? "LANTERNS" : "OPEN ROADS";
       });
       bindBooks();
     })
