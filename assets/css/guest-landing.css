@@ -147,31 +147,6 @@
 }
 
 .guest-landing-page .guest-open-rules-mock-book[data-guest-product-preview] { cursor: pointer; }
-.guest-landing-page .guest-open-rules-mock-book--preview {
-  outline: 2px solid rgba(239, 201, 111, .92);
-  outline-offset: 2px;
-  box-shadow: inset 1px 0 rgba(242, 201, 116, .28), inset -2px 0 rgba(0, 0, 0, .35), 0 0 10px rgba(239, 201, 111, .45), 1px 0 1px rgba(0, 0, 0, .45);
-}
-.guest-landing-page .guest-open-rules-mock-book--preview::marker { content: none; }
-.guest-landing-page .guest-open-rules-mock-book--preview::after {
-  right: -3px;
-  bottom: auto;
-  left: auto;
-  top: -14px;
-  width: max-content;
-  height: auto;
-  padding: 2px 3px;
-  border: 1px solid rgba(44, 25, 7, .85);
-  background: #e9c875;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, .45);
-  color: #24170a;
-  content: "PREVIEW";
-  font: 700 6px/1 Arial, sans-serif;
-  letter-spacing: .04em;
-  text-align: center;
-  writing-mode: horizontal-tb;
-  z-index: 4;
-}
 .guest-product-preview { width: min(680px, calc(100vw - 32px)); max-width: 680px; padding: 0; border: 1px solid rgba(225,188,95,.7); border-radius: 8px; background: #1b1811; color: #f6e8c4; box-shadow: 0 24px 80px rgba(0,0,0,.65); }
 .guest-product-preview::backdrop { background: rgba(5,7,5,.72); }
 .guest-product-preview__panel { position: relative; padding: clamp(22px,4vw,38px); }

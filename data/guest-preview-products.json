@@ -6,7 +6,9 @@
     "priceLabel": "Free Preview",
     "description": "A staging-only preview of a warm, table-ready collection of magical prompts and small-town mysteries.",
     "cover": "/assets/tobacco-road-games-logo.png",
-    "fullUrl": "/guest/preview-products/erin-lanterns-and-lore/"
+    "fullUrl": "/guest/preview-products/erin-lanterns-and-lore/",
+    "collection": "open-rules-upper",
+    "position": 1
   },
   {
     "slug": "open-roads-starter-kit",
@@ -15,6 +17,41 @@
     "priceLabel": "Pay What You Want",
     "description": "A staging-only preview of a compact toolkit for building open-ended adventures at the table.",
     "cover": "/assets/tobacco-road-games-logo.png",
-    "fullUrl": "/guest/preview-products/open-roads-starter-kit/"
+    "fullUrl": "/guest/preview-products/open-roads-starter-kit/",
+    "collection": "open-rules-upper",
+    "position": 2
+  },
+  {
+    "slug": "lantern-keep-encounters",
+    "title": "Lantern Keep Encounters",
+    "creator": "Erin Vale",
+    "priceLabel": "$4.99 Preview",
+    "description": "A staging-only preview of compact encounters for journeys through haunted roads and forgotten keeps.",
+    "cover": "/assets/tobacco-road-games-logo.png",
+    "fullUrl": "/guest/preview-products/lantern-keep-encounters/",
+    "collection": "featured-creator",
+    "position": 1
+  },
+  {
+    "slug": "mossbound-almanac",
+    "title": "The Mossbound Almanac",
+    "creator": "Tobacco Road Games",
+    "priceLabel": "Free Preview",
+    "description": "A staging-only preview of strange flora, old trails, and table-ready wilderness details.",
+    "cover": "/assets/tobacco-road-games-logo.png",
+    "fullUrl": "/guest/preview-products/mossbound-almanac/",
+    "collection": "new-this-week",
+    "position": 1
+  },
+  {
+    "slug": "carolina-star-chart",
+    "title": "Carolina Star Chart",
+    "creator": "Tobacco Road Games",
+    "priceLabel": "Pay What You Want",
+    "description": "A staging-only preview of a celestial travel aid for explorers, skyships, and night roads.",
+    "cover": "/assets/tobacco-road-games-logo.png",
+    "fullUrl": "/guest/preview-products/carolina-star-chart/",
+    "collection": "best-sellers",
+    "position": 1
   }
 ]
