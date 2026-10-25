@@ -1,0 +1,13 @@
+name = "tobacco-road-games-news-staging"
+main = "../../workers/news-collector.mjs"
+compatibility_date = "2026-06-18"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[[d1_databases]]
+binding = "TRG_ORDERS"
+database_name = "trg-orders-staging"
+database_id = "d92594e8-a45c-4f84-8f48-7c3aeba17f29"
+migrations_dir = "../../migrations"
+remote = true

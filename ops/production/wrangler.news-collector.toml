@@ -3,7 +3,7 @@ main = "../../workers/news-collector.mjs"
 compatibility_date = "2026-06-18"
 
 [triggers]
-crons = ["*/30 * * * *"]
+crons = ["0 * * * *"]
 
 [[d1_databases]]
 binding = "TRG_ORDERS"
