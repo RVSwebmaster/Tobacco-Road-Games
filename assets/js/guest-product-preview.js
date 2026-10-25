@@ -58,19 +58,28 @@
     });
   }
 
-  fetch("/data/guest-preview-products.json", { cache: "no-store" })
+  fetch("/data/guest-preview-products.json?v=20261025-preview3", { cache: "no-store" })
     .then((response) => response.ok ? response.json() : [])
     .then((products) => {
-      Array.from(page.querySelectorAll(".guest-open-rules-mock-book")).slice(0, products.length).forEach((book, index) => {
-        book.dataset.guestProductPreview = JSON.stringify(products[index]);
-        book.classList.add("guest-open-rules-mock-book--preview");
-        book.setAttribute("title", `Preview ${products[index].title}`);
-        book.removeAttribute("aria-hidden");
-        book.setAttribute("tabindex", "0");
-        book.setAttribute("role", "button");
-        book.setAttribute("aria-label", `Preview ${products[index].title}`);
-        const label = book.querySelector(".guest-open-rules-mock-book__label");
-        if (label) label.textContent = index === 0 ? "LANTERNS" : "OPEN ROADS";
+      const shelfByCollection = {
+        "open-rules-upper": page.querySelectorAll(".guest-open-rules-books")[0],
+        "open-rules-lower": page.querySelectorAll(".guest-open-rules-books")[1],
+        "featured-creator": page.querySelector('[aria-label="FEATURED CREATOR shelf"] [data-magical-bookshelf]'),
+        "new-this-week": page.querySelector('[aria-label="NEW THIS WEEK shelf"] [data-magical-bookshelf]'),
+        "best-sellers": page.querySelector('[aria-label="BEST SELLERS shelf"] [data-magical-bookshelf]')
+      };
+      Object.entries(shelfByCollection).forEach(([collection, shelf]) => {
+        if (!shelf) return;
+        const shelfBooks = Array.from(shelf.querySelectorAll("[data-magical-book], .shop-wall-stock-spine, .shop-wall-hero-book"));
+        products.filter((product) => product.collection === collection).forEach((product) => {
+          const book = shelfBooks[Number(product.position) - 1];
+          if (!book) return;
+          book.dataset.guestProductPreview = JSON.stringify(product);
+          book.removeAttribute("aria-hidden");
+          book.setAttribute("tabindex", "0");
+          book.setAttribute("role", "button");
+          book.setAttribute("aria-label", `Preview ${product.title}`);
+        });
       });
       bindBooks();
     })
