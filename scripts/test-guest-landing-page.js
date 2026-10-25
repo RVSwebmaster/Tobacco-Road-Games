@@ -44,10 +44,11 @@ assert.match(builder, /\.slice\(0, 36\)/);
 assert.doesNotMatch(guest, /id="free-pwyw-wall-heading"|aria-label="FREE &amp; PWYW shelf"/);
 assert.match(guest, /href="\/store\/catalog\/"/);
 assert.match(guest, /class="storefront-news-chiron"/);
-assert.equal(guest.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0], homepage.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0]);
+const normalizeMarkup = (markup) => markup?.replace(/\r\n/g, "\n");
+assert.equal(normalizeMarkup(guest.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0]), normalizeMarkup(homepage.match(/<aside class="storefront-news-chiron"[\s\S]*?<\/aside>/)?.[0]));
 
 const cabinetPicture = (document) => document.match(/<picture class="shop-wall-cabinet-art"[\s\S]*?<\/picture>/)?.[0];
-assert.equal(cabinetPicture(guest), cabinetPicture(homepage));
+assert.equal(normalizeMarkup(cabinetPicture(guest)), normalizeMarkup(cabinetPicture(homepage)));
 assert.match(guest, /\/assets\/js\/cart\.js/);
 assert.match(guest, /\/assets\/js\/storefront\.js/);
 assert.match(guest, /\/assets\/js\/news-chyron\.js/);
