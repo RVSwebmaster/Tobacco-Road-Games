@@ -14,6 +14,7 @@
     "test:guest-landing": "node scripts/test-guest-landing-page.js",
     "test:guest-bookshelf-baseline": "node scripts/test-guest-bookshelf-baseline.js",
     "test:guest-bookshelf-hover": "node scripts/test-guest-bookshelf-hover.js",
+    "test:guest-product-preview": "node scripts/test-guest-product-preview.js",
     "test:guest-magic": "node scripts/test-magical-bookshelf-animation.js",
     "test:news-chiron": "node scripts/test-news-chiron.js",
     "test:legacy-catalog-publication": "node scripts/test-legacy-catalog-publication.js",

@@ -30,7 +30,7 @@ assert.match(builder, /renderHomepageProductBay\(\{ title: "FEATURED CREATOR"/);
 assert.match(builder, /renderHomepageProductBay\(\{ title: "NEW THIS WEEK"/);
 assert.match(builder, /renderHomepageProductBay\(\{ title: "BEST SELLERS"/);
 
-for (const phrase of ["approved shared visual foundation", "Mouse-over behavior", "preview overlays", "full-product navigation"]) {
+for (const phrase of ["approved shared visual foundation", "hover/focus", "product preview", "Full-product navigation"]) {
   assert.match(baseline, new RegExp(phrase.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")));
 }
 

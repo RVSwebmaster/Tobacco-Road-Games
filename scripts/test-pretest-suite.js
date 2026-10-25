@@ -42,7 +42,8 @@ const STAGING_TESTS = [
   "scripts/test-transaction-payout-policy.js",
   "scripts/test-creator-agreement-draft.js",
   "scripts/test-creator-agreement-crosswalk.js",
-  "scripts/test-cumulative-partial-refunds.js"
+  "scripts/test-cumulative-partial-refunds.js",
+  "scripts/test-guest-product-preview.js"
 ];
 
 function run(script) {

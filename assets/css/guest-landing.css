@@ -146,6 +146,23 @@
   z-index: 3;
 }
 
+.guest-landing-page .guest-open-rules-mock-book[data-guest-product-preview] { cursor: pointer; }
+.guest-product-preview { width: min(680px, calc(100vw - 32px)); max-width: 680px; padding: 0; border: 1px solid rgba(225,188,95,.7); border-radius: 8px; background: #1b1811; color: #f6e8c4; box-shadow: 0 24px 80px rgba(0,0,0,.65); }
+.guest-product-preview::backdrop { background: rgba(5,7,5,.72); }
+.guest-product-preview__panel { position: relative; padding: clamp(22px,4vw,38px); }
+.guest-product-preview__close { position: absolute; top: 10px; right: 12px; width: 36px; height: 36px; border: 1px solid rgba(225,188,95,.45); border-radius: 50%; background: rgba(0,0,0,.22); color: #f6e8c4; font-size: 1.65rem; line-height: 1; cursor: pointer; }
+.guest-product-preview__summary { display: grid; grid-template-columns: minmax(130px,190px) 1fr; gap: clamp(20px,4vw,34px); align-items: center; color: inherit; text-decoration: none; }
+.guest-product-preview__cover { width: 100%; aspect-ratio: 3/4; object-fit: contain; border: 1px solid rgba(225,188,95,.45); background: #2a2419; }
+.guest-product-preview__copy { display: grid; gap: 9px; }
+.guest-product-preview__kicker { margin: 0; color: #d9b661; font: 700 .72rem/1.2 "Trebuchet MS",sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+.guest-product-preview__copy h2 { margin: 0; color: #fff1c9; font: 700 clamp(1.5rem,3vw,2.3rem)/1.1 Georgia,serif; }
+.guest-product-preview__creator, .guest-product-preview__price, .guest-product-preview__copy > p:last-of-type { margin: 0; }
+.guest-product-preview__creator { color: #d8c79e; }
+.guest-product-preview__price { color: #e9c875; font-weight: 700; }
+.guest-product-preview__copy > p:last-of-type { color: #e4dac1; line-height: 1.55; }
+.guest-product-preview__summary .button { justify-self: start; margin-top: 6px; }
+@media (max-width:560px) { .guest-product-preview__summary { grid-template-columns: 1fr; } .guest-product-preview__cover { max-width: 170px; } }
+
 @media (min-width: 1024px) {
   html.trg-magical-shelves .guest-landing-page [data-magical-bookshelf] .is-magical-pending {
     visibility: hidden;
