@@ -18,4 +18,4 @@ The reusable implementation is the Guest shelf renderer and `assets/js/magical-b
 
 ## Pending interaction specifications
 
-Preview overlays and full-product navigation for future profile shelves are recorded requirements only. They are not claimed as part of this baseline and must be specified and approved before implementation.
+Full-product navigation for future profile shelves remains a recorded requirement and must be specified and approved before implementation. The Guest product preview is implemented only for the two explicitly marked staging fixture books; it does not turn decorative books into catalog products.
