@@ -132,6 +132,19 @@
   background: linear-gradient(90deg, rgba(255, 224, 141, .1), transparent 28%, rgba(0, 0, 0, .26) 88%), linear-gradient(180deg, #4e552e, #222613);
 }
 
+/* Approved Guest bookshelf affordance: lift only the hovered book anchor. */
+.guest-landing-page .bookshelf-book:not(.is-examining),
+.guest-landing-page .guest-open-rules-mock-book {
+  pointer-events: auto;
+  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
+}
+
+.guest-landing-page .bookshelf-book:hover:not(.is-examining),
+.guest-landing-page .guest-open-rules-mock-book:hover {
+  transform: translateY(-6px) scale(1.02);
+  z-index: 3;
+}
+
 @media (min-width: 1024px) {
   html.trg-magical-shelves .guest-landing-page [data-magical-bookshelf] .is-magical-pending {
     visibility: hidden;
@@ -274,6 +287,16 @@
 
 @media (prefers-reduced-motion: reduce) {
   .guest-landing-page .guest-library-sign { scroll-behavior: auto; }
+  .guest-landing-page .bookshelf-book:not(.is-examining) {
+    transition: none;
+  }
+  .guest-landing-page .guest-open-rules-mock-book {
+    transition: none;
+  }
+  .guest-landing-page .bookshelf-book:hover:not(.is-examining),
+  .guest-landing-page .guest-open-rules-mock-book:hover {
+    transform: none;
+  }
   .guest-landing-page [data-magical-bookshelf] .is-magical-revealed,
   .guest-landing-page .guest-bookshelf-magic,
   .guest-landing-page .guest-bookshelf-magic__flash,

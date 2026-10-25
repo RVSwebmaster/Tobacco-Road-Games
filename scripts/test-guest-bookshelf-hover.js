@@ -1,0 +1,17 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..");
+const css = fs.readFileSync(path.join(root, "assets/css/guest-landing.css"), "utf8");
+const build = fs.readFileSync(path.join(root, "scripts/build-store.js"), "utf8");
+
+assert.match(build, /class="bookshelf-book\$\{edgeClass\}/, "Product shelves must continue to render existing book anchors.");
+assert.match(css, /\.guest-landing-page \.bookshelf-book:not\(\.is-examining\),[\s\S]*?\.guest-landing-page \.guest-open-rules-mock-book\s*\{[\s\S]*?transition:\s*transform 200ms ease/);
+assert.match(css, /\.guest-landing-page \.bookshelf-book:hover:not\(\.is-examining\),[\s\S]*?\.guest-landing-page \.guest-open-rules-mock-book:hover\s*\{[\s\S]*?transform:\s*translateY\(-6px\) scale\(1\.02\)/);
+assert.match(css, /\.guest-landing-page \.guest-open-rules-mock-book:hover\s*\{[\s\S]*?transform:\s*translateY\(-6px\) scale\(1\.02\)/);
+assert.match(css, /\.guest-landing-page \.guest-open-rules-mock-book\s*\{[\s\S]*?pointer-events:\s*auto/);
+assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.guest-landing-page \.bookshelf-book:hover:not\(\.is-examining\),[\s\S]*?\.guest-landing-page \.guest-open-rules-mock-book:hover\s*\{[\s\S]*?transform:\s*none/);
+assert.doesNotMatch(css, /\.guest-landing-page \.bookshelf-book:hover\s+\.bookshelf-book__spine/);
+
+console.log("Guest bookshelf hover tests passed.");
