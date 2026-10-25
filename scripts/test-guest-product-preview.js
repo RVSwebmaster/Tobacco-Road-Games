@@ -24,10 +24,11 @@ for (const product of products) {
   assert.match(read("data/guest-preview-products.json"), new RegExp(product.slug));
   assert.match(client, /fullUrl/);
   const profile = read(`guest/preview-products/${product.slug}/index.html`);
-  const htmlTitle = product.title.replace(/&/g, "&amp;");
-  assert.match(profile, new RegExp(htmlTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(profile, /staging-only preview/);
+  assert.match(profile, new RegExp(`data-product-slug="${product.slug}"`));
+  assert.match(profile, /guest-product-preview-profile\.js/);
+  assert.match(profile, /not a live catalog listing/);
 }
+assert.match(read("assets/js/guest-product-preview-profile.js"), /guest-preview-products\.json/);
 assert.equal((guest.match(/data-mock-open-rule="true"/g) || []).length, 36, "All decorative books remain present.");
 assert.doesNotMatch(guest, /data-guest-product-preview=/, "Preview records are attached by the staging-only client fixture, not hard-coded into the catalog markup.");
 assert.doesNotMatch(guest, /href="\/store\/products\//, "Decorative books must not link to nonexistent catalog products.");
