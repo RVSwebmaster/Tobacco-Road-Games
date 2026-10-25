@@ -12,6 +12,7 @@
     "test:storefront-visual": "node scripts/test-storefront-visual-alignment.js",
     "test:storefront-heroes": "node scripts/test-storefront-hero-books.js",
     "test:guest-landing": "node scripts/test-guest-landing-page.js",
+    "test:guest-bookshelf-baseline": "node scripts/test-guest-bookshelf-baseline.js",
     "test:guest-magic": "node scripts/test-magical-bookshelf-animation.js",
     "test:legacy-catalog-publication": "node scripts/test-legacy-catalog-publication.js",
     "test:owner-profile-finance": "node scripts/test-owner-profile-financial-controls.js",
