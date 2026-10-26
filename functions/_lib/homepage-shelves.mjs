@@ -44,6 +44,7 @@ export async function getHomepageShelves(database, options = {}) {
   const bestSellers = [];
 
   for (const row of rows) {
+    if (Number(row.sales_cents || 0) <= 0) continue;
     const product = catalogBySlug.get(normalizeSlug(row.product_slug));
     if (!isHomepageEligible(product)) continue;
     bestSellers.push(toHomepageProduct(product));
