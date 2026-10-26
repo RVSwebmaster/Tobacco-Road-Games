@@ -22,6 +22,7 @@ const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data
 const HOMEPAGE_NEWS_PREVIEW = [];
 const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
+const GUEST_FEATURE_CACHE_BUST = "20261026-guest-unit1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1156,14 +1157,15 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = '  <script src="/assets/js/magical-bookshelf.js?v=20261024-erin-upper-effects7"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261025-guest-depth2">\n';
+  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
     .replace('<link rel="canonical" href="https://tobaccoroadgames.com/">', '<link rel="canonical" href="https://tobaccoroadgames.com/guest/">')
     .replace("</head>", `${guestStylesheet}</head>`)
     .replace(navPattern, `${renderSharedPublicNav("", "Primary", GUEST_NAV_ITEMS)}\n    `)
-    .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`);
+    .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`)
+    .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_FEATURE_CACHE_BUST}" defer></script>\n</body>`);
 
   writeFile("guest/index.html", next.replace(/^[ \t]+$/gm, ""));
 }

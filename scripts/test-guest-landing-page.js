@@ -52,7 +52,11 @@ assert.match(guest, /\/assets\/js\/cart\.js/);
 assert.match(guest, /\/assets\/js\/storefront\.js/);
 assert.match(guest, /\/assets\/js\/news-chyron\.js/);
 assert.match(guest, /\/assets\/js\/shelf-curios\.js/);
-assert.match(guest, /\/assets\/css\/guest-landing\.css/);
+assert.match(guest, /\/assets\/js\/magical-bookshelf\.js\?v=20261026-guest-unit1/);
+assert.match(guest, /\/assets\/css\/guest-landing\.css\?v=20261026-guest-unit1/);
+assert.match(guest, /\/assets\/js\/guest-product-preview\.js\?v=20261026-guest-unit1/);
+assert.match(builder, /GUEST_FEATURE_CACHE_BUST = "20261026-guest-unit1"/);
+assert.match(builder, /guest-product-preview\.js\?v=\$\{GUEST_FEATURE_CACHE_BUST\}/);
 
 assert.doesNotMatch(homepage, /data-guest-landing|guest-library-sign|Login\/Signup/);
 assert.doesNotMatch(guestCss, /(^|\n)\s*(\.homepage-shop-wall|\.shop-wall-)/m);

@@ -12,6 +12,10 @@ const baseline = read("docs/GUEST-BOOKSHELF-BASELINE.md");
 assert.match(guest, /data-guest-landing/);
 assert.match(guest, /data-magical-bookshelf-demo/);
 assert.doesNotMatch(guest, /data-magical-bookshelf-replay/);
+assert.match(guest, /magical-bookshelf\.js\?v=20261026-guest-unit1/);
+assert.match(guest, /guest-landing\.css\?v=20261026-guest-unit1/);
+assert.match(guest, /guest-product-preview\.js\?v=20261026-guest-unit1/);
+assert.match(builder, /guest-product-preview\.js\?v=\$\{GUEST_FEATURE_CACHE_BUST\}/);
 assert.equal((guest.match(/data-magical-bookshelf(?:\s|>)/g) || []).length, 7, "Guest must retain all seven animated shelf containers.");
 assert.equal((guest.match(/data-magical-book(?:\s|>)/g) || []).length, 36, "Open Rules must retain all 36 decorative book positions.");
 assert.equal((guest.match(/data-magical-shelf-order="[1-7]"/g) || []).length, 7, "Every animated shelf must have an explicit sequence order.");
@@ -32,7 +36,7 @@ assert.match(builder, /renderHomepageProductBay\(\{ title: "FEATURED CREATOR"/);
 assert.match(builder, /renderHomepageProductBay\(\{ title: "NEW THIS WEEK"/);
 assert.match(builder, /renderHomepageProductBay\(\{ title: "BEST SELLERS"/);
 
-for (const phrase of ["approved shared visual foundation", "hover/focus", "product preview", "Full-product navigation"]) {
+for (const phrase of ["approved shared visual foundation", "hover/focus", "Product-preview interaction", "second SPACE", "visible Replay control is intentionally absent", "native anchor", "restore focus"]) {
   assert.match(baseline, new RegExp(phrase.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")));
 }
 
