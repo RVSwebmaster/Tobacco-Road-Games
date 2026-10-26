@@ -3494,4 +3494,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, loadProducts, loadAuthors, buildAuthorLookup };
+module.exports = { selectHomepageShelfBooks, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup };
