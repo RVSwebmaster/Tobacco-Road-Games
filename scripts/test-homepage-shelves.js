@@ -108,7 +108,7 @@ async function testBestSellerService() {
     windowDays: 30,
     limit: 43
   });
-  assert.deepEqual(result.bestSellers.map((product) => product.slug), ["high-dollar", "free-book", "second"], "Service should preserve D1 sales ranking while dropping ineligible catalog records.");
+  assert.deepEqual(result.bestSellers.map((product) => product.slug), ["high-dollar", "second"], "Service should preserve D1 sales ranking while dropping zero-dollar and ineligible catalog records.");
   assert.equal(result.windowDays, 30);
   assert.match(capturedSql, /SUM\(oi\.line_total_cents\)/);
   assert.match(capturedSql, /ORDER BY sales_cents DESC/);
