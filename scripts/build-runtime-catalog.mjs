@@ -58,8 +58,6 @@ function buildRuntimeCatalogEntry(product) {
     lastUpdated: String(product.lastUpdated || "").trim(),
     listedPriceCents: Number.isInteger(product.priceCents) ? product.priceCents : null,
     mediaType: String(product.mediaType || "").trim(),
-    publisher: String(product.publisher || "").trim(),
-    shortDescription: String(product.shortDescription || "").trim(),
     playerCountMax: Number.isInteger(product.playerCountMax) ? product.playerCountMax : null,
     playerCountMin: Number.isInteger(product.playerCountMin) ? product.playerCountMin : null,
     playDuration: String(product.playDuration || "").trim(),
