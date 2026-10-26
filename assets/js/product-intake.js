@@ -57,6 +57,7 @@
     salePrice: document.getElementById("product-sale-price"),
     currency: document.getElementById("product-currency"),
     saleEnabled: document.getElementById("product-sale-enabled"),
+    openRulesEligible: document.getElementById("product-open-rules-eligible"),
     status: document.getElementById("product-status"),
     buyMode: document.getElementById("product-buy-mode"),
     buyUrl: document.getElementById("product-buy-url"),
@@ -320,6 +321,7 @@
         price: fields.price.value,
         releaseDate: fields.releaseDate.value,
         saleEnabled: fields.saleEnabled.checked,
+        openRulesEligible: fields.openRulesEligible.checked,
         salePrice: fields.salePrice.value,
         selectedRelatedProducts: [...selectedRelatedProducts],
         series: fields.series.value,
@@ -498,6 +500,7 @@
     relatedProducts: [...selectedRelatedProducts],
     releaseDate: fields.releaseDate.value,
     saleEnabled: fields.saleEnabled.checked,
+    openRulesEligible: fields.openRulesEligible.checked,
     salePrice: fields.salePrice.value,
     series: fields.series.value,
     shortDescription: fields.shortDescription.value,
@@ -910,6 +913,7 @@
         ? (existingProductLineSlug || slugify(productLine))
         : slugify(productLine),
       saleEnabled: fields.saleEnabled.checked,
+      openRulesEligible: fields.openRulesEligible.checked,
       salePrice: salePriceRaw,
       salePriceCents,
       series,
@@ -1116,6 +1120,7 @@
       formData.set("price", payload.price);
       formData.set("salePrice", payload.salePrice);
       formData.set("saleEnabled", payload.saleEnabled ? "true" : "false");
+      formData.set("openRulesEligible", payload.openRulesEligible ? "true" : "false");
       formData.set("currency", payload.currency);
       for (const field of ["genre", "playerCountMin", "playerCountMax", "gmMode", "prepBurden", "playDuration", "playMode", "rulesComplexity", "mediaType", "language"]) {
         formData.set(field, Object.prototype.hasOwnProperty.call(payload, field) ? String(payload[field]) : "");
@@ -1346,6 +1351,7 @@
     fields.salePrice.value = product.salePrice || "";
     fields.currency.value = product.currency || "USD";
     fields.saleEnabled.checked = Boolean(product.saleEnabled);
+    fields.openRulesEligible.checked = Boolean(product.openRulesEligible);
     fields.status.value = product.status || "coming-soon";
     fields.buyMode.value = product.buyMode || "coming-soon";
     fields.buyUrl.value = product.buyUrl || "";
@@ -1416,7 +1422,7 @@
     fields.price.value = draft.price ?? product.price ?? "";
     fields.salePrice.value = draft.salePrice ?? product.salePrice ?? "";
     fields.currency.value = draft.currency ?? product.currency ?? "USD";
-    fields.saleEnabled.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "saleEnabled") ? draft.saleEnabled : product.saleEnabled);
+    fields.saleEnabled.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "saleEnabled") ? draft.openRulesEligible : product.openRulesEligible);
     fields.status.value = draft.status ?? product.status ?? "coming-soon";
     fields.buyMode.value = draft.buyMode ?? product.buyMode ?? "coming-soon";
     fields.buyUrl.value = draft.buyUrl ?? product.buyUrl ?? "";
@@ -1609,6 +1615,7 @@
     fields.salePrice.value = "";
     fields.currency.value = "USD";
     fields.saleEnabled.checked = false;
+    fields.openRulesEligible.checked = false;
     fields.status.value = "coming-soon";
     fields.buyMode.value = "coming-soon";
     fields.buyUrl.value = "";
