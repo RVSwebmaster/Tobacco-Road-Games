@@ -1262,7 +1262,9 @@ function renderHomepageShopWallMain(products) {
   const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
   const featuredConfig = HOMEPAGE_MERCHANDISING["featured-creator-wall-heading"] || {};
   const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
-  const featuredCreator = featuredConfig.creatorSlug || (designated || chooseFeaturedProduct(eligible))?.authorSlugs?.[0];
+  const configuredCreator = featuredConfig.creatorSlug === "rv-sawyer" ? null : featuredConfig.creatorSlug;
+  const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
+  const featuredCreator = configuredCreator || fallbackFeatured;
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
   const openRules = eligible.filter(isOpenRulesProduct).slice(0, 8);
 
