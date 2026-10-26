@@ -1,0 +1,49 @@
+name: Verify Open Rules Fix
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out proposed change
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Owner intake backend tests
+        run: node scripts/test-owner-intake.js
+
+      - name: Owner intake UI tests
+        run: node scripts/test-owner-intake-ui.js
+
+      - name: Guest landing tests
+        run: npm run test:guest-landing
+
+      - name: Full regression suite
+        run: npm test
+
+      - name: Rebuild storefront
+        run: node scripts/build-store.js
+
+      - name: Pages build verification
+        run: npm run test:pages-build
+
+      - name: Ensure generated source is committed
+        run: git diff --exit-code
+
+      - name: Diff whitespace check
+        run: git diff --check
