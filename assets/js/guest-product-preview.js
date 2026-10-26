@@ -49,16 +49,21 @@
   function bindBooks() {
     books = Array.from(page.querySelectorAll("[data-guest-product-preview]"));
     books.forEach((book) => {
-    book.addEventListener("click", (event) => { event.preventDefault(); open(book); });
-    book.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      open(book);
-    });
+      if (book.dataset.guestPreviewBound === "true") return;
+      book.dataset.guestPreviewBound = "true";
+      book.setAttribute("aria-haspopup", "dialog");
+      book.addEventListener("click", (event) => { event.preventDefault(); open(book); });
+      book.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open(book);
+      });
     });
   }
 
-  fetch("/data/guest-preview-products.json?v=20261026-guest-unit1", { cache: "no-store" })
+  document.addEventListener("trg:homepage-shelves-updated", bindBooks);
+
+  fetch("/data/guest-preview-products.json?v=20261026-homepage-shelves1", { cache: "no-store" })
     .then((response) => response.ok ? response.json() : [])
     .then((products) => {
       const shelfByCollection = {
@@ -84,6 +89,10 @@
         if (!shelf) return;
         const shelfBooks = Array.from(shelf.querySelectorAll("[data-magical-book], .shop-wall-stock-spine, .shop-wall-hero-book"));
         shelfBooks.forEach((book, index) => {
+          const realProductLink = book.matches?.('a[href*="/store/products/"]')
+            ? book
+            : book.querySelector?.('a[href*="/store/products/"]');
+          if (realProductLink) return;
           const product = stagingProductFor(collection, index + 1);
           const link = document.createElement("a");
           link.className = "guest-product-preview-link";

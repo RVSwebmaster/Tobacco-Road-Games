@@ -22,7 +22,8 @@ const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data
 const HOMEPAGE_NEWS_PREVIEW = [];
 const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
-const GUEST_FEATURE_CACHE_BUST = "20261026-guest-unit1";
+const GUEST_FEATURE_CACHE_BUST = "20261026-homepage-shelves1";
+const HOMEPAGE_SHELVES_CACHE_BUST = "20261026-homepage-shelves1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -88,6 +89,7 @@ function main() {
   const authors = loadAuthors();
   const authorLookup = buildAuthorLookup(authors);
   const products = loadProducts(authorLookup);
+  writeHomepageProductCatalog(products);
   const publicCatalogProducts = products.filter(isCatalogBrowsable);
   const assetWarnings = collectAssetWarnings(products);
   const bundleRules = loadBundleRules();
@@ -1133,7 +1135,7 @@ function buildHomepage(products, indexes, bundleRules) {
   const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
-  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/homepage-shelves\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
   let next = html
@@ -1142,7 +1144,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
   next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261025-guest-depth2");
-  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1173,8 +1175,8 @@ function buildGuestLandingPage(products) {
 
 function renderGuestLandingShopWallMain(products) {
   const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
-  const newThisWeek = sortProducts(eligible, "newest");
-  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling"));
+  const newThisWeek = selectNewThisWeek(eligible);
+  const bestSellers = [];
   const featuredConfig = HOMEPAGE_MERCHANDISING["featured-creator-wall-heading"] || {};
   const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
   const configuredCreator = featuredConfig.creatorSlug === "rv-sawyer" ? null : featuredConfig.creatorSlug;
@@ -1203,7 +1205,7 @@ function renderGuestLandingShopWallMain(products) {
         ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }], magicalShelfOrder: 5, magicalDirection: "outer-inward" })}
         ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }], magicalShelfOrder: 6, magicalDirection: "outer-inward" })}
         ${renderHomepageBricABracShelf()}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], magicalShelfOrder: 7, magicalDirection: "outer-inward" })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, liveShelf: "best-sellers", singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], magicalShelfOrder: 7, magicalDirection: "outer-inward" })}
       </section>
       ${renderHomepageNewsChyron()}
     </main>`;
@@ -1236,7 +1238,7 @@ function renderGuestOpenRulesBay(products) {
                   const position = startPosition + index;
                   const product = shelfProducts[index];
                   return product
-                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true }).replace('class="bookshelf-book', `data-library-position="${position}" data-magical-book class="bookshelf-book`)
+                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true, guestPreview: true }).replace('class="bookshelf-book', `data-library-position="${position}" data-magical-book class="bookshelf-book`)
                     : renderMockBook(position);
                 }).join("")}</div>
               </div>`;
@@ -1256,12 +1258,14 @@ function renderGuestOpenRulesBay(products) {
 
 function renderHomepageShopWallMain(products) {
   const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
-  const newThisWeek = sortProducts(eligible, "newest");
-  const bestSellers = eligible.filter((product) => Array.isArray(product.discoveryLabels) && product.discoveryLabels.includes("best_selling"));
+  const newThisWeek = selectNewThisWeek(eligible);
+  const bestSellers = [];
   const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
   const featuredConfig = HOMEPAGE_MERCHANDISING["featured-creator-wall-heading"] || {};
   const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
-  const featuredCreator = featuredConfig.creatorSlug || (designated || chooseFeaturedProduct(eligible))?.authorSlugs?.[0];
+  const configuredCreator = featuredConfig.creatorSlug === "rv-sawyer" ? null : featuredConfig.creatorSlug;
+  const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
+  const featuredCreator = configuredCreator || fallbackFeatured;
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
   const openRules = eligible.filter(isOpenRulesProduct).slice(0, 8);
 
@@ -1285,7 +1289,7 @@ function renderHomepageShopWallMain(products) {
         ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }] })}
         ${renderHomepageProductBay({ title: "NEW THIS WEEK", id: "new-this-week-wall-heading", products: newThisWeek, singleShelf: true, wallArt: [{ src: "/assets/dungeon-masters-guide-framed-poster.png", alt: "Framed Dungeon Masters Guide poster on the shelf back wall" }, { src: "/assets/the-familiar-framed-poster.png", alt: "Framed The Familiar poster on the shelf back wall", placement: "center" }, { src: "/assets/blackbeard-framed-flag.png", alt: "Framed Blackbeard flag rotated with the skeleton at the top on the shelf back wall", placement: "right" }] })}
         ${renderHomepageBricABracShelf()}
-        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
+        ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, liveShelf: "best-sellers", singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }] })}
         ${renderHomepageProductBay({ title: "FREE & PWYW", id: "free-pwyw-wall-heading", products: pwywFree, singleShelf: true, wallArt: [{ src: "/assets/justifiers-framed-cover.png", alt: "Framed Justifiers RPG cover on the shelf back wall" }, { src: "/assets/charlie-daniels-framed-art.png", alt: "Framed Charlie Daniels Band artwork on the shelf back wall", placement: "center" }, { src: "/assets/drolla-framed-cover.png", alt: "Framed Drolla Core Rulebook artwork on the shelf back wall", placement: "right" }] })}
       </section>
       ${renderHomepageNewsChyron()}
@@ -1399,7 +1403,7 @@ function renderHomepageIdentityBay() {
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right" }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right", liveShelf = "" }) {
   const visibleProducts = products.slice(0, 5);
   const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
   const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
@@ -1428,7 +1432,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
               ${wallArtMarkup}
               ${bambooIncenseMarkup}
               ${dogwoodBonsaiMarkup}
-              ${merchandising ? renderHomepageMerchandisingBooks(products, configuredHero, { magicalShelfOrder, magicalDirection }) : `${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}\n              ${productMockMarkup}`}
+              ${merchandising ? renderHomepageMerchandisingBooks(products, configuredHero, { magicalShelfOrder, magicalDirection, liveShelf }) : `${visibleProducts.length ? renderHomepageShelfBooks(visibleProducts) : ""}\n              ${productMockMarkup}`}
               ${jesusFigurineMarkup}
               ${puzzleCubeMarkup}
               ${dicePileMarkup}
@@ -1493,19 +1497,20 @@ function selectHomepageShelfBooks(products, heroProductId = null) {
   return { hero, left: spines.slice(0, 21), right: spines.slice(21, 42) };
 }
 
-function renderHomepageMerchandisingBooks(products, heroProductId = null, { magicalShelfOrder = null, magicalDirection = "left-to-right" } = {}) {
+function renderHomepageMerchandisingBooks(products, heroProductId = null, { magicalShelfOrder = null, magicalDirection = "left-to-right", liveShelf = "" } = {}) {
   const { hero, left, right } = selectHomepageShelfBooks(products, heroProductId);
   const renderSpines = (run, side) => `<div class="shop-wall-spine-run" data-spine-run="${side}" data-spine-slots="21">${Array.from({ length: 21 }, (_, slot) => {
     const product = run[slot];
     if (!product) return `<figure class="shop-wall-stock-spine" data-decorative-stock aria-hidden="true"></figure>`;
     const height = Math.round(bookshelfDimensions(product).height * 188 / 314);
-    return `<a class="shop-wall-sale-spine" data-product-card data-slug="${escapeAttribute(product.slug)}" data-product-id="${escapeAttribute(homepageProductId(product))}" href="${escapeAttribute(product.url)}" aria-label="Open ${escapeAttribute(product.title)} product page" title="${escapeAttribute(product.title)}" style="--merch-book-height:${height}px"><span aria-hidden="true">${escapeHtml(product.title)}</span></a>`;
+    return `<a class="shop-wall-sale-spine" data-product-card data-slug="${escapeAttribute(product.slug)}" data-product-id="${escapeAttribute(homepageProductId(product))}"${renderHomepagePreviewAttributes(product)} href="${escapeAttribute(product.url)}" aria-label="Open ${escapeAttribute(product.title)} product page" title="${escapeAttribute(product.title)}" style="--merch-book-height:${height}px"><span aria-hidden="true">${escapeHtml(product.title)}</span></a>`;
   }).join("")}</div>`;
   const heroMarkup = hero
-    ? `<a class="shop-wall-hero-book" data-product-card data-slug="${escapeAttribute(hero.slug)}" data-product-id="${escapeAttribute(homepageProductId(hero))}" href="${escapeAttribute(hero.url)}" aria-label="Open ${escapeAttribute(hero.title)} product page" title="${escapeAttribute(hero.title)}"><img src="${escapeAttribute(hero.assetSet.cover)}" alt="${escapeAttribute(hero.title)} cover" loading="lazy" decoding="async"></a>`
+    ? `<a class="shop-wall-hero-book" data-product-card data-slug="${escapeAttribute(hero.slug)}" data-product-id="${escapeAttribute(homepageProductId(hero))}"${renderHomepagePreviewAttributes(hero)} href="${escapeAttribute(hero.url)}" aria-label="Open ${escapeAttribute(hero.title)} product page" title="${escapeAttribute(hero.title)}"><img src="${escapeAttribute(hero.assetSet.cover)}" alt="${escapeAttribute(hero.title)} cover" loading="lazy" decoding="async"></a>`
     : `<figure class="shop-wall-hero-book shop-wall-hero-book--stock" data-decorative-stock aria-hidden="true"><div class="shop-wall-stock-cover" aria-hidden="true"><img src="/assets/tobacco-road-games-logo.png" alt="" loading="lazy" decoding="async"></div></figure>`;
   const magicalAttributes = magicalShelfOrder === null ? "" : ` data-magical-bookshelf data-magical-shelf-order="${Number(magicalShelfOrder)}" data-magical-direction="${escapeAttribute(magicalDirection)}"`;
-  return `<div class="shop-wall-product-row shop-wall-product-row--hero" data-overhang-spine data-book-units="50"${magicalAttributes}>
+  const liveShelfAttribute = liveShelf ? ` data-live-homepage-shelf="${escapeAttribute(liveShelf)}"` : "";
+  return `<div class="shop-wall-product-row shop-wall-product-row--hero" data-overhang-spine data-book-units="50"${magicalAttributes}${liveShelfAttribute}>
                 ${renderSpines(left, "left")}
                 <div class="shop-wall-hero-bay" data-hero-units="8">${heroMarkup}</div>
                 ${renderSpines(right, "right")}
@@ -1916,8 +1921,9 @@ function renderStoreBrowserControls(indexes, defaultSort = "title") {
 }
 
 function renderBookshelfBook(product, options = {}) {
-  const { withDataset = false, forceOpenRight = false, edgeRight = false, centerExamination = false } = options;
+  const { withDataset = false, forceOpenRight = false, edgeRight = false, centerExamination = false, guestPreview = false } = options;
   const dataset = withDataset ? renderProductDatasetAttributes(product) : "";
+  const previewAttributes = guestPreview ? renderHomepagePreviewAttributes(product) : "";
   const forceOpenRightAttribute = forceOpenRight ? ' data-bookshelf-force-right="true"' : "";
   const edgeClass = edgeRight ? " bookshelf-book--edge-right" : "";
   const authorName = product.authors.join(", ") || product.publisher;
@@ -1936,7 +1942,7 @@ function renderBookshelfBook(product, options = {}) {
   const dimensions = bookshelfDimensions(product);
 
   return `
-    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset} data-spine-width="${dimensions.width}" data-spine-source="${dimensions.source}" style="--book-spine-width:${dimensions.width}px;--book-height:${dimensions.height}px" aria-label="Open ${escapeAttribute(product.title)} product page">
+    <a class="bookshelf-book${edgeClass}" href="${product.url}"${forceOpenRightAttribute} ${dataset}${previewAttributes} data-spine-width="${dimensions.width}" data-spine-source="${dimensions.source}" style="--book-spine-width:${dimensions.width}px;--book-height:${dimensions.height}px" aria-label="Open ${escapeAttribute(product.title)} product page">
       <span class="bookshelf-book__scene">
         <span class="bookshelf-book__spine">
           <span class="bookshelf-book__status">${escapeHtml(product.statusLabel)}</span>
@@ -3225,6 +3231,29 @@ function isOpenRulesProduct(product) {
   return product?.openRulesEligible === true;
 }
 
+function selectNewThisWeek(products, nowMs = Date.now()) {
+  const newestAllowed = Number(nowMs);
+  const oldestAllowed = newestAllowed - (7 * 86400000);
+  return sortProducts(products.filter((product) => {
+    const released = Number(product?.releaseStamp || parseDate(product?.releaseDate || ""));
+    return Number.isFinite(released) && released >= oldestAllowed && released <= newestAllowed;
+  }), "newest");
+}
+
+function renderHomepagePreviewAttributes(product) {
+  const creator = product.authors?.join(", ") || product.publisher || "Tobacco Road Games";
+  const payload = JSON.stringify({
+    slug: String(product.slug || ""),
+    title: String(product.title || ""),
+    creator,
+    priceLabel: renderCardPrice(product),
+    description: String(product.shortDescription || "Product details available on the full product page."),
+    cover: String(product.assetSet?.cover || "/assets/tobacco-road-games-logo.png"),
+    fullUrl: String(product.url || `/store/products/${product.slug}/`)
+  });
+  return ` data-guest-product-preview="${escapeAttribute(payload)}"`;
+}
+
 function isCatalogBrowsable(product) {
   return product.buyMode !== "retired"
     && product.status !== "retired"
@@ -3471,6 +3500,31 @@ function writeFile(relativePath, contents) {
   fs.writeFileSync(filePath, contents);
 }
 
+function writeHomepageProductCatalog(products) {
+  const entries = [...products]
+    .map((product) => ({
+      slug: String(product.slug || ""),
+      title: String(product.title || ""),
+      creator: product.authors.join(", ") || product.publisher || "Tobacco Road Games",
+      priceLabel: renderCardPrice(product),
+      description: String(product.shortDescription || "Product details available on the full product page."),
+      cover: String(product.assetSet?.cover || "/assets/tobacco-road-games-logo.png"),
+      fullUrl: String(product.url || `/store/products/${product.slug}/`),
+      status: String(product.status || ""),
+      buyMode: String(product.buyMode || "")
+    }))
+    .sort((left, right) => left.slug.localeCompare(right.slug));
+
+  writeFile(
+    "shared/homepage-product-catalog.mjs",
+    `// Generated from data/products.json by scripts/build-store.js.
+// Do not hand-edit this file.
+
+export const HOMEPAGE_PRODUCTS = Object.freeze(${JSON.stringify(entries, null, 2)});
+`
+  );
+}
+
 function buildRuntimeCatalog() {
   const scriptPath = path.join(ROOT, "scripts", "build-runtime-catalog.mjs");
   const result = spawnSync(process.execPath, [scriptPath], {
@@ -3486,12 +3540,13 @@ function buildRuntimeCatalog() {
 
 if (require.main === module) {
   if (process.argv.includes("--homepage-only")) {
-    const products = loadProducts(buildAuthorLookup(loadAuthors())).filter(isCatalogBrowsable);
-    buildHomepage(products);
+    const products = loadProducts(buildAuthorLookup(loadAuthors()));
+    writeHomepageProductCatalog(products);
+    buildHomepage(products.filter(isCatalogBrowsable));
     console.log("Built homepage only.");
   } else {
     main();
   }
 }
 
-module.exports = { selectHomepageShelfBooks, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup };
+module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup };

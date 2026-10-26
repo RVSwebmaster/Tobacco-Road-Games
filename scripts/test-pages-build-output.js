@@ -27,11 +27,12 @@ async function main() {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `non-public path was copied: ${relativePath}`);
     }
     const generatedGuest = fs.readFileSync(path.join(outputDirectory, "guest", "index.html"), "utf8");
-    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261026-guest-unit1/);
-    assert.match(generatedGuest, /guest-landing\.css\?v=20261026-guest-unit1/);
-    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261026-guest-unit1/);
+    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261026-homepage-shelves1/);
+    assert.match(generatedGuest, /guest-landing\.css\?v=20261026-homepage-shelves1/);
+    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261026-homepage-shelves1/);
     assert.doesNotMatch(generatedGuest, /data-magical-bookshelf-replay/);
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "guest-product-preview.js")), "Guest preview runtime is missing from Pages output");
+    assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "homepage-shelves.js")), "Homepage shelf runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "data", "guest-preview-products.json")), "Guest preview fixture data is missing from Pages output");
     assert.ok(fs.existsSync(path.join(repositoryRoot, "functions")), "Pages Functions source is missing");
     assert.throws(
