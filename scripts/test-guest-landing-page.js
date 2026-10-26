@@ -26,7 +26,7 @@ assert.match(guest, /\/assets\/js\/magical-bookshelf\.js/);
 assert.equal((guest.match(/data-magical-bookshelf(?:\s|>)/g) || []).length, 7);
 assert.equal((guest.match(/data-magical-book(?:\s|>)/g) || []).length, 36);
 assert.equal((guest.match(/data-magical-direction="outer-inward"/g) || []).length, 3);
-assert.match(guest, /data-magical-bookshelf-replay hidden>Replay bookshelf magic/);
+assert.doesNotMatch(guest, /data-magical-bookshelf-replay/);
 assert.match(guest, /Your shelves look a little bare\.<br>Log in or sign up to make them your own\./);
 assert.equal((guest.match(/guest-library-sign/g) || []).length, 1);
 const guestLibrary = guest.match(/<section class="shop-wall-bay shop-wall-bay--library guest-library-bay"[\s\S]*?<\/section>/)?.[0] || "";
@@ -81,7 +81,6 @@ assert.match(guestCss, /shop-wall-fixed-cabinet\.has-magical-effect/);
 assert.match(guestMagic, /event\.code !== "Space"/);
 assert.match(guestMagic, /isTextEntryTarget\(event\.target\)/);
 assert.match(guestMagic, /prefers-reduced-motion: reduce/);
-assert.match(guestMagic, /tobacco-road-games-staging\.pages\.dev/);
 assert.match(outputBuilder, /"guest"/);
 
 const mockProduct = (index) => ({

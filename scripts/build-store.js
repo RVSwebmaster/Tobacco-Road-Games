@@ -1203,7 +1203,6 @@ function renderGuestLandingShopWallMain(products) {
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], magicalShelfOrder: 7, magicalDirection: "outer-inward" })}
       </section>
       ${renderHomepageNewsChyron()}
-      <button class="guest-magic-replay" type="button" data-magical-bookshelf-replay hidden>Replay bookshelf magic</button>
     </main>`;
 }
 
