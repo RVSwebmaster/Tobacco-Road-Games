@@ -26,6 +26,8 @@ assert.match(client, /event\.key !== "Enter"/);
 assert.match(client, /event\.key !== " "/);
 assert.match(client, /\?\.focus\?\.\(\)/);
 assert.match(client, /dataset\.guestProductPreview/);
+assert.match(client, /setAttribute\("role", "link"\)/);
+assert.match(client, /aria-haspopup/, "Shelf books must expose link-style dialog semantics.");
 assert.match(css, /\.guest-product-preview::backdrop/);
 assert.match(css, /\.guest-product-preview__summary/);
 assert.match(css, /\.guest-product-preview__close/);

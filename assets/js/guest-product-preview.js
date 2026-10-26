@@ -88,7 +88,8 @@
           book.dataset.guestProductPreview = JSON.stringify(product);
           book.removeAttribute("aria-hidden");
           book.setAttribute("tabindex", "0");
-          book.setAttribute("role", "button");
+          book.setAttribute("role", "link");
+          book.setAttribute("aria-haspopup", "dialog");
           book.setAttribute("aria-label", `Preview ${product.title}`);
         });
       });
