@@ -226,6 +226,69 @@
       color: var(--muted);
     }
 
+    .pdf-prefill {
+      margin: 14px 0 18px;
+    }
+
+    .pdf-prefill__actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pdf-prefill__summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .pdf-prefill__summary section,
+    .pdf-prefill__review {
+      padding: 0.8rem;
+      border: 1px solid rgba(242, 216, 170, 0.14);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .pdf-prefill__summary h3,
+    .pdf-prefill__review h3 {
+      margin: 0 0 0.5rem;
+      font-size: 1rem;
+    }
+
+    .pdf-prefill__summary ul {
+      margin: 0;
+      padding-left: 1.2rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .pdf-prefill__review-list {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pdf-prefill__suggestion {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      padding: 0.65rem;
+      border-radius: 10px;
+      background: rgba(10, 7, 5, 0.5);
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    }
+
+    .pdf-prefill__suggestion small {
+      display: block;
+      margin-top: 0.2rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
     .intake-picker-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -521,6 +584,10 @@
       .tag-manager__row--group {
         grid-template-columns: 1fr;
       }
+
+      .pdf-prefill__summary {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -585,6 +652,40 @@
               <button id="leave-listing-button" class="button button--secondary" type="button">Back to Listings</button>
             </div>
           </div>
+
+          <section class="intake-action-card pdf-prefill" aria-labelledby="pdf-prefill-heading">
+            <div>
+              <strong>PDF Autofill</strong>
+              <h2 id="pdf-prefill-heading">Read PDF and Prefill Listing</h2>
+              <p>Select the finished product PDF once. Reading it does not upload or publish anything, and the same selected file remains attached for the normal publish workflow.</p>
+            </div>
+            <div class="intake-field">
+              <label for="product-pdf-file">Product PDF File</label>
+              <input id="product-pdf-file" class="dock-input" type="file" accept=".pdf,application/pdf">
+            </div>
+            <div class="pdf-prefill__actions">
+              <button id="read-pdf-prefill-button" class="button button--secondary" type="button">Read PDF and Prefill Listing</button>
+              <span id="pdf-prefill-file-status" class="intake-help">No PDF selected.</span>
+            </div>
+            <p id="pdf-prefill-status" class="intake-help" role="status" aria-live="polite">Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.</p>
+            <div id="pdf-prefill-summary" class="pdf-prefill__summary" hidden>
+              <section>
+                <h3>Populated from PDF</h3>
+                <ul id="pdf-prefill-populated-list"></ul>
+              </section>
+              <section>
+                <h3>Still needs manual attention</h3>
+                <ul id="pdf-prefill-manual-list"></ul>
+              </section>
+            </div>
+            <section id="pdf-prefill-review" class="pdf-prefill__review" hidden>
+              <h3>Existing values preserved</h3>
+              <p class="intake-help">These PDF suggestions differ from values already in the form. Select only the replacements you want, then apply them.</p>
+              <div id="pdf-prefill-review-list" class="pdf-prefill__review-list"></div>
+              <button id="apply-pdf-prefill-button" class="button button--secondary" type="button">Apply Selected PDF Values</button>
+            </section>
+            <ul id="pdf-prefill-warning-list" class="intake-list" hidden></ul>
+          </section>
 
           <div class="intake-grid">
             <section class="intake-form" aria-labelledby="intake-form-heading">
@@ -858,8 +959,7 @@
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-pdf-file">Product PDF File</label>
-                <input id="product-pdf-file" class="dock-input" type="file" accept=".pdf,application/pdf">
+                <span class="intake-help">The PDF selected in the autofill panel above is also the product file used by the normal publish workflow. Reading it never uploads it.</span>
               </div>
             </div>
             </section>
@@ -1026,6 +1126,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20260710m"></script>
+  <script src="../assets/js/product-intake.js?v=20261026-pdf-autofill1"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@ async function main() {
   await testIntakeLabelsAndHelperText();
   await testProductLineTerminologyAndManagerLabels();
   await testTagSelectorMarkup();
+  await testPdfPrefillPreservesExistingValues();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
   await testExistingListingLoadsMatchingTagCheckboxes();
@@ -67,6 +68,47 @@ async function testTagSelectorMarkup() {
   assert.match(script, /Product Lines[\s\S]*Genre[\s\S]*Product Type[\s\S]*Game System/, "The grouped tag selector should include the default tag groups.");
   assert.match(html, /<input id="product-tags" type="hidden"/, "The legacy tags field should remain as a hidden publish field.");
   assert.doesNotMatch(html, /<input id="product-tags" class="dock-input" type="text"/, "The old visible free-text tags input should be removed from normal use.");
+}
+
+async function testPdfPrefillPreservesExistingValues() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.buttons.startNew.click();
+
+  const selectedFile = { name: "player-manual.pdf", size: 2048, type: "application/pdf" };
+  harness.fields.pdfFile.files = [selectedFile];
+  harness.fields.pdfFile.dispatch("change");
+  const result = harness.api.applyPdfPrefillResultsForTests({
+    fields: {
+      title: { value: "Road-Worn Player's Manual", source: "PDF document title" },
+      pageCount: { value: "122", source: "PDF page tree" },
+      format: { value: "PDF", source: "selected PDF file" },
+      system: { value: "Traveller", source: "labeled game system" }
+    },
+    pageCount: 122,
+    sampledPageCount: 16,
+    warnings: []
+  });
+
+  assert.equal(harness.fields.title.value, "Road-Worn Player's Manual", "Blank title should be populated from the PDF.");
+  assert.equal(harness.fields.pageCount.value, "122", "Blank page count should be populated from the PDF page tree.");
+  assert.equal(harness.fields.system.value, "5E Compatible", "A nonblank system default must not be overwritten automatically.");
+  assert.equal(result.preserved.includes("system"), true, "Conflicting extracted system should be held for explicit review.");
+  assert.equal(harness.fields.openRulesEligible.checked, false, "PDF autofill must never enable Open Rules eligibility.");
+  assert.equal(harness.fields.price.value, "", "PDF autofill must never assign a price.");
+  assert.equal(harness.fields.pdfFile.files[0], selectedFile, "The analyzed PDF selection must remain attached for normal publishing.");
+
+  harness.fields.existingSelect.value = "fixture-alpha";
+  harness.buttons.loadExisting.click();
+  const existingTitle = harness.fields.title.value;
+  const existing = harness.api.applyPdfPrefillResultsForTests({
+    fields: { title: { value: "Different PDF Title", source: "first-page heading" } },
+    pageCount: 24,
+    sampledPageCount: 24,
+    warnings: []
+  });
+  assert.equal(harness.fields.title.value, existingTitle, "Existing listing data must stay unchanged until RV approves a replacement.");
+  assert.equal(existing.preserved.includes("title"), true, "Existing-listing conflicts should be shown for review.");
 }
 
 async function testTablecraftListingStillLoadsWithProductLine() {
@@ -646,6 +688,9 @@ function createHarness(options = {}) {
     authors: register("product-authors", createInput("RV Sawyer")),
     publisher: register("product-publisher", createInput("Tobacco Road Games")),
     system: register("product-system", createInput("5E Compatible")),
+    genre: register("product-genre", createInput("")),
+    language: register("product-language", createInput("")),
+    contentDescriptors: register("product-content-descriptors", createInput("")),
     line: register("product-line", createElement("select")),
     series: register("product-series", createInput("")),
     productLineManagerInput: register("product-line-manager-input", createInput("")),
@@ -667,6 +712,7 @@ function createHarness(options = {}) {
     features: register("product-features", createElement("textarea")),
     tags: register("product-tags", createInput("", "hidden")),
     fulfillmentNote: register("product-fulfillment-note", createElement("textarea")),
+    teaserVideo: register("product-teaser-video", createInput("", "url")),
     creationMethod: register("product-creation-method", createElement("textarea")),
     legalNote: register("product-legal-note", createElement("textarea")),
     version: register("product-version", createInput("1.0")),
@@ -689,6 +735,14 @@ function createHarness(options = {}) {
   const outputs = {
     editMode: register("product-edit-mode", createElement("p")),
     listingDetails: register("listing-details-section", createElement("section")),
+    pdfPrefillFileStatus: register("pdf-prefill-file-status", createElement("span")),
+    pdfPrefillStatus: register("pdf-prefill-status", createElement("p")),
+    pdfPrefillSummary: register("pdf-prefill-summary", createElement("div")),
+    pdfPrefillPopulatedList: register("pdf-prefill-populated-list", createElement("ul")),
+    pdfPrefillManualList: register("pdf-prefill-manual-list", createElement("ul")),
+    pdfPrefillReview: register("pdf-prefill-review", createElement("section")),
+    pdfPrefillReviewList: register("pdf-prefill-review-list", createElement("div")),
+    pdfPrefillWarningList: register("pdf-prefill-warning-list", createElement("ul")),
     productLineManagerList: register("product-line-manager-list", createElement("div")),
     productLineManagerPanel: register("product-line-manager-panel", createElement("div")),
     productLineManagerStatus: register("product-line-manager-status", createElement("p")),
@@ -738,6 +792,8 @@ function createHarness(options = {}) {
     loadExisting: register("product-existing-load", createElement("button")),
     manageProductLines: register("manage-product-lines-button", createElement("button")),
     manageTags: register("manage-tags-button", createElement("button")),
+    readPdfPrefill: register("read-pdf-prefill-button", createElement("button")),
+    applyPdfPrefill: register("apply-pdf-prefill-button", createElement("button")),
     startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),
     publish: register("publish-button", createElement("button")),

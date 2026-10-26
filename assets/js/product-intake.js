@@ -12,6 +12,25 @@
     Object.freeze({ name: "Product Type", tags: Object.freeze(["Core Rules", "Supplement", "Rules Supplement", "Scenario", "Item", "Monster"]) }),
     Object.freeze({ name: "Game System", tags: Object.freeze(["Dungeons & Dragons", "SRD 5.1", "SRD 5.21", "OGL", "Threshold Engine", "GURPS", "Champions", "Big Damn Sci-Fi", "System Agnostic", "Other System", "Traveller", "Call of Cthulhu", "Syzygy"]) })
   ]);
+  const PDF_PREFILL_FIELDS = Object.freeze({
+    title: Object.freeze({ field: "title", label: "Title" }),
+    subtitle: Object.freeze({ field: "subtitle", label: "Subtitle" }),
+    pageCount: Object.freeze({ field: "pageCount", label: "Page count" }),
+    format: Object.freeze({ field: "format", label: "Format" }),
+    system: Object.freeze({ field: "system", label: "Game system" }),
+    line: Object.freeze({ field: "line", label: "Product line" }),
+    series: Object.freeze({ field: "series", label: "Series" }),
+    version: Object.freeze({ field: "version", label: "Version" }),
+    language: Object.freeze({ field: "language", label: "Language" }),
+    releaseDate: Object.freeze({ field: "releaseDate", label: "Publication date" }),
+    genre: Object.freeze({ field: "genre", label: "Genre" }),
+    contentDescriptors: Object.freeze({ field: "contentDescriptors", label: "Content descriptors", join: ", " }),
+    features: Object.freeze({ field: "features", label: "Features", join: "\n" }),
+    tags: Object.freeze({ field: "tags", label: "Tags", join: ", " }),
+    shortDescription: Object.freeze({ field: "shortDescription", label: "Short description" }),
+    longDescription: Object.freeze({ field: "longDescription", label: "Long description" }),
+    legalNote: Object.freeze({ field: "legalNote", label: "Legal note or license" })
+  });
   const statusLabels = {
     "available-direct": "Available Direct",
     "coming-soon": "Coming Soon",
@@ -82,6 +101,14 @@
   const outputs = {
     editMode: document.getElementById("product-edit-mode"),
     listingDetails: document.getElementById("listing-details-section"),
+    pdfPrefillFileStatus: document.getElementById("pdf-prefill-file-status"),
+    pdfPrefillStatus: document.getElementById("pdf-prefill-status"),
+    pdfPrefillSummary: document.getElementById("pdf-prefill-summary"),
+    pdfPrefillPopulatedList: document.getElementById("pdf-prefill-populated-list"),
+    pdfPrefillManualList: document.getElementById("pdf-prefill-manual-list"),
+    pdfPrefillReview: document.getElementById("pdf-prefill-review"),
+    pdfPrefillReviewList: document.getElementById("pdf-prefill-review-list"),
+    pdfPrefillWarningList: document.getElementById("pdf-prefill-warning-list"),
     productLineManagerList: document.getElementById("product-line-manager-list"),
     productLineManagerPanel: document.getElementById("product-line-manager-panel"),
     productLineManagerStatus: document.getElementById("product-line-manager-status"),
@@ -131,6 +158,8 @@
     loadExisting: document.getElementById("product-existing-load"),
     manageProductLines: document.getElementById("manage-product-lines-button"),
     manageTags: document.getElementById("manage-tags-button"),
+    readPdfPrefill: document.getElementById("read-pdf-prefill-button"),
+    applyPdfPrefill: document.getElementById("apply-pdf-prefill-button"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
     publish: document.getElementById("publish-button"),
@@ -155,6 +184,8 @@
   let ownerTagGroups = DEFAULT_TAG_GROUPS.map((group) => ({ name: group.name, tags: [...group.tags] }));
   let selectedTagKeys = new Set();
   let preservedUnknownTags = [];
+  let pdfPrefillBusy = false;
+  let pdfPrefillSuggestions = new Map();
 
   const slugify = (value) =>
     String(value || "")
@@ -199,6 +230,196 @@
     Array.isArray(value)
       ? value.join(", ")
       : String(value || "").trim();
+
+  const normalizePdfPrefillValue = (value, join = "") =>
+    Array.isArray(value)
+      ? value.map((entry) => String(entry || "").trim()).filter(Boolean).join(join || ", ")
+      : String(value ?? "").trim();
+
+  const getPdfPrefillCurrentValue = (fieldKey) => {
+    const config = PDF_PREFILL_FIELDS[fieldKey];
+    if (!config) return "";
+    if (fieldKey === "tags") return getCurrentTagValues().join(", ");
+    return String(fields[config.field]?.value ?? "").trim();
+  };
+
+  const ensureProductLineValue = (value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized || !fields.line) return;
+    const existing = [...fields.line.options].some((option) => option.value === normalized);
+    if (!existing) {
+      const option = document.createElement("option");
+      option.value = normalized;
+      option.textContent = normalized;
+      option.dataset.pdfPrefill = "true";
+      fields.line.append(option);
+    }
+  };
+
+  const setPdfPrefillFieldValue = (fieldKey, suggestion) => {
+    const config = PDF_PREFILL_FIELDS[fieldKey];
+    if (!config) return false;
+    const value = normalizePdfPrefillValue(suggestion?.value, config.join);
+    if (!value) return false;
+    if (fieldKey === "tags") {
+      applyTagValues(value);
+      renderTagSelector();
+      renderTagManager();
+      return true;
+    }
+    if (fieldKey === "line") ensureProductLineValue(value);
+    const field = fields[config.field];
+    if (!field) return false;
+    field.value = value;
+    return true;
+  };
+
+  const makePdfPrefillListItem = (text) => {
+    const item = document.createElement("li");
+    item.textContent = text;
+    return item;
+  };
+
+  const clearPdfPrefillResults = ({ keepFileStatus = true } = {}) => {
+    pdfPrefillSuggestions = new Map();
+    outputs.pdfPrefillSummary.hidden = true;
+    outputs.pdfPrefillReview.hidden = true;
+    outputs.pdfPrefillWarningList.hidden = true;
+    outputs.pdfPrefillPopulatedList.replaceChildren();
+    outputs.pdfPrefillManualList.replaceChildren();
+    outputs.pdfPrefillReviewList.replaceChildren();
+    outputs.pdfPrefillWarningList.replaceChildren();
+    if (!keepFileStatus) outputs.pdfPrefillFileStatus.textContent = "No PDF selected.";
+  };
+
+  const renderPdfPrefillReview = () => {
+    const entries = [...pdfPrefillSuggestions.entries()];
+    outputs.pdfPrefillReview.hidden = entries.length === 0;
+    outputs.pdfPrefillReviewList.replaceChildren(...entries.map(([fieldKey, suggestion]) => {
+      const config = PDF_PREFILL_FIELDS[fieldKey];
+      const label = document.createElement("label");
+      label.className = "pdf-prefill__suggestion";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.pdfPrefillField = fieldKey;
+      const copy = document.createElement("span");
+      const value = normalizePdfPrefillValue(suggestion.value, config.join);
+      const title = document.createElement("strong");
+      title.textContent = `${config.label}: ${value}`;
+      const detail = document.createElement("small");
+      detail.textContent = `Current value kept: ${getPdfPrefillCurrentValue(fieldKey) || "blank"}. Source: ${suggestion.source}.`;
+      copy.append(title, detail);
+      label.append(checkbox, copy);
+      return label;
+    }));
+  };
+
+  const renderPdfPrefillSummary = ({ populated = [], extractedFields = {}, warnings = [], pageCount = 0, sampledPageCount = 0 } = {}) => {
+    outputs.pdfPrefillSummary.hidden = false;
+    outputs.pdfPrefillPopulatedList.replaceChildren(...(populated.length
+      ? populated.map(makePdfPrefillListItem)
+      : [makePdfPrefillListItem("No blank fields were changed automatically.")]));
+
+    const missing = Object.entries(PDF_PREFILL_FIELDS)
+      .filter(([fieldKey]) => !extractedFields[fieldKey])
+      .map(([, config]) => config.label);
+    const manualItems = [
+      ...missing,
+      "Price, sale settings, buy mode, and store status",
+      "Cover and preview WebP files"
+    ];
+    outputs.pdfPrefillManualList.replaceChildren(...manualItems.map(makePdfPrefillListItem));
+
+    outputs.pdfPrefillWarningList.replaceChildren(...warnings.map(makePdfPrefillListItem));
+    outputs.pdfPrefillWarningList.hidden = warnings.length === 0;
+    outputs.pdfPrefillStatus.textContent = `Read ${sampledPageCount} selected page${sampledPageCount === 1 ? "" : "s"} from a ${pageCount}-page PDF. Review editable form values and any preserved-value suggestions before publishing.`;
+  };
+
+  const applyPdfPrefillResults = (result) => {
+    const populated = [];
+    pdfPrefillSuggestions = new Map();
+    for (const [fieldKey, suggestion] of Object.entries(result.fields || {})) {
+      const config = PDF_PREFILL_FIELDS[fieldKey];
+      if (!config) continue;
+      const nextValue = normalizePdfPrefillValue(suggestion.value, config.join);
+      const currentValue = getPdfPrefillCurrentValue(fieldKey);
+      if (!nextValue) continue;
+      if (!currentValue) {
+        if (setPdfPrefillFieldValue(fieldKey, suggestion)) populated.push(`${config.label} - ${suggestion.source}`);
+        continue;
+      }
+      if (currentValue.toLocaleLowerCase() === nextValue.toLocaleLowerCase()) {
+        populated.push(`${config.label} - already matched the PDF`);
+        continue;
+      }
+      pdfPrefillSuggestions.set(fieldKey, suggestion);
+    }
+    updateAutoFields();
+    renderPdfPrefillReview();
+    renderPdfPrefillSummary({
+      populated,
+      extractedFields: result.fields || {},
+      warnings: result.warnings || [],
+      pageCount: result.pageCount,
+      sampledPageCount: result.sampledPageCount
+    });
+    return { populated, preserved: [...pdfPrefillSuggestions.keys()] };
+  };
+
+  const applySelectedPdfPrefillSuggestions = () => {
+    const checked = [...outputs.pdfPrefillReviewList.querySelectorAll("input[data-pdf-prefill-field]:checked")];
+    if (!checked.length) {
+      outputs.pdfPrefillStatus.textContent = "No preserved values were selected for replacement.";
+      return [];
+    }
+    const applied = [];
+    for (const checkbox of checked) {
+      const fieldKey = checkbox.dataset.pdfPrefillField;
+      const suggestion = pdfPrefillSuggestions.get(fieldKey);
+      if (!suggestion || !setPdfPrefillFieldValue(fieldKey, suggestion)) continue;
+      applied.push(PDF_PREFILL_FIELDS[fieldKey].label);
+      pdfPrefillSuggestions.delete(fieldKey);
+    }
+    updateAutoFields();
+    renderPdfPrefillReview();
+    outputs.pdfPrefillStatus.textContent = `Applied ${applied.join(", ")} from the PDF. The values remain editable and nothing has been uploaded.`;
+    return applied;
+  };
+
+  const readPdfAndPrefillListing = async () => {
+    if (pdfPrefillBusy) return null;
+    const file = fields.pdfFile.files[0];
+    if (!file) {
+      outputs.pdfPrefillStatus.textContent = "Choose a product PDF before reading it.";
+      return null;
+    }
+    pdfPrefillBusy = true;
+    buttons.readPdfPrefill.disabled = true;
+    clearPdfPrefillResults();
+    outputs.pdfPrefillStatus.textContent = "Loading the local PDF parser...";
+    try {
+      const { readProductPdf } = await import("/assets/js/product-pdf-autofill.mjs?v=20261026a");
+      const result = await readProductPdf(file, {
+        onProgress: ({ current, total, pageNumber }) => {
+          outputs.pdfPrefillStatus.textContent = `Reading selected page ${current} of ${total} (PDF page ${pageNumber})...`;
+        }
+      });
+      if (fields.pdfFile.files[0] !== file) {
+        outputs.pdfPrefillStatus.textContent = "The selected PDF changed during analysis. Read the newly selected file when ready.";
+        return null;
+      }
+      applyPdfPrefillResults(result);
+      outputs.pdfPrefillFileStatus.textContent = `${file.name} remains selected for publishing.`;
+      return result;
+    } catch (error) {
+      outputs.pdfPrefillStatus.textContent = `The PDF could not be read: ${error?.message || "unknown extraction error"}. The file remains selected and may still be used by the normal publishing workflow.`;
+      outputs.pdfPrefillFileStatus.textContent = `${file.name} remains selected for publishing.`;
+      return null;
+    } finally {
+      pdfPrefillBusy = false;
+      buttons.readPdfPrefill.disabled = false;
+    }
+  };
 
   const normalizeProductLineName = (value) =>
     String(value || "")
@@ -1338,6 +1559,8 @@
     fields.coverFile.value = "";
     fields.previewFile.value = "";
     fields.pdfFile.value = "";
+    clearPdfPrefillResults({ keepFileStatus: false });
+    outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     selectedRelatedProducts = Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [];
     slugTouched = true;
     folderTouched = true;
@@ -1409,6 +1632,8 @@
     fields.coverFile.value = "";
     fields.previewFile.value = "";
     fields.pdfFile.value = "";
+    clearPdfPrefillResults({ keepFileStatus: false });
+    outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     if (fields.existingSelect) {
       fields.existingSelect.value = persisted.existingSelectValue || loadedProductSlug;
     }
@@ -1452,6 +1677,17 @@
   });
 
   fields.title.addEventListener("input", updateAutoFields);
+  fields.pdfFile?.addEventListener("change", () => {
+    clearPdfPrefillResults();
+    const file = fields.pdfFile.files[0];
+    outputs.pdfPrefillFileStatus.textContent = file
+      ? `${file.name} selected for analysis and publishing.`
+      : "No PDF selected.";
+    outputs.pdfPrefillStatus.textContent = file
+      ? "Ready to read the selected PDF. Nothing will upload until the normal Publish action."
+      : "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
+    updatePreview();
+  });
   fields.buyMode.addEventListener("change", () => {
     syncBuyModeUi();
     updatePreview();
@@ -1467,6 +1703,8 @@
   });
 
   buttons.analyze?.addEventListener("click", analyzeCurrentListing);
+  buttons.readPdfPrefill?.addEventListener("click", readPdfAndPrefillListing);
+  buttons.applyPdfPrefill?.addEventListener("click", applySelectedPdfPrefillSuggestions);
   buttons.addProductLine?.addEventListener("click", () => {
     addOwnerProductLine();
   });
@@ -1569,6 +1807,8 @@
         field.value = "";
       }
     });
+    clearPdfPrefillResults({ keepFileStatus: false });
+    outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     fields.title.value = "";
     fields.slug.value = "";
     fields.folder.value = "";
@@ -2300,6 +2540,9 @@
     addOwnerProductLine,
     addOwnerTag,
     addOwnerTagGroup,
+    applyPdfPrefillResultsForTests: applyPdfPrefillResults,
+    applySelectedPdfPrefillSuggestionsForTests: applySelectedPdfPrefillSuggestions,
+    clearPdfPrefillResultsForTests: clearPdfPrefillResults,
     getModeLabels,
     getPreservedUnknownTags: () => [...preservedUnknownTags],
     getSelectableProductLines,
@@ -2309,6 +2552,7 @@
     getUsedTagUsage,
     getCurrentTagValues,
     getUsedProductLineUsage,
+    getPdfPrefillSuggestions: () => new Map(pdfPrefillSuggestions),
     hasUnsavedChanges,
     removeOwnerProductLine,
     removeOwnerTag,
