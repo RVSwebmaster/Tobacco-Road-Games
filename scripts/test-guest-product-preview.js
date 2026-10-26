@@ -30,7 +30,10 @@ assert.match(client, /guest-preview-products\.json\?v=20261026-homepage-shelves1
 assert.match(client, /event\.key !== "Enter"/);
 assert.match(client, /event\.key !== " "/);
 assert.match(client, /\?\.focus\?\.\(\)/);
-assert.match(client, /dataset\.guestProductPreview/);\nassert.match(client, /guestPreviewBound/);\nassert.match(client, /realProductLink/);\nassert.match(client, /trg:homepage-shelves-updated/);
+assert.match(client, /dataset\.guestProductPreview/);
+assert.match(client, /guestPreviewBound/);
+assert.match(client, /realProductLink/);
+assert.match(client, /trg:homepage-shelves-updated/);
 assert.match(client, /createElement\("a"\)/, "Shelf previews must use real anchors.");
 assert.match(client, /link\.href = product\.fullUrl/);
 assert.match(client, /aria-haspopup/, "Shelf books must expose link-style dialog semantics.");
