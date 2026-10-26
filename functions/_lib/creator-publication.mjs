@@ -1,11 +1,11 @@
-import {verifyAuthenticatedOwnerMutationRequest} from "./owner-mutation-auth.mjs";
+import { OWNER_ACTOR_ID } from "./owner-runtime.mjs";
 import {dispatchPublishWorkflow} from "./github-dispatch.mjs";
 import {mapApprovedListingToPublishPayload} from "./creator-publication-map.mjs";
 import {getRuntimeCatalogProduct} from "./runtime-catalog.mjs";
 import {assertPublicationCapacity} from './marketplace-policy.mjs';
 import {assertCreatorPublicationReadiness} from './publication-readiness.mjs';
 export async function handleCreatorPublicationRequest(request,env={},options={}){
- const auth=await verifyAuthenticatedOwnerMutationRequest(request,env,{nowMs:options.nowMs});if(!auth.valid)return json({error:auth.userMessage},auth.status);if(request.method!=="POST")return json({error:"Use POST."},405);const db=options.database||env.TRG_ORDERS;let body={};try{body=await request.json();}catch{}const action=String(body.action||""),now=new Date(Number.isFinite(options.nowMs)?options.nowMs:Date.now()).toISOString();
+ const auth={username:OWNER_ACTOR_ID};if(request.method!=="POST")return json({error:"Use POST."},405);const db=options.database||env.TRG_ORDERS;let body={};try{body=await request.json();}catch{}const action=String(body.action||""),now=new Date(Number.isFinite(options.nowMs)?options.nowMs:Date.now()).toISOString();
  if(action==="accept_file"||action==="reject_file"){const file=await db.prepare("SELECT * FROM creator_listing_files WHERE id=?").bind(String(body.fileId||"")).first();if(!file)return json({error:"Creator file not found."},404);const state=action==="accept_file"?"accepted":"rejected",message=String(body.message||"").slice(0,1000);await db.batch([db.prepare("UPDATE creator_listing_files SET validation_state=?,validation_message=?,validated_at=? WHERE id=? AND validation_state IN ('uploaded','validating')").bind(state,message,now,file.id),db.prepare("UPDATE creator_listings SET publication_state=CASE WHEN ?='accepted' THEN 'approved' ELSE 'waiting_for_files' END WHERE id=? AND publication_state IN ('approved','waiting_for_files')").bind(state,file.listing_id),audit(db,file.listing_id,file.creator_id,auth.username,`file_${state}`,{fileId:file.id,purpose:file.purpose,message},now)]);return json({ok:true,state});}
  if(action==="approve_bundle")return approveBundle(body,db,auth,now);
  if(action==="publish_bundle")return publishBundle(body,db,env,auth,now,options);

@@ -282,7 +282,7 @@ function createHarness(products, fetchImpl) {
 
   const confirmMessages = [];
 
-  document.cookie = "trg_owner_csrf=test-csrf";
+  document.cookie = "";
   document.register("pricing-mode-indicator", fields.modeIndicator);
   document.register("pricing-product-select", fields.existingSelect);
   document.register("pricing-current-title", fields.currentTitle);

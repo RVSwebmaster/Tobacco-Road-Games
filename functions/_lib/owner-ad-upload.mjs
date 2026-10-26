@@ -1,5 +1,4 @@
-import { jsonResponse } from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { OWNER_ACTOR_ID, jsonResponse } from "./owner-runtime.mjs";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["video/mp4"]);
@@ -12,11 +11,6 @@ export function normalizeAdFilename(value) {
 
 export async function handleOwnerAdUpload(request, env) {
   if (request.method !== "POST") return jsonResponse({ error: "Upload only accepts POST requests." }, 405);
-
-  const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, {
-    sameOriginMessage: "Uploads must come from the Tobacco Road Games owner site."
-  });
-  if (!auth.valid) return jsonResponse({ error: auth.userMessage }, auth.status);
 
   const bucket = env.TRG_PRODUCTS;
   if (!bucket?.put) return jsonResponse({ error: "The upload bucket is not configured." }, 503);
@@ -40,7 +34,7 @@ export async function handleOwnerAdUpload(request, env) {
 
   await bucket.put(key, file.stream(), {
     httpMetadata: { contentType: "video/mp4", cacheControl: "public, max-age=3600" },
-    customMetadata: { uploadedBy: String(auth.username || "owner"), originalName: file.name }
+    customMetadata: { uploadedBy: OWNER_ACTOR_ID, originalName: file.name }
   });
   return jsonResponse({ filename, ok: true, url: `/ad-media/${filename}` }, 201);
 }

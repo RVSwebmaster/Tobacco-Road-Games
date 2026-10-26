@@ -7,7 +7,7 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
+const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 const NOW_MS = Date.parse("2026-10-18T22:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const STANDARD_CAP = 20;
@@ -16,9 +16,7 @@ const STANDARD_CREATOR = "creator-mock-shelf-standard";
 const STANDARD_USER = "user-mock-shelf-standard";
 const PREFERRED_CREATOR = "creator-mock-shelf-preferred";
 const PREFERRED_USER = "user-mock-shelf-preferred";
-const OWNER_ID = "rv-local-owner";
-const OWNER_SESSION_SECRET = "mock-task6-owner-session-secret-32-bytes";
-const OWNER_CSRF_SECRET = "mock-task6-owner-csrf-secret-32-bytes";
+const OWNER_ID = "owner-open-workbench";
 const REAL_CATALOG_FILES = Object.freeze([
   "data/products.json",
   "data/product-intake-map.json",
@@ -43,7 +41,6 @@ async function main() {
     const marketplacePolicy = await load(
       "functions/_lib/marketplace-policy.mjs"
     );
-    const ownerAuth = await load("functions/_lib/owner-auth.mjs");
     const publishIntake = require(path.join(ROOT, "scripts", "publish-intake.js"));
 
     database = new DatabaseSync(databasePath);
@@ -110,12 +107,8 @@ async function main() {
     );
     copyCatalogFixture(catalogRoot);
 
-    const ownerFixture = await createOwnerAuthFixture({
-      ownerAuth,
+    const ownerFixture = createOwnerWorkbenchFixture({
       ownerId: OWNER_ID,
-      nowMs: NOW_MS,
-      sessionSecret: OWNER_SESSION_SECRET,
-      csrfSecret: OWNER_CSRF_SECRET,
       origin: "http://127.0.0.1"
     });
     const environment = {

@@ -9,11 +9,10 @@ const { DatabaseSync } = require("node:sqlite");
 const ROOT = path.resolve(__dirname, "..");
 const CREATOR_ID = "creator-mock-review-task4a";
 const CREATOR_USER_ID = "user-mock-review-task4a";
-const OWNER_ID = "owner-review-task4a@example.invalid";
+const OWNER_ID = "owner-open-workbench";
 const PRODUCT_SLUG = "mock-owner-review-task4a";
 const CREATOR_SESSION = "mock-task4a-creator-session";
 const CREATOR_CSRF = "mock-task4a-creator-csrf";
-const OWNER_ACCESS_TOKEN = "mock-task4a-owner-access-token";
 const NOW_MS = Date.parse("2026-10-18T18:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const EXPIRES_AT = "2027-10-18T18:00:00.000Z";
@@ -142,22 +141,10 @@ async function main() {
       "The Mock Owner must not impersonate or join the Mock Creator."
     );
 
-    const ownerEnvironment = {
-      ...environment,
-      OWNER_ACCESS_AUD: "mock-task4a-audience",
-      OWNER_ACCESS_EMAIL: OWNER_ID,
-      OWNER_ACCESS_TEAM_DOMAIN: "https://access.example.invalid"
-    };
+    const ownerEnvironment = { ...environment };
     const ownerOptions = {
       database: d1,
-      nowMs: NOW_MS,
-      verifyOwnerAccessRequest: async (request) => {
-        assert.equal(
-          request.headers.get("cf-access-jwt-assertion"),
-          OWNER_ACCESS_TOKEN
-        );
-        return { valid: true, csrfSubject: OWNER_ID, email: OWNER_ID };
-      }
+      nowMs: NOW_MS
     };
 
     response = await ownerListingFiles.handleOwnerListingFiles(
@@ -408,9 +395,7 @@ function creatorFormRequest(route, body) {
 }
 
 function ownerRequest(route) {
-  return new Request(`https://example.com${route}`, {
-    headers: { "cf-access-jwt-assertion": OWNER_ACCESS_TOKEN }
-  });
+  return new Request(`https://example.com${route}`);
 }
 
 function commerceSnapshot(database) {

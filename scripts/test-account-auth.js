@@ -814,8 +814,7 @@ function assertNoAuthBoundaryChanges() {
   for (const relative of [
     "functions/_lib/stripe-checkout.mjs",
     "functions/_lib/download-authorization.mjs",
-    "functions/_lib/office-access.mjs",
-    "functions/_lib/owner-auth.mjs"
+    "functions/_lib/office-access.mjs"
   ]) {
     const source = fs.readFileSync(path.join(ROOT, relative), "utf8");
     assert.doesNotMatch(source, /account-auth|password_credentials|user_identities/, `${relative} should not depend on public account auth.`);

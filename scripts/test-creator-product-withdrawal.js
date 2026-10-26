@@ -7,7 +7,7 @@ const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
+const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 const NOW_MS = Date.parse("2026-10-19T02:30:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const EXPIRES_AT = "2027-10-19T02:30:00.000Z";
@@ -25,7 +25,7 @@ const CREATOR_B = Object.freeze({
   session: "mock-withdrawal-b-session",
   csrf: "mock-withdrawal-b-csrf"
 });
-const OWNER_ID = "owner-withdrawal-task7@example.invalid";
+const OWNER_ID = "owner-open-workbench";
 const PDF_BYTES = Buffer.from(
   "%PDF-1.7\nTobacco Road Games disposable Task 7 PDF\n%%EOF",
   "utf8"
@@ -62,7 +62,6 @@ async function main() {
     const creatorPublication = await load("functions/_lib/creator-publication.mjs");
     const creatorReview = await load("functions/_lib/creator-review.mjs");
     const cartQuote = await load("functions/_lib/cart-quote.mjs");
-    const ownerAuth = await load("functions/_lib/owner-auth.mjs");
     const publishIntake = require(path.join(ROOT, "scripts", "publish-intake.js"));
 
     database = new DatabaseSync(databasePath);
@@ -75,12 +74,8 @@ async function main() {
     const bucket = createLocalBucket(storageRoot);
     copyCatalogFixture(catalogRoot);
     const dispatch = createSuccessfulDispatch();
-    const ownerFixture = await createOwnerAuthFixture({
-      ownerAuth,
+    const ownerFixture = createOwnerWorkbenchFixture({
       ownerId: OWNER_ID,
-      nowMs: NOW_MS,
-      sessionSecret: "mock-task7-owner-session-secret-32-bytes",
-      csrfSecret: "mock-task7-owner-csrf-secret-32-bytes",
       origin: "http://127.0.0.1"
     });
     const environment = {

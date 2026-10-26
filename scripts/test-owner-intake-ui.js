@@ -603,7 +603,7 @@ function createHarness(options = {}) {
   };
 
   const document = {
-    cookie: "trg_owner_csrf=test-token",
+    cookie: "",
     createElement,
     getElementById(id) {
       return byId.get(id) || null;

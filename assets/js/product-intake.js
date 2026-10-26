@@ -1046,21 +1046,6 @@
     outputs.previewCoverImage.alt = "Tobacco Road Games logo fallback";
   }
 
-  function getCookie(name) {
-    const cookies = document.cookie.split(";").map((entry) => entry.trim()).filter(Boolean);
-    for (const cookie of cookies) {
-      const separator = cookie.indexOf("=");
-      if (separator === -1) {
-        continue;
-      }
-      const cookieName = cookie.slice(0, separator);
-      if (cookieName === name) {
-        return cookie.slice(separator + 1);
-      }
-    }
-    return "";
-  }
-
   function getSubmitProgressLabel() {
     return isEditingLoadedListing()
       ? "Updating..."
@@ -1085,12 +1070,6 @@
     const missingTextErrors = validateRequiredFields();
     if (missingTextErrors.length) {
       outputs.status.textContent = missingTextErrors.join(" ");
-      return;
-    }
-
-    const csrfToken = getCookie("trg_owner_csrf");
-    if (!csrfToken) {
-      outputs.status.textContent = "Your login security token is missing. Reload the page and sign in again if needed.";
       return;
     }
 
@@ -1155,22 +1134,11 @@
       const response = await fetch("/owner/api/publish", {
         method: "POST",
         credentials: "same-origin",
-        headers: {
-          "X-CSRF-Token": csrfToken
-        },
         body: formData,
         redirect: "manual"
       });
 
       const responsePayload = await readResponsePayload(response);
-
-      if (response.status === 401 || response.status === 403) {
-        outputs.status.textContent = responsePayload.json.error || "Your owner access session is no longer valid. Reloading the protected route...";
-        window.setTimeout(() => {
-          window.location.assign("/owner/");
-        }, 600);
-        return;
-      }
 
       if (!response.ok) {
         outputs.status.textContent = responsePayload.json.error || formatUnexpectedResponseError("Publish", responsePayload);

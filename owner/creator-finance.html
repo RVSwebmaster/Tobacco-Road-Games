@@ -50,15 +50,6 @@
       </main>
     </div>
     <script>
-      const csrf = (
-        document.cookie
-          .split(";")
-          .map((value) => value.trim())
-          .find((value) => value.startsWith("trg_owner_csrf=")) || ""
-      )
-        .split("=")
-        .slice(1)
-        .join("=");
       const money = (value) => `$${(Number(value || 0) / 100).toFixed(2)}`;
       async function load() {
         const response = await fetch("/owner/api/creator-finance", {
@@ -180,7 +171,6 @@
             credentials: "same-origin",
             headers: {
               "content-type": "application/json",
-              "x-csrf-token": csrf,
             },
             body: JSON.stringify(body),
           }),

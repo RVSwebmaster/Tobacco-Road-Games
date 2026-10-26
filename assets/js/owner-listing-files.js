@@ -38,13 +38,13 @@
     const reason = prompt(`Creator-visible reason for delisting ${listing.title}:`, "");
     if (!reason?.trim()) return;
     const correctiveActionExpected = confirm("Is corrective action expected from the Creator?");
-    try { await request("/owner/api/listing-files", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": csrf() }, body: JSON.stringify({ action: "place_review_hold", listingId: listing.id, reason, correctiveActionExpected }) }); await loadListings(); status.textContent = "Listing placed on Owner Review Hold."; }
+    try { await request("/owner/api/listing-files", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "place_review_hold", listingId: listing.id, reason, correctiveActionExpected }) }); await loadListings(); status.textContent = "Listing placed on Owner Review Hold."; }
     catch (error) { status.textContent = error.message; }
   }
 
   async function restoreListing(listing) {
     if (!confirm(`Clear the Owner Review Hold for ${listing.title}? Other listing restrictions will remain in effect.`)) return;
-    try { await request("/owner/api/listing-files", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": csrf() }, body: JSON.stringify({ action: "restore_review_hold", listingId: listing.id }) }); await loadListings(); status.textContent = "Owner Review Hold cleared. Normal saleability rules still apply."; }
+    try { await request("/owner/api/listing-files", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "restore_review_hold", listingId: listing.id }) }); await loadListings(); status.textContent = "Owner Review Hold cleared. Normal saleability rules still apply."; }
     catch (error) { status.textContent = error.message; }
   }
 
@@ -78,7 +78,7 @@
         if (!confirm(`Replace the current ${file.purpose} file with ${input.files[0].name}? Existing customers will receive the new current file.`)) return;
         button.disabled = true; status.textContent = "Validating and replacing file…";
         const data = new FormData(); data.set("listingId", file.listing_id); data.set("fileId", file.id); data.set("file", input.files[0]);
-        try { await request("/owner/api/listing-files", { method: "POST", headers: { "x-csrf-token": csrf() }, body: data }); await loadFiles(file.listing_id); status.textContent = "Replacement stored, verified, and recorded."; }
+        try { await request("/owner/api/listing-files", { method: "POST", body: data }); await loadFiles(file.listing_id); status.textContent = "Replacement stored, verified, and recorded."; }
         catch (error) { status.textContent = error.message; button.disabled = false; }
       });
       card.append(form);
@@ -86,7 +86,6 @@
     return card;
   }
   async function request(url, options = {}) { const response = await fetch(url, { credentials: "same-origin", cache: "no-store", ...options }), payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.error?.message || payload.error || "Owner file maintenance request failed."); return payload; }
-  function csrf() { return document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("trg_owner_csrf="))?.slice("trg_owner_csrf=".length) || ""; }
   function node(tag, className, text) { const value=document.createElement(tag); if(className)value.className=className; if(text!==undefined)value.textContent=text; return value; }
   function formatBytes(value) { const bytes=Number(value)||0; if(bytes<1024)return `${bytes} B`; if(bytes<1048576)return `${(bytes/1024).toFixed(1)} KB`; return `${(bytes/1048576).toFixed(1)} MB`; }
   function formatDate(value) { const date=new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleString() : "unknown date"; }

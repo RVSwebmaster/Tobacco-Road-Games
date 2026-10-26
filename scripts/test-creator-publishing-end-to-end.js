@@ -4,7 +4,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 
-const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
+const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 const {
   ROOT,
   NOW_MS,
@@ -61,7 +61,6 @@ async function main() {
     const creatorOperations = await load("functions/_lib/creator-operations.mjs");
     const creatorPublication = await load("functions/_lib/creator-publication.mjs");
     const creatorReview = await load("functions/_lib/creator-review.mjs");
-    const ownerAuth = await load("functions/_lib/owner-auth.mjs");
     const ownerListingFiles = await load("functions/_lib/owner-listing-files.mjs");
     const cartQuote = await load("functions/_lib/cart-quote.mjs");
     const publishIntake = require(path.join(ROOT, "scripts", "publish-intake.js"));
@@ -76,12 +75,8 @@ async function main() {
     const bucket = createLocalBucket(storageRoot);
     copyCatalogFixture(catalogRoot);
     const dispatch = createSuccessfulDispatch();
-    const ownerFixture = await createOwnerAuthFixture({
-      ownerAuth,
+    const ownerFixture = createOwnerWorkbenchFixture({
       ownerId: OWNER_ID,
-      nowMs: NOW_MS,
-      sessionSecret: "mock-task8-owner-session-secret-32-bytes",
-      csrfSecret: "mock-task8-owner-csrf-secret-32-bytes",
       origin: "http://127.0.0.1"
     });
     const environment = {
@@ -170,16 +165,6 @@ async function main() {
       sha256(bucket.read(fileRecord(database, primary.productFileId).quarantine_key)),
       originalPdfHash
     );
-
-    response = await creatorPublication.handleCreatorPublicationRequest(
-      creatorRequest(CREATOR_B, "owner/api/creator-publication", {
-        action: "publish",
-        listingId: primary.id
-      }),
-      environment,
-      ownerOptions
-    );
-    assert.equal(response.status, ownerFixture.unauthorizedStatus);
 
     response = await ownerListingFiles.handleOwnerListingFiles(
       ownerFixture.readRequest(`/owner/api/listing-files?listingId=${primary.id}`),

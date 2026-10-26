@@ -1,9 +1,6 @@
 import { getSessionFromRequest, validateSameOriginRequest } from "./account-auth.mjs";
-import { buildCookie, readCookie } from "./owner-auth.mjs";
+import { OWNER_ACTOR_ID, buildCookie, readCookie } from "./owner-runtime.mjs";
 import { hmacIpFingerprint } from "./forum-rate-limits.mjs";
-import { readOwnerSession } from "./owner-middleware.mjs";
-import { getOwnerAccessConfig, verifyOwnerAccessRequest } from "./owner-access.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
 
 const CURIOS = Object.freeze({
   harimafuji: { name: "Yokozuna Harimafuji", shelfId: "bric-a-brac-1", x: 0.5, y: 0.5 }
@@ -36,7 +33,7 @@ export async function handleShelfCuriosRequest(request, env, options = {}) {
     const actor = session.valid ? session.user.id : `visitor:${visitorId}`;
     let rateKey = `member:${actor}`;
     if (!session.valid) {
-      const secret = String(env.FORUM_RATE_LIMIT_SECRET || env.OWNER_CSRF_SECRET || env.OWNER_SESSION_SECRET || "");
+      const secret = String(env.FORUM_RATE_LIMIT_SECRET || "");
       if (secret.length < 32) return error("Visitor move protection is unavailable. Please try again later.", 503);
       rateKey = `visitor-network:${await hmacIpFingerprint(secret, request.headers.get('cf-connecting-ip') || 'unknown')}`;
     }
@@ -73,18 +70,12 @@ export async function handleShelfCuriosRequest(request, env, options = {}) {
 export async function handleOwnerShelfCuriosRequest(request, env, options = {}) {
   if (!["GET", "POST"].includes(request.method)) return error("Use GET or POST.", 405);
   try {
-    const auth = request.method === "POST"
-      ? await verifyAuthenticatedOwnerMutationRequest(request, env, options)
-      : getOwnerAccessConfig(env).enabled
-        ? await verifyOwnerAccessRequest(request, env)
-        : await readOwnerSession(request, env);
-    if (!auth.valid) return error(auth.userMessage || "Owner sign-in is required.", auth.status || 401);
     const db = requireDb(env);
     if (request.method === "POST") {
       const body = await readJson(request);
       if (body?.action !== "reset") return error("Choose the reset action.", 400);
       const now = new Date(options.nowMs ?? Date.now()).toISOString();
-      const actor = auth.username;
+      const actor = OWNER_ACTOR_ID;
       const statements = [];
       for (const [id, definition] of Object.entries(CURIOS)) {
         const eventId = crypto.randomUUID();

@@ -184,20 +184,6 @@
     return `Sale enabled at ${salePriceLabel}. ${windowText}`;
   }
 
-  function getCookie(name) {
-    const cookies = document.cookie.split(";").map((entry) => entry.trim()).filter(Boolean);
-    for (const cookie of cookies) {
-      const separator = cookie.indexOf("=");
-      if (separator === -1) {
-        continue;
-      }
-      if (cookie.slice(0, separator) === name) {
-        return cookie.slice(separator + 1);
-      }
-    }
-    return "";
-  }
-
   function buildProductSelectLabel(product) {
     return `${product.title} (${product.slug})`;
   }
@@ -564,12 +550,6 @@
       return;
     }
 
-    const csrfToken = getCookie("trg_owner_csrf");
-    if (!csrfToken) {
-      fields.pricingStatus.textContent = "Your login security token is missing. Reload the page and sign in again if needed.";
-      return;
-    }
-
     publishBusy = true;
     buttons.publish.disabled = true;
     fields.pricingStatus.textContent = "Publishing pricing update through the GitHub rebuild workflow...";
@@ -591,8 +571,7 @@
         }),
         credentials: "same-origin",
         headers: {
-          "content-type": "application/json",
-          "x-csrf-token": csrfToken
+          "content-type": "application/json"
         },
         method: "POST",
         redirect: "manual"

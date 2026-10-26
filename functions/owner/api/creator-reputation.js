@@ -1,9 +1,7 @@
-import { SESSION_COOKIE_NAME, getOwnerSecrets, jsonResponse, readCookie, verifySessionToken } from "../../_lib/owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "../../_lib/owner-mutation-auth.mjs";
+import { OWNER_ACTOR_ID, jsonResponse } from "../../_lib/owner-runtime.mjs";
 import { getLaunchEvent, previewFoundingCreators, awardFoundingCreator, manageBadgeAward, moderateCreatorRating } from "../../_lib/creator-reputation.mjs";
 
 export async function onRequestGet({ request, env }) {
-  const auth = await ownerRead(request, env); if (!auth.valid) return jsonResponse({ error: "Operator access required." }, 403);
   const db = env.TRG_ORDERS, event = await getLaunchEvent(db), founding = await previewFoundingCreators(db);
   const badges = await db.prepare("SELECT * FROM creator_badge_definitions ORDER BY category,display_priority,title").all();
   const awards = await db.prepare("SELECT a.*,d.title,d.category,c.display_name creator_name FROM creator_badge_awards a JOIN creator_badge_definitions d ON d.id=a.badge_id JOIN marketplace_creators c ON c.id=a.creator_id ORDER BY a.awarded_at DESC LIMIT 200").all();
@@ -12,7 +10,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  const auth = await verifyAuthenticatedOwnerMutationRequest(request, env); if (!auth.valid) return jsonResponse({ error: auth.userMessage }, auth.status);
+  const auth = { username: OWNER_ACTOR_ID };
   let body={}; try { body=await request.json(); } catch {}
   const db=env.TRG_ORDERS, now=new Date().toISOString();
   try {
@@ -29,4 +27,3 @@ export async function onRequestPost({ request, env }) {
     throw new Error("Operator action is invalid.");
   } catch(error) { return jsonResponse({error:error.message},409); }
 }
-async function ownerRead(request,env){const secrets=getOwnerSecrets(env),verified=await verifySessionToken(readCookie(request,SESSION_COOKIE_NAME),secrets.sessionSecret,Date.now());return verified;}

@@ -5,7 +5,6 @@
   const status = root.querySelector("[data-owner-status]");
   const author = root.dataset.authorSlug;
   const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
-  const csrf = () => document.cookie.split(";").map((part) => part.trim().split("=")).find(([name]) => name === "trg_owner_csrf")?.[1] || "";
 
   async function load() {
     const response = await fetch(`/owner/api/discussions?author=${encodeURIComponent(author)}`);
@@ -20,7 +19,7 @@
     event.preventDefault();
     const output = form.querySelector(".discussion-status");
     output.textContent = "Posting…";
-    const response = await fetch("/owner/api/discussions", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": decodeURIComponent(csrf()) }, body: JSON.stringify({ threadId: form.dataset.threadId, message: new FormData(form).get("message") }) });
+    const response = await fetch("/owner/api/discussions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ threadId: form.dataset.threadId, message: new FormData(form).get("message") }) });
     const payload = await response.json();
     if (!response.ok) { output.textContent = payload.error || "Response failed."; return; }
     await load();

@@ -1,11 +1,11 @@
 import { dispatchPublishWorkflow } from "./github-dispatch.mjs";
 import {
+  OWNER_ACTOR_ID,
   isSafeFolderName,
   jsonResponse,
   normalizeFolderName,
   normalizeSlug
-} from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+} from "./owner-runtime.mjs";
 import {
   getFolderForSlug,
   hasFolderForSlug
@@ -71,18 +71,6 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
   }
 
   try {
-    const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
-      csrfExpiredMessage: "The publish form security token has expired. Reload the page and try again.",
-      csrfMismatchMessage: "The publish form security token did not match. Reload the page and try again.",
-      missingCsrfSecretMessage: "Owner publish is missing OWNER_CSRF_SECRET in Cloudflare.",
-      sameOriginMessage: "Publish requests must come from the Tobacco Road Games owner site."
-    });
-    if (!authState.valid) {
-      return jsonResponse({
-        error: authState.userMessage
-      }, authState.status);
-    }
-
     const formData = await request.formData();
     const parsed = parsePublishForm(formData, options.productFolderMap);
     if (!parsed.valid) {
@@ -111,7 +99,7 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
       metadata: parsed.payload.metadata,
       publish_id: publishId,
       ref: String(env.GITHUB_PUBLISH_REF || "main"),
-      requested_by: authState.username
+      requested_by: OWNER_ACTOR_ID
     };
 
     const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);

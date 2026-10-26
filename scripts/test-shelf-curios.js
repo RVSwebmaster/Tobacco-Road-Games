@@ -9,7 +9,6 @@ const NOW = Date.now();
 
 async function createFixture() {
   const auth = await import(pathToFileURL(path.join(ROOT, 'functions/_lib/account-auth.mjs')));
-  const owner = await import(pathToFileURL(path.join(ROOT, 'functions/_lib/owner-auth.mjs')));
   const api = await import(pathToFileURL(path.join(ROOT, 'functions/_lib/shelf-curios.mjs')));
   const raw = new DatabaseSync(':memory:');
   raw.exec(fs.readFileSync(path.join(ROOT, 'migrations/007_shared_accounts.sql'), 'utf8'));
@@ -20,12 +19,9 @@ async function createFixture() {
   raw.prepare("INSERT INTO sessions (id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES ('session-1','member-1',?,?,?,?,?)")
     .run(await auth.hashToken('member-session'), await auth.hashToken('member-csrf'), now, new Date(NOW + 86400000).toISOString(), now);
   const env = {
-    TRG_ORDERS: d1(raw), FORUM_RATE_LIMIT_SECRET: 'test-forum-secret-at-least-32-characters',
-    OWNER_SESSION_SECRET: 'test-owner-session-at-least-32-characters', OWNER_CSRF_SECRET: 'test-owner-csrf-at-least-32-characters'
+    TRG_ORDERS: d1(raw), FORUM_RATE_LIMIT_SECRET: 'test-forum-secret-at-least-32-characters'
   };
-  const ownerSession = await owner.createSessionToken('RV', env.OWNER_SESSION_SECRET);
-  const ownerCsrf = await owner.createCsrfToken('RV', env.OWNER_CSRF_SECRET);
-  const fixture = { raw, env, api, now: NOW, ownerSession, ownerCsrf };
+  const fixture = { raw, env, api, now: NOW };
   const response = await api.handleShelfCuriosRequest(new Request(`${ORIGIN}/api/curios`), env);
   assert.equal(response.status, 200);
   fixture.csrf = (await response.json()).csrfToken;
@@ -64,8 +60,7 @@ function moveRequest(fixture, body, overrides = {}) {
 function ownerRequest(fixture, reset = false, overrides = {}) {
   return new Request(`${ORIGIN}/owner/api/curios`, {
     method: reset ? 'POST' : 'GET', headers: {
-      cookie: `trg_owner_session=${fixture.ownerSession}; trg_owner_csrf=${fixture.ownerCsrf}`,
-      origin: ORIGIN, 'x-csrf-token': fixture.ownerCsrf, 'content-type': 'application/json', ...overrides
+      origin: ORIGIN, 'content-type': 'application/json', ...overrides
     }, ...(reset ? { body: JSON.stringify({ action: 'reset' }) } : {})
   });
 }
@@ -106,10 +101,7 @@ async function main() {
   }
   assert.equal((await api.handleShelfCuriosRequest(new Request(`${ORIGIN}/api/curios`, { method: 'DELETE' }), env)).status, 405);
   assert.equal((await api.handleShelfCuriosRequest(new Request(`${ORIGIN}/api/curios`), {})).status, 503);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(new Request(`${ORIGIN}/owner/api/curios`), env)).status, 401);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { cookie: `${fixture.cookie}; __Host-trg_session=member-session` }), env)).status, 401);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { 'x-csrf-token': 'wrong' }), env)).status, 403);
-  assert.equal((await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture, true, { origin: 'https://evil.example' }), env)).status, 403);
+  assert.equal((await api.handleOwnerShelfCuriosRequest(new Request(`${ORIGIN}/owner/api/curios`), env)).status, 200);
   response = await api.handleOwnerShelfCuriosRequest(ownerRequest(fixture), env);
   assert.equal(response.status, 200);
   const activity = await response.json();

@@ -1,6 +1,5 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
@@ -22,79 +21,76 @@ const NEUTRAL_FIXTURE_FOLDER_MAP = {
 };
 
 async function main() {
-  const ownerAuth = await importModule("functions/_lib/owner-auth.mjs");
-  const ownerLogin = await importModule("functions/_lib/owner-login.mjs");
-  const ownerMiddleware = await importModule("functions/_lib/owner-middleware.mjs");
   const ownerPublish = await importModule("functions/_lib/owner-publish.mjs");
   const ownerPricing = await importModule("functions/_lib/owner-pricing-publish.mjs");
   const productAdvisor = require(path.join(ROOT, "shared", "product-advisor.js"));
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
-  const accessContext = await createAccessTestContext();
+  const baseEnv = {
+    GITHUB_PUBLISH_REF: "owner-intake-test",
+    GITHUB_REPO_NAME: "Tobacco-Road-Games",
+    GITHUB_REPO_OWNER: "RVSwebmaster",
+    GITHUB_TOKEN: "test-token"
+  };
+  const openOwnerContext = "";
 
-  try {
-    const passwordHash = await ownerAuth.createPasswordHash("correct horse battery staple");
-    assert.equal(await ownerAuth.verifyPasswordHash("correct horse battery staple", passwordHash), true, "Generated password hash should validate the correct password.");
-    assert.equal(await ownerAuth.verifyPasswordHash("wrong password", passwordHash), false, "Generated password hash should reject the wrong password.");
-    const baseEnv = {
-      GITHUB_PUBLISH_REF: "owner-intake-test",
-      GITHUB_REPO_NAME: "Tobacco-Road-Games",
-      GITHUB_REPO_OWNER: "RVSwebmaster",
-      GITHUB_TOKEN: "test-token",
-      OWNER_CSRF_SECRET: "csrf-secret",
-      OWNER_PASSWORD_HASH: passwordHash,
-      OWNER_SESSION_SECRET: "session-secret",
-      OWNER_USERNAME: "rv-owner"
-    };
-    const accessEnv = {
-      ...baseEnv,
-      OWNER_ACCESS_AUD: accessContext.audience,
-      OWNER_ACCESS_EMAIL: accessContext.email,
-      OWNER_ACCESS_TEAM_DOMAIN: accessContext.teamDomain
-    };
+  testOwnerWorkbenchIsOpen();
+  await testMissingFiles(ownerPublish, baseEnv, openOwnerContext);
+  await testWrongFileType(ownerPublish, baseEnv, openOwnerContext);
+  await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, openOwnerContext);
+  await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, openOwnerContext);
+  await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, openOwnerContext);
+  await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, openOwnerContext);
+  await testOwnerPricingPublishAccepted(ownerPricing, baseEnv, openOwnerContext);
+  await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, baseEnv, openOwnerContext);
+  await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, openOwnerContext);
+  await testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, baseEnv, openOwnerContext);
+  await testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, baseEnv, openOwnerContext);
+  await testUnexpectedPublishExceptionHandled(ownerPublish, baseEnv, openOwnerContext);
+  await testProductAdvisorSuggestions(productAdvisor);
+  await testExistingProductUpdatePreservesFields(publishScript);
+  await testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript);
+  await testPricingUpdatePreservesUnrelatedFields(publishScript);
+  await testPricingUpdateRejectsInvalidMoney(publishScript);
+  await testPricingUpdateRejectsSaleAboveRegular(publishScript);
+  await testPricingUpdateRejectsInvalidDates(publishScript);
+  await testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publishScript);
+  await testPricingUpdateBuildConsistency(publishScript);
+  await testPublishScriptRejectsInvalidCartMetadata(publishScript);
+  await testPublishScriptNormalizesCartBuyUrl(publishScript);
+  await testNewProductBuildAndSharedMap(publishScript);
+  await testOpenRulesEligibilityPersistence(publishScript);
 
-    await testWrongUsername(ownerLogin, baseEnv);
-    await testBadLogin(ownerLogin, baseEnv);
-    const authCookies = await testGoodLogin(ownerLogin, baseEnv);
-    await testMalformedHash(ownerLogin, baseEnv);
-    await testMissingSecret(ownerLogin, baseEnv);
-    await testUnexpectedLoginException(ownerLogin, baseEnv);
-    await testAlteredCookie(ownerMiddleware, baseEnv, authCookies);
-    await testExpiredCookie(ownerMiddleware, ownerAuth, baseEnv);
-    await testOwnerIntakeAliasRedirects(ownerMiddleware, baseEnv, authCookies);
-    await testMissingFiles(ownerPublish, baseEnv, authCookies);
-    await testWrongFileType(ownerPublish, baseEnv, authCookies);
-    await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, authCookies);
-    await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, authCookies);
-    await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, authCookies);
-    await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, authCookies);
-    await testOwnerPricingPublishAccepted(ownerPricing, baseEnv, authCookies);
-    await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, baseEnv, authCookies);
-    await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, authCookies);
-    await testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, baseEnv, authCookies);
-    await testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, baseEnv, authCookies);
-    await testUnexpectedPublishExceptionHandled(ownerPublish, baseEnv, authCookies);
-    await testAccessLoginRedirect(ownerLogin, accessEnv, accessContext.token);
-    const accessCookies = await testAccessMiddlewareAllowsAuthorized(ownerMiddleware, accessEnv, accessContext.token);
-    await testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, accessEnv);
-    await testAccessPublishDeniedUnauthorized(ownerPublish, accessEnv);
-    await testAccessPublishAccepted(ownerPublish, accessEnv, accessContext.token, accessCookies);
-    await testProductAdvisorSuggestions(productAdvisor);
-    await testExistingProductUpdatePreservesFields(publishScript);
-    await testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript);
-    await testPricingUpdatePreservesUnrelatedFields(publishScript);
-    await testPricingUpdateRejectsInvalidMoney(publishScript);
-    await testPricingUpdateRejectsSaleAboveRegular(publishScript);
-    await testPricingUpdateRejectsInvalidDates(publishScript);
-    await testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publishScript);
-    await testPricingUpdateBuildConsistency(publishScript);
-    await testPublishScriptRejectsInvalidCartMetadata(publishScript);
-    await testPublishScriptNormalizesCartBuyUrl(publishScript);
-    await testNewProductBuildAndSharedMap(publishScript);
-    await testOpenRulesEligibilityPersistence(publishScript);
+  console.log("Owner intake tests passed.");
+}
 
-    console.log("Owner intake tests passed.");
-  } finally {
-    await closeAccessTestContext(accessContext);
+function testOwnerWorkbenchIsOpen() {
+  const removedAuthenticationFiles = [
+    "functions/_lib/owner-access.mjs",
+    "functions/_lib/owner-auth.mjs",
+    "functions/_lib/owner-login.mjs",
+    "functions/_lib/owner-middleware.mjs",
+    "functions/_lib/owner-mutation-auth.mjs",
+    "functions/_lib/owner-public-bypass.mjs",
+    "functions/owner/login.js",
+    "functions/owner/logout.js",
+    "scripts/hash-owner-password.mjs",
+    "scripts/test-support/owner-auth-fixture.js"
+  ];
+  for (const relativePath of removedAuthenticationFiles) {
+    assert.equal(fs.existsSync(path.join(ROOT, relativePath)), false, `${relativePath} must remain removed.`);
+  }
+
+  const middleware = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8");
+  assert.doesNotMatch(middleware, /owner-(?:access|auth|login|middleware|mutation-auth|public-bypass)/);
+  assert.doesNotMatch(middleware, /\/owner\/login|trg_owner_session|trg_owner_csrf/);
+  assert.match(middleware, /pathname\.startsWith\("\/owner"\)[\s\S]*context\.next\(\)/);
+
+  const ownerPages = fs
+    .readdirSync(path.join(ROOT, "owner"))
+    .filter((name) => name.endsWith(".html"));
+  for (const page of ownerPages) {
+    const source = fs.readFileSync(path.join(ROOT, "owner", page), "utf8");
+    assert.doesNotMatch(source, /\/owner\/logout|trg_owner_session|trg_owner_csrf/, `${page} must not require the retired Owner session or CSRF cookie.`);
   }
 }
 
@@ -139,213 +135,6 @@ async function testOpenRulesEligibilityPersistence(publishScript) {
   assert.equal(product.openRulesEligible, true, "Owner intake publishing should persist Open Rules eligibility to data/products.json.");
 }
 
-async function testWrongUsername(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", "not-the-owner");
-  formData.set("password", "correct horse battery staple");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), env);
-
-  assert.equal(response.status, 401, "Wrong username should return 401.");
-  const body = await response.text();
-  assert.match(body, /did not work/i, "Wrong username should show a human-readable error.");
-}
-
-async function testBadLogin(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "wrong password");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), env);
-
-  assert.equal(response.status, 401, "Bad login should return 401.");
-  const body = await response.text();
-  assert.match(body, /did not work/i, "Bad login should show a human-readable error.");
-}
-
-async function testGoodLogin(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "correct horse battery staple");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login?next=%2Fowner%2Fproduct-intake.html", {
-    body: formData,
-    method: "POST"
-  }), env);
-
-  assert.equal(response.status, 303, "Good login should redirect.");
-  const cookies = extractSetCookies(response.headers);
-  assert.equal(cookies.length, 2, "Good login should set session and CSRF cookies.");
-  assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_session=") && cookie.includes("HttpOnly") && cookie.includes("SameSite=Strict")), "Session cookie should be secure and HttpOnly.");
-  assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_csrf=") && cookie.includes("SameSite=Strict")), "CSRF cookie should be secure and strict.");
-  return cookieHeaderFromSetCookies(cookies);
-}
-
-async function testMalformedHash(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "wrong password");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), {
-    ...env,
-    OWNER_PASSWORD_HASH: "pbkdf2_sha256$310000$bad***$also***"
-  });
-
-  assert.equal(response.status, 503, "Malformed password hash should return 503 instead of throwing.");
-  const body = await response.text();
-  assert.match(body, /OWNER_PASSWORD_HASH|not configured correctly/i, "Malformed password hash should show a configuration error.");
-}
-
-async function testMissingSecret(ownerLogin, env) {
-  const formData = new FormData();
-  formData.set("username", env.OWNER_USERNAME);
-  formData.set("password", "wrong password");
-
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login", {
-    body: formData,
-    method: "POST"
-  }), {
-    ...env,
-    OWNER_SESSION_SECRET: ""
-  });
-
-  assert.equal(response.status, 503, "Missing owner secrets should return 503.");
-  const body = await response.text();
-  assert.match(body, /not configured yet/i, "Missing owner secrets should show a configuration error.");
-}
-
-async function testUnexpectedLoginException(ownerLogin, env) {
-  const captured = [];
-  const originalConsoleError = console.error;
-  console.error = (entry) => {
-    captured.push(String(entry));
-  };
-
-  try {
-    const response = await ownerLogin.handleOwnerLoginRequest({
-      formData() {
-        throw new Error("synthetic login failure");
-      },
-      headers: new Headers({
-        "cf-ray": "test-ray-id"
-      }),
-      method: "POST",
-      url: "https://example.com/owner/login"
-    }, env);
-
-    assert.equal(response.status, 500, "Unexpected login exceptions should be caught and turned into a normal response.");
-    const body = await response.text();
-    assert.match(body, /could not be completed/i, "Unexpected login exceptions should show a safe error.");
-    assert.equal(captured.length, 1, "Unexpected login exceptions should be logged once.");
-    assert.match(captured[0], /owner_login_exception/, "Unexpected login exceptions should use the safe event log.");
-    assert.doesNotMatch(captured[0], /correct horse battery staple|session-secret|csrf-secret|pbkdf2_sha256/, "Safe login logs must not include secrets or credentials.");
-  } finally {
-    console.error = originalConsoleError;
-  }
-}
-
-async function testAccessLoginRedirect(ownerLogin, env, accessToken) {
-  const response = await ownerLogin.handleOwnerLoginRequest(new Request("https://example.com/owner/login?next=%2Fowner%2Fproduct-intake.html", {
-    headers: {
-      "cf-access-jwt-assertion": accessToken
-    },
-    method: "GET"
-  }), env);
-
-  assert.equal(response.status, 303, "Access-protected login should redirect into the intake page.");
-  assert.match(response.headers.get("location") || "", /\/owner\/product-intake\.html$/, "Access-protected login should redirect to the owner intake.");
-}
-
-async function testAlteredCookie(ownerMiddleware, env, cookieHeader) {
-  const tamperedCookie = cookieHeader.replace(/trg_owner_session=([^;]+)/, "trg_owner_session=$1tampered");
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok"),
-    request: new Request("https://example.com/owner/product-intake.html", {
-      headers: {
-        cookie: tamperedCookie
-      }
-    })
-  });
-
-  assert.equal(response.status, 303, "Altered owner page cookie should redirect to login.");
-  assert.match(response.headers.get("location") || "", /\/owner\/login/, "Altered cookie redirect should go to login.");
-}
-
-async function testExpiredCookie(ownerMiddleware, ownerAuth, env) {
-  const expiredSession = await ownerAuth.createSessionToken(env.OWNER_USERNAME, env.OWNER_SESSION_SECRET, Date.now() - 9 * 60 * 60 * 1000);
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok"),
-    request: new Request("https://example.com/owner/product-intake.html", {
-      headers: {
-        cookie: `trg_owner_session=${expiredSession}`
-      }
-    })
-  });
-
-  assert.equal(response.status, 303, "Expired cookie should redirect to login.");
-  assert.match(response.headers.get("location") || "", /\/owner\/login/, "Expired cookie redirect should go to login.");
-}
-
-async function testOwnerIntakeAliasRedirects(ownerMiddleware, env, cookieHeader) {
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok"),
-    request: new Request("https://example.com/owner/intake", {
-      headers: {
-        cookie: cookieHeader
-      }
-    })
-  });
-
-  assert.equal(response.status, 303, "Owner intake alias should redirect.");
-  assert.match(response.headers.get("location") || "", /\/owner\/product-intake\.html$/, "Owner intake alias should land on the real intake page.");
-}
-
-async function testAccessMiddlewareAllowsAuthorized(ownerMiddleware, env, accessToken) {
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok", {
-      headers: {
-        "content-type": "text/plain; charset=utf-8"
-      },
-      status: 200
-    }),
-    request: new Request("https://example.com/owner/product-intake.html", {
-      headers: {
-        "cf-access-jwt-assertion": accessToken
-      }
-    })
-  });
-
-  assert.equal(response.status, 200, "Authorized Access request should reach the owner page.");
-  const cookies = extractSetCookies(response.headers);
-  assert.ok(cookies.some((cookie) => cookie.includes("trg_owner_csrf=") && cookie.includes("SameSite=Strict")), "Authorized Access request should issue the CSRF cookie.");
-  return cookieHeaderFromSetCookies(cookies);
-}
-
-async function testAccessMiddlewareDeniesUnauthorized(ownerMiddleware, env) {
-  const response = await ownerMiddleware.handleOwnerMiddleware({
-    env,
-    next: () => new Response("ok"),
-    request: new Request("https://example.com/owner/product-intake.html")
-  });
-
-  assert.equal(response.status, 403, "Missing Access JWT should deny the owner page.");
-  const body = await response.text();
-  assert.match(body, /Cloudflare Access/i, "Missing Access JWT should explain that Cloudflare Access is required.");
-}
-
 async function testMissingFiles(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
@@ -364,33 +153,6 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
   assert.equal(response.status, 400, "Missing files should return 400.");
   const payload = await response.json();
   assert.match(payload.error, /product pdf is required/i, "Missing PDF error should be human-readable.");
-}
-
-async function testAccessPublishDeniedUnauthorized(ownerPublish, env) {
-  const formData = new FormData();
-  addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const response = await ownerPublish.handleOwnerPublishRequest(new Request("https://example.com/owner/api/publish", {
-    body: formData,
-    headers: {
-      origin: "https://example.com"
-    },
-    method: "POST"
-  }), {
-    ...env,
-    TRG_PRODUCTS: createMockBucket()
-  }, {
-    dispatchOptions: {
-      fetchImpl: async () => new Response(null, { status: 204 })
-    }
-  });
-
-  assert.equal(response.status, 403, "Publish should deny direct unauthenticated requests in Access mode.");
-  const payload = await response.json();
-  assert.match(payload.error, /Cloudflare Access/i, "Access-mode publish denial should mention Cloudflare Access.");
 }
 
 async function testWrongFileType(ownerPublish, env, cookieHeader) {
@@ -673,67 +435,6 @@ async function testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, env, c
   assert.match(payload.error, /valid dollar amount|must match/i, "Pricing validation failures should be human-readable.");
 }
 
-async function testAccessPublishAccepted(ownerPublish, env, accessToken, cookieHeader) {
-  const bucket = createMockBucket();
-  const formData = new FormData();
-  addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const originalRandomUuid = crypto.randomUUID;
-  const originalDateNow = Date.now;
-  const fixedNow = 1760000000001;
-  const fetchImpl = async (url) => {
-    if (String(url).endsWith("/dispatches")) {
-      return new Response(null, { status: 204 });
-    }
-
-    const workflowRunsUrl = new URL(String(url));
-    assert.equal(workflowRunsUrl.searchParams.get("event"), "repository_dispatch", "Workflow polling should filter by the GitHub event name.");
-
-    return jsonResponse({
-      workflow_runs: [
-        {
-          conclusion: "success",
-          created_at: new Date().toISOString(),
-          display_title: `Owner publish pub-${fixedNow}-access-run`,
-          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/2",
-          id: 2,
-          status: "completed"
-        }
-      ]
-    });
-  };
-
-  Date.now = () => fixedNow;
-  crypto.randomUUID = () => "access-run";
-  try {
-    const response = await ownerPublish.handleOwnerPublishRequest(buildAccessAuthenticatedPublishRequest(formData, cookieHeader, accessToken), {
-      ...env,
-      TRG_PRODUCTS: bucket
-    }, {
-      dispatchOptions: {
-        fetchImpl,
-        pollIntervalMs: 1,
-        timeoutMs: 100
-      }
-    });
-
-    assert.equal(response.status, 200, "Authenticated Access publish should succeed.");
-    const payload = await response.json();
-    assert.equal(payload.ok, true, "Authenticated Access publish should report success.");
-    assert.deepEqual(bucket.putKeys.sort(), [
-      "new-product/cover.webp",
-      "new-product/preview.webp",
-      "new-product/product.pdf"
-    ], "Authenticated Access publish should upload all required files.");
-  } finally {
-    Date.now = originalDateNow;
-    crypto.randomUUID = originalRandomUuid;
-  }
-}
-
 async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
   const bucket = createMockBucket();
   const calls = [];
@@ -888,9 +589,7 @@ async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHe
       },
       headers: new Headers({
         "cf-ray": "publish-test-ray",
-        cookie: cookieHeader,
-        origin: "https://example.com",
-        "x-csrf-token": readCookieFromHeader(cookieHeader, "trg_owner_csrf")
+        origin: "https://example.com"
       }),
       method: "POST",
       url: "https://example.com/owner/api/publish"
@@ -905,7 +604,7 @@ async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHe
     assert.match(payload.error, /could not be completed/i, "Unexpected publish exceptions should return a safe owner-facing message.");
     assert.equal(captured.length, 1, "Unexpected publish exceptions should be logged once.");
     assert.match(captured[0], /owner_publish_exception/, "Unexpected publish exceptions should use the safe publish event log.");
-    assert.doesNotMatch(captured[0], /session-secret|csrf-secret|test-token|correct horse battery staple|pbkdf2_sha256/i, "Unexpected publish logs must not leak secrets.");
+    assert.doesNotMatch(captured[0], /test-token/i, "Unexpected publish logs must not leak configured tokens.");
   } finally {
     console.error = originalConsoleError;
   }
@@ -1385,41 +1084,21 @@ function addRequiredTextFields(formData, overrides = {}) {
 }
 
 function buildAuthenticatedPublishRequest(formData, cookieHeader) {
-  const csrfToken = readCookieFromHeader(cookieHeader, "trg_owner_csrf");
   return new Request("https://example.com/owner/api/publish", {
     body: formData,
     headers: {
-      cookie: cookieHeader,
-      origin: "https://example.com",
-      "x-csrf-token": csrfToken
+      origin: "https://example.com"
     },
     method: "POST"
   });
 }
 
 function buildAuthenticatedPricingRequest(payload, cookieHeader) {
-  const csrfToken = readCookieFromHeader(cookieHeader, "trg_owner_csrf");
   return new Request("https://example.com/owner/api/pricing", {
     body: JSON.stringify(payload),
     headers: {
       "content-type": "application/json",
-      cookie: cookieHeader,
-      origin: "https://example.com",
-      "x-csrf-token": csrfToken
-    },
-    method: "POST"
-  });
-}
-
-function buildAccessAuthenticatedPublishRequest(formData, cookieHeader, accessToken) {
-  const csrfToken = readCookieFromHeader(cookieHeader, "trg_owner_csrf");
-  return new Request("https://example.com/owner/api/publish", {
-    body: formData,
-    headers: {
-      "cf-access-jwt-assertion": accessToken,
-      cookie: cookieHeader,
-      origin: "https://example.com",
-      "x-csrf-token": csrfToken
+      origin: "https://example.com"
     },
     method: "POST"
   });
@@ -1552,21 +1231,6 @@ function createFixtureProduct(slug, title, overrides = {}) {
   };
 }
 
-function cookieHeaderFromSetCookies(setCookies) {
-  return setCookies
-    .map((cookie) => cookie.split(";")[0])
-    .join("; ");
-}
-
-function extractSetCookies(headers) {
-  if (typeof headers.getSetCookie === "function") {
-    return headers.getSetCookie();
-  }
-
-  const raw = headers.get("set-cookie");
-  return raw ? raw.split(/,(?=\s*[A-Za-z0-9_-]+=)/) : [];
-}
-
 function importModule(relativePath) {
   return import(pathToFileURL(path.join(ROOT, relativePath)).href);
 }
@@ -1577,94 +1241,6 @@ function jsonResponse(payload) {
       "content-type": "application/json; charset=utf-8"
     },
     status: 200
-  });
-}
-
-function readCookieFromHeader(cookieHeader, name) {
-  const cookies = String(cookieHeader || "").split(";").map((entry) => entry.trim());
-  for (const cookie of cookies) {
-    const separator = cookie.indexOf("=");
-    if (separator === -1) {
-      continue;
-    }
-    const cookieName = cookie.slice(0, separator);
-    if (cookieName === name) {
-      return cookie.slice(separator + 1);
-    }
-  }
-  return "";
-}
-
-async function createAccessTestContext() {
-  const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
-  const { privateKey, publicKey } = await generateKeyPair("RS256");
-  const publicJwk = await exportJWK(publicKey);
-  publicJwk.alg = "RS256";
-  publicJwk.kid = "owner-access-test";
-  publicJwk.use = "sig";
-
-  const server = http.createServer((request, response) => {
-    if (request.url === "/cdn-cgi/access/certs") {
-      response.writeHead(200, {
-        "content-type": "application/json; charset=utf-8"
-      });
-      response.end(JSON.stringify({
-        keys: [publicJwk]
-      }));
-      return;
-    }
-
-    response.writeHead(404, {
-      "content-type": "text/plain; charset=utf-8"
-    });
-    response.end("Not found");
-  });
-
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-
-  const address = server.address();
-  const teamDomain = `http://127.0.0.1:${address.port}`;
-  const audience = "owner-access-test-audience";
-  const email = "rv@example.com";
-  const token = await new SignJWT({
-    email
-  })
-    .setProtectedHeader({
-      alg: "RS256",
-      kid: publicJwk.kid
-    })
-    .setAudience(audience)
-    .setExpirationTime("2h")
-    .setIssuedAt()
-    .setIssuer(teamDomain)
-    .setSubject("rv-owner-subject")
-    .sign(privateKey);
-
-  return {
-    audience,
-    email,
-    server,
-    teamDomain,
-    token
-  };
-}
-
-async function closeAccessTestContext(accessContext) {
-  if (!accessContext?.server) {
-    return;
-  }
-
-  await new Promise((resolve, reject) => {
-    accessContext.server.close((error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
   });
 }
 

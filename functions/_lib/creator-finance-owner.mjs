@@ -7,13 +7,7 @@ import {
   reconcileCreatorFinance,
   setCreatorLedgerHold,
 } from "./creator-finance.mjs";
-import {
-  getOwnerSecrets,
-  readCookie,
-  SESSION_COOKIE_NAME,
-  verifySessionToken,
-} from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { OWNER_ACTOR_ID } from "./owner-runtime.mjs";
 import {
   getCreatorPayoutStatus,
   getOperatorPayoutReadiness,
@@ -65,13 +59,6 @@ export async function handleCreatorFinanceOwnerRequest(
 ) {
   const db = options.database || env.TRG_ORDERS;
   if (request.method === "GET") {
-    const secrets = getOwnerSecrets(env),
-      auth = await verifySessionToken(
-        readCookie(request, SESSION_COOKIE_NAME),
-        secrets.sessionSecret,
-        options.nowMs || Date.now(),
-      );
-    if (!auth.valid) return json({ error: "Operator access required." }, 403);
     const creatorId = new URL(request.url).searchParams.get("creator");
     if (creatorId)
       return json({
@@ -118,10 +105,7 @@ export async function handleCreatorFinanceOwnerRequest(
   }
   if (request.method !== "POST")
     return json({ error: "Use GET or POST." }, 405);
-  const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, {
-    nowMs: options.nowMs,
-  });
-  if (!auth.valid) return json({ error: auth.userMessage }, auth.status);
+  const auth = { username: OWNER_ACTOR_ID };
   let body = {};
   try {
     body = await request.json();

@@ -1,6 +1,5 @@
 import { dispatchPublishWorkflow } from "./github-dispatch.mjs";
-import { jsonResponse, normalizeSlug } from "./owner-auth.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { OWNER_ACTOR_ID, jsonResponse, normalizeSlug } from "./owner-runtime.mjs";
 
 export async function handleOwnerPricingPublishRequest(request, env, options = {}) {
   if (String(request.method || "GET").toUpperCase() !== "POST") {
@@ -10,18 +9,6 @@ export async function handleOwnerPricingPublishRequest(request, env, options = {
   }
 
   try {
-    const authState = await verifyAuthenticatedOwnerMutationRequest(request, env, {
-      csrfExpiredMessage: "The pricing editor security token has expired. Reload the page and try again.",
-      csrfMismatchMessage: "The pricing editor security token did not match. Reload the page and try again.",
-      missingCsrfSecretMessage: "Owner pricing is missing OWNER_CSRF_SECRET in Cloudflare.",
-      sameOriginMessage: "Pricing updates must come from the Tobacco Road Games owner site."
-    });
-    if (!authState.valid) {
-      return jsonResponse({
-        error: authState.userMessage
-      }, authState.status);
-    }
-
     const parsed = await parsePricingRequest(request);
     if (!parsed.valid) {
       return jsonResponse({
@@ -35,7 +22,7 @@ export async function handleOwnerPricingPublishRequest(request, env, options = {
       pricingConfirmation: parsed.pricingConfirmation,
       publish_id: `price-${Date.now()}-${crypto.randomUUID()}`,
       ref: String(env.GITHUB_PUBLISH_REF || "main"),
-      requested_by: authState.username
+      requested_by: OWNER_ACTOR_ID
     };
 
     const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);

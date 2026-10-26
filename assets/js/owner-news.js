@@ -1,8 +1,7 @@
 (function () {
-  const csrf = (document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith('trg_owner_csrf=')) || '').split('=').slice(1).join('=');
   const status = document.getElementById('status');
   async function api(body) {
-    const response = await fetch('/owner/api/news', { credentials: 'same-origin', method: body ? 'POST' : 'GET', headers: body ? { 'content-type': 'application/json', 'x-csrf-token': csrf } : {}, body: body ? JSON.stringify(body) : undefined });
+    const response = await fetch('/owner/api/news', { credentials: 'same-origin', method: body ? 'POST' : 'GET', headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'News request failed.');
     return payload;

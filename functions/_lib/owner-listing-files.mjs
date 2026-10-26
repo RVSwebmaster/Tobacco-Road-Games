@@ -1,14 +1,4 @@
-import {
-  SESSION_COOKIE_NAME,
-  getOwnerSecrets,
-  readCookie,
-  verifySessionToken,
-} from "./owner-auth.mjs";
-import {
-  getOwnerAccessConfig,
-  verifyOwnerAccessRequest,
-} from "./owner-access.mjs";
-import { verifyAuthenticatedOwnerMutationRequest } from "./owner-mutation-auth.mjs";
+import { OWNER_ACTOR_ID } from "./owner-runtime.mjs";
 import { prepareCreatorListingFile } from "./creator-files.mjs";
 import { placeListingReviewHold, restoreListingReviewHold } from "./listing-review-hold.mjs";
 
@@ -16,15 +6,12 @@ export async function handleOwnerListingFiles(request, env = {}, options = {}) {
   const db = options.database || env.TRG_ORDERS;
   if (!db) return json({ error: "Marketplace database is unavailable." }, 503);
   if (request.method === "GET" || request.method === "HEAD") {
-    const auth = await verifyOwnerRead(request, env, options);
-    if (!auth.valid) return json({ error: auth.message }, auth.status);
     const url = new URL(request.url), fileId = url.searchParams.get("download");
-    if (fileId) return downloadFile(request, db, env.TRG_PRODUCTS, fileId, auth.actorId, options.nowMs);
-    return lookup(db, env.TRG_PRODUCTS, url.searchParams, auth.actorId, options.nowMs);
+    if (fileId) return downloadFile(request, db, env.TRG_PRODUCTS, fileId, OWNER_ACTOR_ID, options.nowMs);
+    return lookup(db, env.TRG_PRODUCTS, url.searchParams, OWNER_ACTOR_ID, options.nowMs);
   }
   if (request.method !== "POST") return json({ error: "Use GET or POST." }, 405);
-  const auth = await verifyAuthenticatedOwnerMutationRequest(request, env, { nowMs: options.nowMs });
-  if (!auth.valid) return json({ error: auth.userMessage }, auth.status);
+  const auth = { username: OWNER_ACTOR_ID };
   if (request.headers.get("content-type")?.includes("application/json")) {
     let body = {};
     try { body = await request.json(); } catch {}
@@ -147,16 +134,6 @@ async function replaceFile(request, db, bucket, actorId, nowMs) {
   return json({ ok: true, file: { id, listingId: existing.listing_id, creatorId: existing.creator_id, purpose: existing.purpose, filename: prepared.normalizedFilename, contentType: prepared.contentType, sizeBytes: prepared.bytes.byteLength, state: "accepted", secureDeliveryState: targetKey ? "ready" : "not_promoted" } }, 201);
 }
 
-async function verifyOwnerRead(request, env, options) {
-  const access = getOwnerAccessConfig(env);
-  if (access.enabled) {
-    const accessVerifier = options.verifyOwnerAccessRequest || verifyOwnerAccessRequest;
-    const result = await accessVerifier(request, env);
-    return result.valid ? { valid: true, actorId: result.email || result.csrfSubject } : { valid: false, status: result.reason === "config_incomplete" ? 503 : 403, message: result.userMessage };
-  }
-  const secrets = getOwnerSecrets(env), result = await verifySessionToken(readCookie(request, SESSION_COOKIE_NAME), secrets.sessionSecret, options.nowMs || Date.now());
-  return result.valid ? { valid: true, actorId: result.username } : { valid: false, status: 403, message: "Operator access required." };
-}
 function deliveryKey(slug, purpose) { return ({ product: `${slug}/product.pdf`, cover: `${slug}/cover.webp`, preview: `${slug}/preview.webp` })[purpose] || null; }
 function safeSlug(value) { const slug=String(value||"").trim().toLowerCase(); return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : ""; }
 async function rows(statement) { const result=await statement.all(); return result.results||[]; }

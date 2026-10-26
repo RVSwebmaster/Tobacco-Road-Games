@@ -23,11 +23,9 @@
 
   publish.addEventListener("click", async () => {
     if (!featured.value) { setStatus("Choose one featured title before publishing.", "error"); featured.focus(); return; }
-    const csrf = getCookie("trg_owner_csrf");
-    if (!csrf) { setStatus("Your security token is missing. Reload this page and try again.", "error"); return; }
     setButtonState("publishing"); setStatus("Publishing homepage selections…", "working");
     try {
-      const response = await fetch("/owner/api/homepage", { method: "POST", headers: { "content-type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify({ featuredSlug: featured.value, workInProgressSlugs: [...wip.querySelectorAll('input:checked')].map((input) => input.value) }) });
+      const response = await fetch("/owner/api/homepage", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ featuredSlug: featured.value, workInProgressSlugs: [...wip.querySelectorAll('input:checked')].map((input) => input.value) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Publish failed.");
       const selectedTitles = [...wip.querySelectorAll('input:checked')].map((input) => input.closest("label")?.innerText.trim() || input.value);
@@ -61,6 +59,5 @@
   }
 
   function checkResponse(response) { if (!response.ok) throw new Error(`Request failed (${response.status}).`); return response.json(); }
-  function getCookie(name) { const prefix = `${name}=`; return document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length) || ""; }
   function escapeHtml(value) { return String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]); }
 })();

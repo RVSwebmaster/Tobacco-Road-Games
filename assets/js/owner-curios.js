@@ -3,8 +3,6 @@
   const status = document.querySelector('[data-curio-owner-status]');
   const counts = document.querySelector('[data-curio-counts]');
   const position = (x, y) => `${Math.round(x * 100)}%, ${Math.round(y * 100)}%`;
-  const cookie = name => document.cookie.split(';').map(value => value.trim()).find(value => value.startsWith(name + '='))?.slice(name.length + 1) || '';
-
   function rows(selector, values) {
     const body = document.querySelector(selector);
     body.replaceChildren();
@@ -24,7 +22,7 @@
     try {
       const response = await fetch('/owner/api/curios', {
         method: reset ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store',
-        headers: reset ? { 'content-type': 'application/json', 'x-csrf-token': decodeURIComponent(cookie('trg_owner_csrf')) } : { accept: 'application/json' },
+        headers: reset ? { 'content-type': 'application/json' } : { accept: 'application/json' },
         ...(reset ? { body: JSON.stringify({ action: 'reset' }) } : {})
       });
       const payload = await response.json();

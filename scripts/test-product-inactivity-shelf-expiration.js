@@ -19,13 +19,13 @@ const {
   applyMigrations,
   load
 } = require("./test-creator-product-withdrawal.js");
-const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
+const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 
 const NOW_MS = Date.parse("2025-03-01T12:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const DAY = 86400000;
 const PDF_BYTES = Buffer.from("%PDF-1.7\nShelf expiration fixture\n%%EOF");
-const OWNER_ID = "owner-inactivity-task1@example.invalid";
+const OWNER_ID = "owner-open-workbench";
 
 async function main() {
   const sandboxRoot = fs.mkdtempSync(
@@ -43,7 +43,6 @@ async function main() {
     const creatorOperations = await load("functions/_lib/creator-operations.mjs");
     const creatorPublication = await load("functions/_lib/creator-publication.mjs");
     const creatorFinanceOwner = await load("functions/_lib/creator-finance-owner.mjs");
-    const ownerAuth = await load("functions/_lib/owner-auth.mjs");
     const cartQuote = await load("functions/_lib/cart-quote.mjs");
     const publishIntake = require(path.join(ROOT, "scripts", "publish-intake.js"));
 
@@ -62,11 +61,7 @@ async function main() {
     const bucket = createLocalBucket(storageRoot);
     copyCatalogFixture(catalogRoot);
     const dispatch = createDispatch();
-    const ownerFixture = await createOwnerAuthFixture({
-      ownerAuth,
-      ownerId: OWNER_ID,
-      nowMs: NOW_MS
-    });
+    const ownerFixture = createOwnerWorkbenchFixture({ ownerId: OWNER_ID });
     const environment = {
       TRG_ORDERS: db,
       TRG_PRODUCTS: bucket,
@@ -111,25 +106,6 @@ async function main() {
       "Migration 053 must not reclassify existing listings."
     );
     let response = await creatorFinanceOwner.handleCreatorFinanceOwnerRequest(
-      new Request("https://example.com/owner/api/creator-finance", {
-        method: "POST",
-        headers: {
-          origin: "https://example.com",
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          action: "set_inactivity_exemption",
-          listingId: "trg-house-old",
-          exemptionKind: "trg_house"
-        })
-      }),
-      environment,
-      { database: db, nowMs: NOW_MS, ...ownerFixture.options }
-    );
-    assert.equal(response.status, ownerFixture.unauthorizedStatus);
-    assert.equal(listing(raw, "trg-house-old").inactivity_exemption_kind, "none");
-
-    response = await creatorFinanceOwner.handleCreatorFinanceOwnerRequest(
       ownerFixture.jsonRequest("/owner/api/creator-finance", {
         action: "set_inactivity_exemption",
         listingId: "trg-house-old",

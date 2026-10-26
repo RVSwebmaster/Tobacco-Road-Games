@@ -7,15 +7,13 @@ const { pathToFileURL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
 const ROOT = path.resolve(__dirname, "..");
-const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
+const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 const CREATOR_ID = "creator-mock-review-task4b";
 const CREATOR_USER_ID = "user-mock-review-task4b";
 const CREATOR_EMAIL = "mock-task4b@example.invalid";
 const CREATOR_SESSION = "mock-task4b-creator-session";
 const CREATOR_CSRF = "mock-task4b-creator-csrf";
-const OWNER_ID = "owner-review-task4b@example.invalid";
-const OWNER_SESSION_SECRET = "mock-task4b-owner-session-secret-32-bytes";
-const OWNER_CSRF_SECRET = "mock-task4b-owner-csrf-secret-32-bytes";
+const OWNER_ID = "owner-open-workbench";
 const NOW_MS = Date.parse("2026-10-18T19:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const EXPIRES_AT = "2027-10-18T19:00:00.000Z";
@@ -59,7 +57,6 @@ async function main() {
     );
     const creatorFiles = await load("functions/_lib/creator-files.mjs");
     const creatorReview = await load("functions/_lib/creator-review.mjs");
-    const ownerAuth = await load("functions/_lib/owner-auth.mjs");
 
     database = new DatabaseSync(databasePath);
     database.exec("PRAGMA foreign_keys=ON;");
@@ -97,13 +94,7 @@ async function main() {
       earningsCents: 0
     });
 
-    const ownerFixture = await createOwnerAuthFixture({
-      ownerAuth,
-      ownerId: OWNER_ID,
-      nowMs: NOW_MS,
-      sessionSecret: OWNER_SESSION_SECRET,
-      csrfSecret: OWNER_CSRF_SECRET
-    });
+    const ownerFixture = createOwnerWorkbenchFixture({ ownerId: OWNER_ID });
     const ownerEnvironment = {
       ...creatorEnvironment,
       ...ownerFixture.environment
@@ -132,16 +123,7 @@ async function main() {
       );
     }
 
-    const auditCountBeforeUnauthorized = decisionAuditCount(database);
-    response = await creatorReview.handleCreatorReviewRequest(
-      unauthorizedCreatorDecisionRequest(ids.approval),
-      ownerEnvironment,
-      ownerOptions
-    );
-    const unauthorizedStatus = response.status;
-    assert.equal(unauthorizedStatus, ownerFixture.unauthorizedStatus);
-    assert.equal(listingState(database, ids.approval).lifecycle_state, "submitted");
-    assert.equal(decisionAuditCount(database), auditCountBeforeUnauthorized);
+    const auditCountBeforeDecision = decisionAuditCount(database);
 
     response = await creatorReview.handleCreatorReviewRequest(
       ownerFixture.jsonRequest("/owner/api/creator-reviews", {
@@ -155,7 +137,7 @@ async function main() {
     const invalidActionStatus = response.status;
     assert.equal(invalidActionStatus, 400);
     assert.equal(listingState(database, ids.approval).lifecycle_state, "submitted");
-    assert.equal(decisionAuditCount(database), auditCountBeforeUnauthorized);
+    assert.equal(decisionAuditCount(database), auditCountBeforeDecision);
 
     const approvalNote = "Approved after Owner review.";
     response = await creatorReview.handleCreatorReviewRequest(
@@ -331,7 +313,6 @@ async function main() {
     console.log("Rejection result: rejected / not_approved");
     console.log(`Rejection reason: ${rejectionNote}`);
     console.log("Creator decision visibility: confirmed through Creator listings (200)");
-    console.log(`Creator Owner-action attempt: rejected (${unauthorizedStatus})`);
     console.log(`Invalid Owner action: rejected (${invalidActionStatus})`);
     console.log(`Repeated/reversal decisions: rejected (${repeatedStatuses.join(", ")})`);
     console.log("Owner decision audit events: 2 review + 2 publication");

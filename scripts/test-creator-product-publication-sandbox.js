@@ -7,15 +7,13 @@ const { pathToFileURL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
 const ROOT = path.resolve(__dirname, "..");
-const { createOwnerAuthFixture } = require("./test-support/owner-auth-fixture.js");
+const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 const CREATOR_ID = "creator-mock-publication-task5";
 const CREATOR_USER_ID = "user-mock-publication-task5";
 const CREATOR_EMAIL = "mock-task5@example.invalid";
 const CREATOR_SESSION = "mock-task5-creator-session";
 const CREATOR_CSRF = "mock-task5-creator-csrf";
-const OWNER_ID = "owner-publication-task5@example.invalid";
-const OWNER_SESSION_SECRET = "mock-task5-owner-session-secret-32-bytes";
-const OWNER_CSRF_SECRET = "mock-task5-owner-csrf-secret-32-bytes";
+const OWNER_ID = "owner-open-workbench";
 const PRODUCT_SLUG = "mock-creator-publication-task5";
 const PRODUCT_TITLE = "Mock Creator Publication Product Task 5";
 const SHORT_DESCRIPTION = "A disposable Creator publication fixture.";
@@ -67,7 +65,6 @@ async function main() {
     const creatorPublication = await load(
       "functions/_lib/creator-publication.mjs"
     );
-    const ownerAuth = await load("functions/_lib/owner-auth.mjs");
     const publishIntake = require(path.join(ROOT, "scripts", "publish-intake.js"));
 
     database = new DatabaseSync(databasePath);
@@ -161,13 +158,7 @@ async function main() {
       sha256(COVER_BYTES)
     );
 
-    const ownerFixture = await createOwnerAuthFixture({
-      ownerAuth,
-      ownerId: OWNER_ID,
-      nowMs: NOW_MS,
-      sessionSecret: OWNER_SESSION_SECRET,
-      csrfSecret: OWNER_CSRF_SECRET
-    });
+    const ownerFixture = createOwnerWorkbenchFixture({ ownerId: OWNER_ID });
     const ownerEnvironment = {
       ...creatorEnvironment,
       ...ownerFixture.environment,
