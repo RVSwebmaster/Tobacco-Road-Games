@@ -68,12 +68,23 @@
         "new-this-week": page.querySelector('[aria-label="NEW THIS WEEK shelf"] [data-magical-bookshelf]'),
         "best-sellers": page.querySelector('[aria-label="BEST SELLERS shelf"] [data-magical-bookshelf]')
       };
+      const explicitProducts = new Map(products.map((product) => [`${product.collection}:${product.position}`, product]));
+      const stagingProductFor = (collection, position) => explicitProducts.get(`${collection}:${position}`) || {
+        slug: `staging-${collection}-${position}`,
+        title: `${collection.replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())} Book ${position}`,
+        creator: "Tobacco Road Games",
+        priceLabel: "Staging Preview",
+        description: "A staging-only product preview assigned to this visible shelf position.",
+        cover: "/assets/tobacco-road-games-logo.png",
+        fullUrl: "/guest/preview-products/lantern-keep-encounters/",
+        collection,
+        position
+      };
       Object.entries(shelfByCollection).forEach(([collection, shelf]) => {
         if (!shelf) return;
         const shelfBooks = Array.from(shelf.querySelectorAll("[data-magical-book], .shop-wall-stock-spine, .shop-wall-hero-book"));
-        products.filter((product) => product.collection === collection).forEach((product) => {
-          const book = shelfBooks[Number(product.position) - 1];
-          if (!book) return;
+        shelfBooks.forEach((book, index) => {
+          const product = stagingProductFor(collection, index + 1);
           book.dataset.guestProductPreview = JSON.stringify(product);
           book.removeAttribute("aria-hidden");
           book.setAttribute("tabindex", "0");
