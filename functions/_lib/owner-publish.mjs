@@ -211,6 +211,7 @@ function parsePublishForm(formData, productFolderMap = {}) {
       excludeFromBundles: true,
       features: parseLines(formData.get("features")),
       featured: String(formData.get("featured") || "") === "true",
+      openRulesEligible: String(formData.get("openRulesEligible") || "") === "true",
       fileList: [],
       format: formatList,
       fulfillmentNote: String(formData.get("fulfillmentNote") || "").trim(),
