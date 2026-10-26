@@ -663,10 +663,18 @@
               <label for="product-pdf-file">Product PDF File</label>
               <input id="product-pdf-file" class="dock-input" type="file" accept=".pdf,application/pdf">
             </div>
+            <div id="review-pdf-field" class="intake-field" hidden>
+              <label for="review-pdf-file">Select Local PDF for Review</label>
+              <input id="review-pdf-file" class="dock-input" type="file" accept=".pdf,application/pdf">
+              <span class="intake-help">Review-only selection. This file never replaces the existing published PDF and is never added to the publishing payload.</span>
+            </div>
             <div class="pdf-prefill__actions">
               <button id="read-pdf-prefill-button" class="button button--secondary" type="button">Read PDF and Prefill Listing</button>
+              <button id="open-pdf-review-button" class="button button--secondary" type="button" disabled>Open PDF for Review</button>
+              <button id="download-pdf-review-button" class="button button--secondary" type="button" disabled>Download PDF</button>
               <span id="pdf-prefill-file-status" class="intake-help">No PDF selected.</span>
             </div>
+            <p id="pdf-review-status" class="intake-help" role="status" aria-live="polite">Select a PDF to enable local review.</p>
             <p id="pdf-prefill-status" class="intake-help" role="status" aria-live="polite">Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.</p>
             <div id="pdf-prefill-summary" class="pdf-prefill__summary" hidden>
               <section>

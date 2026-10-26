@@ -95,7 +95,8 @@
     relatedList: document.getElementById("product-related-list"),
     coverFile: document.getElementById("product-cover-file"),
     previewFile: document.getElementById("product-preview-file"),
-    pdfFile: document.getElementById("product-pdf-file")
+    pdfFile: document.getElementById("product-pdf-file"),
+    reviewPdfFile: document.getElementById("review-pdf-file")
   };
 
   const outputs = {
@@ -109,6 +110,8 @@
     pdfPrefillReview: document.getElementById("pdf-prefill-review"),
     pdfPrefillReviewList: document.getElementById("pdf-prefill-review-list"),
     pdfPrefillWarningList: document.getElementById("pdf-prefill-warning-list"),
+    pdfReviewField: document.getElementById("review-pdf-field"),
+    pdfReviewStatus: document.getElementById("pdf-review-status"),
     productLineManagerList: document.getElementById("product-line-manager-list"),
     productLineManagerPanel: document.getElementById("product-line-manager-panel"),
     productLineManagerStatus: document.getElementById("product-line-manager-status"),
@@ -159,6 +162,8 @@
     manageProductLines: document.getElementById("manage-product-lines-button"),
     manageTags: document.getElementById("manage-tags-button"),
     readPdfPrefill: document.getElementById("read-pdf-prefill-button"),
+    openPdfReview: document.getElementById("open-pdf-review-button"),
+    downloadPdfReview: document.getElementById("download-pdf-review-button"),
     applyPdfPrefill: document.getElementById("apply-pdf-prefill-button"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
@@ -186,6 +191,50 @@
   let preservedUnknownTags = [];
   let pdfPrefillBusy = false;
   let pdfPrefillSuggestions = new Map();
+
+  const getPdfReviewFile = () => isEditingLoadedListing()
+    ? fields.reviewPdfFile?.files?.[0] || null
+    : fields.pdfFile?.files?.[0] || null;
+
+  const updatePdfReviewControls = () => {
+    const file = getPdfReviewFile();
+    const enabled = Boolean(file);
+    if (buttons.openPdfReview) buttons.openPdfReview.disabled = !enabled;
+    if (buttons.downloadPdfReview) buttons.downloadPdfReview.disabled = !enabled;
+    if (outputs.pdfReviewField) outputs.pdfReviewField.hidden = !isEditingLoadedListing();
+    if (!outputs.pdfReviewStatus) return;
+    outputs.pdfReviewStatus.textContent = file
+      ? `${file.name} is ready for exact-byte local review. Nothing has been uploaded or published.`
+      : (isEditingLoadedListing()
+        ? "Select a local review copy. It will not replace the published PDF or enter the publishing payload."
+        : "Select the Product PDF File to enable local review.");
+  };
+
+  const withLocalPdfUrl = (callback) => {
+    const file = getPdfReviewFile();
+    if (!file) {
+      updatePdfReviewControls();
+      return false;
+    }
+    const url = URL.createObjectURL(file);
+    callback(url, file);
+    globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return true;
+  };
+
+  const openPdfForReview = () => withLocalPdfUrl((url, file) => {
+    globalThis.open(url, "_blank", "noopener");
+    outputs.pdfReviewStatus.textContent = `Opened ${file.name} for closer review. Nothing was uploaded or published.`;
+  });
+
+  const downloadPdfForReview = () => withLocalPdfUrl((url, file) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    link.rel = "noopener";
+    link.click();
+    outputs.pdfReviewStatus.textContent = `Prepared the unchanged ${file.name} for download. Nothing was uploaded or published.`;
+  });
 
   const slugify = (value) =>
     String(value || "")
@@ -1559,6 +1608,7 @@
     fields.coverFile.value = "";
     fields.previewFile.value = "";
     fields.pdfFile.value = "";
+    if (fields.reviewPdfFile) fields.reviewPdfFile.value = "";
     clearPdfPrefillResults({ keepFileStatus: false });
     outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     selectedRelatedProducts = Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [];
@@ -1574,6 +1624,7 @@
     setListingDetailsVisibility(true);
     updateEditModeCopy();
     updatePreview();
+    updatePdfReviewControls();
     markDraftBaseline();
     persistExistingListingDraft();
     outputs.status.textContent = `Loaded ${product.title} for editing.`;
@@ -1632,6 +1683,7 @@
     fields.coverFile.value = "";
     fields.previewFile.value = "";
     fields.pdfFile.value = "";
+    if (fields.reviewPdfFile) fields.reviewPdfFile.value = "";
     clearPdfPrefillResults({ keepFileStatus: false });
     outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     if (fields.existingSelect) {
@@ -1652,6 +1704,7 @@
     setListingDetailsVisibility(true);
     updateEditModeCopy();
     updatePreview();
+    updatePdfReviewControls();
     draftBaseline = typeof persisted.draftBaseline === "string" && persisted.draftBaseline
       ? persisted.draftBaseline
       : captureDraftState();
@@ -1687,7 +1740,9 @@
       ? "Ready to read the selected PDF. Nothing will upload until the normal Publish action."
       : "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     updatePreview();
+    updatePdfReviewControls();
   });
+  fields.reviewPdfFile?.addEventListener("change", updatePdfReviewControls);
   fields.buyMode.addEventListener("change", () => {
     syncBuyModeUi();
     updatePreview();
@@ -1704,6 +1759,8 @@
 
   buttons.analyze?.addEventListener("click", analyzeCurrentListing);
   buttons.readPdfPrefill?.addEventListener("click", readPdfAndPrefillListing);
+  buttons.openPdfReview?.addEventListener("click", openPdfForReview);
+  buttons.downloadPdfReview?.addEventListener("click", downloadPdfForReview);
   buttons.applyPdfPrefill?.addEventListener("click", applySelectedPdfPrefillSuggestions);
   buttons.addProductLine?.addEventListener("click", () => {
     addOwnerProductLine();
@@ -1857,6 +1914,7 @@
     setListingDetailsVisibility(!hideDetails);
     updateEditModeCopy();
     updatePreview();
+    updatePdfReviewControls();
     markDraftBaseline();
   };
 
@@ -2543,6 +2601,8 @@
     applyPdfPrefillResultsForTests: applyPdfPrefillResults,
     applySelectedPdfPrefillSuggestionsForTests: applySelectedPdfPrefillSuggestions,
     clearPdfPrefillResultsForTests: clearPdfPrefillResults,
+    getPdfReviewFileForTests: getPdfReviewFile,
+    downloadPdfForReviewForTests: downloadPdfForReview,
     getModeLabels,
     getPreservedUnknownTags: () => [...preservedUnknownTags],
     getSelectableProductLines,
@@ -2572,5 +2632,6 @@
   setListingDetailsVisibility(false);
   updateActionLabels();
   updatePreview();
+  updatePdfReviewControls();
   markDraftBaseline();
 })();

@@ -10,6 +10,7 @@ async function main() {
   await testProductLineTerminologyAndManagerLabels();
   await testTagSelectorMarkup();
   await testPdfPrefillPreservesExistingValues();
+  await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
   await testExistingListingLoadsMatchingTagCheckboxes();
@@ -109,6 +110,33 @@ async function testPdfPrefillPreservesExistingValues() {
   });
   assert.equal(harness.fields.title.value, existingTitle, "Existing listing data must stay unchanged until RV approves a replacement.");
   assert.equal(existing.preserved.includes("title"), true, "Existing-listing conflicts should be shown for review.");
+}
+
+async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, /id="download-pdf-review-button"[^>]*>Download PDF</);
+  assert.match(html, /id="open-pdf-review-button"[^>]*>Open PDF for Review</);
+  assert.match(html, /id="review-pdf-file"[^>]*type="file"/);
+  assert.match(html, /never replaces the existing published PDF and is never added to the publishing payload/i);
+
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "fixture-alpha";
+  harness.buttons.loadExisting.click();
+
+  const originalBytes = Buffer.from("%PDF-1.7\nlocal review fixture\n%%EOF", "utf8");
+  const reviewFile = new (globalThis.File || require("node:buffer").File)([originalBytes], "local-review.pdf", { type: "application/pdf" });
+  harness.fields.reviewPdfFile.files = [reviewFile];
+  harness.fields.reviewPdfFile.dispatch("change");
+
+  assert.equal(harness.api.getPdfReviewFileForTests(), reviewFile, "Existing listings should use the separate local review PDF input.");
+  assert.deepEqual(Buffer.from(await reviewFile.arrayBuffer()), originalBytes, "Local review must preserve the original PDF bytes.");
+  assert.equal(harness.fields.pdfFile.files.length, 0, "Selecting a review PDF must not select a replacement product PDF.");
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+  assert.equal(harness.lastPublishFormData.get("productFile"), null, "The review-only PDF must never enter the existing-listing publish payload.");
+  assert.equal(harness.lastPublishFormData.get("reviewPdfFile"), null, "No review-only field may be submitted to publishing.");
 }
 
 async function testTablecraftListingStillLoadsWithProductLine() {
@@ -722,7 +750,8 @@ function createHarness(options = {}) {
     relatedList: register("product-related-list", createElement("div")),
     coverFile: register("product-cover-file", createFileInput()),
     previewFile: register("product-preview-file", createFileInput()),
-    pdfFile: register("product-pdf-file", createFileInput())
+    pdfFile: register("product-pdf-file", createFileInput()),
+    reviewPdfFile: register("review-pdf-file", createFileInput())
   };
   fields.status.value = "preview-available";
   fields.buyMode.value = "preview-only";
@@ -743,6 +772,8 @@ function createHarness(options = {}) {
     pdfPrefillReview: register("pdf-prefill-review", createElement("section")),
     pdfPrefillReviewList: register("pdf-prefill-review-list", createElement("div")),
     pdfPrefillWarningList: register("pdf-prefill-warning-list", createElement("ul")),
+    pdfReviewField: register("review-pdf-field", createElement("div")),
+    pdfReviewStatus: register("pdf-review-status", createElement("p")),
     productLineManagerList: register("product-line-manager-list", createElement("div")),
     productLineManagerPanel: register("product-line-manager-panel", createElement("div")),
     productLineManagerStatus: register("product-line-manager-status", createElement("p")),
@@ -793,6 +824,8 @@ function createHarness(options = {}) {
     manageProductLines: register("manage-product-lines-button", createElement("button")),
     manageTags: register("manage-tags-button", createElement("button")),
     readPdfPrefill: register("read-pdf-prefill-button", createElement("button")),
+    openPdfReview: register("open-pdf-review-button", createElement("button")),
+    downloadPdfReview: register("download-pdf-review-button", createElement("button")),
     applyPdfPrefill: register("apply-pdf-prefill-button", createElement("button")),
     startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),
