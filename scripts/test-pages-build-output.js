@@ -32,6 +32,7 @@ async function main() {
     assert.match(generatedGuest, /guest-product-preview\.js\?v=20261026-homepage-shelves1/);
     assert.doesNotMatch(generatedGuest, /data-magical-bookshelf-replay/);
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "guest-product-preview.js")), "Guest preview runtime is missing from Pages output");
+    assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "homepage-shelves.js")), "Homepage shelf runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "data", "guest-preview-products.json")), "Guest preview fixture data is missing from Pages output");
     assert.ok(fs.existsSync(path.join(repositoryRoot, "functions")), "Pages Functions source is missing");
     assert.throws(
