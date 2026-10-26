@@ -89,6 +89,7 @@ function main() {
   const authors = loadAuthors();
   const authorLookup = buildAuthorLookup(authors);
   const products = loadProducts(authorLookup);
+  writeHomepageProductCatalog(products);
   const publicCatalogProducts = products.filter(isCatalogBrowsable);
   const assetWarnings = collectAssetWarnings(products);
   const bundleRules = loadBundleRules();
@@ -3499,6 +3500,31 @@ function writeFile(relativePath, contents) {
   fs.writeFileSync(filePath, contents);
 }
 
+function writeHomepageProductCatalog(products) {
+  const entries = [...products]
+    .map((product) => ({
+      slug: String(product.slug || ""),
+      title: String(product.title || ""),
+      creator: product.authors.join(", ") || product.publisher || "Tobacco Road Games",
+      priceLabel: renderCardPrice(product),
+      description: String(product.shortDescription || "Product details available on the full product page."),
+      cover: String(product.assetSet?.cover || "/assets/tobacco-road-games-logo.png"),
+      fullUrl: String(product.url || `/store/products/${product.slug}/`),
+      status: String(product.status || ""),
+      buyMode: String(product.buyMode || "")
+    }))
+    .sort((left, right) => left.slug.localeCompare(right.slug));
+
+  writeFile(
+    "shared/homepage-product-catalog.mjs",
+    `// Generated from data/products.json by scripts/build-store.js.
+// Do not hand-edit this file.
+
+export const HOMEPAGE_PRODUCTS = Object.freeze(${JSON.stringify(entries, null, 2)});
+`
+  );
+}
+
 function buildRuntimeCatalog() {
   const scriptPath = path.join(ROOT, "scripts", "build-runtime-catalog.mjs");
   const result = spawnSync(process.execPath, [scriptPath], {
@@ -3514,8 +3540,9 @@ function buildRuntimeCatalog() {
 
 if (require.main === module) {
   if (process.argv.includes("--homepage-only")) {
-    const products = loadProducts(buildAuthorLookup(loadAuthors())).filter(isCatalogBrowsable);
-    buildHomepage(products);
+    const products = loadProducts(buildAuthorLookup(loadAuthors()));
+    writeHomepageProductCatalog(products);
+    buildHomepage(products.filter(isCatalogBrowsable));
     console.log("Built homepage only.");
   } else {
     main();
