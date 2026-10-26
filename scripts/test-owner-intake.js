@@ -90,11 +90,53 @@ async function main() {
     await testPublishScriptRejectsInvalidCartMetadata(publishScript);
     await testPublishScriptNormalizesCartBuyUrl(publishScript);
     await testNewProductBuildAndSharedMap(publishScript);
+    await testOpenRulesEligibilityPersistence(publishScript);
 
     console.log("Owner intake tests passed.");
   } finally {
     await closeAccessTestContext(accessContext);
   }
+}
+
+async function testOpenRulesEligibilityPersistence(publishScript) {
+  const normalizedOpenRules = publishScript.normalizePublishMetadata({
+    buyMode: "preview-only",
+    gameSystem: "SRD 5.1",
+    openRulesEligible: true,
+    productLine: "5e Reference Library",
+    slug: "fixture-alpha",
+    status: "preview-available",
+    title: "Fixture Alpha"
+  });
+  assert.equal(normalizedOpenRules.openRulesEligible, true, "Explicit Open Rules eligibility should survive metadata normalization.");
+
+  const normalizedOrdinary = publishScript.normalizePublishMetadata({
+    buyMode: "preview-only",
+    gameSystem: "5E Compatible",
+    productLine: "Fifth Edition Fantasy Roleplaying",
+    slug: "fixture-beta",
+    status: "preview-available",
+    title: "Fixture Beta"
+  });
+  assert.equal(normalizedOrdinary.openRulesEligible, false, "Ordinary RV products should default to not Open Rules.");
+
+  const tempRoot = createTempRepo(["data/products.json", "data/product-intake-map.json", "shared/product-folder-map.mjs"]);
+  await publishScript.applyPublishPayload(tempRoot, {
+    folder: "fixture-alpha",
+    metadata: {
+      buyMode: "preview-only",
+      gameSystem: "SRD 5.1",
+      openRulesEligible: true,
+      productLine: "5e Reference Library",
+      slug: "fixture-alpha",
+      status: "preview-available",
+      subtitle: "Open rules fixture",
+      title: "Fixture Alpha"
+    }
+  });
+  const products = JSON.parse(fs.readFileSync(path.join(tempRoot, "data", "products.json"), "utf8"));
+  const product = products.find((entry) => entry.slug === "fixture-alpha");
+  assert.equal(product.openRulesEligible, true, "Owner intake publishing should persist Open Rules eligibility to data/products.json.");
 }
 
 async function testWrongUsername(ownerLogin, env) {
