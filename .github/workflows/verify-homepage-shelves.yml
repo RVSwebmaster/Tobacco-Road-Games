@@ -1,0 +1,45 @@
+name: Verify Homepage Shelf Wiring
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Homepage shelf rules
+        run: npm run test:homepage-shelves
+      - name: Guest landing
+        run: npm run test:guest-landing
+      - name: Guest product preview
+        run: npm run test:guest-product-preview
+      - name: Guest magic
+        run: npm run test:guest-magic
+      - name: Storefront visual baseline
+        run: npm run test:storefront-visual
+      - name: Full regression suite
+        run: npm test
+      - name: Rebuild storefront
+        run: node scripts/build-store.js
+      - name: Verify generated shelf hooks
+        run: |
+          grep -q 'data-live-homepage-shelf="best-sellers"' index.html
+          grep -q 'data-live-homepage-shelf="best-sellers"' guest/index.html
+          grep -q 'homepage-shelves.js?v=20261026-homepage-shelves1' index.html
+          grep -q 'homepage-shelves.js?v=20261026-homepage-shelves1' guest/index.html
+          grep -q 'guest-product-preview.js?v=20261026-homepage-shelves1' guest/index.html
+      - name: Pages build verification
+        run: npm run test:pages-build
+      - name: Diff whitespace check
+        run: git diff --check
