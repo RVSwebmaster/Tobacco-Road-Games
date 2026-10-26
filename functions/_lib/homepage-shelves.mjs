@@ -1,4 +1,4 @@
-import { getRuntimeCatalogProducts } from "./runtime-catalog.mjs";
+import { HOMEPAGE_PRODUCTS } from "../../shared/homepage-product-catalog.mjs";
 
 export const HOMEPAGE_BEST_SELLER_WINDOW_DAYS = 30;
 export const HOMEPAGE_BEST_SELLER_LIMIT = 43;
@@ -28,7 +28,7 @@ LIMIT ?
 `;
 
 export async function getHomepageShelves(database, options = {}) {
-  const catalog = Array.isArray(options.catalog) ? options.catalog : getRuntimeCatalogProducts();
+  const catalog = Array.isArray(options.catalog) ? options.catalog : HOMEPAGE_PRODUCTS;
   const nowMs = Number.isFinite(options.nowMs) ? Number(options.nowMs) : Date.now();
   const windowDays = positiveInteger(options.windowDays, HOMEPAGE_BEST_SELLER_WINDOW_DAYS);
   const limit = positiveInteger(options.limit, HOMEPAGE_BEST_SELLER_LIMIT);
@@ -63,28 +63,15 @@ export function isHomepageEligible(product) {
 }
 
 export function toHomepageProduct(product) {
-  const effectivePriceCents = Number.isInteger(product.effectivePriceCents) ? product.effectivePriceCents : null;
   return {
     slug: String(product.slug || ""),
     title: String(product.title || ""),
-    creator: String(product.authorDisplay || product.publisher || "Tobacco Road Games"),
-    priceLabel: priceLabel(product, effectivePriceCents),
-    description: String(product.shortDescription || "Product details available on the full product page."),
-    cover: String(product.coverUrl || "/assets/tobacco-road-games-logo.png"),
-    fullUrl: `/store/products/${encodeURIComponent(String(product.slug || ""))}/`
+    creator: String(product.creator || "Tobacco Road Games"),
+    priceLabel: String(product.priceLabel || product.status || "Available"),
+    description: String(product.description || "Product details available on the full product page."),
+    cover: String(product.cover || "/assets/tobacco-road-games-logo.png"),
+    fullUrl: String(product.fullUrl || `/store/products/${encodeURIComponent(String(product.slug || ""))}/`)
   };
-}
-
-function priceLabel(product, effectivePriceCents) {
-  if (product.buyMode === "pay-what-you-want") return "Pay What You Want";
-  if (product.buyMode === "free-download" || effectivePriceCents === 0) return "Free Download";
-  if (effectivePriceCents !== null) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: String(product.currency || "USD")
-    }).format(effectivePriceCents / 100);
-  }
-  return String(product.status || "Available");
 }
 
 function normalizeSlug(value) {
