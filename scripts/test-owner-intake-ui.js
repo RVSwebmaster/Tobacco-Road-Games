@@ -41,6 +41,8 @@ async function testIntakeLabelsAndHelperText() {
   assert.match(html, />Review New Product</, "Product intake should expose a Review New Product action.");
   assert.match(html, />Publish New Product</, "Product intake should expose a Publish New Product action.");
   assert.match(html, />Clear New Product Form</, "Product intake should expose a Clear New Product Form action.");
+  assert.match(html, /id="product-open-rules-eligible"[^>]*type="checkbox"/, "Owner intake should expose an explicit Open Rules Library checkbox.");
+  assert.match(html, /RV Sawyer authorship or Tobacco Road Games publication alone does not qualify a title\./, "Owner intake should explain that Open Rules eligibility is explicit.");
   assert.match(html, /Checks the form for missing or invalid information and refreshes advisory suggestions\. Does not save changes\./, "Product intake should explain the check action.");
   assert.match(html, /Shows the generated product data and file plan so you can confirm exactly what will be published\./, "Product intake should explain the review action.");
   assert.match(html, /Discards unsaved work from this form only\. Published data is not affected\./, "Product intake should explain the discard action.");
