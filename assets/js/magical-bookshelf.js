@@ -282,7 +282,13 @@
     }
 
     documentRef.addEventListener("keydown", (event) => {
-      if (event.code !== "Space" || event.repeat || isTextEntryTarget(event.target) || !runner.isRunning()) return;
+      if (event.code !== "Space" || event.repeat) return;
+      if (replay && event.target === replay) {
+        event.preventDefault();
+        if (runner.isRunning()) runner.finish();
+        return;
+      }
+      if (isTextEntryTarget(event.target) || !runner.isRunning()) return;
       event.preventDefault();
       runner.finish();
     });
