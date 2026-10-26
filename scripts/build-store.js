@@ -311,6 +311,7 @@ function loadProducts(authorLookup) {
       saleLabel: product.saleLabel || "",
       saleEnabled: Boolean(product.saleEnabled),
       libraryEligible: Boolean(product.libraryEligible),
+      openRulesEligible: Boolean(product.openRulesEligible),
       updateEligible: Boolean(product.updateEligible),
       bundleEligible: Boolean(product.bundleEligible),
       bundleMinPriceCents: normalizeInteger(product.bundleMinPriceCents, 100),
@@ -982,7 +983,7 @@ function renderShelfStoreHome(products, indexes) {
 
 function buildStorefrontHomeModel(products, indexes) {
   const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
-  const openRules = products.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 12);
+  const openRules = products.filter(isOpenRulesProduct).slice(0, 12);
   const newThisWeek = chooseNewReleases(eligible).slice(0, 12);
   const pwywFree = eligible.filter((product) => product.priceType === "pay-what-you-want" || product.priceType === "free-download" || Number(product.effectivePriceCents ?? product.priceCents) === 0);
   const creatorFeature = indexes.authors.find((author) => author.products.length > 0) || null;
@@ -1180,7 +1181,7 @@ function renderGuestLandingShopWallMain(products) {
   const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
   const featuredCreator = configuredCreator || fallbackFeatured;
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
-  const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 36);
+  const openRules = eligible.filter(isOpenRulesProduct).slice(0, 36);
 
   return `    <main id="top" class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo aria-labelledby="homepage-shop-wall-heading">
       <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
@@ -1262,7 +1263,7 @@ function renderHomepageShopWallMain(products) {
   const designated = eligible.find(product => homepageProductId(product) === String(featuredConfig.heroProductId));
   const featuredCreator = featuredConfig.creatorSlug || (designated || chooseFeaturedProduct(eligible))?.authorSlugs?.[0];
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
-  const openRules = eligible.filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer")).slice(0, 8);
+  const openRules = eligible.filter(isOpenRulesProduct).slice(0, 8);
 
   return `    <main id="top" class="homepage-shop-wall shelf-storefront" aria-labelledby="homepage-shop-wall-heading">
       <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
@@ -1520,7 +1521,7 @@ function renderShopWallPlaque(title, id, href = "") {
 
 function renderOpenRulesLibraryPage(products) {
   const openRules = products
-    .filter((product) => /tobacco road games/i.test(product.publisher || "") || product.authorSlugs?.includes("rv-sawyer"))
+    .filter(isOpenRulesProduct)
     .slice(0, 24);
 
   return renderLayout({
@@ -3218,6 +3219,10 @@ function resolvePriceType(product) {
 
 function isBuyModeActive(buyMode) {
   return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
+}
+
+function isOpenRulesProduct(product) {
+  return product?.openRulesEligible === true;
 }
 
 function isCatalogBrowsable(product) {
