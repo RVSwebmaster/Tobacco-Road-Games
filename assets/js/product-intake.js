@@ -1422,7 +1422,8 @@
     fields.price.value = draft.price ?? product.price ?? "";
     fields.salePrice.value = draft.salePrice ?? product.salePrice ?? "";
     fields.currency.value = draft.currency ?? product.currency ?? "USD";
-    fields.saleEnabled.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "saleEnabled") ? draft.openRulesEligible : product.openRulesEligible);
+    fields.saleEnabled.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "saleEnabled") ? draft.saleEnabled : product.saleEnabled);
+    fields.openRulesEligible.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "openRulesEligible") ? draft.openRulesEligible : product.openRulesEligible);
     fields.status.value = draft.status ?? product.status ?? "coming-soon";
     fields.buyMode.value = draft.buyMode ?? product.buyMode ?? "coming-soon";
     fields.buyUrl.value = draft.buyUrl ?? product.buyUrl ?? "";
