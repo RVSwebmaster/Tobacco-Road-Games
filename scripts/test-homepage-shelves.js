@@ -121,13 +121,12 @@ function runtimeProduct(slug, cents, overrides = {}) {
   return {
     slug,
     title: slug,
-    authorDisplay: "RV Sawyer",
-    publisher: "Tobacco Road Games",
+    creator: "RV Sawyer",
     buyMode: "cart",
-    coverUrl: `/product-assets/${slug}/cover.webp`,
-    currency: "USD",
-    effectivePriceCents: cents,
-    shortDescription: "Catalog product",
+    cover: `/product-assets/${slug}/cover.webp`,
+    priceLabel: cents === 0 ? "Free Download" : `${(cents / 100).toFixed(2)}`,
+    description: "Catalog product",
+    fullUrl: `/store/products/${slug}/`,
     status: "available-direct",
     ...overrides
   };
