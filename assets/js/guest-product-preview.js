@@ -85,12 +85,14 @@
         const shelfBooks = Array.from(shelf.querySelectorAll("[data-magical-book], .shop-wall-stock-spine, .shop-wall-hero-book"));
         shelfBooks.forEach((book, index) => {
           const product = stagingProductFor(collection, index + 1);
-          book.dataset.guestProductPreview = JSON.stringify(product);
+          const link = document.createElement("a");
+          link.className = "guest-product-preview-link";
+          link.href = product.fullUrl;
+          link.dataset.guestProductPreview = JSON.stringify(product);
           book.removeAttribute("aria-hidden");
-          book.setAttribute("tabindex", "0");
-          book.setAttribute("role", "link");
-          book.setAttribute("aria-haspopup", "dialog");
-          book.setAttribute("aria-label", `Preview ${product.title}`);
+          link.setAttribute("aria-haspopup", "dialog");
+          link.setAttribute("aria-label", `Preview ${product.title}`);
+          book.append(link);
         });
       });
       bindBooks();
