@@ -58,7 +58,7 @@
     });
   }
 
-  fetch("/data/guest-preview-products.json?v=20261025-preview3", { cache: "no-store" })
+  fetch("/data/guest-preview-products.json?v=20261026-guest-unit1", { cache: "no-store" })
     .then((response) => response.ok ? response.json() : [])
     .then((products) => {
       const shelfByCollection = {
