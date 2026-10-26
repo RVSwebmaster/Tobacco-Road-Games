@@ -658,6 +658,7 @@ function createHarness(options = {}) {
     salePrice: register("product-sale-price", createInput("")),
     currency: register("product-currency", createInput("USD")),
     saleEnabled: register("product-sale-enabled", createCheckbox(false)),
+    openRulesEligible: register("product-open-rules-eligible", createCheckbox(false)),
     status: register("product-status", createElement("select")),
     buyMode: register("product-buy-mode", createElement("select")),
     buyUrl: register("product-buy-url", createInput("")),
