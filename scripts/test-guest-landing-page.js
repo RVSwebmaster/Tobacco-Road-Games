@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { renderGuestLibraryBay, renderGuestOpenRulesBay } = require("./build-store.js");
+const { isOpenRulesProduct, renderGuestLibraryBay, renderGuestOpenRulesBay } = require("./build-store.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
@@ -40,6 +40,10 @@ assert.match(guest, /data-library-start-position="19"/);
 assert.match(builder, /products\.slice\(0, 18\), 1/);
 assert.match(builder, /products\.slice\(18, 36\), 19/);
 assert.match(builder, /\.slice\(0, 36\)/);
+assert.equal(isOpenRulesProduct({ publisher: "Tobacco Road Games", authorSlugs: ["rv-sawyer"] }), false, "TRG publication or RV Sawyer authorship alone must not classify a product as Open Rules.");
+assert.equal(isOpenRulesProduct({ openRulesEligible: true, publisher: "Tobacco Road Games", authorSlugs: ["rv-sawyer"] }), true, "Explicit Open Rules eligibility should classify the product.");
+assert.equal(isOpenRulesProduct({ openRulesEligible: false }), false, "Explicit false must stay out of Open Rules.");
+assert.doesNotMatch(builder, /tobacco road games\/i\.test\(product\.publisher[\s\S]{0,120}rv-sawyer/, "Open Rules selectors must not infer eligibility from publisher or author.");
 
 assert.doesNotMatch(guest, /id="free-pwyw-wall-heading"|aria-label="FREE &amp; PWYW shelf"/);
 assert.match(guest, /href="\/store\/catalog\/"/);
