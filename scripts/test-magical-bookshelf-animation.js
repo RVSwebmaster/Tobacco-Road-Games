@@ -103,6 +103,8 @@ midwaySkip.runner.finish();
 assert.equal(midwaySkip.revealed.size, 23);
 assert.equal(midwaySkip.effectsCleared(), 1);
 
+assert.equal(animation.isStagingPreviewHost("abc.tobacco-road-games-staging.pages.dev"), true);
+assert.equal(animation.isStagingPreviewHost("tobaccoroadgames.com"), false);
 assert.equal(animation.isTextEntryTarget({ matches: (selector) => selector.includes("input") }), true);
 assert.equal(animation.isTextEntryTarget({ matches: () => false }), false);
 

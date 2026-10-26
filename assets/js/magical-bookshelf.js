@@ -146,6 +146,14 @@
     return target.matches("input, textarea, select, button, [contenteditable]:not([contenteditable='false'])");
   }
 
+  function isStagingPreviewHost(hostname) {
+    const host = String(hostname || "").toLowerCase();
+    return host === "localhost"
+      || host === "127.0.0.1"
+      || host === "tobacco-road-games-staging.pages.dev"
+      || host.endsWith(".tobacco-road-games-staging.pages.dev");
+  }
+
   function initializeMagicalBookshelves(documentRef) {
     const root = documentRef.querySelector("[data-magical-bookshelf-demo]");
     if (!root) return null;
@@ -160,6 +168,7 @@
       shelf.dataset.magicalDirection
     ));
     const plan = buildRevealPlan(shelfBooks);
+    const replay = root.querySelector("[data-magical-bookshelf-replay]");
     const effectTimers = new Set();
 
     const removeEffects = () => {
@@ -267,8 +276,18 @@
       runner.start();
     };
 
+    if (replay && isStagingPreviewHost(windowRef.location.hostname)) {
+      replay.hidden = false;
+      replay.addEventListener("click", play);
+    }
+
     documentRef.addEventListener("keydown", (event) => {
       if (event.code !== "Space" || event.repeat) return;
+      if (replay && event.target === replay) {
+        event.preventDefault();
+        if (runner.isRunning()) runner.finish();
+        return;
+      }
       if (isTextEntryTarget(event.target) || !runner.isRunning()) return;
       event.preventDefault();
       runner.finish();
@@ -285,6 +304,7 @@
     createFlashDescriptors,
     createSequenceRunner,
     initializeMagicalBookshelves,
+    isStagingPreviewHost,
     isTextEntryTarget,
     orderBooksByDirection,
   };
