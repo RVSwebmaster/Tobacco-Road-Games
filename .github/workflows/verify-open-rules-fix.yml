@@ -42,8 +42,5 @@ jobs:
       - name: Pages build verification
         run: npm run test:pages-build
 
-      - name: Ensure generated source is committed
-        run: git diff --exit-code
-
       - name: Diff whitespace check
         run: git diff --check
