@@ -98,8 +98,7 @@
     pdfFile: document.getElementById("product-pdf-file"),
     reviewPdfFile: document.getElementById("review-pdf-file"),
     pdfFrontPage: document.getElementById("pdf-front-page"),
-    pdfBackPage: document.getElementById("pdf-back-page"),
-    pdfPreviewPage: document.getElementById("pdf-preview-page")
+    pdfBackPage: document.getElementById("pdf-back-page")
   };
 
   const outputs = {
@@ -119,10 +118,8 @@
     pdfImageStatus: document.getElementById("pdf-image-extraction-status"),
     pdfFrontImage: document.getElementById("pdf-front-image"),
     pdfBackImage: document.getElementById("pdf-back-image"),
-    pdfPreviewImage: document.getElementById("pdf-preview-image"),
     pdfFrontDetails: document.getElementById("pdf-front-details"),
     pdfBackDetails: document.getElementById("pdf-back-details"),
-    pdfPreviewDetails: document.getElementById("pdf-preview-details"),
     productLineManagerList: document.getElementById("product-line-manager-list"),
     productLineManagerPanel: document.getElementById("product-line-manager-panel"),
     productLineManagerStatus: document.getElementById("product-line-manager-status"),
@@ -182,9 +179,6 @@
     pdfBackReplace: document.getElementById("pdf-back-replace"),
     pdfBackDownload: document.getElementById("pdf-back-download"),
     pdfBackAccept: document.getElementById("pdf-back-accept"),
-    pdfPreviewReplace: document.getElementById("pdf-preview-replace"),
-    pdfPreviewDownload: document.getElementById("pdf-preview-download"),
-    pdfPreviewAccept: document.getElementById("pdf-preview-accept"),
     applyPdfPrefill: document.getElementById("apply-pdf-prefill-button"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
@@ -278,14 +272,6 @@
       replace: buttons.pdfBackReplace,
       download: buttons.pdfBackDownload,
       accept: buttons.pdfBackAccept
-    }),
-    preview: Object.freeze({
-      page: fields.pdfPreviewPage,
-      image: outputs.pdfPreviewImage,
-      details: outputs.pdfPreviewDetails,
-      replace: buttons.pdfPreviewReplace,
-      download: buttons.pdfPreviewDownload,
-      accept: buttons.pdfPreviewAccept
     })
   });
 
@@ -299,9 +285,7 @@
     controls.image.hidden = true;
     controls.download.disabled = true;
     controls.accept.disabled = true;
-    controls.details.textContent = role === "preview"
-      ? "Choose an interior page, then select Replace Page."
-      : "Not generated.";
+    controls.details.textContent = "Not generated.";
   };
 
   const clearPdfImageExtraction = ({ hidePanel = true } = {}) => {
@@ -315,7 +299,7 @@
     updatePdfReviewControls();
   };
 
-  const setPdfImageCandidate = (role, rendered, makeFilename) => {
+  const setPdfImageCandidate = async (role, rendered, makeFilename) => {
     const controls = pdfImageRoleControls[role];
     if (!controls || !rendered?.blob) return null;
     clearPdfImageCandidate(role);
@@ -328,6 +312,14 @@
     pdfImageCandidates.set(role, candidate);
     controls.image.src = candidate.url;
     controls.image.hidden = false;
+    try {
+      if (typeof controls.image.decode === "function") {
+        await controls.image.decode();
+      }
+    } catch (error) {
+      clearPdfImageCandidate(role);
+      throw new Error(`The generated ${role}-cover WebP could not be displayed: ${error?.message || "image decoding failed"}`);
+    }
     controls.download.disabled = false;
     controls.accept.disabled = false;
     controls.details.textContent = `PDF page ${candidate.pageNumber} - ${candidate.width} x ${candidate.height}px WebP - ${Math.max(1, Math.round(candidate.blob.size / 1024))} KB.`;
@@ -338,19 +330,23 @@
     const controls = pdfImageRoleControls[role];
     if (!pdfImageSession || !controls || pdfImageBusy) return null;
     const requestedPage = Number(controls.page.value);
+    clearPdfImageCandidate(role);
     pdfImageBusy = true;
     updatePdfReviewControls();
     controls.replace.disabled = true;
-    outputs.pdfImageStatus.textContent = `Rendering PDF page ${requestedPage} locally for the ${role === "preview" ? "interior preview" : `${role} cover`} candidate...`;
+    controls.details.textContent = `Rendering PDF page ${requestedPage}...`;
+    outputs.pdfImageStatus.textContent = `Rendering PDF page ${requestedPage} locally for the ${role}-cover candidate...`;
     try {
       const module = await import("/assets/js/product-pdf-images.mjs?v=20261026a");
       const rendered = await pdfImageSession.renderPage(requestedPage);
       controls.page.value = String(rendered.pageNumber);
-      const candidate = setPdfImageCandidate(role, rendered, module.makePdfWebpFilename);
+      const candidate = await setPdfImageCandidate(role, rendered, module.makePdfWebpFilename);
       outputs.pdfImageStatus.textContent = `Generated ${candidate.fileName} locally. Review it before accepting or downloading it.`;
       return candidate;
     } catch (error) {
-      outputs.pdfImageStatus.textContent = `PDF page extraction failed: ${error?.message || "unknown rendering error"}. Nothing was uploaded or published.`;
+      const message = error?.message || "unknown rendering error";
+      controls.details.textContent = `Could not generate this image: ${message}`;
+      outputs.pdfImageStatus.textContent = `PDF page extraction failed: ${message}. Nothing was uploaded or published.`;
       return null;
     } finally {
       pdfImageBusy = false;
@@ -382,16 +378,18 @@
       pdfImageSession = session;
       fields.pdfFrontPage.max = String(session.pageCount);
       fields.pdfBackPage.max = String(session.pageCount);
-      fields.pdfPreviewPage.max = String(session.pageCount);
       fields.pdfFrontPage.value = String(session.defaults.frontPage);
       fields.pdfBackPage.value = String(session.defaults.backPage);
-      fields.pdfPreviewPage.value = String(Math.min(session.pageCount, 2));
-      outputs.pdfImageStatus.textContent = `Opened ${file.name}: ${session.pageCount} pages. Generating front, back, and interior candidates locally...`;
+      outputs.pdfImageStatus.textContent = `Opened ${file.name}: ${session.pageCount} pages. Generating the front and back covers locally...`;
       pdfImageBusy = false;
-      await renderPdfImageCandidate("front");
-      await renderPdfImageCandidate("back");
-      await renderPdfImageCandidate("preview");
-      outputs.pdfImageStatus.textContent = `Generated candidates from pages ${fields.pdfFrontPage.value}, ${fields.pdfBackPage.value}, and ${fields.pdfPreviewPage.value}. Nothing has been assigned, uploaded, or published.`;
+      const frontCandidate = await renderPdfImageCandidate("front");
+      const backCandidate = await renderPdfImageCandidate("back");
+      if (!frontCandidate || !backCandidate) {
+        const failed = [!frontCandidate && "front cover", !backCandidate && "back cover"].filter(Boolean).join(" and ");
+        outputs.pdfImageStatus.textContent = `Could not generate the ${failed}. Review the error shown with the affected image and try another page or PDF. Nothing was uploaded or published.`;
+        return session;
+      }
+      outputs.pdfImageStatus.textContent = `Generated the front cover from page ${fields.pdfFrontPage.value} and the back cover from page ${fields.pdfBackPage.value}. Nothing has been assigned, uploaded, or published.`;
       return session;
     } catch (error) {
       outputs.pdfImageStatus.textContent = `The PDF could not be opened for image extraction: ${error?.message || "unknown extraction error"}. Nothing was uploaded or published.`;
@@ -1978,13 +1976,10 @@
   buttons.extractPdfImages?.addEventListener("click", extractPdfImages);
   buttons.pdfFrontReplace?.addEventListener("click", () => renderPdfImageCandidate("front"));
   buttons.pdfBackReplace?.addEventListener("click", () => renderPdfImageCandidate("back"));
-  buttons.pdfPreviewReplace?.addEventListener("click", () => renderPdfImageCandidate("preview"));
   buttons.pdfFrontDownload?.addEventListener("click", () => downloadPdfImageCandidate("front"));
   buttons.pdfBackDownload?.addEventListener("click", () => downloadPdfImageCandidate("back"));
-  buttons.pdfPreviewDownload?.addEventListener("click", () => downloadPdfImageCandidate("preview"));
   buttons.pdfFrontAccept?.addEventListener("click", () => assignPdfImageCandidate("front", "cover"));
   buttons.pdfBackAccept?.addEventListener("click", () => assignPdfImageCandidate("back", "back"));
-  buttons.pdfPreviewAccept?.addEventListener("click", () => assignPdfImageCandidate("preview", "preview"));
   buttons.applyPdfPrefill?.addEventListener("click", applySelectedPdfPrefillSuggestions);
   buttons.addProductLine?.addEventListener("click", () => {
     addOwnerProductLine();

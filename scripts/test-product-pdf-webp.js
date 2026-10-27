@@ -30,6 +30,12 @@ async function main() {
   assert.doesNotMatch(browserModule, /https?:\/\//);
   assert.doesNotMatch(browserModule, /fetch\s*\(/);
 
+  const intakeScript = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'product-intake.js'), 'utf8');
+  assert.match(intakeScript, /renderPdfImageCandidate\("front"\)/);
+  assert.match(intakeScript, /renderPdfImageCandidate\("back"\)/);
+  assert.doesNotMatch(intakeScript, /renderPdfImageCandidate\("preview"\)/, 'Extract Covers must not automatically generate an interior preview image.');
+  assert.match(intakeScript, /Could not generate the \$\{failed\}/, 'Partial extraction failures must remain visible instead of being overwritten by a success message.');
+
   const realPdfPath = process.env.TRG_PDF_WEBP_TEST_FILE;
   if (realPdfPath) await verifyRealPdfRendering(realPdfPath, utils);
   console.log('Product PDF WebP extraction tests passed.');

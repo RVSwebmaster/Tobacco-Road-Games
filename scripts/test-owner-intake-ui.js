@@ -143,11 +143,14 @@ async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
 
 async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
-  assert.match(html, /id="extract-pdf-images-button"[^>]*>Extract WebP Images</);
+  assert.match(html, /id="extract-pdf-images-button"[^>]*>Extract Covers</);
   assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
   assert.match(html, /id="pdf-back-accept"[^>]*>Accept Back Cover</);
-  assert.match(html, /id="pdf-preview-accept"[^>]*>Accept as preview\.webp</);
-  assert.match(html, /back cover remains a separate review asset/i);
+  assert.doesNotMatch(html, /id="pdf-preview-(?:page|image|replace|download|accept)"/, "Automatic cover extraction must not include an interior preview candidate.");
+  assert.match(html, /back cover remains a separate review asset and never replaces preview\.webp/i);
+  assert.match(html, /\.pdf-image-extraction\[hidden\][\s\S]*?display:\s*none/, "The extraction panel's hidden state must override its grid display.");
+  assert.match(html, /\.pdf-image-candidate__preview img\[hidden\][\s\S]*?display:\s*none/, "Hidden candidate images must not be forced visible by the image display rule.");
+  assert.match(html, /id="product-preview-file"/, "The independent preview.webp upload slot must remain available.");
 
   const harness = createHarness();
   await harness.flush();
@@ -158,27 +161,21 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   harness.fields.reviewPdfFile.files = [reviewFile];
   harness.fields.reviewPdfFile.dispatch("change");
   const frontBlob = new Blob([Buffer.from("RIFFfrontWEBP")], { type: "image/webp" });
-  const previewBlob = new Blob([Buffer.from("RIFFpreviewWEBP")], { type: "image/webp" });
   const backBlob = new Blob([Buffer.from("RIFFbackWEBP")], { type: "image/webp" });
 
-  harness.api.setPdfImageCandidateForTests("front", { blob: frontBlob, pageNumber: 1, width: 1200, height: 1600 });
+  await harness.api.setPdfImageCandidateForTests("front", { blob: frontBlob, pageNumber: 1, width: 1200, height: 1600 });
   assert.equal(harness.fields.coverFile.files.length, 0, "Generating a cover candidate must not assign it automatically.");
   assert.equal(harness.api.assignPdfImageCandidateForTests("front", "cover"), true);
   assert.equal(harness.fields.coverFile.files[0].name, "cover.webp", "Only explicit acceptance should assign cover.webp.");
 
-  harness.api.setPdfImageCandidateForTests("preview", { blob: previewBlob, pageNumber: 8, width: 1600, height: 1200 });
-  assert.equal(harness.fields.previewFile.files.length, 0, "Generating an interior candidate must not assign it automatically.");
-  assert.equal(harness.api.assignPdfImageCandidateForTests("preview", "preview"), true);
-  assert.equal(harness.fields.previewFile.files[0].name, "preview.webp", "Only explicit acceptance should assign preview.webp.");
-
-  harness.api.setPdfImageCandidateForTests("back", { blob: backBlob, pageNumber: 53, width: 1200, height: 1600 });
+  await harness.api.setPdfImageCandidateForTests("back", { blob: backBlob, pageNumber: 53, width: 1200, height: 1600 });
   assert.equal(harness.api.assignPdfImageCandidateForTests("back", "back"), true);
-  assert.equal(harness.fields.previewFile.files[0].name, "preview.webp", "Accepting a back cover must not replace the storefront preview.");
+  assert.equal(harness.fields.previewFile.files.length, 0, "Accepting a back cover must not populate or replace the storefront preview.");
   assert.equal(harness.fields.pdfFile.files.length, 0, "Review-only extraction must not select a replacement product PDF.");
   assert.equal(harness.fields.reviewPdfFile.files[0], reviewFile, "The locally selected review PDF must remain selected after image assignment.");
 
   const existingCover = harness.fields.coverFile.files[0];
-  harness.api.setPdfImageCandidateForTests("front", { blob: frontBlob, pageNumber: 2, width: 1200, height: 1600 });
+  await harness.api.setPdfImageCandidateForTests("front", { blob: frontBlob, pageNumber: 2, width: 1200, height: 1600 });
   harness.confirmResponse = false;
   assert.equal(harness.api.assignPdfImageCandidateForTests("front", "cover"), false, "Replacing an already selected cover must require confirmation.");
   assert.equal(harness.fields.coverFile.files[0], existingCover, "Declining replacement must preserve the already selected cover.");
@@ -187,7 +184,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   await harness.flush();
   assert.equal(harness.lastPublishFormData.get("productFile"), null, "Review-only PDF selection must remain absent from the publishing payload.");
   assert.equal(harness.lastPublishFormData.get("coverFile").name, "cover.webp", "Explicitly accepted cover should use the normal publishing slot.");
-  assert.equal(harness.lastPublishFormData.get("previewFile").name, "preview.webp", "Explicitly accepted interior image should use the normal preview slot.");
+  assert.equal(harness.lastPublishFormData.get("previewFile"), null, "Cover extraction must not silently add a storefront preview image.");
 }
 
 async function testTablecraftListingStillLoadsWithProductLine() {

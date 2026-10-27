@@ -300,7 +300,7 @@
 
     .pdf-image-extraction__grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
     }
 
@@ -335,6 +335,11 @@
       max-width: 100%;
       max-height: 360px;
       object-fit: contain;
+    }
+
+    .pdf-image-extraction[hidden],
+    .pdf-image-candidate__preview img[hidden] {
+      display: none;
     }
 
     .pdf-image-candidate__actions {
@@ -730,7 +735,7 @@
               <button id="read-pdf-prefill-button" class="button button--secondary" type="button">Read PDF and Prefill Listing</button>
               <button id="open-pdf-review-button" class="button button--secondary" type="button" disabled>Open PDF for Review</button>
               <button id="download-pdf-review-button" class="button button--secondary" type="button" disabled>Download PDF</button>
-              <button id="extract-pdf-images-button" class="button button--secondary" type="button" disabled>Extract WebP Images</button>
+              <button id="extract-pdf-images-button" class="button button--secondary" type="button" disabled>Extract Covers</button>
               <span id="pdf-prefill-file-status" class="intake-help">No PDF selected.</span>
             </div>
             <p id="pdf-review-status" class="intake-help" role="status" aria-live="polite">Select a PDF to enable local review.</p>
@@ -754,8 +759,8 @@
             <ul id="pdf-prefill-warning-list" class="intake-list" hidden></ul>
             <section id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading" hidden>
               <div>
-                <h3 id="pdf-image-extraction-heading">PDF page image review</h3>
-                <p class="intake-help">Generated locally in this browser. Nothing is uploaded or published. Front cover and storefront preview are assigned only when you explicitly accept them; the back cover remains a separate review asset.</p>
+                <h3 id="pdf-image-extraction-heading">PDF cover review</h3>
+                <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and never replaces preview.webp.</p>
               </div>
               <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite"></p>
               <div class="pdf-image-extraction__grid">
@@ -781,18 +786,6 @@
                     <button id="pdf-back-replace" class="button button--secondary" type="button">Replace Page</button>
                     <button id="pdf-back-download" class="button button--secondary" type="button" disabled>Download WebP</button>
                     <button id="pdf-back-accept" class="button button--primary" type="button" disabled>Accept Back Cover</button>
-                  </div>
-                </article>
-                <article class="pdf-image-candidate" data-pdf-image-role="preview">
-                  <h3>Interior preview candidate</h3>
-                  <label for="pdf-preview-page">PDF page</label>
-                  <input id="pdf-preview-page" class="dock-input" type="number" min="1" step="1" value="2">
-                  <div class="pdf-image-candidate__preview"><img id="pdf-preview-image" alt="Generated interior preview candidate" hidden></div>
-                  <p id="pdf-preview-details" class="intake-help">Choose an interior page, then select Replace Page.</p>
-                  <div class="pdf-image-candidate__actions">
-                    <button id="pdf-preview-replace" class="button button--secondary" type="button">Replace Page</button>
-                    <button id="pdf-preview-download" class="button button--secondary" type="button" disabled>Download WebP</button>
-                    <button id="pdf-preview-accept" class="button button--primary" type="button" disabled>Accept as preview.webp</button>
                   </div>
                 </article>
               </div>
@@ -1238,6 +1231,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20261026-pdf-images1"></script>
+  <script src="../assets/js/product-intake.js?v=20261027-cover-extraction-fix1"></script>
 </body>
 </html>
