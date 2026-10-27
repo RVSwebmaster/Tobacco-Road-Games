@@ -118,6 +118,8 @@
     pdfImageStatus: document.getElementById("pdf-image-extraction-status"),
     pdfFrontImage: document.getElementById("pdf-front-image"),
     pdfBackImage: document.getElementById("pdf-back-image"),
+    pdfFrontPlaceholder: document.getElementById("pdf-front-placeholder"),
+    pdfBackPlaceholder: document.getElementById("pdf-back-placeholder"),
     pdfFrontDetails: document.getElementById("pdf-front-details"),
     pdfBackDetails: document.getElementById("pdf-back-details"),
     productLineManagerList: document.getElementById("product-line-manager-list"),
@@ -260,6 +262,7 @@
     front: Object.freeze({
       page: fields.pdfFrontPage,
       image: outputs.pdfFrontImage,
+      placeholder: outputs.pdfFrontPlaceholder,
       details: outputs.pdfFrontDetails,
       replace: buttons.pdfFrontReplace,
       download: buttons.pdfFrontDownload,
@@ -268,6 +271,7 @@
     back: Object.freeze({
       page: fields.pdfBackPage,
       image: outputs.pdfBackImage,
+      placeholder: outputs.pdfBackPlaceholder,
       details: outputs.pdfBackDetails,
       replace: buttons.pdfBackReplace,
       download: buttons.pdfBackDownload,
@@ -283,19 +287,23 @@
     if (!controls) return;
     controls.image.removeAttribute?.("src");
     controls.image.hidden = true;
+    controls.placeholder.hidden = false;
+    controls.placeholder.textContent = role === "front"
+      ? "No front cover extracted"
+      : "No back cover extracted";
     controls.download.disabled = true;
     controls.accept.disabled = true;
     controls.details.textContent = "Not generated.";
   };
 
-  const clearPdfImageExtraction = ({ hidePanel = true } = {}) => {
+  const clearPdfImageExtraction = ({ hidePanel = false } = {}) => {
     for (const role of Object.keys(pdfImageRoleControls)) clearPdfImageCandidate(role);
     if (pdfImageSession) void pdfImageSession.destroy();
     pdfImageSession = null;
     pdfImageSourceFile = null;
     pdfImageBusy = false;
     if (outputs.pdfImagePanel) outputs.pdfImagePanel.hidden = hidePanel;
-    if (outputs.pdfImageStatus) outputs.pdfImageStatus.textContent = "";
+    if (outputs.pdfImageStatus) outputs.pdfImageStatus.textContent = "Select a PDF, then choose Extract Covers.";
     updatePdfReviewControls();
   };
 
@@ -312,6 +320,7 @@
     pdfImageCandidates.set(role, candidate);
     controls.image.src = candidate.url;
     controls.image.hidden = false;
+    controls.placeholder.hidden = true;
     try {
       if (typeof controls.image.decode === "function") {
         await controls.image.decode();
@@ -335,6 +344,8 @@
     updatePdfReviewControls();
     controls.replace.disabled = true;
     controls.details.textContent = `Rendering PDF page ${requestedPage}...`;
+    controls.placeholder.hidden = false;
+    controls.placeholder.textContent = `Rendering PDF page ${requestedPage}...`;
     outputs.pdfImageStatus.textContent = `Rendering PDF page ${requestedPage} locally for the ${role}-cover candidate...`;
     try {
       const module = await import("/assets/js/product-pdf-images.mjs?v=20261026a");
@@ -346,6 +357,8 @@
     } catch (error) {
       const message = error?.message || "unknown rendering error";
       controls.details.textContent = `Could not generate this image: ${message}`;
+      controls.placeholder.hidden = false;
+      controls.placeholder.textContent = `Cover extraction failed: ${message}`;
       outputs.pdfImageStatus.textContent = `PDF page extraction failed: ${message}. Nothing was uploaded or published.`;
       return null;
     } finally {

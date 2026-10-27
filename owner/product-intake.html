@@ -45,6 +45,10 @@
       gap: 6px;
     }
 
+    .intake-field[hidden] {
+      display: none;
+    }
+
     .intake-field__header {
       display: flex;
       align-items: center;
@@ -323,11 +327,19 @@
     .pdf-image-candidate__preview {
       display: grid;
       place-items: center;
-      min-height: 220px;
+      min-height: 360px;
       overflow: hidden;
       border: 1px solid rgba(242, 216, 170, 0.16);
       border-radius: 10px;
       background: rgba(17, 11, 8, 0.86);
+    }
+
+    .pdf-image-candidate__empty {
+      max-width: 24ch;
+      padding: 1rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
     }
 
     .pdf-image-candidate__preview img {
@@ -338,7 +350,8 @@
     }
 
     .pdf-image-extraction[hidden],
-    .pdf-image-candidate__preview img[hidden] {
+    .pdf-image-candidate__preview img[hidden],
+    .pdf-image-candidate__empty[hidden] {
       display: none;
     }
 
@@ -648,9 +661,6 @@
         grid-template-columns: 1fr;
       }
 
-      .pdf-image-extraction__grid {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
@@ -738,6 +748,45 @@
               <button id="extract-pdf-images-button" class="button button--secondary" type="button" disabled>Extract Covers</button>
               <span id="pdf-prefill-file-status" class="intake-help">No PDF selected.</span>
             </div>
+            <section id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">
+              <div>
+                <h3 id="pdf-image-extraction-heading">PDF Cover Review</h3>
+                <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and never replaces preview.webp.</p>
+              </div>
+              <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite">Select a PDF, then choose Extract Covers.</p>
+              <div class="pdf-image-extraction__grid">
+                <article class="pdf-image-candidate" data-pdf-image-role="front">
+                  <h3>FRONT COVER</h3>
+                  <label for="pdf-front-page">Selected PDF page number</label>
+                  <input id="pdf-front-page" class="dock-input" type="number" min="1" step="1" value="1">
+                  <div class="pdf-image-candidate__preview">
+                    <p id="pdf-front-placeholder" class="pdf-image-candidate__empty">No front cover extracted</p>
+                    <img id="pdf-front-image" alt="Generated front-cover candidate" hidden>
+                  </div>
+                  <p id="pdf-front-details" class="intake-help">Not generated.</p>
+                  <div class="pdf-image-candidate__actions">
+                    <button id="pdf-front-replace" class="button button--secondary" type="button">Replace Page</button>
+                    <button id="pdf-front-download" class="button button--secondary" type="button" disabled>Download WebP</button>
+                    <button id="pdf-front-accept" class="button button--primary" type="button" disabled>Accept as cover.webp</button>
+                  </div>
+                </article>
+                <article class="pdf-image-candidate" data-pdf-image-role="back">
+                  <h3>BACK COVER</h3>
+                  <label for="pdf-back-page">Selected PDF page number</label>
+                  <input id="pdf-back-page" class="dock-input" type="number" min="1" step="1" value="1">
+                  <div class="pdf-image-candidate__preview">
+                    <p id="pdf-back-placeholder" class="pdf-image-candidate__empty">No back cover extracted</p>
+                    <img id="pdf-back-image" alt="Generated back-cover candidate" hidden>
+                  </div>
+                  <p id="pdf-back-details" class="intake-help">Not generated.</p>
+                  <div class="pdf-image-candidate__actions">
+                    <button id="pdf-back-replace" class="button button--secondary" type="button">Replace Page</button>
+                    <button id="pdf-back-download" class="button button--secondary" type="button" disabled>Download WebP</button>
+                    <button id="pdf-back-accept" class="button button--primary" type="button" disabled>Accept Back Cover</button>
+                  </div>
+                </article>
+              </div>
+            </section>
             <p id="pdf-review-status" class="intake-help" role="status" aria-live="polite">Select a PDF to enable local review.</p>
             <p id="pdf-prefill-status" class="intake-help" role="status" aria-live="polite">Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.</p>
             <div id="pdf-prefill-summary" class="pdf-prefill__summary" hidden>
@@ -757,39 +806,6 @@
               <button id="apply-pdf-prefill-button" class="button button--secondary" type="button">Apply Selected PDF Values</button>
             </section>
             <ul id="pdf-prefill-warning-list" class="intake-list" hidden></ul>
-            <section id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading" hidden>
-              <div>
-                <h3 id="pdf-image-extraction-heading">PDF cover review</h3>
-                <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and never replaces preview.webp.</p>
-              </div>
-              <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite"></p>
-              <div class="pdf-image-extraction__grid">
-                <article class="pdf-image-candidate" data-pdf-image-role="front">
-                  <h3>Front-cover candidate</h3>
-                  <label for="pdf-front-page">PDF page</label>
-                  <input id="pdf-front-page" class="dock-input" type="number" min="1" step="1" value="1">
-                  <div class="pdf-image-candidate__preview"><img id="pdf-front-image" alt="Generated front-cover candidate" hidden></div>
-                  <p id="pdf-front-details" class="intake-help">Not generated.</p>
-                  <div class="pdf-image-candidate__actions">
-                    <button id="pdf-front-replace" class="button button--secondary" type="button">Replace Page</button>
-                    <button id="pdf-front-download" class="button button--secondary" type="button" disabled>Download WebP</button>
-                    <button id="pdf-front-accept" class="button button--primary" type="button" disabled>Accept as cover.webp</button>
-                  </div>
-                </article>
-                <article class="pdf-image-candidate" data-pdf-image-role="back">
-                  <h3>Back-cover candidate</h3>
-                  <label for="pdf-back-page">PDF page</label>
-                  <input id="pdf-back-page" class="dock-input" type="number" min="1" step="1" value="1">
-                  <div class="pdf-image-candidate__preview"><img id="pdf-back-image" alt="Generated back-cover candidate" hidden></div>
-                  <p id="pdf-back-details" class="intake-help">Not generated.</p>
-                  <div class="pdf-image-candidate__actions">
-                    <button id="pdf-back-replace" class="button button--secondary" type="button">Replace Page</button>
-                    <button id="pdf-back-download" class="button button--secondary" type="button" disabled>Download WebP</button>
-                    <button id="pdf-back-accept" class="button button--primary" type="button" disabled>Accept Back Cover</button>
-                  </div>
-                </article>
-              </div>
-            </section>
           </section>
 
           <div class="intake-grid">
@@ -1231,6 +1247,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20261027-cover-extraction-fix1"></script>
+  <script src="../assets/js/product-intake.js?v=20261027-visible-cover-review1"></script>
 </body>
 </html>

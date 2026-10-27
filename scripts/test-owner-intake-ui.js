@@ -143,17 +143,30 @@ async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
 
 async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
   assert.match(html, /id="extract-pdf-images-button"[^>]*>Extract Covers</);
   assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
   assert.match(html, /id="pdf-back-accept"[^>]*>Accept Back Cover</);
   assert.doesNotMatch(html, /id="pdf-preview-(?:page|image|replace|download|accept)"/, "Automatic cover extraction must not include an interior preview candidate.");
   assert.match(html, /back cover remains a separate review asset and never replaces preview\.webp/i);
-  assert.match(html, /\.pdf-image-extraction\[hidden\][\s\S]*?display:\s*none/, "The extraction panel's hidden state must override its grid display.");
+  assert.match(html, /id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">/, "The PDF Cover Review must not be hidden while a listing workspace is open.");
+  assert.ok(html.indexOf('id="pdf-image-extraction-panel"') < html.indexOf('id="pdf-review-status"'), "The permanent cover review must appear immediately beneath the PDF actions.");
+  assert.match(html, /id="pdf-front-placeholder"[^>]*>No front cover extracted</);
+  assert.match(html, /id="pdf-back-placeholder"[^>]*>No back cover extracted</);
   assert.match(html, /\.pdf-image-candidate__preview img\[hidden\][\s\S]*?display:\s*none/, "Hidden candidate images must not be forced visible by the image display rule.");
+  assert.match(html, /\.intake-field\[hidden\][\s\S]*?display:\s*none/, "The review-only PDF selector must remain hidden in New Listing mode.");
+  assert.match(html, /\.pdf-image-extraction__grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/, "The two cover displays must remain side by side.");
+  assert.doesNotMatch(html, /\.pdf-image-extraction__grid\s*\{\s*grid-template-columns:\s*1fr/, "Responsive rules must not collapse the required side-by-side cover displays.");
+  assert.match(script, /controls\.placeholder\.textContent = `Cover extraction failed:/, "Extraction errors must appear inside the affected cover frame.");
   assert.match(html, /id="product-preview-file"/, "The independent preview.webp upload slot must remain available.");
 
   const harness = createHarness();
   await harness.flush();
+  harness.buttons.startNew.click();
+  assert.equal(harness.outputs.pdfImagePanel.hidden, false, "New Listing must show the permanent PDF Cover Review.");
+  assert.equal(harness.outputs.pdfFrontPlaceholder.textContent, "No front cover extracted");
+  assert.equal(harness.outputs.pdfBackPlaceholder.textContent, "No back cover extracted");
+  assert.equal(harness.outputs.pdfReviewField.hidden, true, "New Listing must not show the existing-listing review-only PDF selector.");
   harness.fields.existingSelect.value = "fixture-alpha";
   harness.buttons.loadExisting.click();
 
@@ -834,6 +847,8 @@ function createHarness(options = {}) {
     pdfImageStatus: register("pdf-image-extraction-status", createElement("p")),
     pdfFrontImage: register("pdf-front-image", createElement("img")),
     pdfBackImage: register("pdf-back-image", createElement("img")),
+    pdfFrontPlaceholder: register("pdf-front-placeholder", createElement("p")),
+    pdfBackPlaceholder: register("pdf-back-placeholder", createElement("p")),
     pdfPreviewImage: register("pdf-preview-image", createElement("img")),
     pdfFrontDetails: register("pdf-front-details", createElement("p")),
     pdfBackDetails: register("pdf-back-details", createElement("p")),
