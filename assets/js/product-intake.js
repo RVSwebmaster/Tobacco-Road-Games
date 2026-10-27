@@ -96,7 +96,10 @@
     coverFile: document.getElementById("product-cover-file"),
     previewFile: document.getElementById("product-preview-file"),
     pdfFile: document.getElementById("product-pdf-file"),
-    reviewPdfFile: document.getElementById("review-pdf-file")
+    reviewPdfFile: document.getElementById("review-pdf-file"),
+    pdfFrontPage: document.getElementById("pdf-front-page"),
+    pdfBackPage: document.getElementById("pdf-back-page"),
+    pdfPreviewPage: document.getElementById("pdf-preview-page")
   };
 
   const outputs = {
@@ -112,6 +115,14 @@
     pdfPrefillWarningList: document.getElementById("pdf-prefill-warning-list"),
     pdfReviewField: document.getElementById("review-pdf-field"),
     pdfReviewStatus: document.getElementById("pdf-review-status"),
+    pdfImagePanel: document.getElementById("pdf-image-extraction-panel"),
+    pdfImageStatus: document.getElementById("pdf-image-extraction-status"),
+    pdfFrontImage: document.getElementById("pdf-front-image"),
+    pdfBackImage: document.getElementById("pdf-back-image"),
+    pdfPreviewImage: document.getElementById("pdf-preview-image"),
+    pdfFrontDetails: document.getElementById("pdf-front-details"),
+    pdfBackDetails: document.getElementById("pdf-back-details"),
+    pdfPreviewDetails: document.getElementById("pdf-preview-details"),
     productLineManagerList: document.getElementById("product-line-manager-list"),
     productLineManagerPanel: document.getElementById("product-line-manager-panel"),
     productLineManagerStatus: document.getElementById("product-line-manager-status"),
@@ -164,6 +175,16 @@
     readPdfPrefill: document.getElementById("read-pdf-prefill-button"),
     openPdfReview: document.getElementById("open-pdf-review-button"),
     downloadPdfReview: document.getElementById("download-pdf-review-button"),
+    extractPdfImages: document.getElementById("extract-pdf-images-button"),
+    pdfFrontReplace: document.getElementById("pdf-front-replace"),
+    pdfFrontDownload: document.getElementById("pdf-front-download"),
+    pdfFrontAccept: document.getElementById("pdf-front-accept"),
+    pdfBackReplace: document.getElementById("pdf-back-replace"),
+    pdfBackDownload: document.getElementById("pdf-back-download"),
+    pdfBackAccept: document.getElementById("pdf-back-accept"),
+    pdfPreviewReplace: document.getElementById("pdf-preview-replace"),
+    pdfPreviewDownload: document.getElementById("pdf-preview-download"),
+    pdfPreviewAccept: document.getElementById("pdf-preview-accept"),
     applyPdfPrefill: document.getElementById("apply-pdf-prefill-button"),
     startNew: document.getElementById("start-new-listing-button"),
     addRelated: document.getElementById("product-related-add"),
@@ -191,6 +212,10 @@
   let preservedUnknownTags = [];
   let pdfPrefillBusy = false;
   let pdfPrefillSuggestions = new Map();
+  let pdfImageBusy = false;
+  let pdfImageSession = null;
+  let pdfImageSourceFile = null;
+  const pdfImageCandidates = new Map();
 
   const getPdfReviewFile = () => isEditingLoadedListing()
     ? fields.reviewPdfFile?.files?.[0] || null
@@ -201,6 +226,7 @@
     const enabled = Boolean(file);
     if (buttons.openPdfReview) buttons.openPdfReview.disabled = !enabled;
     if (buttons.downloadPdfReview) buttons.downloadPdfReview.disabled = !enabled;
+    if (buttons.extractPdfImages) buttons.extractPdfImages.disabled = !enabled || pdfImageBusy;
     if (outputs.pdfReviewField) outputs.pdfReviewField.hidden = !isEditingLoadedListing();
     if (!outputs.pdfReviewStatus) return;
     outputs.pdfReviewStatus.textContent = file
@@ -235,6 +261,188 @@
     link.click();
     outputs.pdfReviewStatus.textContent = `Prepared the unchanged ${file.name} for download. Nothing was uploaded or published.`;
   });
+
+  const pdfImageRoleControls = Object.freeze({
+    front: Object.freeze({
+      page: fields.pdfFrontPage,
+      image: outputs.pdfFrontImage,
+      details: outputs.pdfFrontDetails,
+      replace: buttons.pdfFrontReplace,
+      download: buttons.pdfFrontDownload,
+      accept: buttons.pdfFrontAccept
+    }),
+    back: Object.freeze({
+      page: fields.pdfBackPage,
+      image: outputs.pdfBackImage,
+      details: outputs.pdfBackDetails,
+      replace: buttons.pdfBackReplace,
+      download: buttons.pdfBackDownload,
+      accept: buttons.pdfBackAccept
+    }),
+    preview: Object.freeze({
+      page: fields.pdfPreviewPage,
+      image: outputs.pdfPreviewImage,
+      details: outputs.pdfPreviewDetails,
+      replace: buttons.pdfPreviewReplace,
+      download: buttons.pdfPreviewDownload,
+      accept: buttons.pdfPreviewAccept
+    })
+  });
+
+  const clearPdfImageCandidate = (role) => {
+    const candidate = pdfImageCandidates.get(role);
+    if (candidate?.url) URL.revokeObjectURL(candidate.url);
+    pdfImageCandidates.delete(role);
+    const controls = pdfImageRoleControls[role];
+    if (!controls) return;
+    controls.image.removeAttribute?.("src");
+    controls.image.hidden = true;
+    controls.download.disabled = true;
+    controls.accept.disabled = true;
+    controls.details.textContent = role === "preview"
+      ? "Choose an interior page, then select Replace Page."
+      : "Not generated.";
+  };
+
+  const clearPdfImageExtraction = ({ hidePanel = true } = {}) => {
+    for (const role of Object.keys(pdfImageRoleControls)) clearPdfImageCandidate(role);
+    if (pdfImageSession) void pdfImageSession.destroy();
+    pdfImageSession = null;
+    pdfImageSourceFile = null;
+    pdfImageBusy = false;
+    if (outputs.pdfImagePanel) outputs.pdfImagePanel.hidden = hidePanel;
+    if (outputs.pdfImageStatus) outputs.pdfImageStatus.textContent = "";
+    updatePdfReviewControls();
+  };
+
+  const setPdfImageCandidate = (role, rendered, makeFilename) => {
+    const controls = pdfImageRoleControls[role];
+    if (!controls || !rendered?.blob) return null;
+    clearPdfImageCandidate(role);
+    const candidate = {
+      ...rendered,
+      accepted: false,
+      fileName: makeFilename(role, rendered.pageNumber),
+      url: URL.createObjectURL(rendered.blob)
+    };
+    pdfImageCandidates.set(role, candidate);
+    controls.image.src = candidate.url;
+    controls.image.hidden = false;
+    controls.download.disabled = false;
+    controls.accept.disabled = false;
+    controls.details.textContent = `PDF page ${candidate.pageNumber} - ${candidate.width} x ${candidate.height}px WebP - ${Math.max(1, Math.round(candidate.blob.size / 1024))} KB.`;
+    return candidate;
+  };
+
+  const renderPdfImageCandidate = async (role) => {
+    const controls = pdfImageRoleControls[role];
+    if (!pdfImageSession || !controls || pdfImageBusy) return null;
+    const requestedPage = Number(controls.page.value);
+    pdfImageBusy = true;
+    updatePdfReviewControls();
+    controls.replace.disabled = true;
+    outputs.pdfImageStatus.textContent = `Rendering PDF page ${requestedPage} locally for the ${role === "preview" ? "interior preview" : `${role} cover`} candidate...`;
+    try {
+      const module = await import("/assets/js/product-pdf-images.mjs?v=20261026a");
+      const rendered = await pdfImageSession.renderPage(requestedPage);
+      controls.page.value = String(rendered.pageNumber);
+      const candidate = setPdfImageCandidate(role, rendered, module.makePdfWebpFilename);
+      outputs.pdfImageStatus.textContent = `Generated ${candidate.fileName} locally. Review it before accepting or downloading it.`;
+      return candidate;
+    } catch (error) {
+      outputs.pdfImageStatus.textContent = `PDF page extraction failed: ${error?.message || "unknown rendering error"}. Nothing was uploaded or published.`;
+      return null;
+    } finally {
+      pdfImageBusy = false;
+      controls.replace.disabled = false;
+      updatePdfReviewControls();
+    }
+  };
+
+  const extractPdfImages = async () => {
+    const file = getPdfReviewFile();
+    if (!file || pdfImageBusy) {
+      updatePdfReviewControls();
+      return null;
+    }
+    clearPdfImageExtraction({ hidePanel: false });
+    pdfImageBusy = true;
+    pdfImageSourceFile = file;
+    outputs.pdfImagePanel.hidden = false;
+    outputs.pdfImageStatus.textContent = "Opening the local PDF and reading its page count...";
+    updatePdfReviewControls();
+    try {
+      const module = await import("/assets/js/product-pdf-images.mjs?v=20261026a");
+      const session = await module.openPdfImageExtraction(file);
+      if (getPdfReviewFile() !== file) {
+        await session.destroy();
+        outputs.pdfImageStatus.textContent = "The selected PDF changed during extraction. Start again with the current selection.";
+        return null;
+      }
+      pdfImageSession = session;
+      fields.pdfFrontPage.max = String(session.pageCount);
+      fields.pdfBackPage.max = String(session.pageCount);
+      fields.pdfPreviewPage.max = String(session.pageCount);
+      fields.pdfFrontPage.value = String(session.defaults.frontPage);
+      fields.pdfBackPage.value = String(session.defaults.backPage);
+      fields.pdfPreviewPage.value = String(Math.min(session.pageCount, 2));
+      outputs.pdfImageStatus.textContent = `Opened ${file.name}: ${session.pageCount} pages. Generating front, back, and interior candidates locally...`;
+      pdfImageBusy = false;
+      await renderPdfImageCandidate("front");
+      await renderPdfImageCandidate("back");
+      await renderPdfImageCandidate("preview");
+      outputs.pdfImageStatus.textContent = `Generated candidates from pages ${fields.pdfFrontPage.value}, ${fields.pdfBackPage.value}, and ${fields.pdfPreviewPage.value}. Nothing has been assigned, uploaded, or published.`;
+      return session;
+    } catch (error) {
+      outputs.pdfImageStatus.textContent = `The PDF could not be opened for image extraction: ${error?.message || "unknown extraction error"}. Nothing was uploaded or published.`;
+      return null;
+    } finally {
+      pdfImageBusy = false;
+      updatePdfReviewControls();
+    }
+  };
+
+  const downloadPdfImageCandidate = (role) => {
+    const candidate = pdfImageCandidates.get(role);
+    if (!candidate) return false;
+    const link = document.createElement("a");
+    link.href = candidate.url;
+    link.download = candidate.fileName;
+    link.rel = "noopener";
+    link.click();
+    outputs.pdfImageStatus.textContent = `Prepared ${candidate.fileName} for local download. Nothing was uploaded or published.`;
+    return true;
+  };
+
+  const placeFileInInput = (field, file) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    field.files = transfer.files;
+    field.dispatchEvent?.(new Event("change", { bubbles: true }));
+  };
+
+  const assignPdfImageCandidate = (role, target) => {
+    const candidate = pdfImageCandidates.get(role);
+    if (!candidate) return false;
+    if (role === "back" || target === "back") {
+      candidate.accepted = true;
+      outputs.pdfBackDetails.textContent = `Accepted back-cover candidate from PDF page ${candidate.pageNumber}. It remains separate from cover.webp and preview.webp.`;
+      outputs.pdfImageStatus.textContent = "Back-cover candidate accepted for review only. It was not added to the publishing payload.";
+      return true;
+    }
+    const field = target === "cover" ? fields.coverFile : fields.previewFile;
+    const fileName = target === "cover" ? "cover.webp" : "preview.webp";
+    if (field.files?.length && !globalThis.confirm(`Replace the currently selected ${fileName} with PDF page ${candidate.pageNumber}?`)) {
+      outputs.pdfImageStatus.textContent = `${fileName} was not changed.`;
+      return false;
+    }
+    const file = new File([candidate.blob], fileName, { type: "image/webp", lastModified: Date.now() });
+    placeFileInInput(field, file);
+    candidate.accepted = true;
+    outputs.pdfImageStatus.textContent = `Assigned PDF page ${candidate.pageNumber} to ${fileName}. The original PDF remains selected, and nothing has been uploaded or published.`;
+    updatePreview();
+    return true;
+  };
 
   const slugify = (value) =>
     String(value || "")
@@ -1609,6 +1817,7 @@
     fields.previewFile.value = "";
     fields.pdfFile.value = "";
     if (fields.reviewPdfFile) fields.reviewPdfFile.value = "";
+    clearPdfImageExtraction();
     clearPdfPrefillResults({ keepFileStatus: false });
     outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     selectedRelatedProducts = Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [];
@@ -1684,6 +1893,7 @@
     fields.previewFile.value = "";
     fields.pdfFile.value = "";
     if (fields.reviewPdfFile) fields.reviewPdfFile.value = "";
+    clearPdfImageExtraction();
     clearPdfPrefillResults({ keepFileStatus: false });
     outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     if (fields.existingSelect) {
@@ -1731,6 +1941,7 @@
 
   fields.title.addEventListener("input", updateAutoFields);
   fields.pdfFile?.addEventListener("change", () => {
+    clearPdfImageExtraction();
     clearPdfPrefillResults();
     const file = fields.pdfFile.files[0];
     outputs.pdfPrefillFileStatus.textContent = file
@@ -1742,7 +1953,10 @@
     updatePreview();
     updatePdfReviewControls();
   });
-  fields.reviewPdfFile?.addEventListener("change", updatePdfReviewControls);
+  fields.reviewPdfFile?.addEventListener("change", () => {
+    clearPdfImageExtraction();
+    updatePdfReviewControls();
+  });
   fields.buyMode.addEventListener("change", () => {
     syncBuyModeUi();
     updatePreview();
@@ -1761,6 +1975,16 @@
   buttons.readPdfPrefill?.addEventListener("click", readPdfAndPrefillListing);
   buttons.openPdfReview?.addEventListener("click", openPdfForReview);
   buttons.downloadPdfReview?.addEventListener("click", downloadPdfForReview);
+  buttons.extractPdfImages?.addEventListener("click", extractPdfImages);
+  buttons.pdfFrontReplace?.addEventListener("click", () => renderPdfImageCandidate("front"));
+  buttons.pdfBackReplace?.addEventListener("click", () => renderPdfImageCandidate("back"));
+  buttons.pdfPreviewReplace?.addEventListener("click", () => renderPdfImageCandidate("preview"));
+  buttons.pdfFrontDownload?.addEventListener("click", () => downloadPdfImageCandidate("front"));
+  buttons.pdfBackDownload?.addEventListener("click", () => downloadPdfImageCandidate("back"));
+  buttons.pdfPreviewDownload?.addEventListener("click", () => downloadPdfImageCandidate("preview"));
+  buttons.pdfFrontAccept?.addEventListener("click", () => assignPdfImageCandidate("front", "cover"));
+  buttons.pdfBackAccept?.addEventListener("click", () => assignPdfImageCandidate("back", "back"));
+  buttons.pdfPreviewAccept?.addEventListener("click", () => assignPdfImageCandidate("preview", "preview"));
   buttons.applyPdfPrefill?.addEventListener("click", applySelectedPdfPrefillSuggestions);
   buttons.addProductLine?.addEventListener("click", () => {
     addOwnerProductLine();
@@ -1864,6 +2088,7 @@
         field.value = "";
       }
     });
+    clearPdfImageExtraction();
     clearPdfPrefillResults({ keepFileStatus: false });
     outputs.pdfPrefillStatus.textContent = "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     fields.title.value = "";
@@ -2603,6 +2828,9 @@
     clearPdfPrefillResultsForTests: clearPdfPrefillResults,
     getPdfReviewFileForTests: getPdfReviewFile,
     downloadPdfForReviewForTests: downloadPdfForReview,
+    assignPdfImageCandidateForTests: assignPdfImageCandidate,
+    clearPdfImageExtractionForTests: clearPdfImageExtraction,
+    setPdfImageCandidateForTests: (role, candidate) => setPdfImageCandidate(role, candidate, (candidateRole, pageNumber) => `${candidateRole}-page-${pageNumber}.webp`),
     getModeLabels,
     getPreservedUnknownTags: () => [...preservedUnknownTags],
     getSelectableProductLines,

@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const { Blob, File } = require("node:buffer");
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -11,6 +12,7 @@ async function main() {
   await testTagSelectorMarkup();
   await testPdfPrefillPreservesExistingValues();
   await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
+  await testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
   await testExistingListingLoadsMatchingTagCheckboxes();
@@ -137,6 +139,55 @@ async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
   await harness.flush();
   assert.equal(harness.lastPublishFormData.get("productFile"), null, "The review-only PDF must never enter the existing-listing publish payload.");
   assert.equal(harness.lastPublishFormData.get("reviewPdfFile"), null, "No review-only field may be submitted to publishing.");
+}
+
+async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, /id="extract-pdf-images-button"[^>]*>Extract WebP Images</);
+  assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
+  assert.match(html, /id="pdf-back-accept"[^>]*>Accept Back Cover</);
+  assert.match(html, /id="pdf-preview-accept"[^>]*>Accept as preview\.webp</);
+  assert.match(html, /back cover remains a separate review asset/i);
+
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "fixture-alpha";
+  harness.buttons.loadExisting.click();
+
+  const reviewFile = new File([Buffer.from("%PDF-1.7\nreview-only\n%%EOF")], "review-only.pdf", { type: "application/pdf" });
+  harness.fields.reviewPdfFile.files = [reviewFile];
+  harness.fields.reviewPdfFile.dispatch("change");
+  const frontBlob = new Blob([Buffer.from("RIFFfrontWEBP")], { type: "image/webp" });
+  const previewBlob = new Blob([Buffer.from("RIFFpreviewWEBP")], { type: "image/webp" });
+  const backBlob = new Blob([Buffer.from("RIFFbackWEBP")], { type: "image/webp" });
+
+  harness.api.setPdfImageCandidateForTests("front", { blob: frontBlob, pageNumber: 1, width: 1200, height: 1600 });
+  assert.equal(harness.fields.coverFile.files.length, 0, "Generating a cover candidate must not assign it automatically.");
+  assert.equal(harness.api.assignPdfImageCandidateForTests("front", "cover"), true);
+  assert.equal(harness.fields.coverFile.files[0].name, "cover.webp", "Only explicit acceptance should assign cover.webp.");
+
+  harness.api.setPdfImageCandidateForTests("preview", { blob: previewBlob, pageNumber: 8, width: 1600, height: 1200 });
+  assert.equal(harness.fields.previewFile.files.length, 0, "Generating an interior candidate must not assign it automatically.");
+  assert.equal(harness.api.assignPdfImageCandidateForTests("preview", "preview"), true);
+  assert.equal(harness.fields.previewFile.files[0].name, "preview.webp", "Only explicit acceptance should assign preview.webp.");
+
+  harness.api.setPdfImageCandidateForTests("back", { blob: backBlob, pageNumber: 53, width: 1200, height: 1600 });
+  assert.equal(harness.api.assignPdfImageCandidateForTests("back", "back"), true);
+  assert.equal(harness.fields.previewFile.files[0].name, "preview.webp", "Accepting a back cover must not replace the storefront preview.");
+  assert.equal(harness.fields.pdfFile.files.length, 0, "Review-only extraction must not select a replacement product PDF.");
+  assert.equal(harness.fields.reviewPdfFile.files[0], reviewFile, "The locally selected review PDF must remain selected after image assignment.");
+
+  const existingCover = harness.fields.coverFile.files[0];
+  harness.api.setPdfImageCandidateForTests("front", { blob: frontBlob, pageNumber: 2, width: 1200, height: 1600 });
+  harness.confirmResponse = false;
+  assert.equal(harness.api.assignPdfImageCandidateForTests("front", "cover"), false, "Replacing an already selected cover must require confirmation.");
+  assert.equal(harness.fields.coverFile.files[0], existingCover, "Declining replacement must preserve the already selected cover.");
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+  assert.equal(harness.lastPublishFormData.get("productFile"), null, "Review-only PDF selection must remain absent from the publishing payload.");
+  assert.equal(harness.lastPublishFormData.get("coverFile").name, "cover.webp", "Explicitly accepted cover should use the normal publishing slot.");
+  assert.equal(harness.lastPublishFormData.get("previewFile").name, "preview.webp", "Explicitly accepted interior image should use the normal preview slot.");
 }
 
 async function testTablecraftListingStillLoadsWithProductLine() {
@@ -637,6 +688,11 @@ function createHarness(options = {}) {
       }
     }
 
+    dispatchEvent(event) {
+      this.dispatch(event?.type || "change");
+      return true;
+    }
+
     replaceChildren(...children) {
       this.children = children;
     }
@@ -751,7 +807,10 @@ function createHarness(options = {}) {
     coverFile: register("product-cover-file", createFileInput()),
     previewFile: register("product-preview-file", createFileInput()),
     pdfFile: register("product-pdf-file", createFileInput()),
-    reviewPdfFile: register("review-pdf-file", createFileInput())
+    reviewPdfFile: register("review-pdf-file", createFileInput()),
+    pdfFrontPage: register("pdf-front-page", createInput("1", "number")),
+    pdfBackPage: register("pdf-back-page", createInput("1", "number")),
+    pdfPreviewPage: register("pdf-preview-page", createInput("2", "number"))
   };
   fields.status.value = "preview-available";
   fields.buyMode.value = "preview-only";
@@ -774,6 +833,14 @@ function createHarness(options = {}) {
     pdfPrefillWarningList: register("pdf-prefill-warning-list", createElement("ul")),
     pdfReviewField: register("review-pdf-field", createElement("div")),
     pdfReviewStatus: register("pdf-review-status", createElement("p")),
+    pdfImagePanel: register("pdf-image-extraction-panel", createElement("section")),
+    pdfImageStatus: register("pdf-image-extraction-status", createElement("p")),
+    pdfFrontImage: register("pdf-front-image", createElement("img")),
+    pdfBackImage: register("pdf-back-image", createElement("img")),
+    pdfPreviewImage: register("pdf-preview-image", createElement("img")),
+    pdfFrontDetails: register("pdf-front-details", createElement("p")),
+    pdfBackDetails: register("pdf-back-details", createElement("p")),
+    pdfPreviewDetails: register("pdf-preview-details", createElement("p")),
     productLineManagerList: register("product-line-manager-list", createElement("div")),
     productLineManagerPanel: register("product-line-manager-panel", createElement("div")),
     productLineManagerStatus: register("product-line-manager-status", createElement("p")),
@@ -826,6 +893,16 @@ function createHarness(options = {}) {
     readPdfPrefill: register("read-pdf-prefill-button", createElement("button")),
     openPdfReview: register("open-pdf-review-button", createElement("button")),
     downloadPdfReview: register("download-pdf-review-button", createElement("button")),
+    extractPdfImages: register("extract-pdf-images-button", createElement("button")),
+    pdfFrontReplace: register("pdf-front-replace", createElement("button")),
+    pdfFrontDownload: register("pdf-front-download", createElement("button")),
+    pdfFrontAccept: register("pdf-front-accept", createElement("button")),
+    pdfBackReplace: register("pdf-back-replace", createElement("button")),
+    pdfBackDownload: register("pdf-back-download", createElement("button")),
+    pdfBackAccept: register("pdf-back-accept", createElement("button")),
+    pdfPreviewReplace: register("pdf-preview-replace", createElement("button")),
+    pdfPreviewDownload: register("pdf-preview-download", createElement("button")),
+    pdfPreviewAccept: register("pdf-preview-accept", createElement("button")),
     applyPdfPrefill: register("apply-pdf-prefill-button", createElement("button")),
     startNew: register("start-new-listing-button", createElement("button")),
     addRelated: register("product-related-add", createElement("button")),
@@ -986,7 +1063,19 @@ function createHarness(options = {}) {
   };
 
   const context = {
+    Blob,
     Date,
+    DataTransfer: class FakeDataTransfer {
+      constructor() {
+        const files = [];
+        this.items = { add(file) { files.push(file); } };
+        Object.defineProperty(this, "files", { get: () => files });
+      }
+    },
+    Event: class FakeEvent {
+      constructor(type) { this.type = type; }
+    },
+    File,
     FormData,
     HTMLElement: FakeHTMLElement,
     JSON,

@@ -35,9 +35,11 @@ async function main() {
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "homepage-shelves.js")), "Homepage shelf runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "owner", "product-intake.html")), "Owner Product Intake page is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "product-pdf-autofill.mjs")), "Product PDF autofill runtime is missing from Pages output");
+    assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "product-pdf-images.mjs")), "Product PDF image extraction runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "vendor", "pdfjs", "pdf.mjs")), "Pinned PDF.js browser runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "vendor", "pdfjs", "pdf.worker.mjs")), "Pinned PDF.js worker is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "shared", "product-pdf-prefill.mjs")), "Shared PDF inference helper is missing from Pages output");
+    assert.ok(fs.existsSync(path.join(outputDirectory, "shared", "product-pdf-image-utils.mjs")), "Shared PDF image sizing helper is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "data", "guest-preview-products.json")), "Guest preview fixture data is missing from Pages output");
     assert.ok(fs.existsSync(path.join(repositoryRoot, "functions")), "Pages Functions source is missing");
     assert.throws(
