@@ -637,6 +637,71 @@
       color: var(--accent-strong);
       font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
       font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .intake-feedback {
+      display: grid;
+      gap: 10px;
+      padding: 1rem;
+      border: 2px solid rgba(214, 169, 75, 0.68);
+      border-radius: 14px;
+      background: rgba(44, 31, 18, 0.92);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+      outline: none;
+    }
+
+    .intake-feedback[hidden],
+    .intake-validation-list[hidden],
+    .intake-review-summary[hidden] {
+      display: none;
+    }
+
+    .intake-feedback[data-kind="error"] {
+      border-color: rgba(235, 122, 98, 0.86);
+      background: rgba(61, 24, 19, 0.94);
+    }
+
+    .intake-feedback[data-kind="success"] {
+      border-color: rgba(125, 194, 139, 0.78);
+      background: rgba(20, 50, 31, 0.94);
+    }
+
+    .intake-feedback[data-kind="progress"] {
+      border-color: rgba(110, 174, 225, 0.82);
+      background: rgba(17, 39, 58, 0.94);
+    }
+
+    .intake-feedback h3 {
+      margin: 0;
+      color: var(--text);
+    }
+
+    .intake-validation-list,
+    .intake-review-summary {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding-left: 1.25rem;
+      color: var(--text);
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .intake-validation-link {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #ffe4a1;
+      font: inherit;
+      text-align: left;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .dock-input[aria-invalid="true"] {
+      border-color: #f08a73;
+      box-shadow: 0 0 0 2px rgba(240, 138, 115, 0.22);
     }
 
     @media (max-width: 980px) {
@@ -716,6 +781,13 @@
           </div>
         </section>
 
+        <section id="intake-action-feedback" class="intake-feedback" tabindex="-1" aria-labelledby="intake-feedback-heading" aria-live="polite" hidden>
+          <h3 id="intake-feedback-heading">Action result</h3>
+          <p id="intake-status" class="intake-status"></p>
+          <ul id="intake-validation-list" class="intake-validation-list" hidden></ul>
+          <ul id="intake-review-summary" class="intake-review-summary" hidden></ul>
+        </section>
+
         <section id="listing-details-section" hidden>
           <div class="intake-mode" aria-live="polite">
             <strong>Current Mode</strong>
@@ -781,7 +853,7 @@
                   <div class="pdf-image-candidate__actions">
                     <button id="pdf-back-replace" class="button button--secondary" type="button">Replace Page</button>
                     <button id="pdf-back-download" class="button button--secondary" type="button" disabled>Download WebP</button>
-                    <button id="pdf-back-accept" class="button button--primary" type="button" disabled>Accept Back Cover</button>
+                    <button id="pdf-back-accept" class="button button--primary" type="button" aria-pressed="false" disabled>Mark Back Cover Reviewed</button>
                   </div>
                 </article>
               </div>
@@ -1154,8 +1226,6 @@
             <p id="intake-reset-help">Discards unsaved work from this form only. Published data is not affected.</p>
           </div>
         </div>
-        <p id="intake-status" class="intake-status" aria-live="polite"></p>
-
         <section id="advisor-panel" class="advisor-panel" aria-labelledby="advisor-panel-heading" hidden>
           <div class="section-heading">
             <p class="section-heading__kicker">Product Intelligence</p>
@@ -1246,6 +1316,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20261027-auto-cover-extraction1"></script>
+  <script src="../assets/js/product-intake.js?v=20261027-functional-feedback1"></script>
 </body>
 </html>

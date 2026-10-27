@@ -1,5 +1,16 @@
 (() => {
   const CART_BUY_MODE = "cart";
+  const ALLOWED_BUY_MODES = new Set([
+    "available-direct",
+    "cart",
+    "coming-soon",
+    "fixed-price",
+    "free-download",
+    "manual-invoice",
+    "pay-what-you-want",
+    "preview-only",
+    "retired"
+  ]);
   const CART_BUY_URL_PLACEHOLDER = "No buy URL needed for cart products.";
   const DISCARD_LISTING_CHANGES_MESSAGE = "Discard unsaved work? Any unpublished listing changes will be lost.";
   const EXISTING_LISTING_DRAFT_KEY = "trg_owner_existing_listing_draft_v1";
@@ -150,7 +161,11 @@
     checklist: document.getElementById("asset-checklist"),
     outputHeading: document.getElementById("intake-output-heading"),
     outputCopy: document.getElementById("intake-output-copy"),
+    feedbackPanel: document.getElementById("intake-action-feedback"),
+    feedbackHeading: document.getElementById("intake-feedback-heading"),
     status: document.getElementById("intake-status"),
+    validationList: document.getElementById("intake-validation-list"),
+    reviewSummary: document.getElementById("intake-review-summary"),
     assetFolder: document.getElementById("asset-folder-output"),
     assetFileList: document.getElementById("asset-file-list"),
     previewStatus: document.getElementById("preview-status"),
@@ -291,6 +306,8 @@
       : "No back cover extracted";
     controls.download.disabled = true;
     controls.accept.disabled = true;
+    controls.accept.setAttribute?.("aria-pressed", "false");
+    if (role === "back") controls.accept.textContent = "Mark Back Cover Reviewed";
     controls.details.textContent = "Not generated.";
   };
 
@@ -435,8 +452,11 @@
     if (!candidate) return false;
     if (role === "back" || target === "back") {
       candidate.accepted = true;
-      outputs.pdfBackDetails.textContent = `Accepted back-cover candidate from PDF page ${candidate.pageNumber}. It remains separate from cover.webp and preview.webp.`;
-      outputs.pdfImageStatus.textContent = "Back-cover candidate accepted for review only. It was not added to the publishing payload.";
+      buttons.pdfBackAccept.textContent = "Back Cover Reviewed";
+      buttons.pdfBackAccept.setAttribute?.("aria-pressed", "true");
+      buttons.pdfBackAccept.disabled = true;
+      outputs.pdfBackDetails.textContent = `Back cover from PDF page ${candidate.pageNumber} marked reviewed. It remains separate from cover.webp and preview.webp.`;
+      outputs.pdfImageStatus.textContent = "Back cover marked reviewed. It was not assigned to cover.webp or preview.webp and was not added to the publishing payload.";
       return true;
     }
     const field = target === "cover" ? fields.coverFile : fields.previewFile;
@@ -765,6 +785,79 @@
       buttons.toggleChecklist.textContent = visible ? "Hide Asset Checklist" : "View Asset Checklist";
       buttons.toggleChecklist.setAttribute("aria-expanded", visible ? "true" : "false");
     }
+  };
+
+  const clearFieldValidation = () => {
+    for (const field of Object.values(fields)) {
+      field?.removeAttribute?.("aria-invalid");
+    }
+  };
+
+  const renderValidationIssues = (issues = []) => {
+    if (!outputs.validationList) return;
+    outputs.validationList.hidden = !issues.length;
+    outputs.validationList.replaceChildren(...issues.map((issue) => {
+      const item = document.createElement("li");
+      if (!issue.field?.id) {
+        item.textContent = issue.message;
+        return item;
+      }
+      const link = document.createElement("button");
+      link.type = "button";
+      link.className = "intake-validation-link";
+      link.dataset.validationTarget = issue.field.id;
+      link.textContent = issue.message;
+      item.append(link);
+      return item;
+    }));
+  };
+
+  const renderReviewSummary = (items = []) => {
+    if (!outputs.reviewSummary) return;
+    outputs.reviewSummary.hidden = !items.length;
+    outputs.reviewSummary.replaceChildren(...items.map((text) => {
+      const item = document.createElement("li");
+      item.textContent = text;
+      return item;
+    }));
+  };
+
+  const showActionFeedback = ({
+    kind = "info",
+    heading = "Action result",
+    message = "",
+    issues = [],
+    reviewItems = [],
+    bringIntoView = true
+  } = {}) => {
+    clearFieldValidation();
+    for (const issue of issues) {
+      issue.field?.setAttribute?.("aria-invalid", "true");
+    }
+    if (outputs.feedbackPanel) {
+      outputs.feedbackPanel.hidden = false;
+      outputs.feedbackPanel.dataset.kind = kind;
+    }
+    if (outputs.feedbackHeading) outputs.feedbackHeading.textContent = heading;
+    if (outputs.status) outputs.status.textContent = message;
+    renderValidationIssues(issues);
+    renderReviewSummary(reviewItems);
+    if (bringIntoView && outputs.feedbackPanel) {
+      outputs.feedbackPanel.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      outputs.feedbackPanel.focus?.({ preventScroll: true });
+    }
+  };
+
+  const clearActionFeedback = () => {
+    clearFieldValidation();
+    if (outputs.feedbackPanel) {
+      outputs.feedbackPanel.hidden = true;
+      outputs.feedbackPanel.dataset.kind = "";
+    }
+    if (outputs.feedbackHeading) outputs.feedbackHeading.textContent = "Action result";
+    if (outputs.status) outputs.status.textContent = "";
+    renderValidationIssues([]);
+    renderReviewSummary([]);
   };
 
   const setListingDetailsVisibility = (visible) => {
@@ -1141,42 +1234,81 @@
   };
 
   const analyzeCurrentListing = () => {
-    const validationErrors = validateRequiredFields();
-    if (validationErrors.length) {
+    const validationIssues = validateListingIssues();
+    if (validationIssues.length) {
       clearAdvisorPanel();
-      outputs.status.textContent = validationErrors.join(" ");
+      showActionFeedback({
+        kind: "error",
+        heading: `Validation failed - ${validationIssues.length} requirement${validationIssues.length === 1 ? "" : "s"} need attention`,
+        message: "Nothing was published. Select any requirement below to move to the affected field.",
+        issues: validationIssues
+      });
       return;
     }
 
     if (!globalThis.TRGProductAdvisor?.analyzeProductListing) {
-      outputs.status.textContent = "Listing information looks valid so far. The pricing advisor is not available on this page right now.";
+      showActionFeedback({
+        kind: "success",
+        heading: "Validation passed",
+        message: "All publishing requirements are satisfied. The optional pricing advisor is unavailable, but Review and Publish remain available."
+      });
       return;
     }
 
-    const advisorRun = globalThis.TRGProductAdvisor.analyzeProductListing(buildAdvisorInput(), {
-      catalog: availableProducts
-    });
-    latestAdvisorRun = advisorRun;
-    renderAdvisorPanel(advisorRun);
-    outputs.status.textContent = "Listing information looks valid so far. Review the generated output and any advisory suggestions before publishing.";
+    try {
+      const advisorRun = globalThis.TRGProductAdvisor.analyzeProductListing(buildAdvisorInput(), {
+        catalog: availableProducts
+      });
+      latestAdvisorRun = advisorRun;
+      renderAdvisorPanel(advisorRun);
+      showActionFeedback({
+        kind: "success",
+        heading: "Validation passed",
+        message: "All publishing requirements are satisfied. Advisory suggestions are available below; they do not change the listing unless you apply them."
+      });
+    } catch (error) {
+      clearAdvisorPanel();
+      showActionFeedback({
+        kind: "error",
+        heading: "Validation passed, but the advisor failed",
+        message: `The listing itself is valid. The optional pricing advisor could not finish: ${error?.message || "unknown advisor error"}.`
+      });
+    }
   };
 
   const reviewCurrentListing = () => {
-    const validationErrors = validateRequiredFields();
-    if (validationErrors.length) {
-      outputs.status.textContent = validationErrors.join(" ");
+    const validationIssues = validateListingIssues();
+    if (validationIssues.length) {
+      showActionFeedback({
+        kind: "error",
+        heading: `Review blocked - ${validationIssues.length} requirement${validationIssues.length === 1 ? "" : "s"} need attention`,
+        message: "Nothing was published. Correct the listed requirements, then run Review again.",
+        issues: validationIssues
+      });
       return;
     }
 
     updatePreview();
-    outputs.status.textContent = isEditingLoadedListing()
-      ? "Review ready. No changes have been published yet. Confirm the listing update details below before you update the existing listing."
-      : "Review ready. No changes have been published yet. Confirm the new product details below before you publish the listing.";
+    const payload = buildPayload();
+    setJsonVisibility(true);
+    setChecklistVisibility(true);
+    showActionFeedback({
+      kind: "success",
+      heading: isEditingLoadedListing() ? "Listing update review ready" : "New product review ready",
+      message: isEditingLoadedListing()
+        ? "Review ready. No changes have been published. The exact metadata and replacement-file plan are open below."
+        : "Review ready. Nothing has been published. The exact metadata and required-file plan are open below.",
+      reviewItems: buildReviewSummary(payload)
+    });
   };
 
   const applyAdvisorSuggestions = () => {
     if (!latestAdvisorRun) {
-      outputs.status.textContent = `Run ${getModeLabels().checkButton} first.`;
+      showActionFeedback({
+        kind: "error",
+        heading: "No advisor results are available",
+        message: `Run ${getModeLabels().checkButton} first.`
+      });
       return;
     }
 
@@ -1194,7 +1326,11 @@
     selectedRelatedProducts = [...latestAdvisorRun.suggested_cross_sells];
     syncRelatedPicker();
     updatePreview();
-    outputs.status.textContent = "Advisor suggestions applied to the form. You can still edit every field.";
+    showActionFeedback({
+      kind: "success",
+      heading: "Advisor suggestions applied",
+      message: "The suggestions are now editable form values. Nothing was published."
+    });
   };
 
   const updateRelatedSelectOptions = () => {
@@ -1519,6 +1655,25 @@
     ].join("\n");
   }
 
+  function buildReviewSummary(payload) {
+    const existingMode = isEditingLoadedListing();
+    const selectedPdf = fields.pdfFile.files[0]?.name || "";
+    const currentPdf = Array.isArray(loadedProductRecord?.fileList) && loadedProductRecord.fileList.length
+      ? loadedProductRecord.fileList.join(", ")
+      : "current private product PDF";
+    return [
+      `Mode: ${existingMode ? `Update ${loadedProductRecord?.title || loadedProductSlug}` : "Create a new listing"}.`,
+      `Product: ${payload.title} (${payload.slug}).`,
+      `Storefront state: ${payload.statusLabel}; buy mode: ${payload.buyMode}.`,
+      `R2 folder: ${payload.folder}.`,
+      `Product PDF: ${selectedPdf || (existingMode ? `preserve ${currentPdf}` : "not selected")}.`,
+      `cover.webp: ${fields.coverFile.files[0]?.name || (existingMode ? "preserve current cover" : "not selected")}.`,
+      `preview.webp: ${fields.previewFile.files[0]?.name || (existingMode ? "preserve current preview" : "not selected")}.`,
+      "Back-cover review image: never included in the publishing payload.",
+      `Tags: ${payload.tags.length ? payload.tags.join(", ") : "none selected"}.`
+    ];
+  }
+
   function renderAssetFileList(payload) {
     const items = [
       ...payload.fileList,
@@ -1577,23 +1732,50 @@
     return `${productTitle} updated successfully. The editor is closed and you are back at the listing picker.${liveNote}${workflowNote}`;
   }
 
+  function getPublishFailureHeading(stage) {
+    return ({
+      validation: "Server validation failed",
+      configuration: "Publishing configuration failed",
+      upload: "R2 file upload failed",
+      "catalog-deployment": "Catalog update or deployment failed",
+      unexpected: "Publishing failed"
+    })[stage] || "Publishing failed";
+  }
+
+  function setPublishBusyState(busy) {
+    publishBusy = busy;
+    buttons.publish.disabled = busy;
+    for (const button of [buttons.analyze, buttons.review, buttons.reset]) {
+      if (button) button.disabled = busy;
+    }
+    outputs.feedbackPanel?.setAttribute?.("aria-busy", busy ? "true" : "false");
+  }
+
   async function publishProduct() {
     if (publishBusy) {
       return;
     }
 
-    const missingTextErrors = validateRequiredFields();
-    if (missingTextErrors.length) {
-      outputs.status.textContent = missingTextErrors.join(" ");
+    const validationIssues = validateListingIssues();
+    if (validationIssues.length) {
+      showActionFeedback({
+        kind: "error",
+        heading: `Publish blocked - ${validationIssues.length} requirement${validationIssues.length === 1 ? "" : "s"} need attention`,
+        message: "No request was sent and nothing was uploaded. Correct every listed requirement, then run Review before publishing.",
+        issues: validationIssues
+      });
       return;
     }
 
-    publishBusy = true;
-    buttons.publish.disabled = true;
+    setPublishBusyState(true);
     buttons.publish.textContent = getSubmitProgressLabel();
-    outputs.status.textContent = isEditingLoadedListing()
-      ? "Uploading any selected replacement files and waiting for the existing-listing update workflow to finish..."
-      : "Uploading files and waiting for the new-listing publish workflow to finish...";
+    showActionFeedback({
+      kind: "progress",
+      heading: isEditingLoadedListing() ? "Updating listing" : "Publishing new product",
+      message: isEditingLoadedListing()
+        ? "Preparing metadata, uploading any selected replacement files to R2, and waiting for the existing-listing update workflow to finish..."
+        : "Preparing metadata, uploading the three required files to R2, and waiting for the new-listing publish workflow to finish..."
+    });
 
     try {
       const startedInExistingMode = isEditingLoadedListing();
@@ -1656,36 +1838,55 @@
       const responsePayload = await readResponsePayload(response);
 
       if (!response.ok) {
-        outputs.status.textContent = responsePayload.json.error || formatUnexpectedResponseError("Publish", responsePayload);
+        const errorMessage = responsePayload.json.error || formatUnexpectedResponseError("Publish", responsePayload);
+        const uploadedFiles = Array.isArray(responsePayload.json.filesUploaded) && responsePayload.json.filesUploaded.length
+          ? ` R2 accepted these files before the later failure: ${responsePayload.json.filesUploaded.join(", ")}.`
+          : "";
+        showActionFeedback({
+          kind: "error",
+          heading: getPublishFailureHeading(responsePayload.json.stage),
+          message: `${errorMessage}${uploadedFiles}`
+        });
         return;
       }
 
       if (startedInExistingMode) {
         const updatedTitle = loadedProductRecord?.title || payload.title || payload.slug || "The listing";
         resetFormToDefaults();
-        outputs.status.textContent = formatPublishSuccessMessage(updatedTitle, responsePayload);
+        showActionFeedback({
+          kind: "success",
+          heading: "Existing listing updated",
+          message: formatPublishSuccessMessage(updatedTitle, responsePayload)
+        });
         if (typeof fields.existingSelect?.focus === "function") {
           fields.existingSelect.focus();
         }
         return;
       }
 
-      outputs.status.textContent = responsePayload.json.runUrl
-        ? `${responsePayload.json.message} Workflow: ${responsePayload.json.runUrl}`
-        : responsePayload.json.message;
+      showActionFeedback({
+        kind: "success",
+        heading: responsePayload.json.pending ? "Publish accepted - catalog workflow still running" : "Product published successfully",
+        message: responsePayload.json.runUrl
+          ? `${responsePayload.json.message} Workflow: ${responsePayload.json.runUrl}`
+          : responsePayload.json.message
+      });
       markDraftBaseline();
       persistExistingListingDraft();
-    } catch {
-      outputs.status.textContent = "The publish request failed before the server could answer. Please try again.";
+    } catch (error) {
+      showActionFeedback({
+        kind: "error",
+        heading: "Publish request could not reach the server",
+        message: `The browser did not receive a server response: ${error?.message || "network request failed"}. No success was reported. Review the current listing and try again.`
+      });
     } finally {
-      publishBusy = false;
-      buttons.publish.disabled = false;
+      setPublishBusyState(false);
       updateActionLabels();
     }
   }
 
-  function validateRequiredFields() {
-    const errors = [];
+  function validateListingIssues() {
+    const issues = [];
     const requireFiles = requiresFullAssetSet();
     const requiredTextFields = [
       [fields.title, "Title"],
@@ -1695,36 +1896,97 @@
       [fields.system, "Game system"],
       [fields.line, "Product line"],
       [fields.shortDescription, "Short description"],
-      [fields.longDescription, "Long description"]
+      [fields.longDescription, "Long description"],
+      [fields.status, "Status"],
+      [fields.buyMode, "Buy mode"]
     ];
 
     for (const [field, label] of requiredTextFields) {
       if (!field.value.trim()) {
-        errors.push(`${label} is required.`);
+        issues.push({ field, label, message: `${label} is required.` });
       }
     }
 
-    if (requireFiles && !fields.coverFile.files.length) {
-      errors.push("A cover WebP is required.");
+    const slug = fields.slug.value.trim();
+    if (slug && slugify(slug) !== slug) {
+      issues.push({ field: fields.slug, label: "Slug", message: "Slug must use lowercase letters, numbers, and single hyphens only." });
     }
-    if (requireFiles && !fields.previewFile.files.length) {
-      errors.push("A preview WebP is required.");
+
+    const folder = fields.folder.value.trim();
+    if (folder && (folder.includes("/") || folder.includes("\\") || folder.includes("..") || !/^[A-Za-z0-9 _-]+$/.test(folder))) {
+      issues.push({ field: fields.folder, label: "R2 folder name", message: "R2 folder name may use only letters, numbers, spaces, underscores, and hyphens." });
     }
-    if (requireFiles && !fields.pdfFile.files.length) {
-      errors.push("A product PDF is required.");
+
+    if (!parseList(fields.format.value).length) {
+      issues.push({ field: fields.format, label: "Format", message: "At least one format is required." });
     }
+
+    if (fields.status.value && !statusLabels[fields.status.value]) {
+      issues.push({ field: fields.status, label: "Status", message: "Choose a supported storefront status." });
+    }
+
+    if (fields.buyMode.value && !ALLOWED_BUY_MODES.has(fields.buyMode.value)) {
+      issues.push({ field: fields.buyMode, label: "Buy mode", message: "Choose a supported buy mode." });
+    }
+
+    const pageCountText = fields.pageCount.value.trim();
+    if (pageCountText && (!Number.isInteger(Number(pageCountText)) || Number(pageCountText) < 1)) {
+      issues.push({ field: fields.pageCount, label: "Page count", message: "Page count must be a positive whole number." });
+    }
+
+    const minimumPlayers = fields.playerCountMin?.value ? Number(fields.playerCountMin.value) : null;
+    const maximumPlayers = fields.playerCountMax?.value ? Number(fields.playerCountMax.value) : null;
+    if (minimumPlayers !== null && (!Number.isInteger(minimumPlayers) || minimumPlayers < 1 || minimumPlayers > 100)) {
+      issues.push({ field: fields.playerCountMin, label: "Minimum players", message: "Minimum players must be a whole number from 1 to 100." });
+    }
+    if (maximumPlayers !== null && (!Number.isInteger(maximumPlayers) || maximumPlayers < 1 || maximumPlayers > 100)) {
+      issues.push({ field: fields.playerCountMax, label: "Maximum players", message: "Maximum players must be a whole number from 1 to 100." });
+    }
+    if (minimumPlayers !== null && maximumPlayers !== null && minimumPlayers > maximumPlayers) {
+      issues.push({ field: fields.playerCountMax, label: "Maximum players", message: "Maximum players cannot be lower than minimum players." });
+    }
+
+    for (const [field, label] of [[fields.price, "Price"], [fields.salePrice, "Sale price"]]) {
+      const value = field.value.trim();
+      if (value && (parsePriceNumber(value) === null || parsePriceNumber(value) < 0)) {
+        issues.push({ field, label, message: `${label} must be a valid nonnegative amount.` });
+      }
+    }
+
+    const validateSelectedFile = (field, label, expectedType, extension) => {
+      const file = field.files?.[0];
+      if (!file) {
+        if (requireFiles) issues.push({ field, label, message: `${label} is required.` });
+        return;
+      }
+      const name = String(file.name || "").toLowerCase();
+      const type = String(file.type || "").toLowerCase();
+      if (!file.size) {
+        issues.push({ field, label, message: `${label} is empty.` });
+      } else if (!name.endsWith(extension) || (type && type !== expectedType)) {
+        issues.push({ field, label, message: `${label} must be a ${expectedType === "application/pdf" ? "PDF file" : "WebP image"}.` });
+      }
+    };
+
+    validateSelectedFile(fields.coverFile, "Cover image", "image/webp", ".webp");
+    validateSelectedFile(fields.previewFile, "Preview image", "image/webp", ".webp");
+    validateSelectedFile(fields.pdfFile, "Product PDF", "application/pdf", ".pdf");
 
     if (fields.buyMode.value === CART_BUY_MODE) {
       if (fields.status.value !== "available-direct") {
-        errors.push("Cart products must use Available Direct status.");
+        issues.push({ field: fields.status, label: "Status", message: "Cart products must use Available Direct status." });
       }
       const parsedPrice = parsePriceNumber(fields.price.value);
       if (parsedPrice === null || parsedPrice <= 0) {
-        errors.push("Cart products require a positive price.");
+        issues.push({ field: fields.price, label: "Price", message: "Cart products require a positive price." });
       }
     }
 
-    return errors;
+    return issues;
+  }
+
+  function validateRequiredFields() {
+    return validateListingIssues().map((issue) => issue.message);
   }
 
   async function readResponsePayload(response) {
@@ -1794,13 +2056,17 @@
   function loadExistingProductIntoForm() {
     const slug = fields.existingSelect?.value || "";
     if (!slug) {
-      outputs.status.textContent = "Pick a listing first.";
+      showActionFeedback({ kind: "error", heading: "No listing selected", message: "Pick a listing first." });
       return;
     }
 
     const product = findAvailableProduct(slug);
     if (!product) {
-      outputs.status.textContent = "That listing could not be loaded from the current catalog data.";
+      showActionFeedback({
+        kind: "error",
+        heading: "Listing could not be loaded",
+        message: "That listing is not present in the current catalog data."
+      });
       return;
     }
 
@@ -1873,7 +2139,11 @@
     updatePdfReviewControls();
     markDraftBaseline();
     persistExistingListingDraft();
-    outputs.status.textContent = `Loaded ${product.title} for editing.`;
+    showActionFeedback({
+      kind: "success",
+      heading: "Existing listing loaded",
+      message: `Loaded ${product.title} for editing. No changes have been published.`
+    });
   }
 
   function restorePersistedExistingListingDraft() {
@@ -1956,7 +2226,11 @@
       ? persisted.draftBaseline
       : captureDraftState();
     persistExistingListingDraft();
-    outputs.status.textContent = `Restored ${loadedProductRecord?.title || loadedProductSlug} for editing after the page was reloaded.`;
+    showActionFeedback({
+      kind: "info",
+      heading: "Unsaved listing draft restored",
+      message: `Restored ${loadedProductRecord?.title || loadedProductSlug} for editing after the page was reloaded.`
+    });
     return true;
   }
 
@@ -2034,7 +2308,11 @@
   buttons.applyAdvisor?.addEventListener("click", applyAdvisorSuggestions);
   buttons.ignoreAdvisor?.addEventListener("click", () => {
     clearAdvisorPanel();
-    outputs.status.textContent = "Advisor suggestions cleared.";
+    showActionFeedback({
+      kind: "success",
+      heading: "Advisor suggestions cleared",
+      message: "The listing values were not changed."
+    });
   });
   buttons.publish.addEventListener("click", publishProduct);
   buttons.loadExisting?.addEventListener("click", loadExistingProductIntoForm);
@@ -2046,12 +2324,16 @@
   });
   buttons.leaveListing?.addEventListener("click", () => {
     if (hasUnsavedChanges() && !confirmDiscardChanges()) {
-      outputs.status.textContent = "Unsaved listing changes are still in place.";
+      showActionFeedback({ kind: "info", heading: "Changes preserved", message: "Unsaved listing changes are still in place." });
       return;
     }
 
     resetFormToDefaults({ hideDetails: true });
-    outputs.status.textContent = "Returned to the listing picker. Published data was not changed.";
+    showActionFeedback({
+      kind: "success",
+      heading: "Returned to listing picker",
+      message: "Returned to the listing picker. Published data was not changed."
+    });
     if (typeof fields.existingSelect?.focus === "function") {
       fields.existingSelect.focus();
     }
@@ -2059,14 +2341,18 @@
   buttons.startNew?.addEventListener("click", () => {
     const wasEditing = isEditingLoadedListing();
     if (hasUnsavedChanges() && !confirmDiscardChanges()) {
-      outputs.status.textContent = "Unsaved listing changes are still in place.";
+      showActionFeedback({ kind: "info", heading: "Changes preserved", message: "Unsaved listing changes are still in place." });
       return;
     }
 
     resetFormToDefaults({ hideDetails: false });
-    outputs.status.textContent = wasEditing
-      ? "Existing-listing edits were discarded. You are now creating a new product."
-      : "New listing workspace is ready. Nothing has been published yet.";
+    showActionFeedback({
+      kind: "info",
+      heading: "New listing workspace ready",
+      message: wasEditing
+        ? "Existing-listing edits were discarded. You are now creating a new product."
+        : "Nothing has been published yet."
+    });
     if (typeof fields.title?.focus === "function") {
       fields.title.focus();
     }
@@ -2078,6 +2364,13 @@
   });
   buttons.toggleChecklist?.addEventListener("click", () => {
     setChecklistVisibility(Boolean(outputs.checklistPanel?.hidden));
+  });
+  outputs.validationList?.addEventListener("click", (event) => {
+    const targetId = event.target?.dataset?.validationTarget || "";
+    if (!targetId) return;
+    const field = document.getElementById(targetId);
+    field?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    field?.focus?.({ preventScroll: true });
   });
 
   fields.productLineManagerInput?.addEventListener("keydown", (event) => {
@@ -2119,6 +2412,7 @@
   });
 
   const resetFormToDefaults = ({ hideDetails = true } = {}) => {
+    clearActionFeedback();
     document.querySelectorAll("input, textarea, select").forEach((field) => {
       if (field.type === "file") {
         field.value = "";
@@ -2842,14 +3136,18 @@
   buttons.reset.addEventListener("click", () => {
     const wasEditing = isEditingLoadedListing();
     if (hasUnsavedChanges() && !confirmDiscardChanges()) {
-      outputs.status.textContent = "Unsaved listing changes are still in place.";
+      showActionFeedback({ kind: "info", heading: "Changes preserved", message: "Unsaved listing changes are still in place." });
       return;
     }
 
     resetFormToDefaults({ hideDetails: wasEditing });
-    outputs.status.textContent = wasEditing
-      ? "Listing changes discarded. You are back at the listing picker. Published data was not changed."
-      : "New product form cleared. Published data was not changed.";
+    showActionFeedback({
+      kind: "success",
+      heading: wasEditing ? "Listing changes discarded" : "New product form cleared",
+      message: wasEditing
+        ? "You are back at the listing picker. Published data was not changed."
+        : "Published data was not changed."
+    });
   });
 
   clearAdvisorPanel();

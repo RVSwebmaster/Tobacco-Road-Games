@@ -14,6 +14,9 @@ async function main() {
   await testPdfSelectionAutomaticallyProcessesMetadataAndCovers();
   await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
   await testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate();
+  await testVisibleValidationAndReviewFeedback();
+  await testDuplicatePublishClicksAreBlocked();
+  await testPublishFailureIdentifiesPipelineStage();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
   await testExistingListingLoadsMatchingTagCheckboxes();
@@ -147,7 +150,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
   assert.doesNotMatch(html, /id="extract-pdf-images-button"/, "Automatic cover extraction must not keep a redundant Extract Covers button in the normal workflow.");
   assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
-  assert.match(html, /id="pdf-back-accept"[^>]*>Accept Back Cover</);
+  assert.match(html, /id="pdf-back-accept"[^>]*>Mark Back Cover Reviewed</);
   assert.doesNotMatch(html, /id="pdf-preview-(?:page|image|replace|download|accept)"/, "Automatic cover extraction must not include an interior preview candidate.");
   assert.match(html, /back cover remains a separate review asset and never replaces preview\.webp/i);
   assert.match(html, /id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">/, "The PDF Cover Review must not be hidden while a listing workspace is open.");
@@ -184,6 +187,9 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
 
   await harness.api.setPdfImageCandidateForTests("back", { blob: backBlob, pageNumber: 53, width: 1200, height: 1600 });
   assert.equal(harness.api.assignPdfImageCandidateForTests("back", "back"), true);
+  assert.equal(harness.buttons.pdfBackAccept.textContent, "Back Cover Reviewed", "Back-cover review should leave a persistent visible result on its action.");
+  assert.equal(harness.buttons.pdfBackAccept.disabled, true, "A reviewed back-cover candidate should not keep offering the same ambiguous action.");
+  assert.equal(harness.buttons.pdfBackAccept["aria-pressed"], "true", "Back-cover review should expose its selected state accessibly.");
   assert.equal(harness.fields.previewFile.files.length, 0, "Accepting a back cover must not populate or replace the storefront preview.");
   assert.equal(harness.fields.pdfFile.files.length, 0, "Review-only extraction must not select a replacement product PDF.");
   assert.equal(harness.fields.reviewPdfFile.files[0], reviewFile, "The locally selected review PDF must remain selected after image assignment.");
@@ -199,6 +205,81 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.equal(harness.lastPublishFormData.get("productFile"), null, "Review-only PDF selection must remain absent from the publishing payload.");
   assert.equal(harness.lastPublishFormData.get("coverFile").name, "cover.webp", "Explicitly accepted cover should use the normal publishing slot.");
   assert.equal(harness.lastPublishFormData.get("previewFile"), null, "Cover extraction must not silently add a storefront preview image.");
+}
+
+async function testVisibleValidationAndReviewFeedback() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, /id="intake-action-feedback"[^>]*tabindex="-1"/, "Action results should have a focusable visible feedback panel.");
+  assert.match(html, /id="intake-validation-list"/, "Validation should expose every failed requirement as a visible list.");
+  assert.match(html, /id="intake-review-summary"/, "Review should expose a readable file-and-metadata summary.");
+
+  const harness = createHarness();
+  await harness.flush();
+  harness.buttons.startNew.click();
+  harness.buttons.analyze.click();
+
+  assert.equal(harness.outputs.feedbackPanel.hidden, false, "Check must reveal the action-feedback panel.");
+  assert.equal(harness.outputs.feedbackPanel.dataset.kind, "error", "Failed validation must be visually identified as an error.");
+  assert.match(harness.outputs.feedbackHeading.textContent, /Validation failed/, "Failed validation needs an explicit heading.");
+  assert.ok(harness.outputs.validationList.children.length >= 1, "Every validation failure should be rendered in the visible requirement list.");
+  assert.ok(harness.outputs.feedbackPanel.scrollIntoViewCount >= 1, "Check must bring its result into view.");
+  assert.ok(harness.outputs.feedbackPanel.focusCount >= 1, "Check must move keyboard focus to its result.");
+  assert.equal(harness.fields.title["aria-invalid"], "true", "Invalid fields should be identified accessibly.");
+
+  harness.fields.existingSelect.value = "fixture-alpha";
+  harness.buttons.loadExisting.click();
+  harness.buttons.review.click();
+
+  assert.equal(harness.outputs.feedbackPanel.dataset.kind, "success", "A valid review should show a success result.");
+  assert.match(harness.outputs.feedbackHeading.textContent, /review ready/i, "A valid review needs an explicit ready heading.");
+  assert.equal(harness.outputs.jsonPanel.hidden, false, "Review must automatically expose the exact JSON payload.");
+  assert.equal(harness.outputs.checklistPanel.hidden, false, "Review must automatically expose the asset checklist.");
+  assert.ok(harness.outputs.reviewSummary.children.length >= 7, "Review must summarize metadata and all file assignments.");
+  assert.match(harness.outputs.reviewSummary.children.map((item) => item.textContent).join(" "), /Back-cover review image: never included/, "Review must make the back-cover exclusion explicit.");
+}
+
+async function testDuplicatePublishClicksAreBlocked() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "fixture-alpha";
+  harness.buttons.loadExisting.click();
+  const deferred = createDeferred();
+  harness.mockPublishResponse = deferred.promise;
+
+  harness.buttons.publish.click();
+  harness.buttons.publish.click();
+  await harness.flush();
+
+  assert.equal(harness.publishRequestCount, 1, "Repeated clicks during an active publish must send only one request.");
+  assert.equal(harness.buttons.publish.disabled, true, "The publish control must remain disabled while the request is active.");
+  assert.equal(harness.outputs.feedbackPanel.dataset.kind, "progress", "An active publish must show an unmistakable processing state.");
+
+  deferred.resolve(createJsonResponse({ message: "Published.", ok: true, stage: "complete" }));
+  await harness.flush();
+  await harness.flush();
+  assert.equal(harness.buttons.publish.disabled, false, "Publish should re-enable after the request finishes.");
+  assert.equal(harness.publishRequestCount, 1, "Finishing the request must not replay a duplicate submission.");
+}
+
+async function testPublishFailureIdentifiesPipelineStage() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.fields.existingSelect.value = "fixture-alpha";
+  harness.buttons.loadExisting.click();
+  harness.mockPublishResponse = createJsonResponse({
+    error: "Files uploaded to R2, but the catalog workflow failed.",
+    filesUploaded: ["fixture-alpha/cover.webp"],
+    stage: "catalog-deployment"
+  }, 502);
+
+  await harness.buttons.publish.click();
+  await harness.flush();
+
+  assert.equal(harness.outputs.feedbackPanel.dataset.kind, "error", "A failed publish must remain visibly identified as an error.");
+  assert.equal(harness.outputs.feedbackHeading.textContent, "Catalog update or deployment failed", "The Owner must be told which publishing stage failed.");
+  assert.match(harness.outputs.status.textContent, /Files uploaded to R2, but the catalog workflow failed\./, "The server's failure reason must reach the Owner interface.");
+  assert.match(harness.outputs.status.textContent, /fixture-alpha\/cover\.webp/, "The interface must disclose files uploaded before a later pipeline failure.");
+  assert.equal(harness.buttons.publish.disabled, false, "The publish control must recover after a failed request.");
 }
 
 async function testPdfSelectionAutomaticallyProcessesMetadataAndCovers() {
@@ -710,6 +791,8 @@ function createHarness(options = {}) {
       this.innerHTML = "";
       this.listeners = new Map();
       this.placeholder = "";
+      this.focusCount = 0;
+      this.scrollIntoViewCount = 0;
       this.src = "";
       this.textContent = "";
       this.type = this.tagName === "TEXTAREA" ? "textarea" : "";
@@ -752,6 +835,18 @@ function createHarness(options = {}) {
 
     replaceChildren(...children) {
       this.children = children;
+    }
+
+    focus() {
+      this.focusCount += 1;
+    }
+
+    scrollIntoView() {
+      this.scrollIntoViewCount += 1;
+    }
+
+    removeAttribute(name) {
+      delete this[String(name)];
     }
 
     setAttribute(name, value) {
@@ -912,7 +1007,11 @@ function createHarness(options = {}) {
     modeIndicatorCopy: register("product-mode-indicator-copy", createElement("span")),
     outputHeading: register("intake-output-heading", createElement("h2")),
     outputCopy: register("intake-output-copy", createElement("p")),
+    feedbackPanel: register("intake-action-feedback", createElement("section")),
+    feedbackHeading: register("intake-feedback-heading", createElement("h3")),
     status: register("intake-status", createElement("p")),
+    validationList: register("intake-validation-list", createElement("ul")),
+    reviewSummary: register("intake-review-summary", createElement("ul")),
     advisorPanel: register("advisor-panel", createElement("section")),
     advisorSummaryCopy: register("advisor-summary-copy", createElement("p")),
     advisorSuggestedPrice: register("advisor-suggested-price", createElement("span")),
@@ -1113,6 +1212,7 @@ function createHarness(options = {}) {
     fields,
     flush,
     lastPublishFormData: null,
+    publishRequestCount: 0,
     mockPublishResponse: createJsonResponse({
       message: "Published."
     }),
@@ -1157,6 +1257,7 @@ function createHarness(options = {}) {
         return createJsonResponse(intakeMap);
       }
       if (String(url).includes("/owner/api/publish")) {
+        harness.publishRequestCount += 1;
         harness.lastPublishFormData = options.body || null;
         if (harness.lastPublishFormData && typeof harness.lastPublishFormData.get === "function") {
           const slug = String(harness.lastPublishFormData.get("slug") || "").trim();

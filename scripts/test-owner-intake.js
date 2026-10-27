@@ -36,6 +36,8 @@ async function main() {
   testOwnerWorkbenchIsOpen();
   await testMissingFiles(ownerPublish, baseEnv, openOwnerContext);
   await testWrongFileType(ownerPublish, baseEnv, openOwnerContext);
+  await testMissingBucketReportsConfigurationStage(ownerPublish, baseEnv, openOwnerContext);
+  await testR2FailureReportsUploadStageAndRollsBack(ownerPublish, baseEnv, openOwnerContext);
   await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, openOwnerContext);
   await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, openOwnerContext);
   await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, openOwnerContext);
@@ -153,6 +155,7 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
   assert.equal(response.status, 400, "Missing files should return 400.");
   const payload = await response.json();
   assert.match(payload.error, /product pdf is required/i, "Missing PDF error should be human-readable.");
+  assert.equal(payload.stage, "validation", "Missing files should be identified as a validation-stage failure.");
 }
 
 async function testWrongFileType(ownerPublish, env, cookieHeader) {
@@ -174,6 +177,48 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
   assert.equal(response.status, 400, "Wrong file type should return 400.");
   const payload = await response.json();
   assert.match(payload.error, /preview image must be a webp image/i, "Wrong file type error should be human-readable.");
+  assert.equal(payload.stage, "validation", "Wrong file types should be identified as a validation-stage failure.");
+}
+
+async function testMissingBucketReportsConfigurationStage(ownerPublish, env, cookieHeader) {
+  const formData = new FormData();
+  addRequiredTextFields(formData);
+  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+
+  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), env);
+  const payload = await response.json();
+  assert.equal(response.status, 503, "A missing R2 binding should return 503.");
+  assert.equal(payload.stage, "configuration", "A missing R2 binding should be identified as a configuration-stage failure.");
+}
+
+async function testR2FailureReportsUploadStageAndRollsBack(ownerPublish, env, cookieHeader) {
+  const formData = new FormData();
+  addRequiredTextFields(formData);
+  formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
+  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
+  const uploaded = [];
+  const deleted = [];
+  const bucket = {
+    async put(key) {
+      if (uploaded.length === 1) throw new Error("synthetic R2 failure");
+      uploaded.push(key);
+    },
+    async delete(key) {
+      deleted.push(key);
+    }
+  };
+
+  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+    ...env,
+    TRG_PRODUCTS: bucket
+  });
+  const payload = await response.json();
+  assert.equal(response.status, 502, "An R2 write failure should return 502.");
+  assert.equal(payload.stage, "upload", "An R2 write failure should be identified as an upload-stage failure.");
+  assert.deepEqual(deleted, uploaded, "An incomplete R2 upload should roll back every object written by that request.");
 }
 
 async function testCartPublishAcceptedWithoutBuyUrl(ownerPublish, env, cookieHeader) {
@@ -489,6 +534,7 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
     assert.equal(response.status, 200, "Successful publish should return 200.");
     const payload = await response.json();
     assert.equal(payload.ok, true, "Successful publish should report success.");
+    assert.equal(payload.stage, "complete", "A completed workflow should identify the completed publish stage.");
     assert.deepEqual(bucket.putKeys.sort(), [
       "new-product/cover.webp",
       "new-product/preview.webp",
@@ -546,6 +592,7 @@ async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPub
     const payload = await response.json();
     assert.equal(payload.ok, true, "Pending publish should still use a successful JSON envelope.");
     assert.equal(payload.pending, true, "Pending publish should tell the client the workflow is still running.");
+    assert.equal(payload.stage, "catalog-deployment", "A pending GitHub workflow should be identified as the catalog-deployment stage.");
     assert.deepEqual(bucket.putKeys, [], "Metadata-only pending publish should not upload replacement assets.");
   } finally {
     crypto.randomUUID = originalRandomUuid;
@@ -573,6 +620,7 @@ async function testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, env,
   assert.equal(response.status, 502, "GitHub dispatch failures should return a structured 502 instead of throwing.");
   const payload = await response.json();
   assert.match(payload.error, /could not be reached from Cloudflare/i, "GitHub dispatch failures should surface a safe, actionable message.");
+  assert.equal(payload.stage, "catalog-deployment", "GitHub dispatch failures should be identified as catalog-deployment failures.");
 }
 
 async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHeader) {
@@ -602,6 +650,7 @@ async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHe
     assert.match(response.headers.get("content-type") || "", /application\/json/i, "Unexpected publish exceptions should return JSON.");
     const payload = await response.json();
     assert.match(payload.error, /could not be completed/i, "Unexpected publish exceptions should return a safe owner-facing message.");
+    assert.equal(payload.stage, "unexpected", "Unexpected publish exceptions should be identified separately from validation, upload, and deployment failures.");
     assert.equal(captured.length, 1, "Unexpected publish exceptions should be logged once.");
     assert.match(captured[0], /owner_publish_exception/, "Unexpected publish exceptions should use the safe publish event log.");
     assert.doesNotMatch(captured[0], /test-token/i, "Unexpected publish logs must not leak configured tokens.");

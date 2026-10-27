@@ -75,21 +75,24 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
     const parsed = parsePublishForm(formData, options.productFolderMap);
     if (!parsed.valid) {
       return jsonResponse({
-        error: parsed.userMessage
+        error: parsed.userMessage,
+        stage: "validation"
       }, 400);
     }
 
     const bucket = env.TRG_PRODUCTS;
     if (!bucket || typeof bucket.put !== "function") {
       return jsonResponse({
-        error: "The product bucket binding is missing. Add TRG_PRODUCTS in Cloudflare before publishing."
+        error: "The product bucket binding is missing. Add TRG_PRODUCTS in Cloudflare before publishing.",
+        stage: "configuration"
       }, 503);
     }
 
     const uploadResult = await uploadRequiredProductFiles(bucket, parsed.payload);
     if (!uploadResult.ok) {
       return jsonResponse({
-        error: uploadResult.userMessage
+        error: uploadResult.userMessage,
+        stage: "upload"
       }, 502);
     }
 
@@ -107,6 +110,7 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
       return jsonResponse({
         error: `Files uploaded to R2, but the store was not published. ${dispatchResult.userMessage}`,
         filesUploaded: uploadResult.uploadedKeys,
+        stage: "catalog-deployment",
         runUrl: dispatchResult.runUrl || ""
       }, 502);
     }
@@ -118,12 +122,14 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
         : "Files uploaded and the store publish workflow completed successfully.",
       ok: true,
       pending: Boolean(dispatchResult.pending),
+      stage: dispatchResult.pending ? "catalog-deployment" : "complete",
       runUrl: dispatchResult.runUrl || ""
     }, dispatchResult.pending ? 202 : 200);
   } catch (error) {
     logOwnerPublishException(request, error);
     return jsonResponse({
-      error: "Owner publish could not be completed. Please try again. If the problem persists, check Cloudflare bindings and the GitHub workflow configuration."
+      error: "Owner publish could not be completed. Please try again. If the problem persists, check Cloudflare bindings and the GitHub workflow configuration.",
+      stage: "unexpected"
     }, 500);
   }
 }
