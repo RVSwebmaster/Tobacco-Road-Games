@@ -174,7 +174,6 @@
     readPdfPrefill: document.getElementById("read-pdf-prefill-button"),
     openPdfReview: document.getElementById("open-pdf-review-button"),
     downloadPdfReview: document.getElementById("download-pdf-review-button"),
-    extractPdfImages: document.getElementById("extract-pdf-images-button"),
     pdfFrontReplace: document.getElementById("pdf-front-replace"),
     pdfFrontDownload: document.getElementById("pdf-front-download"),
     pdfFrontAccept: document.getElementById("pdf-front-accept"),
@@ -222,7 +221,6 @@
     const enabled = Boolean(file);
     if (buttons.openPdfReview) buttons.openPdfReview.disabled = !enabled;
     if (buttons.downloadPdfReview) buttons.downloadPdfReview.disabled = !enabled;
-    if (buttons.extractPdfImages) buttons.extractPdfImages.disabled = !enabled || pdfImageBusy;
     if (outputs.pdfReviewField) outputs.pdfReviewField.hidden = !isEditingLoadedListing();
     if (!outputs.pdfReviewStatus) return;
     outputs.pdfReviewStatus.textContent = file
@@ -303,7 +301,7 @@
     pdfImageSourceFile = null;
     pdfImageBusy = false;
     if (outputs.pdfImagePanel) outputs.pdfImagePanel.hidden = hidePanel;
-    if (outputs.pdfImageStatus) outputs.pdfImageStatus.textContent = "Select a PDF, then choose Extract Covers.";
+    if (outputs.pdfImageStatus) outputs.pdfImageStatus.textContent = "Select a PDF to process its front and back covers automatically.";
     updatePdfReviewControls();
   };
 
@@ -656,9 +654,11 @@
 
   const readPdfAndPrefillListing = async () => {
     if (pdfPrefillBusy) return null;
-    const file = fields.pdfFile.files[0];
+    const file = getPdfReviewFile();
     if (!file) {
-      outputs.pdfPrefillStatus.textContent = "Choose a product PDF before reading it.";
+      outputs.pdfPrefillStatus.textContent = isEditingLoadedListing()
+        ? "Choose a local review PDF before reading it."
+        : "Choose a product PDF before reading it.";
       return null;
     }
     pdfPrefillBusy = true;
@@ -672,21 +672,47 @@
           outputs.pdfPrefillStatus.textContent = `Reading selected page ${current} of ${total} (PDF page ${pageNumber})...`;
         }
       });
-      if (fields.pdfFile.files[0] !== file) {
+      if (getPdfReviewFile() !== file) {
         outputs.pdfPrefillStatus.textContent = "The selected PDF changed during analysis. Read the newly selected file when ready.";
         return null;
       }
       applyPdfPrefillResults(result);
-      outputs.pdfPrefillFileStatus.textContent = `${file.name} remains selected for publishing.`;
+      outputs.pdfPrefillFileStatus.textContent = isEditingLoadedListing()
+        ? `${file.name} remains selected for local review only and will not replace the published PDF.`
+        : `${file.name} remains selected for publishing.`;
       return result;
     } catch (error) {
-      outputs.pdfPrefillStatus.textContent = `The PDF could not be read: ${error?.message || "unknown extraction error"}. The file remains selected and may still be used by the normal publishing workflow.`;
-      outputs.pdfPrefillFileStatus.textContent = `${file.name} remains selected for publishing.`;
+      outputs.pdfPrefillStatus.textContent = isEditingLoadedListing()
+        ? `The PDF could not be read: ${error?.message || "unknown extraction error"}. The local review file remains separate from the publishing workflow.`
+        : `The PDF could not be read: ${error?.message || "unknown extraction error"}. The file remains selected and may still be used by the normal publishing workflow.`;
+      outputs.pdfPrefillFileStatus.textContent = isEditingLoadedListing()
+        ? `${file.name} remains selected for local review only and will not replace the published PDF.`
+        : `${file.name} remains selected for publishing.`;
       return null;
     } finally {
       pdfPrefillBusy = false;
       buttons.readPdfPrefill.disabled = false;
     }
+  };
+
+  let automaticPdfProcessorsForTests = null;
+
+  const processSelectedPdf = async () => {
+    const file = getPdfReviewFile();
+    if (!file) {
+      updatePdfReviewControls();
+      return null;
+    }
+
+    outputs.pdfPrefillStatus.textContent = "Processing PDF...";
+    outputs.pdfImageStatus.textContent = "Processing PDF...";
+
+    const prefillProcessor = automaticPdfProcessorsForTests?.prefill || readPdfAndPrefillListing;
+    const coverProcessor = automaticPdfProcessorsForTests?.covers || extractPdfImages;
+    await prefillProcessor(file);
+    if (getPdfReviewFile() !== file) return null;
+    await coverProcessor(file);
+    return file;
   };
 
   const normalizeProductLineName = (value) =>
@@ -1963,10 +1989,13 @@
       : "Choose a readable PDF to begin. Scanned image-only documents will still provide page count and format.";
     updatePreview();
     updatePdfReviewControls();
+    if (file) void processSelectedPdf();
   });
   fields.reviewPdfFile?.addEventListener("change", () => {
     clearPdfImageExtraction();
+    clearPdfPrefillResults();
     updatePdfReviewControls();
+    if (fields.reviewPdfFile.files[0]) void processSelectedPdf();
   });
   fields.buyMode.addEventListener("change", () => {
     syncBuyModeUi();
@@ -1986,7 +2015,6 @@
   buttons.readPdfPrefill?.addEventListener("click", readPdfAndPrefillListing);
   buttons.openPdfReview?.addEventListener("click", openPdfForReview);
   buttons.downloadPdfReview?.addEventListener("click", downloadPdfForReview);
-  buttons.extractPdfImages?.addEventListener("click", extractPdfImages);
   buttons.pdfFrontReplace?.addEventListener("click", () => renderPdfImageCandidate("front"));
   buttons.pdfBackReplace?.addEventListener("click", () => renderPdfImageCandidate("back"));
   buttons.pdfFrontDownload?.addEventListener("click", () => downloadPdfImageCandidate("front"));
@@ -2839,6 +2867,9 @@
     assignPdfImageCandidateForTests: assignPdfImageCandidate,
     clearPdfImageExtractionForTests: clearPdfImageExtraction,
     setPdfImageCandidateForTests: (role, candidate) => setPdfImageCandidate(role, candidate, (candidateRole, pageNumber) => `${candidateRole}-page-${pageNumber}.webp`),
+    setAutomaticPdfProcessorsForTests: (processors) => {
+      automaticPdfProcessorsForTests = processors || null;
+    },
     getModeLabels,
     getPreservedUnknownTags: () => [...preservedUnknownTags],
     getSelectableProductLines,

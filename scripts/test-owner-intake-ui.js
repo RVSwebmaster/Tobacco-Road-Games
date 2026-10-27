@@ -11,6 +11,7 @@ async function main() {
   await testProductLineTerminologyAndManagerLabels();
   await testTagSelectorMarkup();
   await testPdfPrefillPreservesExistingValues();
+  await testPdfSelectionAutomaticallyProcessesMetadataAndCovers();
   await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
   await testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate();
   await testListingDetailsStayHiddenUntilWorkStarts();
@@ -144,7 +145,7 @@ async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
 async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
   const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
-  assert.match(html, /id="extract-pdf-images-button"[^>]*>Extract Covers</);
+  assert.doesNotMatch(html, /id="extract-pdf-images-button"/, "Automatic cover extraction must not keep a redundant Extract Covers button in the normal workflow.");
   assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
   assert.match(html, /id="pdf-back-accept"[^>]*>Accept Back Cover</);
   assert.doesNotMatch(html, /id="pdf-preview-(?:page|image|replace|download|accept)"/, "Automatic cover extraction must not include an interior preview candidate.");
@@ -198,6 +199,52 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.equal(harness.lastPublishFormData.get("productFile"), null, "Review-only PDF selection must remain absent from the publishing payload.");
   assert.equal(harness.lastPublishFormData.get("coverFile").name, "cover.webp", "Explicitly accepted cover should use the normal publishing slot.");
   assert.equal(harness.lastPublishFormData.get("previewFile"), null, "Cover extraction must not silently add a storefront preview image.");
+}
+
+async function testPdfSelectionAutomaticallyProcessesMetadataAndCovers() {
+  const harness = createHarness();
+  await harness.flush();
+  harness.buttons.startNew.click();
+
+  const newListingCalls = [];
+  harness.api.setAutomaticPdfProcessorsForTests({
+    prefill: async (file) => newListingCalls.push(`prefill:${file.name}`),
+    covers: async (file) => newListingCalls.push(`covers:${file.name}`)
+  });
+  const productPdf = new File([Buffer.from("%PDF-1.7\nautomatic-new-listing\n%%EOF")], "automatic-product.pdf", { type: "application/pdf" });
+  harness.fields.pdfFile.files = [productPdf];
+  harness.fields.pdfFile.dispatch("change");
+
+  assert.equal(harness.outputs.pdfPrefillStatus.textContent, "Processing PDF...", "Selecting a new-listing PDF must immediately announce automatic processing.");
+  assert.equal(harness.outputs.pdfImageStatus.textContent, "Processing PDF...", "Selecting a new-listing PDF must immediately announce automatic cover processing.");
+  await harness.flush();
+  assert.deepEqual(newListingCalls, [
+    "prefill:automatic-product.pdf",
+    "covers:automatic-product.pdf"
+  ], "Selecting a new-listing PDF must automatically run metadata prefill and cover extraction in order.");
+
+  const reviewHarness = createHarness();
+  await reviewHarness.flush();
+  reviewHarness.fields.existingSelect.value = "fixture-alpha";
+  reviewHarness.buttons.loadExisting.click();
+  await reviewHarness.flush();
+  const reviewCalls = [];
+  reviewHarness.api.setAutomaticPdfProcessorsForTests({
+    prefill: async (file) => reviewCalls.push(`prefill:${file.name}`),
+    covers: async (file) => reviewCalls.push(`covers:${file.name}`)
+  });
+  const reviewPdf = new File([Buffer.from("%PDF-1.7\nautomatic-review-only\n%%EOF")], "automatic-review.pdf", { type: "application/pdf" });
+  reviewHarness.fields.reviewPdfFile.files = [reviewPdf];
+  reviewHarness.fields.reviewPdfFile.dispatch("change");
+
+  assert.equal(reviewHarness.outputs.pdfPrefillStatus.textContent, "Processing PDF...", "Selecting an existing-listing review PDF must immediately announce automatic processing.");
+  assert.equal(reviewHarness.outputs.pdfImageStatus.textContent, "Processing PDF...", "Selecting an existing-listing review PDF must immediately announce automatic cover processing.");
+  await reviewHarness.flush();
+  assert.deepEqual(reviewCalls, [
+    "prefill:automatic-review.pdf",
+    "covers:automatic-review.pdf"
+  ], "Selecting a review-only PDF must automatically run the same metadata and cover processing.");
+  assert.equal(reviewHarness.fields.pdfFile.files.length, 0, "Automatic review-PDF processing must not select a replacement product PDF.");
 }
 
 async function testTablecraftListingStillLoadsWithProductLine() {
@@ -677,7 +724,9 @@ function createHarness(options = {}) {
     }
 
     addEventListener(type, handler) {
-      this.listeners.set(type, handler);
+      const handlers = this.listeners.get(type) || [];
+      handlers.push(handler);
+      this.listeners.set(type, handlers);
     }
 
     append(...children) {
@@ -685,15 +734,13 @@ function createHarness(options = {}) {
     }
 
     click() {
-      const handler = this.listeners.get("click");
-      if (handler) {
+      for (const handler of this.listeners.get("click") || []) {
         handler({ currentTarget: this, preventDefault() {}, target: this });
       }
     }
 
     dispatch(type) {
-      const handler = this.listeners.get(type);
-      if (handler) {
+      for (const handler of this.listeners.get(type) || []) {
         handler({ currentTarget: this, preventDefault() {}, target: this });
       }
     }
@@ -905,7 +952,6 @@ function createHarness(options = {}) {
     readPdfPrefill: register("read-pdf-prefill-button", createElement("button")),
     openPdfReview: register("open-pdf-review-button", createElement("button")),
     downloadPdfReview: register("download-pdf-review-button", createElement("button")),
-    extractPdfImages: register("extract-pdf-images-button", createElement("button")),
     pdfFrontReplace: register("pdf-front-replace", createElement("button")),
     pdfFrontDownload: register("pdf-front-download", createElement("button")),
     pdfFrontAccept: register("pdf-front-accept", createElement("button")),
@@ -1161,6 +1207,10 @@ function createHarness(options = {}) {
   const script = fs.readFileSync(scriptPath, "utf8");
   vm.runInNewContext(script, context, { filename: scriptPath });
   harness.api = context.TRGProductIntake;
+  harness.api.setAutomaticPdfProcessorsForTests({
+    prefill: async () => null,
+    covers: async () => null
+  });
 
   return harness;
 }

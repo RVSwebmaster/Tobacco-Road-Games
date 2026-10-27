@@ -730,7 +730,7 @@
             <div>
               <strong>PDF Autofill</strong>
               <h2 id="pdf-prefill-heading">Read PDF and Prefill Listing</h2>
-              <p>Select the finished product PDF once. Reading it does not upload or publish anything, and the same selected file remains attached for the normal publish workflow.</p>
+              <p>Select the finished product PDF once. Metadata and both cover candidates are processed automatically in this browser; nothing uploads or publishes, and the same selected file remains attached for the normal publish workflow.</p>
             </div>
             <div class="intake-field">
               <label for="product-pdf-file">Product PDF File</label>
@@ -745,7 +745,6 @@
               <button id="read-pdf-prefill-button" class="button button--secondary" type="button">Read PDF and Prefill Listing</button>
               <button id="open-pdf-review-button" class="button button--secondary" type="button" disabled>Open PDF for Review</button>
               <button id="download-pdf-review-button" class="button button--secondary" type="button" disabled>Download PDF</button>
-              <button id="extract-pdf-images-button" class="button button--secondary" type="button" disabled>Extract Covers</button>
               <span id="pdf-prefill-file-status" class="intake-help">No PDF selected.</span>
             </div>
             <section id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">
@@ -753,7 +752,7 @@
                 <h3 id="pdf-image-extraction-heading">PDF Cover Review</h3>
                 <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and never replaces preview.webp.</p>
               </div>
-              <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite">Select a PDF, then choose Extract Covers.</p>
+              <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite">Select a PDF to process its front and back covers automatically.</p>
               <div class="pdf-image-extraction__grid">
                 <article class="pdf-image-candidate" data-pdf-image-role="front">
                   <h3>FRONT COVER</h3>
@@ -1247,6 +1246,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=20261027-visible-cover-review1"></script>
+  <script src="../assets/js/product-intake.js?v=20261027-auto-cover-extraction1"></script>
 </body>
 </html>

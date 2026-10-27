@@ -61,7 +61,7 @@ async function main() {
 
   assert.equal((html.match(/id="product-pdf-file"/g) || []).length, 1, "Product Intake must use one retained PDF file input.");
   assert.ok(html.indexOf("Read PDF and Prefill Listing") < html.indexOf("Product details"), "PDF autofill belongs near the beginning of the listing workflow.");
-  assert.match(html, /product-intake\.js\?v=20261027-visible-cover-review1/, "Product Intake must load the current PDF cover-extraction runtime.");
+  assert.match(html, /product-intake\.js\?v=20261027-auto-cover-extraction1/, "Product Intake must load the current automatic PDF cover-extraction runtime.");
   for (const id of [
     "read-pdf-prefill-button",
     "pdf-prefill-populated-list",
@@ -80,7 +80,8 @@ async function main() {
   assert.match(browserReader, /\/assets\/vendor\/pdfjs\/pdf\.worker\.mjs/);
   assert.doesNotMatch(browserReader, /https?:\/\//, "Browser extraction must not call an external PDF or AI service.");
   assert.match(intake, /fields\.pdfFile\.files\[0\]/);
-  assert.match(intake, /fields\.pdfFile\.files\[0\] !== file/);
+  assert.match(intake, /getPdfReviewFile\(\) !== file/, "Automatic PDF processing must abandon stale work if either selected PDF changes.");
+  assert.match(intake, /if \(file\) void processSelectedPdf\(\)/, "Selecting the product PDF must start automatic processing without another button click.");
   assert.match(html, /Existing values preserved/);
   assert.doesNotMatch(browserReader, /fetch\s*\(/, "Reading a PDF must not upload or publish it.");
 
