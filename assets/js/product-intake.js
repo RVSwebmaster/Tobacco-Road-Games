@@ -105,7 +105,6 @@
     relatedSelect: document.getElementById("product-related-select"),
     relatedList: document.getElementById("product-related-list"),
     coverFile: document.getElementById("product-cover-file"),
-    previewFile: document.getElementById("product-preview-file"),
     pdfFile: document.getElementById("product-pdf-file"),
     reviewPdfFile: document.getElementById("review-pdf-file"),
     pdfFrontPage: document.getElementById("pdf-front-page"),
@@ -455,12 +454,12 @@
       buttons.pdfBackAccept.textContent = "Back Cover Reviewed";
       buttons.pdfBackAccept.setAttribute?.("aria-pressed", "true");
       buttons.pdfBackAccept.disabled = true;
-      outputs.pdfBackDetails.textContent = `Back cover from PDF page ${candidate.pageNumber} marked reviewed. It remains separate from cover.webp and preview.webp.`;
-      outputs.pdfImageStatus.textContent = "Back cover marked reviewed. It was not assigned to cover.webp or preview.webp and was not added to the publishing payload.";
+      outputs.pdfBackDetails.textContent = `Back cover from PDF page ${candidate.pageNumber} marked reviewed. It remains separate from cover.webp.`;
+      outputs.pdfImageStatus.textContent = "Back cover marked reviewed. It was not assigned to cover.webp and was not added to the publishing payload.";
       return true;
     }
-    const field = target === "cover" ? fields.coverFile : fields.previewFile;
-    const fileName = target === "cover" ? "cover.webp" : "preview.webp";
+    const field = fields.coverFile;
+    const fileName = "cover.webp";
     if (field.files?.length && !globalThis.confirm(`Replace the currently selected ${fileName} with PDF page ${candidate.pageNumber}?`)) {
       outputs.pdfImageStatus.textContent = `${fileName} was not changed.`;
       return false;
@@ -612,7 +611,7 @@
     const manualItems = [
       ...missing,
       "Price, sale settings, buy mode, and store status",
-      "Cover and preview WebP files"
+      "Cover WebP file"
     ];
     outputs.pdfPrefillManualList.replaceChildren(...manualItems.map(makePdfPrefillListItem));
 
@@ -1103,7 +1102,6 @@
     longDescription: fields.longDescription.value,
     pageCount: fields.pageCount.value,
     pdfFileName: fields.pdfFile.files[0]?.name || "",
-    previewFileName: fields.previewFile.files[0]?.name || "",
     price: fields.price.value,
     relatedProducts: [...selectedRelatedProducts],
     releaseDate: fields.releaseDate.value,
@@ -1159,7 +1157,7 @@
     }
 
     const renameWarning = requiresFullAssetSet()
-      ? " Because the slug or folder changed, the next update needs a full replacement set of cover, preview, and PDF files."
+      ? " Because the slug or folder changed, the next update needs a full replacement set of cover and PDF files."
       : " Leave file inputs blank to keep the live assets, or choose only the replacement files you want to swap in.";
     outputs.editMode.textContent = `${getModeLabels().editMode}${renameWarning}`;
   };
@@ -1182,7 +1180,7 @@
       coverImage: fields.coverFile.files[0]?.name || loadedProductRecord?.coverImage || "",
       current_price: payload.price,
       gameSystem: payload.gameSystem,
-      interior_image_count: (loadedProductRecord?.previewImages?.length || 0) + (fields.previewFile.files[0] ? 1 : 0),
+      interior_image_count: loadedProductRecord?.previewImages?.length || 0,
       long_description: payload.longDescription,
       page_count: payload.pageCount,
       pdf_file: fields.pdfFile.files[0]?.name || payload.fileList[0] || "",
@@ -1628,9 +1626,6 @@
         ? "- One WebP cover image"
         : "- Cover WebP only if you want to replace the current live cover",
       requiresFiles
-        ? "- One WebP preview image"
-        : "- Preview WebP only if you want to replace the current live preview",
-      requiresFiles
         ? "- One PDF product file"
         : "- Product PDF only if you want to replace the current private PDF",
       ...(existingMode && !requiresFiles
@@ -1639,12 +1634,10 @@
       "",
       "Internal bucket object paths after publish:",
       `- ${payload.folder}/cover.webp`,
-      `- ${payload.folder}/preview.webp`,
       `- ${payload.folder}/product.pdf`,
       "",
       "Published public asset paths:",
       `/product-assets/${payload.slug}/cover.webp`,
-      `/product-assets/${payload.slug}/preview.webp`,
       "",
       "Repo publish path after upload:",
       "- Update shared folder map",
@@ -1668,7 +1661,6 @@
       `R2 folder: ${payload.folder}.`,
       `Product PDF: ${selectedPdf || (existingMode ? `preserve ${currentPdf}` : "not selected")}.`,
       `cover.webp: ${fields.coverFile.files[0]?.name || (existingMode ? "preserve current cover" : "not selected")}.`,
-      `preview.webp: ${fields.previewFile.files[0]?.name || (existingMode ? "preserve current preview" : "not selected")}.`,
       "Back-cover review image: never included in the publishing payload.",
       `Tags: ${payload.tags.length ? payload.tags.join(", ") : "none selected"}.`
     ];
@@ -1678,10 +1670,8 @@
     const items = [
       ...payload.fileList,
       `${payload.folder}/cover.webp`,
-      `${payload.folder}/preview.webp`,
       `${payload.folder}/product.pdf`,
-      `/product-assets/${payload.slug}/cover.webp`,
-      `/product-assets/${payload.slug}/preview.webp`
+      `/product-assets/${payload.slug}/cover.webp`
     ];
 
     outputs.assetFileList.replaceChildren(
@@ -1774,7 +1764,7 @@
       heading: isEditingLoadedListing() ? "Updating listing" : "Publishing new product",
       message: isEditingLoadedListing()
         ? "Preparing metadata, uploading any selected replacement files to R2, and waiting for the existing-listing update workflow to finish..."
-        : "Preparing metadata, uploading the three required files to R2, and waiting for the new-listing publish workflow to finish..."
+        : "Preparing metadata, uploading the two required files to R2, and waiting for the new-listing publish workflow to finish..."
     });
 
     try {
@@ -1820,9 +1810,6 @@
 
       if (fields.coverFile.files[0]) {
         formData.set("coverFile", fields.coverFile.files[0]);
-      }
-      if (fields.previewFile.files[0]) {
-        formData.set("previewFile", fields.previewFile.files[0]);
       }
       if (fields.pdfFile.files[0]) {
         formData.set("productFile", fields.pdfFile.files[0]);
@@ -1969,7 +1956,6 @@
     };
 
     validateSelectedFile(fields.coverFile, "Cover image", "image/webp", ".webp");
-    validateSelectedFile(fields.previewFile, "Preview image", "image/webp", ".webp");
     validateSelectedFile(fields.pdfFile, "Product PDF", "application/pdf", ".pdf");
 
     if (fields.buyMode.value === CART_BUY_MODE) {
@@ -2117,7 +2103,6 @@
     fields.releaseDate.value = product.releaseDate || "";
     fields.lastUpdated.value = product.lastUpdated || "";
     fields.coverFile.value = "";
-    fields.previewFile.value = "";
     fields.pdfFile.value = "";
     if (fields.reviewPdfFile) fields.reviewPdfFile.value = "";
     clearPdfImageExtraction();
@@ -2197,7 +2182,6 @@
     fields.releaseDate.value = draft.releaseDate ?? product.releaseDate ?? "";
     fields.lastUpdated.value = draft.lastUpdated ?? product.lastUpdated ?? "";
     fields.coverFile.value = "";
-    fields.previewFile.value = "";
     fields.pdfFile.value = "";
     if (fields.reviewPdfFile) fields.reviewPdfFile.value = "";
     clearPdfImageExtraction();

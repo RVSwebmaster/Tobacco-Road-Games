@@ -757,7 +757,7 @@
           <p class="section-heading__kicker">Owner Tool</p>
           <h1 id="intake-heading">Product Intake Bench</h1>
           <p>Use this Owner workbench to publish one storefront product at a time. It uploads the required files to R2, then sends the metadata through the normal GitHub build path.</p>
-          <p>Required files: one cover WebP, one preview WebP, and one product PDF. The intake stores them under the standard internal object keys after upload. Cover and preview become public through <code>/product-assets/</code>. The PDF stays private.</p>
+          <p>Required files: one cover WebP and one product PDF. The intake stores them under the standard internal object keys after upload. The cover becomes public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
         <section class="intake-output" aria-labelledby="intake-picker-heading">
@@ -822,7 +822,7 @@
             <section id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">
               <div>
                 <h3 id="pdf-image-extraction-heading">PDF Cover Review</h3>
-                <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and never replaces preview.webp.</p>
+                <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and is never added to the publishing payload.</p>
               </div>
               <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite">Select a PDF to process its front and back covers automatically.</p>
               <div class="pdf-image-extraction__grid">
@@ -1146,11 +1146,6 @@
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-preview-file">Preview File</label>
-                <input id="product-preview-file" class="dock-input" type="file" accept="image/webp,.webp">
-              </div>
-
-              <div class="intake-field intake-field--full">
                 <span class="intake-help">The PDF selected in the autofill panel above is also the product file used by the normal publish workflow. Reading it never uploads it.</span>
               </div>
             </div>
@@ -1189,7 +1184,7 @@
               <p class="note-card__label">How to use this</p>
               <ol class="intake-list">
                 <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
-                <li>For a new listing, choose the three required files: one cover WebP, one preview WebP, and the product PDF. For an existing listing, leave file inputs blank to keep the current assets or add only the replacements you want.</li>
+                <li>For a new listing, choose the two required files: one cover WebP and the product PDF. For an existing listing, leave file inputs blank to keep the current assets or add only the replacements you want.</li>
                 <li>Use Check to validate missing or invalid information, then use Review to inspect the generated metadata and asset plan.</li>
                 <li>Use Publish or Update only after the review looks right. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
               </ol>

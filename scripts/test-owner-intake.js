@@ -141,7 +141,6 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
   formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
     ...env,
@@ -161,8 +160,7 @@ async function testMissingFiles(ownerPublish, env, cookieHeader) {
 async function testWrongFileType(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.png", { type: "image/png" }));
+  formData.set("coverFile", new FileCtor(["cover"], "cover.png", { type: "image/png" }));
   formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
@@ -176,7 +174,7 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
 
   assert.equal(response.status, 400, "Wrong file type should return 400.");
   const payload = await response.json();
-  assert.match(payload.error, /preview image must be a webp image/i, "Wrong file type error should be human-readable.");
+  assert.match(payload.error, /cover image must be a webp image/i, "Wrong file type error should be human-readable.");
   assert.equal(payload.stage, "validation", "Wrong file types should be identified as a validation-stage failure.");
 }
 
@@ -512,7 +510,6 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData);
   formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
   formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
 
   const originalRandomUuid = crypto.randomUUID;
@@ -537,9 +534,8 @@ async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
     assert.equal(payload.stage, "complete", "A completed workflow should identify the completed publish stage.");
     assert.deepEqual(bucket.putKeys.sort(), [
       "new-product/cover.webp",
-      "new-product/preview.webp",
       "new-product/product.pdf"
-    ], "R2 upload should write all required files.");
+    ], "A new product should upload only its required cover and PDF files.");
     assert.ok(calls.some((call) => String(call.url).includes("/dispatches")), "GitHub dispatch should be called after upload.");
   } finally {
     Date.now = originalDateNow;
@@ -1097,7 +1093,11 @@ async function testNewProductBuildAndSharedMap(publishScript) {
   assert.ok(fs.existsSync(builtPagePath), "New product page should be generated.");
   const builtPage = fs.readFileSync(builtPagePath, "utf8");
   assert.match(builtPage, /\/product-assets\/ghost-cairn\/cover\.webp/, "New product page should use the public cover route.");
-  assert.match(builtPage, /\/product-assets\/ghost-cairn\/preview\.webp/, "New product page should use the public preview route.");
+  assert.doesNotMatch(builtPage, /\/product-assets\/ghost-cairn\/preview\.webp/, "A product without a preview asset should build without inventing a preview route.");
+  assert.doesNotMatch(builtPage, /back-cover preview image has not been added|previewImage field missing/i, "A product without a preview asset should not display a misleading missing-preview warning.");
+  const products = JSON.parse(fs.readFileSync(path.join(tempRoot, "data", "products.json"), "utf8"));
+  const product = products.find((entry) => entry.slug === "ghost-cairn");
+  assert.equal(product.previewImage, "", "New catalog metadata should not generate a preview.webp reference.");
 
   const builtSeriesPath = path.join(tempRoot, "store", "series", "tablecraft", "index.html");
   assert.ok(fs.existsSync(builtSeriesPath), "Series landing page should be generated when a product includes a series.");

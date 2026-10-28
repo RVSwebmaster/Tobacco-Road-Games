@@ -2847,9 +2847,6 @@ function buildPreviewAudit(product, previewFeature, previewImages, previewPdf, t
   if (product.previewImage && !sitePathExists(product.previewImage)) {
     return `previewImage missing file ${product.previewImage}`;
   }
-  if (!product.previewImage && !previewFeature && !previewImages.length && !previewPdf && !teaserVideo) {
-    return "previewImage field missing";
-  }
   return "";
 }
 
@@ -2858,9 +2855,6 @@ function buildPreviewNotice(product, previewFeature, previewImages, previewPdf, 
     return previewImages.length
       ? "The dedicated back-cover preview image is still missing, so this page is showing the first available sample image instead."
       : "The dedicated back-cover preview image has not been added yet.";
-  }
-  if (!product.previewImage && !previewFeature && !previewImages.length && !previewPdf && !teaserVideo) {
-    return "A back-cover preview image has not been added yet.";
   }
   return "";
 }

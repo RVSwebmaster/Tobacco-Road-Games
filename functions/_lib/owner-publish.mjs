@@ -59,7 +59,6 @@ const REQUIRED_TEXT_FIELDS = [
 
 const REQUIRED_FILE_FIELDS = [
   ["coverFile", "Cover image", "image/webp", ".webp"],
-  ["previewFile", "Preview image", "image/webp", ".webp"],
   ["productFile", "Product PDF", "application/pdf", ".pdf"]
 ];
 
@@ -241,7 +240,6 @@ function parsePublishForm(formData, productFolderMap = {}) {
     existingFolder: "",
     isExistingProduct: false,
     productFile: null,
-    previewFile: null,
     coverFile: null
   };
 
@@ -333,7 +331,6 @@ function normalizeTeaserVideo(value) {
 async function uploadRequiredProductFiles(bucket, payload) {
   const uploads = [
     [payload.coverFile, `${payload.folder}/cover.webp`, "image/webp"],
-    [payload.previewFile, `${payload.folder}/preview.webp`, "image/webp"],
     [payload.productFile, `${payload.folder}/product.pdf`, "application/pdf"]
   ].filter(([file]) => file instanceof File);
   const uploadedKeys = [];

@@ -152,7 +152,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
   assert.match(html, /id="pdf-back-accept"[^>]*>Mark Back Cover Reviewed</);
   assert.doesNotMatch(html, /id="pdf-preview-(?:page|image|replace|download|accept)"/, "Automatic cover extraction must not include an interior preview candidate.");
-  assert.match(html, /back cover remains a separate review asset and never replaces preview\.webp/i);
+  assert.match(html, /back cover remains a separate review asset and is never added to the publishing payload/i);
   assert.match(html, /id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">/, "The PDF Cover Review must not be hidden while a listing workspace is open.");
   assert.ok(html.indexOf('id="pdf-image-extraction-panel"') < html.indexOf('id="pdf-review-status"'), "The permanent cover review must appear immediately beneath the PDF actions.");
   assert.match(html, /id="pdf-front-placeholder"[^>]*>No front cover extracted</);
@@ -162,7 +162,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.match(html, /\.pdf-image-extraction__grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/, "The two cover displays must remain side by side.");
   assert.doesNotMatch(html, /\.pdf-image-extraction__grid\s*\{\s*grid-template-columns:\s*1fr/, "Responsive rules must not collapse the required side-by-side cover displays.");
   assert.match(script, /controls\.placeholder\.textContent = `Cover extraction failed:/, "Extraction errors must appear inside the affected cover frame.");
-  assert.match(html, /id="product-preview-file"/, "The independent preview.webp upload slot must remain available.");
+  assert.doesNotMatch(html, /id="product-preview-file"/, "The obsolete preview.webp upload slot must not appear in Owner Intake.");
 
   const harness = createHarness();
   await harness.flush();
@@ -190,7 +190,6 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.equal(harness.buttons.pdfBackAccept.textContent, "Back Cover Reviewed", "Back-cover review should leave a persistent visible result on its action.");
   assert.equal(harness.buttons.pdfBackAccept.disabled, true, "A reviewed back-cover candidate should not keep offering the same ambiguous action.");
   assert.equal(harness.buttons.pdfBackAccept["aria-pressed"], "true", "Back-cover review should expose its selected state accessibly.");
-  assert.equal(harness.fields.previewFile.files.length, 0, "Accepting a back cover must not populate or replace the storefront preview.");
   assert.equal(harness.fields.pdfFile.files.length, 0, "Review-only extraction must not select a replacement product PDF.");
   assert.equal(harness.fields.reviewPdfFile.files[0], reviewFile, "The locally selected review PDF must remain selected after image assignment.");
 
@@ -234,7 +233,7 @@ async function testVisibleValidationAndReviewFeedback() {
   assert.match(harness.outputs.feedbackHeading.textContent, /review ready/i, "A valid review needs an explicit ready heading.");
   assert.equal(harness.outputs.jsonPanel.hidden, false, "Review must automatically expose the exact JSON payload.");
   assert.equal(harness.outputs.checklistPanel.hidden, false, "Review must automatically expose the asset checklist.");
-  assert.ok(harness.outputs.reviewSummary.children.length >= 7, "Review must summarize metadata and all file assignments.");
+  assert.ok(harness.outputs.reviewSummary.children.length >= 6, "Review must summarize metadata and all required file assignments.");
   assert.match(harness.outputs.reviewSummary.children.map((item) => item.textContent).join(" "), /Back-cover review image: never included/, "Review must make the back-cover exclusion explicit.");
 }
 
@@ -957,7 +956,6 @@ function createHarness(options = {}) {
     relatedSelect: register("product-related-select", createElement("select")),
     relatedList: register("product-related-list", createElement("div")),
     coverFile: register("product-cover-file", createFileInput()),
-    previewFile: register("product-preview-file", createFileInput()),
     pdfFile: register("product-pdf-file", createFileInput()),
     reviewPdfFile: register("review-pdf-file", createFileInput()),
     pdfFrontPage: register("pdf-front-page", createInput("1", "number")),

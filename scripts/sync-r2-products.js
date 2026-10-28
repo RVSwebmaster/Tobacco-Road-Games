@@ -198,7 +198,6 @@ function syncProducts(existingProducts, intakeMap, sharedFolderMap, bucketIndex)
     updated: [],
     unchanged: [],
     skipped: [],
-    missingPreview: [],
     missingPdf: [],
     warnings: []
   };
@@ -224,14 +223,6 @@ function syncProducts(existingProducts, intakeMap, sharedFolderMap, bucketIndex)
         reason: `Missing cover.webp in bucket folder ${folder}`
       });
       continue;
-    }
-
-    if (!assetState.hasPreview) {
-      report.missingPreview.push({
-        folder,
-        slug: definition.slug,
-        title: definition.title
-      });
     }
 
     if (!assetState.mainPdf && !assetState.samplePdf) {
@@ -517,7 +508,6 @@ function printReport(report, options) {
   console.log(`Updated: ${report.updated.length}`);
   console.log(`Unchanged: ${report.unchanged.length}`);
   console.log(`Skipped: ${report.skipped.length}`);
-  console.log(`Missing preview.webp: ${report.missingPreview.length}`);
   console.log(`Missing PDF: ${report.missingPdf.length}`);
 
   if (report.added.length) {
@@ -541,14 +531,6 @@ function printReport(report, options) {
     console.log("Skipped products:");
     for (const entry of report.skipped) {
       console.log(`- ${entry.title} (${entry.slug}): ${entry.reason}`);
-    }
-  }
-
-  if (report.missingPreview.length) {
-    console.log("");
-    console.log("Missing preview.webp:");
-    for (const entry of report.missingPreview) {
-      console.log(`- ${entry.title} (${entry.slug}) in ${entry.folder}`);
     }
   }
 

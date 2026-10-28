@@ -429,7 +429,7 @@ function upsertProducts(products, metadata) {
     status: chooseText(metadata.status, existing.status, "preview-available"),
     statusLabel: resolveStatusLabel(chooseText(metadata.status, existing.status, "preview-available")),
     coverImage: `/product-assets/${metadata.slug}/cover.webp`,
-    previewImage: `/product-assets/${metadata.slug}/preview.webp`,
+    previewImage: chooseText(existing.previewImage, ""),
     thumbnailImage: chooseText(existing.thumbnailImage, ""),
     frontCoverImage: `/product-assets/${metadata.slug}/cover.webp`,
     previewImages: chooseArray(existing.previewImages, []),
