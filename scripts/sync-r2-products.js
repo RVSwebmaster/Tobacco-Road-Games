@@ -309,6 +309,7 @@ function buildProductRecord(existing, definition, globalDefaults, assetState) {
   const status = resolveStatus(existing, definition, assetState, globalDefaults);
   const statusLabel = definition.statusLabel || globalDefaults.statusLabel || humanizeStatus(status);
   const buyMode = resolveBuyMode(existing, definition, assetState, globalDefaults);
+  const creationMethod = chooseValue(existing?.creationMethod, definition.creationMethod, globalDefaults.creationMethod, "");
 
   return {
     slug,
@@ -356,7 +357,7 @@ function buildProductRecord(existing, definition, globalDefaults, assetState) {
     longDescription: chooseValue(existing?.longDescription, definition.longDescription, globalDefaults.longDescription, "Product summary coming soon."),
     features: chooseArray(existing?.features, definition.features, []),
     tags: chooseArray(existing?.tags, definition.tags, []),
-    creationMethod: chooseValue(existing?.creationMethod, definition.creationMethod, globalDefaults.creationMethod, "Human-authored by RV Sawyer."),
+    ...(creationMethod ? { creationMethod } : {}),
     legalNote: chooseValue(existing?.legalNote, definition.legalNote, globalDefaults.legalNote, ""),
     version: chooseValue(existing?.version, definition.version, globalDefaults.version, "2026 catalog preview"),
     releaseDate: chooseValue(existing?.releaseDate, definition.releaseDate, ""),

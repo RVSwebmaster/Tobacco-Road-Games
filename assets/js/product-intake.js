@@ -97,7 +97,6 @@
     tags: document.getElementById("product-tags"),
     fulfillmentNote: document.getElementById("product-fulfillment-note"),
     teaserVideo: document.getElementById("product-teaser-video"),
-    creationMethod: document.getElementById("product-creation-method"),
     legalNote: document.getElementById("product-legal-note"),
     version: document.getElementById("product-version"),
     releaseDate: document.getElementById("product-release-date"),
@@ -913,7 +912,6 @@
       draft: {
         buyMode: fields.buyMode.value,
         buyUrl: fields.buyUrl.value,
-        creationMethod: fields.creationMethod.value,
         currency: fields.currency.value,
         features: fields.features.value,
         folder: fields.folder.value,
@@ -1528,7 +1526,6 @@
       authors: ["RV Sawyer"],
       buyMode: fields.buyMode.value,
       buyUrl: fields.buyMode.value === CART_BUY_MODE ? "" : fields.buyUrl.value.trim(),
-      creationMethod: fields.creationMethod.value.trim() || "Human-authored by RV Sawyer.",
       currency: fields.currency.value.trim() || "USD",
       genre: fields.genre?.value.trim() || "",
       playerCountMin: fields.playerCountMin?.value ? Number(fields.playerCountMin.value) : null,
@@ -1801,7 +1798,6 @@
       formData.set("tags", payload.tags.join(", "));
       formData.set("fulfillmentNote", payload.fulfillmentNote);
       formData.set("teaserVideo", payload.teaserVideo);
-      formData.set("creationMethod", payload.creationMethod);
       formData.set("legalNote", payload.legalNote);
       formData.set("version", payload.version);
       formData.set("releaseDate", payload.releaseDate);
@@ -2097,7 +2093,6 @@
     fields.features.value = Array.isArray(product.features) ? product.features.join("\n") : "";
     applyTagValues(Array.isArray(product.tags) ? product.tags : []);
     fields.fulfillmentNote.value = product.fulfillmentNote || "";
-    fields.creationMethod.value = product.creationMethod || "Human-authored by RV Sawyer.";
     fields.legalNote.value = product.legalNote || "";
     fields.version.value = product.version || "";
     fields.releaseDate.value = product.releaseDate || "";
@@ -2176,7 +2171,6 @@
     fields.features.value = draft.features ?? (Array.isArray(product.features) ? product.features.join("\n") : "");
     applyTagValues(draft.tags ?? (Array.isArray(product.tags) ? product.tags : []));
     fields.fulfillmentNote.value = draft.fulfillmentNote ?? product.fulfillmentNote ?? "";
-    fields.creationMethod.value = draft.creationMethod ?? product.creationMethod ?? "Human-authored by RV Sawyer.";
     fields.legalNote.value = draft.legalNote ?? product.legalNote ?? "";
     fields.version.value = draft.version ?? product.version ?? "";
     fields.releaseDate.value = draft.releaseDate ?? product.releaseDate ?? "";
@@ -2430,7 +2424,6 @@
     fields.features.value = "";
     applyTagValues([]);
     fields.fulfillmentNote.value = "";
-    fields.creationMethod.value = "Human-authored by RV Sawyer.";
     fields.legalNote.value = "";
     fields.version.value = "";
     fields.releaseDate.value = "";

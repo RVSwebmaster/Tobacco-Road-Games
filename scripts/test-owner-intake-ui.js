@@ -163,6 +163,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.doesNotMatch(html, /\.pdf-image-extraction__grid\s*\{\s*grid-template-columns:\s*1fr/, "Responsive rules must not collapse the required side-by-side cover displays.");
   assert.match(script, /controls\.placeholder\.textContent = `Cover extraction failed:/, "Extraction errors must appear inside the affected cover frame.");
   assert.doesNotMatch(html, /id="product-preview-file"/, "The obsolete preview.webp upload slot must not appear in Owner Intake.");
+  assert.doesNotMatch(html, /id="product-creation-method"|>Creation Method</, "Owner Intake must not expose the retired Creation Method field.");
 
   const harness = createHarness();
   await harness.flush();
@@ -204,6 +205,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.equal(harness.lastPublishFormData.get("productFile"), null, "Review-only PDF selection must remain absent from the publishing payload.");
   assert.equal(harness.lastPublishFormData.get("coverFile").name, "cover.webp", "Explicitly accepted cover should use the normal publishing slot.");
   assert.equal(harness.lastPublishFormData.get("previewFile"), null, "Cover extraction must not silently add a storefront preview image.");
+  assert.equal(harness.lastPublishFormData.get("creationMethod"), null, "Owner publishing must not send retired Creation Method metadata.");
 }
 
 async function testVisibleValidationAndReviewFeedback() {
@@ -948,7 +950,6 @@ function createHarness(options = {}) {
     tags: register("product-tags", createInput("", "hidden")),
     fulfillmentNote: register("product-fulfillment-note", createElement("textarea")),
     teaserVideo: register("product-teaser-video", createInput("", "url")),
-    creationMethod: register("product-creation-method", createElement("textarea")),
     legalNote: register("product-legal-note", createElement("textarea")),
     version: register("product-version", createInput("1.0")),
     releaseDate: register("product-release-date", createInput("", "date")),
@@ -968,7 +969,6 @@ function createHarness(options = {}) {
   fields.longDescription.value = "Long description";
   fields.features.value = "Feature one";
   fields.fulfillmentNote.value = "Manual note";
-  fields.creationMethod.value = "Human-authored by RV Sawyer.";
 
   const outputs = {
     editMode: register("product-edit-mode", createElement("p")),

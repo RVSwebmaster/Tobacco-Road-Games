@@ -736,6 +736,7 @@ async function testExistingProductUpdatePreservesFields(publishScript) {
   assert.equal(tablecraftPrimer.saleLabel, "Summer Sale", "Existing sale labels should survive publish.");
   assert.equal(tablecraftPrimer.bundleEligible, true, "Existing bundle flags should survive publish.");
   assert.equal(tablecraftPrimer.shortDescription, "Updated short copy.", "Explicit new copy should apply.");
+  assert.equal(tablecraftPrimer.creationMethod, originalFixtureBeta.creationMethod, "Existing historical Creation Method metadata should be preserved without an Owner Intake control.");
 }
 
 async function testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript) {
@@ -1098,6 +1099,7 @@ async function testNewProductBuildAndSharedMap(publishScript) {
   const products = JSON.parse(fs.readFileSync(path.join(tempRoot, "data", "products.json"), "utf8"));
   const product = products.find((entry) => entry.slug === "ghost-cairn");
   assert.equal(product.previewImage, "", "New catalog metadata should not generate a preview.webp reference.");
+  assert.equal(Object.prototype.hasOwnProperty.call(product, "creationMethod"), false, "New Owner products should not generate retired Creation Method metadata.");
 
   const builtSeriesPath = path.join(tempRoot, "store", "series", "tablecraft", "index.html");
   assert.ok(fs.existsSync(builtSeriesPath), "Series landing page should be generated when a product includes a series.");

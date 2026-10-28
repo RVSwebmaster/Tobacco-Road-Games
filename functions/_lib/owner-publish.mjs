@@ -199,7 +199,6 @@ function parsePublishForm(formData, productFolderMap = {}) {
       bundleMinPriceCents: 100,
       buyMode,
       buyUrl: buyMode === "cart" ? "" : buyUrl,
-      creationMethod: String(formData.get("creationMethod") || "").trim(),
       currency: String(formData.get("currency") || "USD").trim() || "USD",
       excludeFromBundles: true,
       features: parseLines(formData.get("features")),
@@ -274,10 +273,6 @@ function parsePublishForm(formData, productFolderMap = {}) {
       valid: false,
       userMessage: errors.join(" ")
     };
-  }
-
-  if (!payload.metadata.creationMethod) {
-    payload.metadata.creationMethod = "Human-authored by RV Sawyer.";
   }
 
   if (!payload.metadata.version) {
