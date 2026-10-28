@@ -1,4 +1,22 @@
 (() => {
+  const reportInitializationFailure = (error) => {
+    const panel = document.getElementById("intake-action-feedback");
+    const heading = document.getElementById("intake-feedback-heading");
+    const message = document.getElementById("intake-feedback-message");
+    if (panel) {
+      panel.hidden = false;
+      panel.dataset.kind = "error";
+    }
+    if (heading) heading.textContent = "Owner Intake failed to start";
+    if (message) {
+      message.textContent = `Reload this page. If the problem continues, report this initialization error: ${error?.message || String(error)}`;
+    }
+    if (document.documentElement?.dataset) {
+      document.documentElement.dataset.ownerIntakeRuntime = "failed";
+    }
+  };
+
+  try {
   const CART_BUY_MODE = "cart";
   const ALLOWED_BUY_MODES = new Set([
     "available-direct",
@@ -3258,4 +3276,11 @@
   updatePreview();
   updatePdfReviewControls();
   markDraftBaseline();
+  if (document.documentElement?.dataset) {
+    document.documentElement.dataset.ownerIntakeRuntime = "ready";
+  }
+  } catch (error) {
+    reportInitializationFailure(error);
+    console.error("Owner Intake initialization failed.", error);
+  }
 })();

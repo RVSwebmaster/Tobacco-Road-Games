@@ -8,6 +8,7 @@ const ROOT = path.resolve(__dirname, "..");
 
 async function main() {
   await testIntakeLabelsAndHelperText();
+  await testContentDerivedRuntimeVersion();
   await testProductLineTerminologyAndManagerLabels();
   await testTagSelectorMarkup();
   await testPricingEstimateIsIndependentAndOwnerApproved();
@@ -40,6 +41,16 @@ async function main() {
   await testIntakeReviewAndDiscardConfirmation();
   await testNonJsonPublishErrorsShowHttpDetails();
   console.log("Owner intake UI tests passed.");
+}
+
+async function testContentDerivedRuntimeVersion() {
+  const crypto = require("node:crypto");
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8").replace(/\r\n/g, "\n");
+  const version = crypto.createHash("sha256").update(script).digest("hex").slice(0, 16);
+  assert.match(html, new RegExp(`product-intake\\.js\\?v=sha256-${version}`), "Owner Intake must load the exact current runtime by content-derived URL.");
+  assert.match(script, /ownerIntakeRuntime = "ready"/, "The runtime must expose successful initialization for browser verification.");
+  assert.match(script, /ownerIntakeRuntime = "failed"/, "Initialization errors must become visible instead of leaving dead controls.");
 }
 
 async function testIntakeLabelsAndHelperText() {

@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
@@ -61,7 +62,13 @@ async function main() {
 
   assert.equal((html.match(/id="product-pdf-file"/g) || []).length, 1, "Product Intake must use one retained PDF file input.");
   assert.ok(html.indexOf("Read PDF and Prefill Listing") < html.indexOf("Product details"), "PDF autofill belongs near the beginning of the listing workflow.");
-  assert.match(html, /product-intake\.js\?v=20261027-functional-feedback1/, "Product Intake must load the current automatic PDF processing and visible-feedback runtime.");
+  const normalizedIntake = intake.replace(/\r\n/g, "\n");
+  const intakeVersion = crypto.createHash("sha256").update(normalizedIntake).digest("hex").slice(0, 16);
+  assert.match(
+    html,
+    new RegExp(`product-intake\\.js\\?v=sha256-${intakeVersion}`),
+    "Product Intake must use a content-derived JavaScript URL so changed behavior cannot reuse a stale browser asset."
+  );
   for (const id of [
     "read-pdf-prefill-button",
     "pdf-prefill-populated-list",
