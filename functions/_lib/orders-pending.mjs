@@ -8,7 +8,7 @@ import {
   normalizeSlug
 } from "./runtime-catalog.mjs";
 
-const { validateCartPrice } = pricingModule;
+const { isPayWhatYouWantProduct, resolveCartPrice } = pricingModule;
 
 const MAX_BODY_BYTES = 16384;
 const MAX_ORDER_ITEMS = 25;
@@ -209,7 +209,7 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       unavailableItems.push(buildUnavailableItem(slug, "unknown_slug", "This item is not available for pending order creation."));
       continue;
     }
-    if (product.status !== "available-direct") {
+    if (!["available-direct", "pay-what-you-want"].includes(product.status)) {
       unavailableItems.push(buildUnavailableItem(slug, "inactive_product", "This item is not currently available for direct purchase."));
       continue;
     }
@@ -218,12 +218,15 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       continue;
     }
 
-    const pricingModel=String(product.pricingModel||((Number(product.priceCents)===0)?'free':'fixed'));let priceCheck;
-    if(pricingModel==='free')priceCheck={valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:0,regularPriceCents:0,saleActive:false}};
-    else if(pricingModel==='pwyw'){const offered=Number(entry.amountCents);if(!Number.isInteger(offered)||offered<0||offered>100000000){unavailableItems.push(buildUnavailableItem(slug,"invalid_pwyw_amount","The Pay What You Want amount is invalid."));continue;}priceCheck={valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:offered,regularPriceCents:Number(product.suggestedPriceCents||product.priceCents||0),saleActive:false}};}
-    else priceCheck = validateCartPrice(product, { now: options.now });
+    const priceCheck = resolveCartPrice(product, entry.amountCents, { now: options.now });
     if (!priceCheck.valid) {
-      unavailableItems.push(buildUnavailableItem(slug, "invalid_price", "This item cannot be priced right now."));
+      const minimum = Number(product.minimumPriceCents || 0);
+      const message = priceCheck.reason === "pwyw_below_minimum"
+        ? `Choose an amount of at least ${(minimum / 100).toFixed(2)} for this Pay What You Want product.`
+        : isPayWhatYouWantProduct(product)
+          ? "Choose a valid Pay What You Want amount in whole cents."
+          : "This item cannot be priced right now.";
+      unavailableItems.push(buildUnavailableItem(slug, priceCheck.reason || "invalid_price", message));
       continue;
     }
 
@@ -248,6 +251,9 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       quantity: 1,
       saleActive: priceCheck.details.saleActive,
       title: product.title,
+      pricingModel: isPayWhatYouWantProduct(product) ? "pwyw" : String(product.pricingModel || "fixed"),
+      minimumPriceCents: priceCheck.details.minimumPriceCents ?? null,
+      suggestedPriceCents: priceCheck.details.suggestedPriceCents ?? null,
       versionSnapshot: String(product.version || "").trim()
     });
   }
@@ -278,7 +284,10 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       regularPriceCents: item.listPriceCents,
       saleActive: item.saleActive,
       slug: item.productSlug,
-      title: item.title
+      title: item.title,
+      pricingModel: item.pricingModel,
+      minimumPriceCents: item.minimumPriceCents,
+      suggestedPriceCents: item.suggestedPriceCents
     })),
     subtotalCents,
     totalCents: subtotalCents,

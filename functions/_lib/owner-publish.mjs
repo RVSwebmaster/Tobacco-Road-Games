@@ -170,14 +170,30 @@ function parsePublishForm(formData, productFolderMap = {}) {
 
   const priceText = normalizeMoneyText(formData.get("price"));
   const priceCents = normalizePriceCents(formData.get("price"));
+  const nativePwyw = status === "pay-what-you-want" && buyMode === "cart";
+  const suggestedPriceText = nativePwyw ? (normalizeMoneyText(formData.get("suggestedPrice")) || priceText) : "";
+  const suggestedPriceCents = nativePwyw ? normalizePriceCents(suggestedPriceText) : null;
+  const minimumPriceText = nativePwyw ? (normalizeMoneyText(formData.get("minimumPrice")) || "0.00") : "";
+  const minimumPriceCents = nativePwyw ? normalizePriceCents(minimumPriceText) : null;
   const buyUrl = String(formData.get("buyUrl") || "").trim();
 
   if (buyMode === "cart") {
-    if (status !== "available-direct") {
-      errors.push("Cart products must use Available Direct status.");
+    const pwyw = nativePwyw;
+    if (!pwyw && status !== "available-direct") {
+      errors.push("Cart products must use Available Direct or Pay What You Want status.");
     }
-    if (!Number.isInteger(priceCents) || priceCents <= 0) {
-      errors.push("Cart products require a positive price.");
+    if (pwyw) {
+      if (!Number.isInteger(suggestedPriceCents) || suggestedPriceCents < 0) {
+        errors.push("Pay What You Want products require a valid nonnegative suggested price.");
+      }
+      if (!Number.isInteger(minimumPriceCents) || minimumPriceCents < 0) {
+        errors.push("Pay What You Want minimum price must be zero or a positive amount.");
+      }
+      if (Number.isInteger(suggestedPriceCents) && Number.isInteger(minimumPriceCents) && suggestedPriceCents < minimumPriceCents) {
+        errors.push("Pay What You Want suggested price cannot be lower than the minimum price.");
+      }
+    } else if (!Number.isInteger(priceCents) || priceCents <= 0) {
+      errors.push("Fixed-price cart products require a positive price.");
     }
   }
 
@@ -216,6 +232,11 @@ function parsePublishForm(formData, productFolderMap = {}) {
       pageCount: normalizeOptionalNumber(formData.get("pageCount")),
       price: priceText,
       priceCents,
+      pricingModel: nativePwyw ? "pwyw" : "fixed",
+      suggestedPrice: suggestedPriceText,
+      suggestedPriceCents,
+      minimumPrice: minimumPriceText,
+      minimumPriceCents,
       productLine: metadata.productLine,
       productLineSlug: String(formData.get("productLineSlug") || "").trim(),
       series: String(formData.get("series") || "").trim(),

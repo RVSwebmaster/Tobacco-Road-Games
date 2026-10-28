@@ -1027,6 +1027,50 @@ h4 {
   gap: 14px;
 }
 
+.pwyw-purchase {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  max-width: 34rem;
+  padding: 14px;
+  border: 1px solid rgba(242, 216, 170, 0.2);
+  border-radius: 14px;
+  background: rgba(12, 8, 6, 0.34);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
+.pwyw-purchase label {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.pwyw-purchase span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.pwyw-purchase .dock-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(242, 216, 170, 0.28);
+  border-radius: 10px;
+  background: rgba(7, 5, 4, 0.7);
+  color: var(--text);
+  font: inherit;
+}
+
+.pwyw-purchase .button {
+  min-height: 44px;
+}
+
+@media (max-width: 620px) {
+  .pwyw-purchase {
+    grid-template-columns: 1fr;
+  }
+}
+
 .store-hero__aside {
   display: grid;
   gap: 12px;

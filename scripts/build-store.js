@@ -300,6 +300,7 @@ function loadProducts(authorLookup) {
       statusLabel: product.statusLabel || STATUS_LABELS[product.status] || "Unavailable",
       price: product.price || "",
       priceCents: normalizeCents(product.priceCents, product.price),
+      pricingModel: product.pricingModel || (product.status === "pay-what-you-want" ? "pwyw" : "fixed"),
       minimumPrice: product.minimumPrice || "",
       minimumPriceCents: normalizeCents(product.minimumPriceCents, product.minimumPrice),
       suggestedPrice: product.suggestedPrice || "",
@@ -3063,6 +3064,9 @@ function renderCartPage(products) {
       currency: product.currency,
       priceCents: resolveEstimatedCartPriceCents(product),
       priceDisplay: formatCents(resolveEstimatedCartPriceCents(product), product.currency),
+      pricingModel: product.pricingModel || (product.status === "pay-what-you-want" ? "pwyw" : "fixed"),
+      suggestedPriceCents: product.suggestedPriceCents,
+      minimumPriceCents: product.minimumPriceCents,
       slug: product.slug,
       title: product.title,
       url: product.url
@@ -3208,6 +3212,9 @@ function collectIndex(map, slug, name, product, nameField = "name") {
 }
 
 function resolvePriceType(product) {
+  if (product.pricingModel === "pwyw" || product.status === "pay-what-you-want") {
+    return "pay-what-you-want";
+  }
   if (product.buyMode && PRICE_TYPE_LABELS[product.buyMode]) {
     return product.buyMode;
   }
@@ -3218,7 +3225,7 @@ function resolvePriceType(product) {
 }
 
 function isBuyModeActive(buyMode) {
-  return ["fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
+  return ["cart", "fixed-price", "free-download", "pay-what-you-want", "manual-invoice"].includes(buyMode);
 }
 
 function isOpenRulesProduct(product) {
@@ -3255,8 +3262,15 @@ function isCatalogBrowsable(product) {
 }
 
 function isCartReady(product) {
-  return product.buyMode === "cart"
-    && product.status === "available-direct"
+  if (product.buyMode !== "cart") return false;
+  if (product.status === "pay-what-you-want" || product.pricingModel === "pwyw") {
+    const suggested = product.suggestedPriceCents ?? product.priceCents;
+    const minimum = product.minimumPriceCents ?? 0;
+    return Number.isInteger(suggested) && suggested >= 0
+      && Number.isInteger(minimum) && minimum >= 0
+      && suggested >= minimum;
+  }
+  return product.status === "available-direct"
     && Number.isInteger(product.effectivePriceCents ?? product.priceCents)
     && (product.effectivePriceCents ?? product.priceCents) > 0;
 }
@@ -3268,6 +3282,9 @@ function isFreeDownloadReady(product) {
 }
 
 function resolveEstimatedCartPriceCents(product) {
+  if (product.pricingModel === "pwyw" || product.status === "pay-what-you-want") {
+    return product.suggestedPriceCents ?? product.priceCents ?? product.minimumPriceCents ?? 0;
+  }
   return product.effectivePriceCents ?? product.priceCents;
 }
 
@@ -3303,8 +3320,19 @@ function renderCartActionButton(product, options = {}) {
   }
 
   const className = options.className || "button button--primary";
-  const pwyw=product.pricingModel==='pwyw'||product.buyMode==='pay-what-you-want';const amount=pwyw?` data-pwyw-suggested-cents="${escapeAttribute(String(product.suggestedPriceCents??product.priceCents??0))}"`:'';
-  return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}"${amount}>${pwyw?'Choose Price':'Add to Cart'}</button>`;
+  const pwyw = product.pricingModel === "pwyw" || product.status === "pay-what-you-want";
+  if (pwyw) {
+    const suggested = product.suggestedPriceCents ?? product.priceCents ?? 0;
+    const minimum = product.minimumPriceCents ?? 0;
+    const inputId = `pwyw-${product.slug}`;
+    return `<div class="pwyw-purchase" data-pwyw-purchase="${escapeAttribute(product.slug)}">
+      <label for="${escapeAttribute(inputId)}">Pay What You Want</label>
+      <span>Suggested ${escapeHtml(formatCents(suggested, product.currency))}${minimum > 0 ? `; minimum ${escapeHtml(formatCents(minimum, product.currency))}` : "; $0 allowed"}</span>
+      <input id="${escapeAttribute(inputId)}" class="dock-input" type="number" inputmode="decimal" min="${escapeAttribute((minimum / 100).toFixed(2))}" step="0.01" value="${escapeAttribute((suggested / 100).toFixed(2))}" data-pwyw-amount-for="${escapeAttribute(product.slug)}">
+      <button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}" data-pwyw-suggested-cents="${escapeAttribute(String(suggested))}" data-pwyw-minimum-cents="${escapeAttribute(String(minimum))}">Add Selected Amount</button>
+    </div>`;
+  }
+  return `<button type="button" class="${escapeAttribute(className)}" data-cart-add="${escapeAttribute(product.slug)}">Add to Cart</button>`;
 }
 
 function renderFreeDownloadButton(product, options = {}) {

@@ -5,6 +5,8 @@ const TAX_INCLUSIVE_PRICING_POLICY = Object.freeze({
   taxInclusive: true
 });
 
+const MAX_PWYW_AMOUNT_CENTS = 100000000;
+
 function normalizePositiveInteger(value) {
   return Number.isInteger(value) && value > 0 ? value : null;
 }
@@ -71,10 +73,74 @@ function validateCartPrice(product, options = {}) {
   };
 }
 
+function isPayWhatYouWantProduct(product) {
+  return product?.pricingModel === "pwyw"
+    || product?.status === "pay-what-you-want"
+    || product?.buyMode === "pay-what-you-want";
+}
+
+function resolvePayWhatYouWantPrice(product, amountCents) {
+  const minimumPriceCents = Number.isInteger(product?.minimumPriceCents)
+    ? product.minimumPriceCents
+    : 0;
+  const suggestedPriceCents = Number.isInteger(product?.suggestedPriceCents)
+    ? product.suggestedPriceCents
+    : Number.isInteger(product?.priceCents)
+      ? product.priceCents
+      : minimumPriceCents;
+  const currency = String(product?.currency || "USD").trim().toUpperCase() || "USD";
+
+  if (!Number.isInteger(minimumPriceCents) || minimumPriceCents < 0) {
+    return { reason: "invalid_pwyw_minimum", valid: false };
+  }
+  if (!Number.isInteger(suggestedPriceCents) || suggestedPriceCents < minimumPriceCents) {
+    return { reason: "invalid_pwyw_suggested", valid: false };
+  }
+  if (!Number.isInteger(amountCents) || amountCents < 0 || amountCents > MAX_PWYW_AMOUNT_CENTS) {
+    return { reason: "invalid_pwyw_amount", valid: false };
+  }
+  if (amountCents < minimumPriceCents) {
+    return { reason: "pwyw_below_minimum", valid: false };
+  }
+
+  return {
+    details: {
+      currency,
+      effectivePriceCents: amountCents,
+      minimumPriceCents,
+      regularPriceCents: suggestedPriceCents,
+      saleActive: false,
+      suggestedPriceCents
+    },
+    valid: true
+  };
+}
+
+function resolveCartPrice(product, requestedAmountCents, options = {}) {
+  if (isPayWhatYouWantProduct(product)) {
+    return resolvePayWhatYouWantPrice(product, requestedAmountCents);
+  }
+  if (product?.pricingModel === "free" || (product?.buyMode === "free-download" && Number(product?.priceCents) === 0)) {
+    return {
+      details: {
+        currency: String(product?.currency || "USD").trim().toUpperCase() || "USD",
+        effectivePriceCents: 0,
+        regularPriceCents: 0,
+        saleActive: false
+      },
+      valid: true
+    };
+  }
+  return validateCartPrice(product, options);
+}
+
 module.exports = {
   TAX_INCLUSIVE_PRICING_NOTE,
   TAX_INCLUSIVE_PRICING_POLICY,
   getEffectivePriceDetails,
+  isPayWhatYouWantProduct,
   isSaleActive,
+  resolveCartPrice,
+  resolvePayWhatYouWantPrice,
   validateCartPrice
 };

@@ -997,6 +997,19 @@
               <div class="intake-field">
                 <label for="product-price">Price</label>
                 <input id="product-price" class="dock-input" type="text" placeholder="12.95">
+                <p class="intake-help">Fixed price for ordinary cart products. For Pay What You Want, this is retained as the suggested amount unless the dedicated suggested-price field is filled.</p>
+              </div>
+
+              <div class="intake-field">
+                <label for="product-suggested-price">PWYW Suggested Price</label>
+                <input id="product-suggested-price" class="dock-input" type="text" placeholder="12.95" inputmode="decimal">
+                <p class="intake-help">Shown as the recommended contribution. Required for native Pay What You Want cart products.</p>
+              </div>
+
+              <div class="intake-field">
+                <label for="product-minimum-price">PWYW Minimum Price</label>
+                <input id="product-minimum-price" class="dock-input" type="text" placeholder="0.00" inputmode="decimal">
+                <p class="intake-help">Leave blank or enter 0.00 to permit a free acquisition without Stripe.</p>
               </div>
 
               <div class="intake-field">

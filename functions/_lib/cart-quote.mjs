@@ -6,7 +6,7 @@ import {
   normalizeSlug
 } from "./runtime-catalog.mjs";
 
-const { validateCartPrice } = pricingModule;
+const { isPayWhatYouWantProduct, resolveCartPrice } = pricingModule;
 
 const MAX_BODY_BYTES = 8192;
 const MAX_CART_ITEMS = 25;
@@ -57,7 +57,7 @@ export async function handleCartQuoteRequest(request, options = {}) {
       continue;
     }
 
-    if (product.status !== "available-direct") {
+    if (!["available-direct", "pay-what-you-want"].includes(product.status)) {
       unavailableItems.push(buildUnavailableItem(item.slug, "inactive_product", "This item is not currently available for direct purchase."));
       continue;
     }
@@ -76,9 +76,15 @@ export async function handleCartQuoteRequest(request, options = {}) {
       }
     }
 
-    const priceCheck = product.buyMode==='free-download'&&Number(product.priceCents)===0?{valid:true,details:{currency:String(product.currency||'USD'),effectivePriceCents:0,regularPriceCents:0,saleActive:false}}:validateCartPrice(product, { now });
+    const priceCheck = resolveCartPrice(product, item.amountCents, { now });
     if (!priceCheck.valid) {
-      unavailableItems.push(buildUnavailableItem(item.slug, "invalid_price", "This item cannot be quoted right now."));
+      const minimum = Number(product.minimumPriceCents || 0);
+      const message = priceCheck.reason === "pwyw_below_minimum"
+        ? `Choose an amount of at least ${(minimum / 100).toFixed(2)} for this Pay What You Want product.`
+        : isPayWhatYouWantProduct(product)
+          ? "Choose a valid Pay What You Want amount in whole cents."
+          : "This item cannot be quoted right now.";
+      unavailableItems.push(buildUnavailableItem(item.slug, priceCheck.reason || "invalid_price", message));
       continue;
     }
 
@@ -92,6 +98,9 @@ export async function handleCartQuoteRequest(request, options = {}) {
       lineTotalCents,
       quantity: 1,
       regularPriceCents: priceCheck.details.regularPriceCents,
+      pricingModel: isPayWhatYouWantProduct(product) ? "pwyw" : String(product.pricingModel || "fixed"),
+      minimumPriceCents: priceCheck.details.minimumPriceCents ?? null,
+      suggestedPriceCents: priceCheck.details.suggestedPriceCents ?? null,
       saleActive: priceCheck.details.saleActive,
       slug: product.slug,
       title: product.title
@@ -190,7 +199,11 @@ async function parseQuoteRequest(request) {
       continue;
     }
     seen.add(slug);
-    items.push({ quantity: 1, slug });
+    items.push({
+      amountCents: Object.prototype.hasOwnProperty.call(entry, "amountCents") ? entry.amountCents : undefined,
+      quantity: 1,
+      slug
+    });
   }
 
   return {

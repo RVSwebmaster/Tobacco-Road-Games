@@ -23,6 +23,7 @@ async function main() {
   const pendingRoute = await importModule("functions/_lib/orders-pending-route.mjs");
 
   await testCheckoutEndpoint(cartCheckout, cookieHelpers);
+  await testNativePwywCheckout(cartCheckout);
   await testCheckoutValidation(cartCheckout);
   await testCheckoutAccessCookie(cookieHelpers);
   await testCheckoutReturnPages(completePage, cookieHelpers);
@@ -368,6 +369,107 @@ async function testCheckoutValidation(cartCheckout) {
   assert.equal(failedOrder.stripe_checkout_session_id, null, "Failed Stripe session creation should not attach a session ID.");
   assert.equal(failedOrder.checkout_session_status, "retryable", "Indeterminate Stripe failures should preserve a retryable checkout attempt.");
   assert.equal(failedOrder.payment_status, "pending", "Indeterminate Stripe failures must remain pending for recovery.");
+}
+
+async function testNativePwywCheckout(cartCheckout) {
+  const now = Date.parse("2026-07-09T12:00:00.000Z");
+  const product = {
+    authorDisplay: "RV Sawyer",
+    authorSlugs: ["rv-sawyer"],
+    buyMode: "cart",
+    currency: "USD",
+    lastUpdated: "2026-07-01",
+    minimumPriceCents: 0,
+    priceCents: 1295,
+    pricingModel: "pwyw",
+    slug: "native-pwyw",
+    status: "pay-what-you-want",
+    suggestedPriceCents: 1295,
+    title: "Native PWYW",
+    version: "1.0"
+  };
+  const paidDatabase = createD1Database().d1;
+  let paidStripeAmount = null;
+  const paidResponse = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000001295",
+      email: "buyer@example.com",
+      emailConfirmation: "buyer@example.com",
+      items: [{ amountCents: 875, quantity: 1, slug: "native-pwyw" }]
+    }),
+    method: "POST"
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    ORDER_EMAIL_HASH_SECRET: "email-secret",
+    STRIPE_SECRET_KEY: "sk_test_mocked",
+    TRG_ORDERS: paidDatabase
+  }, {
+    catalogProducts: [product],
+    now,
+    stripeFetchImpl: async (url, options = {}) => {
+      const body = new URLSearchParams(String(options.body || ""));
+      paidStripeAmount = body.get("line_items[0][price_data][unit_amount]");
+      return createJsonResponse({
+        id: "cs_test_native_pwyw",
+        livemode: false,
+        ui_mode: "hosted_page",
+        url: "https://checkout.stripe.com/c/pay/cs_test_native_pwyw"
+      });
+    }
+  });
+  const paidPayload = await paidResponse.json();
+  assert.equal(paidResponse.status, 201, "A positive native PWYW amount should create the ordinary Stripe checkout.");
+  assert.equal(paidPayload.totalCents, 875, "Checkout responses must use the customer's chosen PWYW amount.");
+  assert.equal(paidStripeAmount, "875", "Stripe must receive the exact server-validated PWYW amount in integer cents.");
+  const paidItem = await findSingleRow(paidDatabase, "SELECT * FROM order_items");
+  assert.equal(paidItem.effective_unit_price_cents, 875, "D1 order lines must snapshot the actual PWYW amount.");
+  assert.equal(paidItem.list_price_cents, 1295, "D1 order lines should retain the suggested amount as the list-price reference.");
+
+  const freeDatabase = createD1Database().d1;
+  let freeStripeCalls = 0;
+  const freeResponse = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    body: JSON.stringify({
+      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000000",
+      email: "free@example.com",
+      emailConfirmation: "free@example.com",
+      items: [{ amountCents: 0, quantity: 1, slug: "native-pwyw" }]
+    }),
+    method: "POST"
+  }), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
+    ORDER_EMAIL_HASH_SECRET: "email-secret",
+    STRIPE_SECRET_KEY: "sk_test_mocked",
+    TRG_ORDERS: freeDatabase,
+    TRG_PRODUCTS: {
+      async head(key) {
+        return key === "native-pwyw/product.pdf" ? { size: 4096 } : null;
+      }
+    }
+  }, {
+    catalogProducts: [product],
+    deliveryProducts: {
+      "native-pwyw": {
+        contentType: "application/pdf",
+        customerFilename: "Native PWYW.pdf",
+        productSlug: "native-pwyw",
+        r2ObjectKey: "native-pwyw/product.pdf"
+      }
+    },
+    now,
+    stripeFetchImpl: async () => {
+      freeStripeCalls += 1;
+      throw new Error("Stripe must not be called for a zero-dollar PWYW acquisition.");
+    }
+  });
+  const freePayload = await freeResponse.json();
+  assert.equal(freeResponse.status, 201, "A zero-minimum PWYW selection should complete through secure fulfillment.");
+  assert.equal(freePayload.acquisitionComplete, true, "Zero-dollar PWYW should report acquisition completion without a payment session.");
+  assert.equal(freePayload.paymentProvider, "none", "Zero-dollar PWYW should explicitly avoid a payment provider.");
+  assert.equal(freeStripeCalls, 0, "Zero-dollar PWYW must never create an invalid Stripe charge.");
+  const freeOrder = await findSingleRow(freeDatabase, "SELECT * FROM orders");
+  assert.equal(freeOrder.payment_status, "paid", "Zero-dollar PWYW should record the completed acquisition for fulfillment and receipts.");
+  assert.equal(freeOrder.total_cents, 0, "Zero-dollar PWYW should conserve the selected zero-cent total.");
+  assert.equal(await countRows(freeDatabase, "download_entitlements"), 1, "Zero-dollar PWYW should create the same secure entitlement as a completed paid order.");
 }
 
 async function testCheckoutAccessCookie(cookieHelpers) {

@@ -40,6 +40,8 @@ function buildRuntimeCatalogEntry(product) {
     ? product.authorSlugs.map((slug) => String(slug || "").trim()).filter(Boolean)
     : [];
   const price = getEffectivePriceDetails(product);
+  const pricingModel = String(product.pricingModel || (product.status === "pay-what-you-want" ? "pwyw" : "fixed")).trim();
+  const pwyw = pricingModel === "pwyw";
 
   return {
     authorDisplay: authors.join(", "),
@@ -64,6 +66,9 @@ function buildRuntimeCatalogEntry(product) {
     playMode: String(product.playMode || "").trim(),
     prepBurden: String(product.prepBurden || "").trim(),
     priceCents: price.regularPriceCents,
+    pricingModel,
+    suggestedPriceCents: pwyw ? (Number.isInteger(product.suggestedPriceCents) ? product.suggestedPriceCents : price.regularPriceCents) : null,
+    minimumPriceCents: pwyw ? (Number.isInteger(product.minimumPriceCents) ? product.minimumPriceCents : 0) : null,
     saleActive: price.saleActive,
     saleEnabled: Boolean(product.saleEnabled),
     saleEnd: String(product.saleEnd || "").trim(),

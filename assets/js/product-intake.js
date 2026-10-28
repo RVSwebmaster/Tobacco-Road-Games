@@ -84,6 +84,8 @@
     format: document.getElementById("product-format"),
     pageCount: document.getElementById("product-page-count"),
     price: document.getElementById("product-price"),
+    suggestedPrice: document.getElementById("product-suggested-price"),
+    minimumPrice: document.getElementById("product-minimum-price"),
     salePrice: document.getElementById("product-sale-price"),
     currency: document.getElementById("product-currency"),
     saleEnabled: document.getElementById("product-sale-enabled"),
@@ -924,6 +926,8 @@
         longDescription: fields.longDescription.value,
         pageCount: fields.pageCount.value,
         price: fields.price.value,
+        suggestedPrice: fields.suggestedPrice.value,
+        minimumPrice: fields.minimumPrice.value,
         releaseDate: fields.releaseDate.value,
         saleEnabled: fields.saleEnabled.checked,
         openRulesEligible: fields.openRulesEligible.checked,
@@ -1101,6 +1105,8 @@
     pageCount: fields.pageCount.value,
     pdfFileName: fields.pdfFile.files[0]?.name || "",
     price: fields.price.value,
+    suggestedPrice: fields.suggestedPrice.value,
+    minimumPrice: fields.minimumPrice.value,
     relatedProducts: [...selectedRelatedProducts],
     releaseDate: fields.releaseDate.value,
     saleEnabled: fields.saleEnabled.checked,
@@ -1456,6 +1462,9 @@
               longDescription: String(product.longDescription || "").trim(),
               pageCount: product.pageCount ?? null,
               price: String(product.price || "").trim(),
+              suggestedPrice: String(product.suggestedPrice || "").trim(),
+              minimumPrice: String(product.minimumPrice || "").trim(),
+              pricingModel: String(product.pricingModel || "").trim(),
               previewImage: String(product.previewImage || "").trim(),
               previewImages: Array.isArray(product.previewImages) ? [...product.previewImages] : [],
               productLine: String(product.productLine || "").trim(),
@@ -1512,6 +1521,10 @@
     const pageCountRaw = fields.pageCount.value.trim();
     const priceRaw = normalizeMoneyText(fields.price.value);
     const priceCents = parsePriceNumber(priceRaw) === null ? null : Math.round(parsePriceNumber(priceRaw) * 100);
+    const suggestedPriceRaw = normalizeMoneyText(fields.suggestedPrice.value);
+    const suggestedPriceCents = parsePriceNumber(suggestedPriceRaw) === null ? null : Math.round(parsePriceNumber(suggestedPriceRaw) * 100);
+    const minimumPriceRaw = normalizeMoneyText(fields.minimumPrice.value);
+    const minimumPriceCents = minimumPriceRaw === "" ? 0 : (parsePriceNumber(minimumPriceRaw) === null ? null : Math.round(parsePriceNumber(minimumPriceRaw) * 100));
     const salePriceRaw = normalizeMoneyText(fields.salePrice.value);
     const salePriceCents = parsePriceNumber(salePriceRaw) === null ? null : Math.round(parsePriceNumber(salePriceRaw) * 100);
     const selectedPdfName = fields.pdfFile.files[0]?.name?.trim() || "";
@@ -1554,6 +1567,11 @@
       pageCount: pageCountRaw ? Number(pageCountRaw) : null,
       price: priceRaw,
       priceCents,
+      suggestedPrice: suggestedPriceRaw,
+      suggestedPriceCents,
+      minimumPrice: minimumPriceRaw || "0.00",
+      minimumPriceCents,
+      pricingModel: fields.status.value === "pay-what-you-want" && fields.buyMode.value === CART_BUY_MODE ? "pwyw" : "fixed",
       productLine,
       productLineSlug: isEditingLoadedListing() && productLine === existingProductLine
         ? (existingProductLineSlug || slugify(productLine))
@@ -1655,6 +1673,7 @@
       `Mode: ${existingMode ? `Update ${loadedProductRecord?.title || loadedProductSlug}` : "Create a new listing"}.`,
       `Product: ${payload.title} (${payload.slug}).`,
       `Storefront state: ${payload.statusLabel}; buy mode: ${payload.buyMode}.`,
+      ...(payload.pricingModel === "pwyw" ? [`PWYW pricing: suggested $${payload.suggestedPrice || payload.price || "0.00"}; minimum $${payload.minimumPrice || "0.00"}.`] : []),
       `R2 folder: ${payload.folder}.`,
       `Product PDF: ${selectedPdf || (existingMode ? `preserve ${currentPdf}` : "not selected")}.`,
       `cover.webp: ${fields.coverFile.files[0]?.name || (existingMode ? "preserve current cover" : "not selected")}.`,
@@ -1781,6 +1800,8 @@
       formData.set("format", payload.format.join(", "));
       formData.set("pageCount", payload.pageCount === null ? "" : String(payload.pageCount));
       formData.set("price", payload.price);
+      formData.set("suggestedPrice", payload.suggestedPrice);
+      formData.set("minimumPrice", payload.minimumPrice);
       formData.set("salePrice", payload.salePrice);
       formData.set("saleEnabled", payload.saleEnabled ? "true" : "false");
       formData.set("openRulesEligible", payload.openRulesEligible ? "true" : "false");
@@ -1929,7 +1950,7 @@
       issues.push({ field: fields.playerCountMax, label: "Maximum players", message: "Maximum players cannot be lower than minimum players." });
     }
 
-    for (const [field, label] of [[fields.price, "Price"], [fields.salePrice, "Sale price"]]) {
+    for (const [field, label] of [[fields.price, "Price"], [fields.suggestedPrice, "PWYW suggested price"], [fields.minimumPrice, "PWYW minimum price"], [fields.salePrice, "Sale price"]]) {
       const value = field.value.trim();
       if (value && (parsePriceNumber(value) === null || parsePriceNumber(value) < 0)) {
         issues.push({ field, label, message: `${label} must be a valid nonnegative amount.` });
@@ -1955,12 +1976,26 @@
     validateSelectedFile(fields.pdfFile, "Product PDF", "application/pdf", ".pdf");
 
     if (fields.buyMode.value === CART_BUY_MODE) {
-      if (fields.status.value !== "available-direct") {
-        issues.push({ field: fields.status, label: "Status", message: "Cart products must use Available Direct status." });
+      const pwyw = fields.status.value === "pay-what-you-want";
+      if (!pwyw && fields.status.value !== "available-direct") {
+        issues.push({ field: fields.status, label: "Status", message: "Cart products must use Available Direct or Pay What You Want status." });
       }
-      const parsedPrice = parsePriceNumber(fields.price.value);
-      if (parsedPrice === null || parsedPrice <= 0) {
-        issues.push({ field: fields.price, label: "Price", message: "Cart products require a positive price." });
+      if (pwyw) {
+        const suggested = parsePriceNumber(fields.suggestedPrice.value || fields.price.value);
+        const minimum = fields.minimumPrice.value.trim() === "" ? 0 : parsePriceNumber(fields.minimumPrice.value);
+        if (suggested === null || suggested < 0) {
+          issues.push({ field: fields.suggestedPrice, label: "PWYW suggested price", message: "Pay What You Want products require a valid nonnegative suggested price." });
+        }
+        if (minimum === null || minimum < 0) {
+          issues.push({ field: fields.minimumPrice, label: "PWYW minimum price", message: "PWYW minimum price must be zero or a positive amount." });
+        } else if (suggested !== null && suggested < minimum) {
+          issues.push({ field: fields.suggestedPrice, label: "PWYW suggested price", message: "PWYW suggested price cannot be lower than the minimum price." });
+        }
+      } else {
+        const parsedPrice = parsePriceNumber(fields.price.value);
+        if (parsedPrice === null || parsedPrice <= 0) {
+          issues.push({ field: fields.price, label: "Price", message: "Fixed-price cart products require a positive price." });
+        }
       }
     }
 
@@ -2079,6 +2114,8 @@
     fields.format.value = formatListValue(product.format) || "PDF";
     fields.pageCount.value = product.pageCount ?? "";
     fields.price.value = product.price || "";
+    fields.suggestedPrice.value = product.suggestedPrice || (product.pricingModel === "pwyw" ? product.price || "" : "");
+    fields.minimumPrice.value = product.minimumPrice || (product.pricingModel === "pwyw" ? "0.00" : "");
     fields.salePrice.value = product.salePrice || "";
     fields.currency.value = product.currency || "USD";
     fields.saleEnabled.checked = Boolean(product.saleEnabled);
@@ -2158,6 +2195,8 @@
     fields.format.value = draft.format ?? formatListValue(product.format) ?? "PDF";
     fields.pageCount.value = draft.pageCount ?? (product.pageCount ?? "");
     fields.price.value = draft.price ?? product.price ?? "";
+    fields.suggestedPrice.value = draft.suggestedPrice ?? product.suggestedPrice ?? (product.pricingModel === "pwyw" ? product.price || "" : "");
+    fields.minimumPrice.value = draft.minimumPrice ?? product.minimumPrice ?? (product.pricingModel === "pwyw" ? "0.00" : "");
     fields.salePrice.value = draft.salePrice ?? product.salePrice ?? "";
     fields.currency.value = draft.currency ?? product.currency ?? "USD";
     fields.saleEnabled.checked = Boolean(Object.prototype.hasOwnProperty.call(draft, "saleEnabled") ? draft.saleEnabled : product.saleEnabled);
@@ -2411,6 +2450,8 @@
     fields.format.value = "PDF";
     fields.pageCount.value = "";
     fields.price.value = "";
+    fields.suggestedPrice.value = "";
+    fields.minimumPrice.value = "";
     fields.salePrice.value = "";
     fields.currency.value = "USD";
     fields.saleEnabled.checked = false;

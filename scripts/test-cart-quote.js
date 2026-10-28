@@ -60,6 +60,24 @@ async function testRuntimeCatalogGeneration(buildRuntimeCatalog) {
       title: "Preview Only",
       updateEligible: false,
       version: "test"
+    },
+    {
+      authorSlugs: ["rv-sawyer"],
+      authors: ["RV Sawyer"],
+      buyMode: "cart",
+      coverImage: "/product-assets/native-pwyw/cover.webp",
+      currency: "USD",
+      libraryEligible: true,
+      minimumPriceCents: 0,
+      priceCents: 1295,
+      pricingModel: "pwyw",
+      saleEnabled: false,
+      slug: "native-pwyw",
+      status: "pay-what-you-want",
+      suggestedPriceCents: 1295,
+      title: "Native PWYW",
+      updateEligible: true,
+      version: "1.0"
     }
   ];
   fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
@@ -80,6 +98,10 @@ async function testRuntimeCatalogGeneration(buildRuntimeCatalog) {
   assert.equal(agency.effectivePriceCents, 399, "Runtime catalog modules should precompute the effective sale price.");
   assert.equal(agency.authorDisplay, "RV Sawyer", "Runtime catalog modules should retain safe author display data.");
   assert.equal("shortDescription" in agency, false, "Runtime catalog modules should avoid becoming a second hand-edited marketing catalog.");
+  const nativePwyw = runtimeModule.RUNTIME_CATALOG_PRODUCTS.find((product) => product.slug === "native-pwyw");
+  assert.equal(nativePwyw.pricingModel, "pwyw", "Runtime catalogs should retain native PWYW pricing metadata.");
+  assert.equal(nativePwyw.suggestedPriceCents, 1295, "Runtime catalogs should retain PWYW suggested prices in integer cents.");
+  assert.equal(nativePwyw.minimumPriceCents, 0, "Runtime catalogs should retain a zero PWYW minimum.");
 }
 
 function testPricingRules(pricing) {
@@ -132,6 +154,21 @@ function testPricingRules(pricing) {
     saleEnabled: false
   }, { now });
   assert.equal(invalid.valid, false, "Missing, zero, or negative cart prices should be rejected.");
+
+  const pwyw = {
+    buyMode: "cart",
+    currency: "USD",
+    minimumPriceCents: 250,
+    priceCents: 1295,
+    pricingModel: "pwyw",
+    status: "pay-what-you-want",
+    suggestedPriceCents: 1295
+  };
+  assert.equal(pricing.resolveCartPrice(pwyw, 1295).details.effectivePriceCents, 1295, "PWYW should accept the suggested amount as integer cents.");
+  assert.equal(pricing.resolveCartPrice(pwyw, 250).details.effectivePriceCents, 250, "PWYW should accept its exact configured minimum.");
+  assert.equal(pricing.resolveCartPrice(pwyw, 249).reason, "pwyw_below_minimum", "PWYW should reject one cent below its minimum.");
+  assert.equal(pricing.resolveCartPrice(pwyw, "12.95").reason, "invalid_pwyw_amount", "The server must reject client amount strings instead of reparsing ambiguous money.");
+  assert.equal(pricing.resolveCartPrice({ ...pwyw, minimumPriceCents: 0 }, 0).details.effectivePriceCents, 0, "A zero-minimum PWYW product should permit a zero-dollar acquisition.");
 }
 
 async function testQuoteEndpoint(cartQuote) {
@@ -223,6 +260,39 @@ async function testQuoteEndpoint(cartQuote) {
     "invalid_price"
   ], "Unavailable items should distinguish each rejection reason.");
   assert.match(successPayload.quotedAt, /^\d{4}-\d{2}-\d{2}T/, "Quotes should include a generation timestamp.");
+
+  const nativePwyw = {
+    authorDisplay: "RV Sawyer",
+    buyMode: "cart",
+    coverUrl: "/product-assets/native-pwyw/cover.webp",
+    currency: "USD",
+    minimumPriceCents: 250,
+    priceCents: 1295,
+    pricingModel: "pwyw",
+    slug: "native-pwyw",
+    status: "pay-what-you-want",
+    suggestedPriceCents: 1295,
+    title: "Native PWYW"
+  };
+  const pwywResponse = await cartQuote.handleCartQuoteRequest(new Request("https://example.com/api/cart/quote", {
+    body: JSON.stringify({ items: [
+      { amountCents: 875, quantity: 1, slug: "native-pwyw" },
+      { quantity: 1, slug: "agency" }
+    ] }),
+    method: "POST"
+  }), { catalogProducts: [...catalogProducts, nativePwyw], now });
+  const pwywPayload = await pwywResponse.json();
+  assert.equal(pwywResponse.status, 200, "Mixed fixed-price and PWYW carts should quote normally.");
+  assert.equal(pwywPayload.items.find((item) => item.slug === "native-pwyw").effectivePriceCents, 875, "Quotes must preserve the customer's accepted PWYW amount.");
+  assert.equal(pwywPayload.totalCents, 1275, "Mixed-cart totals must use the chosen PWYW amount and the server-authoritative fixed price.");
+
+  const belowMinimumResponse = await cartQuote.handleCartQuoteRequest(new Request("https://example.com/api/cart/quote", {
+    body: JSON.stringify({ items: [{ amountCents: 249, quantity: 1, slug: "native-pwyw" }] }),
+    method: "POST"
+  }), { catalogProducts: [...catalogProducts, nativePwyw], now });
+  const belowMinimumPayload = await belowMinimumResponse.json();
+  assert.equal(belowMinimumPayload.items.length, 0, "A below-minimum PWYW item must not enter the quoted cart.");
+  assert.equal(belowMinimumPayload.unavailableItems[0].code, "pwyw_below_minimum", "The quote API should expose the precise minimum failure.");
 
   const malformedResponse = await cartQuote.handleCartQuoteRequest(new Request("https://example.com/api/cart/quote", {
     body: "{not-json",

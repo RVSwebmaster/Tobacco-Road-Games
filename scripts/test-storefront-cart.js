@@ -38,18 +38,24 @@ function testCartStorageHelpers() {
   assert.equal(cart.items[0].quantity, 1, "Cart quantity should remain fixed at 1.");
 
   api.addItem("sirrocans", storage);
+  api.addItem("native-pwyw", storage, 1295);
   cart = api.readCart(storage);
-  assert.equal(cart.items.length, 2, "Distinct products should be added to the cart.");
+  assert.equal(cart.items.length, 3, "Distinct fixed-price and PWYW products should be added to the cart.");
   assert.deepEqual(JSON.parse(JSON.stringify(api.createQuoteRequest(cart))), {
     items: [
       { quantity: 1, slug: "agency" },
-      { quantity: 1, slug: "sirrocans" }
+      { quantity: 1, slug: "sirrocans" },
+      { amountCents: 1295, quantity: 1, slug: "native-pwyw" }
     ]
-  }, "Quote requests should submit only slugs and fixed quantity.");
+  }, "Quote requests should submit only slugs, fixed quantity, and the selected PWYW amount.");
+
+  api.updateItemAmount("native-pwyw", 875, storage);
+  cart = api.readCart(storage);
+  assert.equal(cart.items.find((entry) => entry.slug === "native-pwyw").amountCents, 875, "Changing a PWYW amount should persist in the cart.");
 
   api.removeItem("agency", storage);
   cart = api.readCart(storage);
-  assert.deepEqual(Array.from(cart.items, (entry) => entry.slug), ["sirrocans"], "Removing a cart entry should persist.");
+  assert.deepEqual(Array.from(cart.items, (entry) => entry.slug), ["sirrocans", "native-pwyw"], "Removing a cart entry should preserve the remaining fixed and PWYW lines.");
 }
 
 function testCartBrowserInitAndStorageSync() {
@@ -426,7 +432,29 @@ function testStoreGenerationCartMode() {
     previewImage: "/product-assets/fixed-price-fixture/preview.webp",
     frontCoverImage: "/product-assets/fixed-price-fixture/cover.webp"
   };
-  products.push(cartFixture, fixedPriceFixture);
+  const pwywFixture = {
+    ...products[0],
+    slug: "native-pwyw-fixture",
+    title: "Native PWYW Fixture",
+    subtitle: "Native cart-based Pay What You Want",
+    status: "pay-what-you-want",
+    statusLabel: "Pay What You Want",
+    buyMode: "cart",
+    buyUrl: "",
+    price: "12.95",
+    priceCents: 1295,
+    pricingModel: "pwyw",
+    suggestedPrice: "12.95",
+    suggestedPriceCents: 1295,
+    minimumPrice: "0.00",
+    minimumPriceCents: 0,
+    saleEnabled: false,
+    salePrice: "",
+    salePriceCents: null,
+    coverImage: "/product-assets/native-pwyw-fixture/cover.webp",
+    frontCoverImage: "/product-assets/native-pwyw-fixture/cover.webp"
+  };
+  products.push(cartFixture, fixedPriceFixture, pwywFixture);
   fs.writeFileSync(productsPath, `${JSON.stringify(products, null, 2)}\n`);
 
   const build = spawnSync(process.execPath, [path.join(tempRoot, "scripts", "build-store.js")], {
@@ -465,6 +493,15 @@ function testStoreGenerationCartMode() {
 
   const fixedPricePage = fs.readFileSync(path.join(tempRoot, "store", "products", "fixed-price-fixture", "index.html"), "utf8");
   assert.match(fixedPricePage, />Buy Now</, "Existing fixed-price purchase modes should remain functional.");
+
+  const pwywPage = fs.readFileSync(path.join(tempRoot, "store", "products", "native-pwyw-fixture", "index.html"), "utf8");
+  assert.match(pwywPage, /data-pwyw-amount-for="native-pwyw-fixture"/, "Native PWYW product pages should render an editable amount control.");
+  assert.match(pwywPage, /Suggested \$12\.95; \$0 allowed/, "Native PWYW product pages should explain the suggested amount and zero minimum.");
+  assert.match(pwywPage, /data-cart-add="native-pwyw-fixture"/, "Native PWYW product pages should use the ordinary cart control.");
+  assert.doesNotMatch(pwywPage, /prompt\(/, "Native PWYW product pages must not rely on a browser prompt.");
+  assert.match(cartPage, /"pricingModel":"pwyw"/, "The cart's embedded catalog should preserve native PWYW metadata.");
+  assert.match(cartPage, /"suggestedPriceCents":1295/, "The cart's embedded catalog should preserve the PWYW suggestion.");
+  assert.match(cartPage, /"minimumPriceCents":0/, "The cart's embedded catalog should preserve the PWYW minimum.");
 }
 
 function loadCartScript({ document, fetchImpl, storage, window }) {

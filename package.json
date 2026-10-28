@@ -21,6 +21,7 @@
     "test:owner-profile-finance": "node scripts/test-owner-profile-financial-controls.js",
     "test:product-pdf-autofill": "node scripts/test-product-pdf-autofill.js",
     "test:product-pdf-webp": "node scripts/test-product-pdf-webp.js",
+    "test:native-pwyw": "node scripts/test-owner-intake.js && node scripts/test-cart-quote.js && node scripts/test-storefront-cart.js && node scripts/test-cart-checkout.js",
     "test:creator-closure": "node scripts/test-creator-account-closure.js",
     "test:creator-publishing-sandbox": "node scripts/test-creator-publishing-sandbox.js",
     "test:creator-product-submission-sandbox": "node scripts/test-creator-product-submission-sandbox.js",

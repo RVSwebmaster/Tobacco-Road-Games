@@ -20,6 +20,14 @@
     return String(value || "").trim().toLowerCase();
   }
 
+  function parseDollarAmountToCents(value) {
+    const text = String(value ?? "").trim();
+    if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
+    const [whole, fraction = ""] = text.split(".");
+    const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+    return Number.isSafeInteger(cents) && cents >= 0 ? cents : null;
+  }
+
   function createEmptyCart() {
     return {
       version: SCHEMA_VERSION,
@@ -151,6 +159,16 @@
     }, storage);
   }
 
+  function updateItemAmount(slug, amountCents, storage = getStorage()) {
+    const normalizedSlug = normalizeSlug(slug);
+    if (!normalizedSlug || !Number.isInteger(amountCents) || amountCents < 0) return readCart(storage);
+    const current = readCart(storage);
+    const nextItems = current.items.map((entry) => entry.slug === normalizedSlug
+      ? { ...entry, amountCents }
+      : entry);
+    return writeCart({ ...current, items: nextItems, updatedAt: nowIso() }, storage);
+  }
+
   function clearCart(storage = getStorage()) {
     return writeCart(createEmptyCart(), storage);
   }
@@ -246,7 +264,7 @@
       error.retryable = payload?.retryable;
       throw error;
     }
-    if (!payload || typeof payload.checkoutUrl !== "string") {
+    if (!payload || (typeof payload.checkoutUrl !== "string" && payload.acquisitionComplete !== true)) {
       throw new Error("Checkout response was not valid.");
     }
 
@@ -354,10 +372,16 @@
       };
     }
 
-    const priceDisplay = product.priceDisplay || formatCents(product.priceCents, product.currency || "USD");
+    const isPwyw = product.pricingModel === "pwyw";
+    const selectedCents = isPwyw && Number.isInteger(entry.amountCents) ? entry.amountCents : product.priceCents;
+    const priceDisplay = formatCents(selectedCents, product.currency || "USD");
     return {
       coverUrl: product.cover || "/assets/logo.png",
-      meta: `Estimated price: ${priceDisplay}`,
+      amountCents: Number.isInteger(selectedCents) ? selectedCents : 0,
+      meta: isPwyw ? `Selected Pay What You Want amount: ${priceDisplay}` : `Estimated price: ${priceDisplay}`,
+      pricingModel: product.pricingModel || "fixed",
+      minimumPriceCents: Number.isInteger(product.minimumPriceCents) ? product.minimumPriceCents : null,
+      suggestedPriceCents: Number.isInteger(product.suggestedPriceCents) ? product.suggestedPriceCents : null,
       priceDisplay,
       slug: product.slug,
       title: product.title,
@@ -369,8 +393,11 @@
     let totalCents = 0;
     const items = cart.items.map((entry) => {
       const product = catalog.get(entry.slug);
-      if (product && Number.isInteger(product.priceCents)) {
-        totalCents += product.priceCents;
+      if (product) {
+        const amount = product.pricingModel === "pwyw" && Number.isInteger(entry.amountCents)
+          ? entry.amountCents
+          : product.priceCents;
+        if (Number.isInteger(amount)) totalCents += amount;
       }
       return buildEstimatedItem(entry, product);
     });
@@ -401,8 +428,12 @@
   function buildQuotedCartModel(quote, catalog) {
     const items = quote.items.map((item) => ({
       coverUrl: item.coverUrl || catalog.get(item.slug)?.cover || "/assets/logo.png",
+      amountCents: item.effectivePriceCents,
       meta: `${item.saleActive ? "Verified sale price" : "Verified price"}: ${formatCents(item.effectivePriceCents, item.currency)}`,
       priceDisplay: formatCents(item.lineTotalCents, item.currency),
+      pricingModel: item.pricingModel || "fixed",
+      minimumPriceCents: Number.isInteger(item.minimumPriceCents) ? item.minimumPriceCents : null,
+      suggestedPriceCents: Number.isInteger(item.suggestedPriceCents) ? item.suggestedPriceCents : null,
       slug: item.slug,
       title: item.title,
       url: catalog.get(item.slug)?.url || ""
@@ -448,6 +479,9 @@
         <div class="cart-item__body">
           ${titleMarkup}
           <p class="cart-item__meta">${escapeHtml(item.meta)}</p>
+          ${item.pricingModel === "pwyw" ? `<label class="cart-item__meta">Change contribution
+            <input class="dock-input" type="number" inputmode="decimal" step="0.01" min="${escapeHtml(((item.minimumPriceCents || 0) / 100).toFixed(2))}" value="${escapeHtml(((item.amountCents || 0) / 100).toFixed(2))}" data-cart-pwyw-amount="${escapeHtml(item.slug)}">
+          </label>` : ""}
         </div>
         <div class="cart-item__actions">
           <span class="cart-item__price">${escapeHtml(item.priceDisplay)}</span>
@@ -500,6 +534,21 @@
         button.dataset.cartBound = "true";
         button.addEventListener("click", () => {
           removeItem(button.dataset.cartRemove, storage);
+          void renderAll(documentRef, storage, options);
+        });
+      });
+      const amountInputs = container.querySelectorAll ? container.querySelectorAll("[data-cart-pwyw-amount]") : [];
+      amountInputs.forEach((input) => {
+        if (input.dataset.cartBound === "true") return;
+        input.dataset.cartBound = "true";
+        input.addEventListener("change", () => {
+          const amount = parseDollarAmountToCents(input.value);
+          const minimum = parseDollarAmountToCents(input.min || "0") ?? 0;
+          if (amount === null || amount < minimum) {
+            globalThis.alert?.(`Enter a valid amount of at least $${(minimum / 100).toFixed(2)} with no more than two decimal places.`);
+            return;
+          }
+          updateItemAmount(input.dataset.cartPwywAmount, amount, storage);
           void renderAll(documentRef, storage, options);
         });
       });
@@ -681,6 +730,14 @@
         state.checkoutAttemptId,
         options.fetchImpl || globalThis.fetch
       );
+      if (payload.acquisitionComplete === true) {
+        clearCart(storage);
+        state.checkoutBusy = false;
+        setCheckoutFeedback(nodes, `Acquisition complete. Order ${payload.publicOrderReference || "recorded"}.`);
+        await renderAll(documentRef, storage, options);
+        if (options.onAcquisitionComplete) options.onAcquisitionComplete(payload);
+        return;
+      }
       if (options.onCheckoutRedirect) {
         options.onCheckoutRedirect(payload.checkoutUrl, payload);
       } else if (options.window?.location) {
@@ -757,7 +814,18 @@
       }
       button.dataset.cartBound = "true";
       button.addEventListener("click", () => {
-        const suggested=Number(button.dataset.pwywSuggestedCents);let amount=null;if(Number.isInteger(suggested)&&suggested>=0){const entered=globalThis.prompt?.(`Choose your price in dollars (suggested $${(suggested/100).toFixed(2)}; enter 0 for free):`,(suggested/100).toFixed(2));if(entered===null)return;const dollars=Number(entered);amount=Number.isFinite(dollars)&&dollars>=0&&Math.round(dollars*100)===dollars*100?Math.round(dollars*100):null;if(amount===null){globalThis.alert?.('Enter a valid non-negative dollar amount with no more than two decimal places.');return;}}addItem(button.dataset.cartAdd, storage, amount);
+        const suggested = Number(button.dataset.pwywSuggestedCents);
+        const minimum = Number(button.dataset.pwywMinimumCents || 0);
+        let amount = null;
+        if (Number.isInteger(suggested) && suggested >= 0) {
+          const input = documentRef.querySelector?.(`[data-pwyw-amount-for="${button.dataset.cartAdd}"]`);
+          amount = parseDollarAmountToCents(input?.value);
+          if (amount === null || amount < minimum) {
+            globalThis.alert?.(`Enter a valid amount of at least $${(minimum / 100).toFixed(2)} with no more than two decimal places.`);
+            return;
+          }
+        }
+        addItem(button.dataset.cartAdd, storage, amount);
         void renderAll(documentRef, storage, options);
       });
     });
@@ -803,6 +871,7 @@
     parseCartCatalog,
     readCart,
     removeItem,
+    updateItemAmount,
     renderAll,
     requestCheckout,
     requestQuote,

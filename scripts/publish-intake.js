@@ -143,6 +143,8 @@ function normalizePublishMetadata(metadata) {
   const hasSalePrice = Object.prototype.hasOwnProperty.call(metadata, "salePrice");
   const hasSalePriceCents = Object.prototype.hasOwnProperty.call(metadata, "salePriceCents");
   const buyMode = chooseText(metadata.buyMode, "preview-only");
+  const pricingModel = chooseText(metadata.pricingModel, metadata.status === "pay-what-you-want" ? "pwyw" : "fixed");
+  const pwyw = pricingModel === "pwyw" || metadata.status === "pay-what-you-want";
 
   const normalized = {
     authorSlugs: Array.isArray(metadata.authorSlugs) && metadata.authorSlugs.length ? metadata.authorSlugs : ["rv-sawyer"],
@@ -178,6 +180,11 @@ function normalizePublishMetadata(metadata) {
     prepBurden: chooseText(metadata.prepBurden, ""),
     price: chooseText(normalizeMoneyText(metadata.price), ""),
     priceCents: chooseNullableInteger(metadata.priceCents, normalizePriceCents(metadata.price)),
+    pricingModel,
+    suggestedPrice: pwyw ? chooseText(normalizeMoneyText(metadata.suggestedPrice), normalizeMoneyText(metadata.price), "") : "",
+    suggestedPriceCents: pwyw ? chooseNullableInteger(metadata.suggestedPriceCents, normalizePriceCents(metadata.suggestedPrice), metadata.priceCents, normalizePriceCents(metadata.price)) : null,
+    minimumPrice: pwyw ? chooseText(normalizeMoneyText(metadata.minimumPrice), "0.00") : "",
+    minimumPriceCents: pwyw ? chooseNullableInteger(metadata.minimumPriceCents, normalizePriceCents(metadata.minimumPrice), 0) : null,
     productLine: chooseText(metadata.productLine, ""),
     productLineSlug: normalizeSlug(chooseText(metadata.productLineSlug, metadata.productLine, "")),
     productIdentityId: chooseText(metadata.productIdentityId, ""),
@@ -276,12 +283,22 @@ function validatePublishMetadata(metadata) {
     return;
   }
 
-  if (metadata.status !== "available-direct") {
-    throw new Error("Cart products must use Available Direct status.");
+  const pwyw = metadata.status === "pay-what-you-want" || metadata.pricingModel === "pwyw";
+  if (!pwyw && metadata.status !== "available-direct") {
+    throw new Error("Cart products must use Available Direct or Pay What You Want status.");
   }
-
-  if (!Number.isInteger(metadata.priceCents) || metadata.priceCents <= 0) {
-    throw new Error("Cart products require a positive price.");
+  if (pwyw) {
+    if (!Number.isInteger(metadata.suggestedPriceCents) || metadata.suggestedPriceCents < 0) {
+      throw new Error("Pay What You Want products require a valid nonnegative suggested price.");
+    }
+    if (!Number.isInteger(metadata.minimumPriceCents) || metadata.minimumPriceCents < 0) {
+      throw new Error("Pay What You Want minimum price must be zero or a positive amount.");
+    }
+    if (metadata.suggestedPriceCents < metadata.minimumPriceCents) {
+      throw new Error("Pay What You Want suggested price cannot be lower than the minimum price.");
+    }
+  } else if (!Number.isInteger(metadata.priceCents) || metadata.priceCents <= 0) {
+    throw new Error("Fixed-price cart products require a positive price.");
   }
 }
 
@@ -377,6 +394,7 @@ function upsertProducts(products, metadata) {
   const index = nextProducts.findIndex((product) => product.slug === metadata.slug);
   const existing = index >= 0 ? deleteMeaninglessSeriesFields(clone(nextProducts[index])) : {};
   const title = chooseText(metadata.title, existing.title, humanizeSlug(metadata.slug));
+  const pwyw = metadata.pricingModel === "pwyw";
 
   const updated = {
     ...existing,
@@ -409,10 +427,11 @@ function upsertProducts(products, metadata) {
     prepBurden: chooseText(metadata.prepBurden, existing.prepBurden, ""),
     price: chooseText(metadata.price, existing.price, ""),
     priceCents: chooseNullableInteger(metadata.priceCents, existing.priceCents, null),
-    minimumPrice: chooseText(existing.minimumPrice, ""),
-    minimumPriceCents: chooseNullableInteger(existing.minimumPriceCents, null),
-    suggestedPrice: chooseText(existing.suggestedPrice, ""),
-    suggestedPriceCents: chooseNullableInteger(existing.suggestedPriceCents, null),
+    minimumPrice: pwyw ? chooseText(metadata.minimumPrice, existing.minimumPrice, "0.00") : "",
+    minimumPriceCents: pwyw ? chooseNullableInteger(metadata.minimumPriceCents, existing.minimumPriceCents, 0) : null,
+    suggestedPrice: pwyw ? chooseText(metadata.suggestedPrice, existing.suggestedPrice, metadata.price, "") : "",
+    suggestedPriceCents: pwyw ? chooseNullableInteger(metadata.suggestedPriceCents, existing.suggestedPriceCents, metadata.priceCents, null) : null,
+    pricingModel: chooseText(metadata.pricingModel, existing.pricingModel, "fixed"),
     regularPrice: chooseText(existing.regularPrice, ""),
     regularPriceCents: chooseNullableInteger(existing.regularPriceCents, null),
     salePrice: chooseText(metadata.salePrice, existing.salePrice, ""),

@@ -39,6 +39,7 @@ async function main() {
   await testMissingBucketReportsConfigurationStage(ownerPublish, baseEnv, openOwnerContext);
   await testR2FailureReportsUploadStageAndRollsBack(ownerPublish, baseEnv, openOwnerContext);
   await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, openOwnerContext);
+  await testNativePwywPublishAccepted(ownerPublish, baseEnv, openOwnerContext);
   await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, openOwnerContext);
   await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, openOwnerContext);
   await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, openOwnerContext);
@@ -301,6 +302,57 @@ async function testCartPublishRejectsMissingPrice(ownerPublish, env, cookieHeade
   assert.match(payload.error, /Cart products require a positive price/i, "Cart price validation should be human-readable.");
 }
 
+async function testNativePwywPublishAccepted(ownerPublish, env, cookieHeader) {
+  const bucket = createMockBucket();
+  const dispatchCalls = [];
+  const formData = new FormData();
+  addRequiredTextFields(formData, {
+    buyMode: "cart",
+    minimumPrice: "0.00",
+    price: "12.95",
+    status: "pay-what-you-want",
+    suggestedPrice: "12.95"
+  });
+  formData.set("coverFile", new FileCtor(["cover"], "new-product-cover.webp", { type: "image/webp" }));
+  formData.set("productFile", new FileCtor(["pdf"], "New Product.pdf", { type: "application/pdf" }));
+
+  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
+    ...env,
+    TRG_PRODUCTS: bucket
+  }, {
+    dispatchOptions: {
+      fetchImpl: async (url, options = {}) => {
+        dispatchCalls.push({ options, url: String(url) });
+        if (String(url).endsWith("/dispatches")) return new Response(null, { status: 204 });
+        return jsonResponse({
+          workflow_runs: [{
+            conclusion: "success",
+            created_at: new Date().toISOString(),
+            display_title: "Owner publish native PWYW",
+            html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/1295",
+            id: 1295,
+            status: "completed"
+          }]
+        });
+      },
+      pollIntervalMs: 1,
+      timeoutMs: 100
+    }
+  });
+
+  assert.ok([200, 202].includes(response.status), "Native PWYW products should publish through the normal Owner pipeline.");
+  assert.deepEqual(bucket.putKeys.sort(), ["new-product/cover.webp", "new-product/product.pdf"], "Native PWYW publication should upload only the required cover and PDF assets.");
+  const dispatch = dispatchCalls.find((call) => call.url.endsWith("/dispatches"));
+  assert.ok(dispatch, "Native PWYW publication should dispatch the existing catalog workflow.");
+  const event = JSON.parse(dispatch.options.body);
+  const metadata = event.client_payload.metadata;
+  assert.equal(metadata.buyMode, "cart", "Native PWYW must use the ordinary cart pipeline.");
+  assert.equal(metadata.pricingModel, "pwyw", "Native PWYW metadata must identify its pricing model.");
+  assert.equal(metadata.suggestedPriceCents, 1295, "Suggested PWYW price must remain integer cents.");
+  assert.equal(metadata.minimumPriceCents, 0, "A blank-or-zero PWYW minimum must allow a free acquisition.");
+  assert.equal(metadata.buyUrl, "", "Native PWYW must not require an external purchase URL.");
+}
+
 async function testCartPublishRejectsInvalidStatus(ownerPublish, env, cookieHeader) {
   const formData = new FormData();
   addRequiredTextFields(formData, {
@@ -323,7 +375,7 @@ async function testCartPublishRejectsInvalidStatus(ownerPublish, env, cookieHead
 
   assert.equal(response.status, 400, "Cart products with the wrong status should be rejected.");
   const payload = await response.json();
-  assert.match(payload.error, /Cart products must use Available Direct status/i, "Cart status validation should be human-readable.");
+  assert.match(payload.error, /Cart products must use Available Direct or Pay What You Want status/i, "Cart status validation should be human-readable.");
 }
 
 async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieHeader) {
@@ -1019,7 +1071,7 @@ async function testPublishScriptRejectsInvalidCartMetadata(publishScript) {
         title: "Cart Bad Fixture"
       }
     }),
-    /Cart products require a positive price/,
+    /Fixed-price cart products require a positive price/,
     "Publish script should reject invalid cart pricing."
   );
 }
