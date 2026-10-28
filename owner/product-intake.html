@@ -1002,8 +1002,8 @@
 
               <div class="intake-field">
                 <label for="product-suggested-price">PWYW Suggested Price</label>
-                <input id="product-suggested-price" class="dock-input" type="text" placeholder="12.95" inputmode="decimal">
-                <p class="intake-help">Shown as the recommended contribution. Required for native Pay What You Want cart products.</p>
+                <input id="product-suggested-price" class="dock-input" type="text" placeholder="Owner-approved advisor recommendation" inputmode="decimal">
+                <p class="intake-help">Shown as the recommended contribution. Product Intelligence can propose this amount, but it changes only when you explicitly apply the recommendation.</p>
               </div>
 
               <div class="intake-field">
@@ -1208,6 +1208,11 @@
         </div>
 
         <div class="intake-actions">
+          <div class="intake-action-card">
+            <strong>Request Pricing Estimate</strong>
+            <button id="request-pricing-estimate-button" class="button button--secondary" type="button" aria-describedby="pricing-estimate-help">Request Pricing Estimate</button>
+            <p id="pricing-estimate-help">Runs Product Intelligence from the descriptive information currently available. It does not require publication-ready files or unrelated fields and changes nothing until you approve Apply Suggestions.</p>
+          </div>
           <div class="intake-action-card">
             <strong id="intake-check-label">Check New Listing</strong>
             <button id="analyze-listing-button" class="button button--secondary" type="button" aria-describedby="intake-check-help">Check New Listing</button>

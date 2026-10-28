@@ -178,6 +178,7 @@
   const buttons = {
     analyze: document.getElementById("analyze-listing-button"),
     applyAdvisor: document.getElementById("apply-advisor-button"),
+    requestPricingEstimate: document.getElementById("request-pricing-estimate-button"),
     addProductLine: document.getElementById("add-product-line-button"),
     addTag: document.getElementById("add-tag-button"),
     addTagGroup: document.getElementById("add-tag-group-button"),
@@ -1278,6 +1279,37 @@
     }
   };
 
+  const requestPricingEstimate = () => {
+    if (!globalThis.TRGProductAdvisor?.analyzeProductListing) {
+      showActionFeedback({
+        kind: "error",
+        heading: "Pricing advisor unavailable",
+        message: "Product Intelligence is not available in this browser. No form values were changed."
+      });
+      return;
+    }
+
+    try {
+      const advisorRun = globalThis.TRGProductAdvisor.analyzeProductListing(buildAdvisorInput(), {
+        catalog: availableProducts
+      });
+      latestAdvisorRun = advisorRun;
+      renderAdvisorPanel(advisorRun);
+      showActionFeedback({
+        kind: "success",
+        heading: "Pricing estimate ready",
+        message: "This estimate used the descriptive information currently available. It did not validate publication readiness or change any listing value. Review it below and apply it only if you approve."
+      });
+    } catch (error) {
+      clearAdvisorPanel();
+      showActionFeedback({
+        kind: "error",
+        heading: "Pricing estimate failed",
+        message: `Product Intelligence could not finish: ${error?.message || "unknown advisor error"}. No form values were changed.`
+      });
+    }
+  };
+
   const reviewCurrentListing = () => {
     const validationIssues = validateListingIssues();
     if (validationIssues.length) {
@@ -1314,8 +1346,14 @@
       return;
     }
 
-    fields.price.value = formatMoney(latestAdvisorRun.suggested_price);
-    fields.salePrice.value = formatMoney(latestAdvisorRun.suggested_sale_price);
+    const nativePwyw = fields.status.value === "pay-what-you-want" && fields.buyMode.value === CART_BUY_MODE;
+    if (latestAdvisorRun.suggested_price !== null) {
+      if (nativePwyw) fields.suggestedPrice.value = formatMoney(latestAdvisorRun.suggested_price);
+      else fields.price.value = formatMoney(latestAdvisorRun.suggested_price);
+    }
+    if (!nativePwyw && latestAdvisorRun.suggested_sale_price !== null) {
+      fields.salePrice.value = formatMoney(latestAdvisorRun.suggested_sale_price);
+    }
 
     if (latestAdvisorRun.series_fit) {
       fields.series.value = latestAdvisorRun.series_fit;
@@ -1331,7 +1369,9 @@
     showActionFeedback({
       kind: "success",
       heading: "Advisor suggestions applied",
-      message: "The suggestions are now editable form values. Nothing was published."
+      message: nativePwyw
+        ? "The approved recommendation is now the editable PWYW suggested price. The minimum price was not changed. Nothing was published."
+        : "The suggestions are now editable form values. Nothing was published."
     });
   };
 
@@ -2323,6 +2363,7 @@
     addOwnerTagGroup();
   });
   buttons.applyAdvisor?.addEventListener("click", applyAdvisorSuggestions);
+  buttons.requestPricingEstimate?.addEventListener("click", requestPricingEstimate);
   buttons.ignoreAdvisor?.addEventListener("click", () => {
     clearAdvisorPanel();
     showActionFeedback({

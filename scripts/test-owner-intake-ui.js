@@ -10,6 +10,7 @@ async function main() {
   await testIntakeLabelsAndHelperText();
   await testProductLineTerminologyAndManagerLabels();
   await testTagSelectorMarkup();
+  await testPricingEstimateIsIndependentAndOwnerApproved();
   await testPdfPrefillPreservesExistingValues();
   await testPdfSelectionAutomaticallyProcessesMetadataAndCovers();
   await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
@@ -78,6 +79,33 @@ async function testTagSelectorMarkup() {
   assert.match(script, /Product Lines[\s\S]*Genre[\s\S]*Product Type[\s\S]*Game System/, "The grouped tag selector should include the default tag groups.");
   assert.match(html, /<input id="product-tags" type="hidden"/, "The legacy tags field should remain as a hidden publish field.");
   assert.doesNotMatch(html, /<input id="product-tags" class="dock-input" type="text"/, "The old visible free-text tags input should be removed from normal use.");
+}
+
+async function testPricingEstimateIsIndependentAndOwnerApproved() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  assert.match(html, /id="request-pricing-estimate-button"/, "Owner Intake should expose an independent pricing-estimate action.");
+  assert.match(html, /does not require publication-ready files or unrelated fields/i, "The pricing-estimate action should explain that publication validation is separate.");
+
+  const harness = createHarness();
+  await harness.flush();
+  harness.buttons.startNew.click();
+  harness.fields.status.value = "pay-what-you-want";
+  harness.fields.buyMode.value = "cart";
+  harness.fields.price.value = "";
+  harness.fields.suggestedPrice.value = "";
+  harness.fields.minimumPrice.value = "0.00";
+
+  assert.ok(harness.api.validateRequiredFields().length > 0, "The incomplete listing fixture should still fail unrelated publication validation.");
+  harness.buttons.requestPricingEstimate.click();
+  assert.equal(harness.outputs.advisorPanel.hidden, false, "Pricing estimates should render even when publication requirements are incomplete.");
+  assert.equal(harness.outputs.advisorSuggestedPrice.textContent, "$4.99", "Product Intelligence should display its current recommendation.");
+  assert.equal(harness.fields.suggestedPrice.value, "", "Requesting an estimate must not change the PWYW suggestion without Owner approval.");
+
+  harness.buttons.applyAdvisor.click();
+  assert.equal(harness.fields.suggestedPrice.value, "4.99", "Applying an approved advisor result should populate the PWYW suggested-price field.");
+  assert.equal(harness.fields.minimumPrice.value, "0.00", "Applying a PWYW suggestion must not alter the Owner's minimum.");
+  assert.equal(harness.fields.price.value, "", "Applying a PWYW suggestion should not repurpose the fixed-price field.");
+  assert.equal(harness.fields.salePrice.value, "", "Applying a PWYW suggestion should not create an unrelated sale price.");
 }
 
 async function testPdfPrefillPreservesExistingValues() {
@@ -1046,6 +1074,7 @@ function createHarness(options = {}) {
     addTag: register("add-tag-button", createElement("button")),
     addTagGroup: register("add-tag-group-button", createElement("button")),
     applyAdvisor: register("apply-advisor-button", createElement("button")),
+    requestPricingEstimate: register("request-pricing-estimate-button", createElement("button")),
     ignoreAdvisor: register("ignore-advisor-button", createElement("button")),
     leaveListing: register("leave-listing-button", createElement("button")),
     loadExisting: register("product-existing-load", createElement("button")),
