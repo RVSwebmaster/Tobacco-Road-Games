@@ -117,6 +117,11 @@ async function main() {
   assert.throws(() => raw.prepare("UPDATE marketplace_products SET price_cents=-1 WHERE id=?").run(created.id), /CHECK constraint/);
   assert.throws(() => raw.prepare("DELETE FROM marketplace_products WHERE id=?").run(created.id), /retire products/);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 2);
+  await assert.rejects(catalog.deleteDraftProduct(db, created.id), /retire products/);
+  assert.equal(await catalog.deleteDraftProduct(db, pwyw.id), true);
+  assert.equal(await catalog.getProductById(db, pwyw.id), null);
+  assert.equal(await catalog.deleteDraftProduct(db, pwyw.id), false);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 1);
   assert.deepEqual(raw.prepare("PRAGMA foreign_key_check").all(), []);
   raw.close();
   console.log("D1 product catalog tests passed.");

@@ -147,6 +147,19 @@ export async function updateProduct(database, id, patch, { expectedRevision, now
   return getProductById(database, current.id);
 }
 
+// Disposable drafts may be removed before publication or sales. The D1 trigger
+// also rejects deletion when an order, entitlement, or creator sale references a slug.
+export async function deleteDraftProduct(database, id) {
+  const product = await getProductById(database, id);
+  if (!product) return false;
+  if (product.publicationState !== "draft") {
+    throw new ProductCatalogError("conflict", "Only draft products may be deleted.");
+  }
+  const result = await database.prepare("DELETE FROM marketplace_products WHERE id=? AND publication_state='draft'")
+    .bind(product.id).run();
+  return Number(result.meta?.changes ?? result.changes ?? 0) === 1;
+}
+
 function normalize(value) {
   const product = { ...value };
   product.title = requiredText(product.title, "title");

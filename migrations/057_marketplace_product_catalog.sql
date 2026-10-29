@@ -92,6 +92,10 @@ END;
 
 CREATE TRIGGER protect_marketplace_product_history
 BEFORE DELETE ON marketplace_products
+WHEN OLD.publication_state <> 'draft'
+  OR EXISTS (SELECT 1 FROM order_items WHERE product_slug = OLD.slug)
+  OR EXISTS (SELECT 1 FROM download_entitlements WHERE product_slug = OLD.slug)
+  OR EXISTS (SELECT 1 FROM creator_sale_snapshots WHERE product_slug = OLD.slug)
 BEGIN
   SELECT RAISE(ABORT, 'retire products instead of deleting them');
 END;
