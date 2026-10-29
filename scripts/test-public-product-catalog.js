@@ -30,7 +30,13 @@ async function main() {
   assert.equal(lookup.status, 200);
   const publicItem = (await lookup.json()).product;
   assert.equal(publicItem.id, "public-item");
+  assert.equal(publicItem.creatorName, "RV Sawyer");
+  assert.equal(publicItem.creatorSlug, "rv-sawyer");
   assert.equal(publicItem.hasCover, true);
+  assert.equal(publicItem.coverUrl, "/product-assets/public-item/cover.webp");
+  assert.equal(publicItem.detailUrl, "/store/products/public-item/");
+  assert.equal(publicItem.storefrontVisibility, "listed");
+  assert.equal(publicItem.purchaseAvailability, "temporarily-unavailable");
   assert.deepEqual(publicItem.metadata.authors, ["RV Sawyer"]);
   assert.equal(publicItem.metadata.privateNote, undefined);
   assert.equal(publicItem.coverR2Key, undefined);
@@ -40,7 +46,9 @@ async function main() {
 
   const listing = await get("https://example.test/api/catalog?creatorId=creator-rv-sawyer&status=pay-what-you-want&limit=1&offset=0");
   assert.equal(listing.status, 200);
-  assert.deepEqual((await listing.json()).products.map(item => item.slug), ["public-item"]);
+  const listingBody = await listing.json();
+  assert.deepEqual(listingBody.products.map(item => item.slug), ["public-item"]);
+  assert.equal(listingBody.scannedCount, 1);
   assert.deepEqual((await (await get("https://example.test/api/catalog?status=available-direct")).json()).products, []);
   assert.equal((await get("https://example.test/api/catalog?limit=0")).status, 400);
   assert.equal((await get("https://example.test/api/catalog?slug=bad%2Fslug")).status, 400);

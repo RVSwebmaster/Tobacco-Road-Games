@@ -1,4 +1,4 @@
-import { HOMEPAGE_PRODUCTS } from "../../shared/homepage-product-catalog.mjs";
+import { getApprovedPublicProductBySlug } from "./public-product-catalog.mjs";
 
 export const HOMEPAGE_BEST_SELLER_WINDOW_DAYS = 30;
 export const HOMEPAGE_BEST_SELLER_LIMIT = 43;
@@ -28,11 +28,11 @@ LIMIT ?
 `;
 
 export async function getHomepageShelves(database, options = {}) {
-  const catalog = Array.isArray(options.catalog) ? options.catalog : HOMEPAGE_PRODUCTS;
+  const compatibilityCatalog = Array.isArray(options.catalog) ? options.catalog : null;
   const nowMs = Number.isFinite(options.nowMs) ? Number(options.nowMs) : Date.now();
   const windowDays = positiveInteger(options.windowDays, HOMEPAGE_BEST_SELLER_WINDOW_DAYS);
   const limit = positiveInteger(options.limit, HOMEPAGE_BEST_SELLER_LIMIT);
-  const catalogBySlug = new Map(catalog.map((product) => [normalizeSlug(product.slug), product]));
+  const catalogBySlug = new Map((compatibilityCatalog || []).map((product) => [normalizeSlug(product.slug), product]));
   const since = new Date(nowMs - (windowDays * 86400000)).toISOString();
 
   if (!database?.prepare) {
@@ -45,7 +45,9 @@ export async function getHomepageShelves(database, options = {}) {
 
   for (const row of rows) {
     if (Number(row.sales_cents || 0) <= 0) continue;
-    const product = catalogBySlug.get(normalizeSlug(row.product_slug));
+    const product = compatibilityCatalog
+      ? catalogBySlug.get(normalizeSlug(row.product_slug))
+      : await getApprovedPublicProductBySlug(database, normalizeSlug(row.product_slug));
     if (!isHomepageEligible(product)) continue;
     bestSellers.push(toHomepageProduct(product));
     if (bestSellers.length >= limit) break;
@@ -57,6 +59,7 @@ export async function getHomepageShelves(database, options = {}) {
 export function isHomepageEligible(product) {
   return Boolean(
     product
+      && (!product.storefrontVisibility || product.storefrontVisibility === "listed")
       && ["available-direct", "pay-what-you-want", "free-download"].includes(String(product.status || ""))
       && String(product.buyMode || "") !== "retired"
   );
@@ -66,12 +69,23 @@ export function toHomepageProduct(product) {
   return {
     slug: String(product.slug || ""),
     title: String(product.title || ""),
-    creator: String(product.creator || "Tobacco Road Games"),
-    priceLabel: String(product.priceLabel || product.status || "Available"),
-    description: String(product.description || "Product details available on the full product page."),
-    cover: String(product.cover || "/assets/tobacco-road-games-logo.png"),
-    fullUrl: String(product.fullUrl || `/store/products/${encodeURIComponent(String(product.slug || ""))}/`)
+    creator: String(product.creatorName || product.creator || "Tobacco Road Games"),
+    priceLabel: String(product.priceLabel || publicPriceLabel(product)),
+    description: String(product.shortDescription || product.description || "Product details available on the full product page."),
+    cover: String(product.coverUrl || product.cover || "/assets/tobacco-road-games-logo.png"),
+    fullUrl: String(product.detailUrl || product.fullUrl || `/store/products/${encodeURIComponent(String(product.slug || ""))}/`)
   };
+}
+
+function publicPriceLabel(product) {
+  if (product.pricingModel === "free") return "Free Download";
+  if (product.pricingModel === "pwyw") return `Pay What You Want — ${money(product.suggestedPriceCents, product.currency)} suggested`;
+  if (Number.isSafeInteger(product.priceCents)) return money(product.priceCents, product.currency);
+  return String(product.status || "Available");
+}
+
+function money(cents, currency = "USD") {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(cents || 0) / 100);
 }
 
 function normalizeSlug(value) {

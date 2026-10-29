@@ -468,7 +468,7 @@ function renderStoreHome(products, indexes) {
     canonicalPath: "/store/",
     ogImage: featured?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/d1-storefront.js?v=20261029-d1-catalog1", "/assets/js/storefront.js?v=" + CACHE_BUST],
     structuredData: renderWebPageSchema({
       name: STORE_TITLE,
       description: "Browse digital roleplaying titles, previews, and upcoming releases from Tobacco Road Games.",
@@ -590,7 +590,7 @@ function renderCatalogPage(products, indexes) {
     canonicalPath: "/store/catalog/",
     ogImage: sortedProducts[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "catalog",
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/storefront.js?v=" + CACHE_BUST, "/assets/js/discovery-labels.js"],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + CACHE_BUST, "/assets/js/d1-storefront.js?v=20261029-d1-catalog1", "/assets/js/storefront.js?v=" + CACHE_BUST, "/assets/js/discovery-labels.js"],
     structuredData: renderWebPageSchema({
       name: `${STORE_TITLE} Catalog`,
       description: "Search and browse Tobacco Road Games titles by creator, game system, product line, series, release status, and title.",
@@ -965,7 +965,7 @@ function renderShelfStoreHome(products, indexes) {
     assetVersion: STOREFRONT_CACHE_BUST,
     brandLogo: "/assets/tobacco-road-games-logo.png",
     brandTag: "",
-    extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
+    extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/d1-storefront.js?v=20261029-d1-catalog1", "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
     structuredData: renderWebPageSchema({ name: STORE_TITLE, description: "Independent tabletop games and creator releases.", url: `${BASE_URL}/store/` }),
     content: `
       <main id="top" class="shelf-storefront">

@@ -1,4 +1,4 @@
-(() => {
+(async () => {
   const browsers = Array.from(document.querySelectorAll("[data-store-browser]"));
   const shelves = Array.from(document.querySelectorAll(".bookshelf-grid"));
   const compactCatalogQuery = window.matchMedia("(max-width: 980px), (hover: none)");
@@ -361,6 +361,8 @@
 
     scheduleShelfEdgeRefresh();
   };
+
+  await window.TRGD1Storefront?.hydrate(browsers);
 
   browsers.forEach((root) => {
     root.querySelectorAll("[data-store-view-button]").forEach((button) => {

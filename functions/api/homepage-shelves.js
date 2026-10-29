@@ -13,7 +13,7 @@ function json(body, status) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      "cache-control": "public, max-age=300",
+      "cache-control": "no-store",
       "content-type": "application/json; charset=utf-8",
       "x-content-type-options": "nosniff"
     }
