@@ -26,6 +26,7 @@
     "test:operation-severance": "node scripts/test-operation-severance.js",
     "test:product-catalog-d1": "node scripts/test-product-catalog-d1.js",
     "test:product-publication": "node scripts/test-product-publication.js",
+    "test:public-product-catalog": "node scripts/test-public-product-catalog.js",
     "test:creator-closure": "node scripts/test-creator-account-closure.js",
     "test:creator-publishing-sandbox": "node scripts/test-creator-publishing-sandbox.js",
     "test:creator-product-submission-sandbox": "node scripts/test-creator-product-submission-sandbox.js",

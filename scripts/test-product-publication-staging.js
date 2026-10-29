@@ -146,6 +146,19 @@ async function main() {
     assert.equal(byId?.deliveryR2Key, body.product.deliveryR2Key);
     console.log("D1 catalog module: ID/slug lookup and explicit asset keys verified.");
 
+    const publicLookup = await fetch(`${ORIGIN}/api/catalog?slug=${slug}`);
+    assert.equal(publicLookup.status, 200);
+    const publicProduct = (await publicLookup.json()).product;
+    assert.equal(publicProduct.id, id);
+    assert.equal(publicProduct.title, byId.title);
+    assert.equal(publicProduct.deliveryR2Key, undefined);
+    assert.equal(publicProduct.coverR2Key, undefined);
+    assert.equal(publicProduct.metadata.task2cDisposable, undefined);
+    const publicList = await fetch(`${ORIGIN}/api/catalog?creatorId=creator-rv-sawyer&status=pay-what-you-want`);
+    assert.equal(publicList.status, 200);
+    assert.equal((await publicList.json()).products.some(product => product.id === id), true);
+    console.log("Public D1 catalog: published lookup and listing passed; private keys withheld.");
+
     assert.deepEqual(r2Download(byId.coverR2Key, path.join(testDir, "cover.webp")), WEBP);
     assert.deepEqual(r2Download(byId.deliveryR2Key, path.join(testDir, "delivery.pdf")), PDF);
     console.log("Native staging R2: cover and PDF bytes verified independently.");
@@ -180,6 +193,7 @@ async function main() {
       assert.equal(r2Download(product.deliveryR2Key, path.join(testDir, "cleaned-delivery.pdf")), null);
     }
     assert.equal(await catalog.getProductBySlug(db, slug), null);
+    assert.equal((await fetch(`${ORIGIN}/api/catalog?slug=${slug}`)).status, 404);
     assert.equal(await catalog.getProductById(db, failedId), null);
     if (failedAttemptId) {
       let orphan = false;
