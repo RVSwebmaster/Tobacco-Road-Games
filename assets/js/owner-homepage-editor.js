@@ -33,7 +33,7 @@
       savedSelection = serializeSelection();
       setButtonState("success");
       status.dataset.state = "success";
-      status.innerHTML = `<strong>Saved and published.</strong> ${escapeHtml(result.message + selectionMessage)}` + (result.runUrl ? ` <a href="${escapeHtml(result.runUrl)}" target="_blank" rel="noopener">View workflow</a>` : "") + ' <a href="/" target="_blank" rel="noopener">View public homepage</a>';
+      status.innerHTML = `<strong>Saved and published.</strong> ${escapeHtml(result.message + selectionMessage)} <a href="/" target="_blank" rel="noopener">View public homepage</a>`;
     } catch (error) { setButtonState("dirty"); setStatus(error.message, "error"); }
   });
 
@@ -49,8 +49,8 @@
 
   function setButtonState(stateName) {
     publish.dataset.state = stateName;
-    publish.disabled = stateName !== "dirty";
-    publish.textContent = ({ loading: "Loading Current Selections…", ready: "Selections Are Up to Date", dirty: "Publish Homepage Changes", publishing: "Publishing…", success: "Published ✓", error: "Publishing Unavailable" })[stateName];
+    publish.disabled = true;
+    publish.textContent = "Publication Temporarily Unavailable";
   }
 
   function setStatus(message, stateName) {

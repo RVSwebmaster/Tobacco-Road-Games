@@ -206,7 +206,7 @@
         <div class="section-heading">
           <p class="section-heading__kicker">Owner Tool</p>
           <h1 id="pricing-heading">Existing Product Pricing Editor</h1>
-          <p>Load an existing product, revise only its pricing fields, confirm the exact changes, and publish through the normal source-of-truth GitHub rebuild path. This editor does not change availability, buy mode, files, descriptions, authors, or artwork.</p>
+          <p>Load an existing product, revise its pricing fields, and review the exact changes. Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.</p>
           <p>The listed store policy remains tax-inclusive: displayed prices are the final listed prices, with any applicable sales tax included.</p>
         </div>
 
@@ -320,7 +320,7 @@
                     <span id="pricing-next-effective">$0.00</span>
                   </div>
                 </div>
-                <p id="pricing-preview-copy" class="pricing-copy">Sale schedules are previewed against the current date. Final storefront output will still be regenerated from `data/products.json` through the normal build workflow.</p>
+                <p id="pricing-preview-copy" class="pricing-copy">Sale schedules are previewed against the current date. These edits cannot be published yet.</p>
               </div>
 
               <div class="pricing-actions">
@@ -395,8 +395,8 @@
             <div class="pricing-actions">
               <div class="pricing-action-card">
                 <strong>Update Pricing</strong>
-                <button id="pricing-publish-button" class="button button--primary" type="button" aria-describedby="pricing-publish-help">Update Pricing</button>
-                <p id="pricing-publish-help">Updates the existing listing pricing fields and rebuilds the store through the normal workflow.</p>
+                <button id="pricing-publish-button" class="button button--primary" type="button" aria-describedby="pricing-publish-help" disabled>Publication Temporarily Unavailable</button>
+                <p id="pricing-publish-help">Pricing publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.</p>
               </div>
               <div class="pricing-action-card">
                 <strong>Continue Editing</strong>

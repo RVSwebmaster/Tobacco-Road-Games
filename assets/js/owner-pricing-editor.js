@@ -552,7 +552,7 @@
 
     publishBusy = true;
     buttons.publish.disabled = true;
-    fields.pricingStatus.textContent = "Publishing pricing update through the GitHub rebuild workflow...";
+    fields.pricingStatus.textContent = "Submitting pricing update...";
 
     try {
       const response = await fetch(PRICING_ENDPOINT, {
@@ -583,14 +583,12 @@
         return;
       }
 
-      fields.pricingStatus.textContent = payload.json.runUrl
-        ? `${payload.json.message} Workflow: ${payload.json.runUrl}`
-        : payload.json.message;
+      fields.pricingStatus.textContent = payload.json.message;
     } catch {
       fields.pricingStatus.textContent = "The pricing update request failed before the server could answer. Please try again.";
     } finally {
       publishBusy = false;
-      buttons.publish.disabled = false;
+      buttons.publish.disabled = true;
     }
   }
 

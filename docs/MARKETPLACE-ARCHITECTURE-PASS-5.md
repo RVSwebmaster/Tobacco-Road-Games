@@ -14,7 +14,7 @@ RV Sawyer is seeded as `creator-rv-sawyer`. Migration 018 assigns existing `owne
 
 Creator listings support `draft`, `submitted`, `active`, `paused`, `needs_changes`, and `rejected`. Creators can create drafts, edit drafts/paused/needs-changes records, submit them, and pause an active listing. Operators review submitted records through the protected owner API and write a review audit record.
 
-The creator operations tables are deliberately not a second public catalog. Existing JSON product data remains the commerce and storefront source of truth. Operator approval changes operational review state but does not dispatch a build, upload files, modify Stripe, alter entitlement mappings, or silently publish. A future controlled synchronization step must validate and copy approved records into the established owner publication workflow.
+The creator operations tables are deliberately not a second public catalog. The existing JSON product data remains a temporary commerce and storefront dependency pending the D1 catalog reconstruction. Operator approval changes operational review state but does not publish. The former repository publication workflow is retired; see `OPERATION-SEVERANCE-TASK-2-HANDOFF.md`.
 
 ## Profiles, pricing, sales, and bundles
 
@@ -35,7 +35,7 @@ Creator analytics join paid orders to creator-owned `source_product_slug` values
 - six-month Creator account audit, cure-period workflow, and duplicate/privilege-gaming review, kept separate from product inactivity;
 - annual and year-to-date downloadable business records beyond current monthly statements;
 
-- approved-record synchronization into `data/products.json`, file upload, and the existing publish workflow;
+- approved-record publication through a future D1 catalog and Cloudflare Workers/R2 path;
 - polished creator editing UI for every listing field, sales scheduler, and bundle editor;
 - private listing-file upload and operator validation reports;
 - order-level creator support access;

@@ -1,10 +1,10 @@
+// Retired publication transformer retained for development fixtures and migration reference.
+// Direct CLI publication is disabled; marketplace transactions must use a future D1 path.
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
-const PRODUCTS_PATH = path.join(ROOT, "data", "products.json");
-const INTAKE_MAP_PATH = path.join(ROOT, "data", "product-intake-map.json");
 const SHARED_FOLDER_MAP_PATH = path.join(ROOT, "shared", "product-folder-map.mjs");
 
 function atomicWriteFile(target, contents) {
@@ -14,56 +14,8 @@ function atomicWriteFile(target, contents) {
 }
 
 if (require.main === module) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : String(error));
-    process.exitCode = 1;
-  });
-}
-
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
-  const rootDir = options.rootDir || ROOT;
-  const clientPayload = loadClientPayload(options);
-  const result = await applyPublishPayload(rootDir, clientPayload);
-  console.log(`Published intake payload for ${result.metadata.slug}.`);
-}
-
-function parseArgs(args) {
-  const options = {
-    payloadPath: "",
-    rootDir: ""
-  };
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === "--payload" && args[index + 1]) {
-      options.payloadPath = path.resolve(args[index + 1]);
-      index += 1;
-      continue;
-    }
-
-    if (arg === "--root" && args[index + 1]) {
-      options.rootDir = path.resolve(args[index + 1]);
-      index += 1;
-      continue;
-    }
-
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  return options;
-}
-
-function loadClientPayload(options) {
-  if (options.payloadPath) {
-    return JSON.parse(fs.readFileSync(options.payloadPath, "utf8"));
-  }
-
-  if (process.env.OWNER_PUBLISH_EVENT_JSON) {
-    return JSON.parse(process.env.OWNER_PUBLISH_EVENT_JSON);
-  }
-
-  throw new Error("No publish payload was provided. Use --payload <path> or OWNER_PUBLISH_EVENT_JSON.");
+  console.error("The repository publishing command is retired. Marketplace publication is temporarily unavailable.");
+  process.exitCode = 1;
 }
 
 async function applyPublishPayload(rootDir, clientPayload) {

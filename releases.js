@@ -3,17 +3,12 @@ DEPRECATED: Do not add or edit product data in this file.
 
 This Tobacco Road Games site no longer uses a releases.js product system.
 
-Current source of truth:
-- data/products.json
-- data/authors.js
-- scripts/build-store.js
-
-After changing product or author data, rebuild the generated storefront with:
-- node scripts/build-store.js
+The generated catalog is a temporary dependency pending the D1 reconstruction.
+Do not use repository data edits or builds to complete marketplace transactions.
 */
 
 if (typeof console !== "undefined" && typeof console.warn === "function") {
   console.warn(
-    "Deprecated file: releases.js is not used by this site. Edit data/products.json and rebuild with node scripts/build-store.js."
+    "Deprecated file: releases.js is not used by this site. Marketplace publication is temporarily unavailable."
   );
 }

@@ -1,6 +1,5 @@
-import { dispatchPublishWorkflow } from "./github-dispatch.mjs";
+import { PUBLICATION_UNAVAILABLE } from "./publication-unavailable.mjs";
 import {
-  OWNER_ACTOR_ID,
   isSafeFolderName,
   jsonResponse,
   normalizeFolderName,
@@ -79,55 +78,14 @@ export async function handleOwnerPublishRequest(request, env, options = {}) {
       }, 400);
     }
 
-    const bucket = env.TRG_PRODUCTS;
-    if (!bucket || typeof bucket.put !== "function") {
-      return jsonResponse({
-        error: "The product bucket binding is missing. Add TRG_PRODUCTS in Cloudflare before publishing.",
-        stage: "configuration"
-      }, 503);
-    }
-
-    const uploadResult = await uploadRequiredProductFiles(bucket, parsed.payload);
-    if (!uploadResult.ok) {
-      return jsonResponse({
-        error: uploadResult.userMessage,
-        stage: "upload"
-      }, 502);
-    }
-
-    const publishId = `pub-${Date.now()}-${crypto.randomUUID()}`;
-    const dispatchPayload = {
-      folder: parsed.payload.folder,
-      metadata: parsed.payload.metadata,
-      publish_id: publishId,
-      ref: String(env.GITHUB_PUBLISH_REF || "main"),
-      requested_by: OWNER_ACTOR_ID
-    };
-
-    const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);
-    if (!dispatchResult.ok) {
-      return jsonResponse({
-        error: `Files uploaded to R2, but the store was not published. ${dispatchResult.userMessage}`,
-        filesUploaded: uploadResult.uploadedKeys,
-        stage: "catalog-deployment",
-        runUrl: dispatchResult.runUrl || ""
-      }, 502);
-    }
-
     return jsonResponse({
-      filesUploaded: uploadResult.uploadedKeys,
-      message: dispatchResult.pending
-        ? "Files uploaded and the GitHub rebuild workflow was accepted. The live store may take another minute to catch up."
-        : "Files uploaded and the store publish workflow completed successfully.",
-      ok: true,
-      pending: Boolean(dispatchResult.pending),
-      stage: dispatchResult.pending ? "catalog-deployment" : "complete",
-      runUrl: dispatchResult.runUrl || ""
-    }, dispatchResult.pending ? 202 : 200);
+      error: PUBLICATION_UNAVAILABLE,
+      stage: "unavailable"
+    }, 503);
   } catch (error) {
     logOwnerPublishException(request, error);
     return jsonResponse({
-      error: "Owner publish could not be completed. Please try again. If the problem persists, check Cloudflare bindings and the GitHub workflow configuration.",
+      error: "Owner publish could not be completed.",
       stage: "unexpected"
     }, 500);
   }
@@ -341,47 +299,6 @@ function normalizeTeaserVideo(value) {
     return url.pathname;
   } catch {
     return "";
-  }
-}
-
-async function uploadRequiredProductFiles(bucket, payload) {
-  const uploads = [
-    [payload.coverFile, `${payload.folder}/cover.webp`, "image/webp"],
-    [payload.productFile, `${payload.folder}/product.pdf`, "application/pdf"]
-  ].filter(([file]) => file instanceof File);
-  const uploadedKeys = [];
-
-  try {
-    for (const [file, objectKey, contentType] of uploads) {
-      const bytes = await file.arrayBuffer();
-      await bucket.put(objectKey, bytes, {
-        httpMetadata: {
-          contentType
-        }
-      });
-      uploadedKeys.push(objectKey);
-    }
-  } catch {
-    await rollbackUploads(bucket, uploadedKeys);
-    return {
-      ok: false,
-      userMessage: "The R2 upload failed before all required files were written. Nothing was published to GitHub."
-    };
-  }
-
-  return {
-    ok: true,
-    uploadedKeys
-  };
-}
-
-async function rollbackUploads(bucket, uploadedKeys) {
-  for (const key of uploadedKeys) {
-    try {
-      await bucket.delete(key);
-    } catch {
-      // Best-effort cleanup only.
-    }
   }
 }
 

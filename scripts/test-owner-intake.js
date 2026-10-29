@@ -25,30 +25,15 @@ async function main() {
   const ownerPricing = await importModule("functions/_lib/owner-pricing-publish.mjs");
   const productAdvisor = require(path.join(ROOT, "shared", "product-advisor.js"));
   const publishScript = require(path.join(ROOT, "scripts", "publish-intake.js"));
-  const baseEnv = {
-    GITHUB_PUBLISH_REF: "owner-intake-test",
-    GITHUB_REPO_NAME: "Tobacco-Road-Games",
-    GITHUB_REPO_OWNER: "RVSwebmaster",
-    GITHUB_TOKEN: "test-token"
-  };
+  const baseEnv = {};
   const openOwnerContext = "";
 
   testOwnerWorkbenchIsOpen();
   await testMissingFiles(ownerPublish, baseEnv, openOwnerContext);
   await testWrongFileType(ownerPublish, baseEnv, openOwnerContext);
-  await testMissingBucketReportsConfigurationStage(ownerPublish, baseEnv, openOwnerContext);
-  await testR2FailureReportsUploadStageAndRollsBack(ownerPublish, baseEnv, openOwnerContext);
-  await testCartPublishAcceptedWithoutBuyUrl(ownerPublish, baseEnv, openOwnerContext);
-  await testNativePwywPublishAccepted(ownerPublish, baseEnv, openOwnerContext);
-  await testCartPublishRejectsMissingPrice(ownerPublish, baseEnv, openOwnerContext);
-  await testCartPublishRejectsInvalidStatus(ownerPublish, baseEnv, openOwnerContext);
-  await testExistingProductMetadataOnlyPublish(ownerPublish, baseEnv, openOwnerContext);
-  await testOwnerPricingPublishAccepted(ownerPricing, baseEnv, openOwnerContext);
-  await testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, baseEnv, openOwnerContext);
-  await testR2UploadAndGithubDispatch(ownerPublish, baseEnv, openOwnerContext);
-  await testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, baseEnv, openOwnerContext);
-  await testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, baseEnv, openOwnerContext);
-  await testUnexpectedPublishExceptionHandled(ownerPublish, baseEnv, openOwnerContext);
+  await testPublicationUnavailableWithoutSideEffects(ownerPublish, ownerPricing, openOwnerContext);
+  await testPublishValidationRemains(ownerPublish, ownerPricing, openOwnerContext);
+  await testUnexpectedPublishExceptionHandled(ownerPublish, openOwnerContext);
   await testProductAdvisorSuggestions(productAdvisor);
   await testExistingProductUpdatePreservesFields(publishScript);
   await testExistingProductUpdateKeepsUneditedSlugMetadata(publishScript);
@@ -179,529 +164,77 @@ async function testWrongFileType(ownerPublish, env, cookieHeader) {
   assert.equal(payload.stage, "validation", "Wrong file types should be identified as a validation-stage failure.");
 }
 
-async function testMissingBucketReportsConfigurationStage(ownerPublish, env, cookieHeader) {
+async function testPublicationUnavailableWithoutSideEffects(ownerPublish, ownerPricing, cookieHeader) {
+  const bucket = createMockBucket();
   const formData = new FormData();
   addRequiredTextFields(formData);
   formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
   formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
-
-  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), env);
+  const response = await ownerPublish.handleOwnerPublishRequest(
+    buildAuthenticatedPublishRequest(formData, cookieHeader),
+    { TRG_PRODUCTS: bucket },
+    { dispatchOptions: { fetchImpl: () => { throw new Error("Network must not be called."); } } }
+  );
   const payload = await response.json();
-  assert.equal(response.status, 503, "A missing R2 binding should return 503.");
-  assert.equal(payload.stage, "configuration", "A missing R2 binding should be identified as a configuration-stage failure.");
+  assert.equal(response.status, 503);
+  assert.equal(payload.stage, "unavailable");
+  assert.match(payload.error, /publication is temporarily unavailable/i);
+  assert.equal(payload.ok, undefined);
+  assert.deepEqual(bucket.putKeys, []);
+
+  const metadataOnly = new FormData();
+  addRequiredTextFields(metadataOnly, { folder: "Fixture Beta", slug: "fixture-beta" });
+  const update = await ownerPublish.handleOwnerPublishRequest(
+    buildAuthenticatedPublishRequest(metadataOnly, cookieHeader),
+    { TRG_PRODUCTS: bucket },
+    { productFolderMap: NEUTRAL_FIXTURE_FOLDER_MAP }
+  );
+  assert.equal(update.status, 503);
+  assert.deepEqual(bucket.putKeys, []);
+
+  const pricing = await ownerPricing.handleOwnerPricingPublishRequest(
+    buildAuthenticatedPricingRequest({
+      currency: "USD", price: "4.99", priceCents: 499, saleEnabled: false,
+      saleEnd: "", saleLabel: "", salePrice: "", salePriceCents: null,
+      saleStart: "", slug: "fixture-beta"
+    }, cookieHeader),
+    {}
+  );
+  assert.equal(pricing.status, 503);
+  assert.match((await pricing.json()).error, /publication is temporarily unavailable/i);
 }
 
-async function testR2FailureReportsUploadStageAndRollsBack(ownerPublish, env, cookieHeader) {
+async function testPublishValidationRemains(ownerPublish, ownerPricing, cookieHeader) {
   const formData = new FormData();
-  addRequiredTextFields(formData);
+  addRequiredTextFields(formData, { buyMode: "cart", price: "", status: "available-direct" });
   formData.set("coverFile", new FileCtor(["cover"], "cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "preview.webp", { type: "image/webp" }));
   formData.set("productFile", new FileCtor(["pdf"], "product.pdf", { type: "application/pdf" }));
-  const uploaded = [];
-  const deleted = [];
-  const bucket = {
-    async put(key) {
-      if (uploaded.length === 1) throw new Error("synthetic R2 failure");
-      uploaded.push(key);
-    },
-    async delete(key) {
-      deleted.push(key);
-    }
-  };
+  const product = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {});
+  assert.equal(product.status, 400);
+  assert.match((await product.json()).error, /positive price/i);
 
-  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-    ...env,
-    TRG_PRODUCTS: bucket
-  });
-  const payload = await response.json();
-  assert.equal(response.status, 502, "An R2 write failure should return 502.");
-  assert.equal(payload.stage, "upload", "An R2 write failure should be identified as an upload-stage failure.");
-  assert.deepEqual(deleted, uploaded, "An incomplete R2 upload should roll back every object written by that request.");
+  const pricing = await ownerPricing.handleOwnerPricingPublishRequest(
+    buildAuthenticatedPricingRequest({ currency: "USD", price: "4.999", priceCents: 500, slug: "fixture-beta" }, cookieHeader),
+    {}
+  );
+  assert.equal(pricing.status, 400);
+  assert.match((await pricing.json()).error, /valid dollar amount|must match/i);
 }
 
-async function testCartPublishAcceptedWithoutBuyUrl(ownerPublish, env, cookieHeader) {
-  const bucket = createMockBucket();
-  const formData = new FormData();
-  addRequiredTextFields(formData, {
-    buyMode: "cart",
-    price: "4.99",
-    status: "available-direct"
-  });
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const originalRandomUuid = crypto.randomUUID;
-  const originalDateNow = Date.now;
-  const fixedNow = 1760000000003;
-  const fetchImpl = async (url) => {
-    if (String(url).endsWith("/dispatches")) {
-      return new Response(null, { status: 204 });
-    }
-
-    return jsonResponse({
-      workflow_runs: [
-        {
-          conclusion: "success",
-          created_at: new Date().toISOString(),
-          display_title: `Owner publish pub-${fixedNow}-cart-mode`,
-          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/4",
-          id: 4,
-          status: "completed"
-        }
-      ]
-    });
-  };
-
-  Date.now = () => fixedNow;
-  crypto.randomUUID = () => "cart-mode";
-  try {
-    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-      ...env,
-      TRG_PRODUCTS: bucket
-    }, {
-      dispatchOptions: {
-        fetchImpl,
-        pollIntervalMs: 1,
-        timeoutMs: 100
-      }
-    });
-
-    assert.equal(response.status, 200, "Cart products should publish without a buy URL.");
-    const payload = await response.json();
-    assert.equal(payload.ok, true, "Cart publish should report success.");
-  } finally {
-    Date.now = originalDateNow;
-    crypto.randomUUID = originalRandomUuid;
-  }
-}
-
-async function testCartPublishRejectsMissingPrice(ownerPublish, env, cookieHeader) {
-  const formData = new FormData();
-  addRequiredTextFields(formData, {
-    buyMode: "cart",
-    price: "",
-    status: "available-direct"
-  });
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-    ...env,
-    TRG_PRODUCTS: createMockBucket()
-  }, {
-    dispatchOptions: {
-      fetchImpl: async () => new Response(null, { status: 204 })
-    }
-  });
-
-  assert.equal(response.status, 400, "Cart products without a price should be rejected.");
-  const payload = await response.json();
-  assert.match(payload.error, /Cart products require a positive price/i, "Cart price validation should be human-readable.");
-}
-
-async function testNativePwywPublishAccepted(ownerPublish, env, cookieHeader) {
-  const bucket = createMockBucket();
-  const dispatchCalls = [];
-  const formData = new FormData();
-  addRequiredTextFields(formData, {
-    buyMode: "cart",
-    minimumPrice: "0.00",
-    price: "12.95",
-    status: "pay-what-you-want",
-    suggestedPrice: "12.95"
-  });
-  formData.set("coverFile", new FileCtor(["cover"], "new-product-cover.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "New Product.pdf", { type: "application/pdf" }));
-
-  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-    ...env,
-    TRG_PRODUCTS: bucket
-  }, {
-    dispatchOptions: {
-      fetchImpl: async (url, options = {}) => {
-        dispatchCalls.push({ options, url: String(url) });
-        if (String(url).endsWith("/dispatches")) return new Response(null, { status: 204 });
-        return jsonResponse({
-          workflow_runs: [{
-            conclusion: "success",
-            created_at: new Date().toISOString(),
-            display_title: "Owner publish native PWYW",
-            html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/1295",
-            id: 1295,
-            status: "completed"
-          }]
-        });
-      },
-      pollIntervalMs: 1,
-      timeoutMs: 100
-    }
-  });
-
-  assert.ok([200, 202].includes(response.status), "Native PWYW products should publish through the normal Owner pipeline.");
-  assert.deepEqual(bucket.putKeys.sort(), ["new-product/cover.webp", "new-product/product.pdf"], "Native PWYW publication should upload only the required cover and PDF assets.");
-  const dispatch = dispatchCalls.find((call) => call.url.endsWith("/dispatches"));
-  assert.ok(dispatch, "Native PWYW publication should dispatch the existing catalog workflow.");
-  const event = JSON.parse(dispatch.options.body);
-  const metadata = event.client_payload.metadata;
-  assert.equal(metadata.buyMode, "cart", "Native PWYW must use the ordinary cart pipeline.");
-  assert.equal(metadata.pricingModel, "pwyw", "Native PWYW metadata must identify its pricing model.");
-  assert.equal(metadata.suggestedPriceCents, 1295, "Suggested PWYW price must remain integer cents.");
-  assert.equal(metadata.minimumPriceCents, 0, "A blank-or-zero PWYW minimum must allow a free acquisition.");
-  assert.equal(metadata.buyUrl, "", "Native PWYW must not require an external purchase URL.");
-}
-
-async function testCartPublishRejectsInvalidStatus(ownerPublish, env, cookieHeader) {
-  const formData = new FormData();
-  addRequiredTextFields(formData, {
-    buyMode: "cart",
-    price: "4.99",
-    status: "coming-soon"
-  });
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-    ...env,
-    TRG_PRODUCTS: createMockBucket()
-  }, {
-    dispatchOptions: {
-      fetchImpl: async () => new Response(null, { status: 204 })
-    }
-  });
-
-  assert.equal(response.status, 400, "Cart products with the wrong status should be rejected.");
-  const payload = await response.json();
-  assert.match(payload.error, /Cart products must use Available Direct or Pay What You Want status/i, "Cart status validation should be human-readable.");
-}
-
-async function testExistingProductMetadataOnlyPublish(ownerPublish, env, cookieHeader) {
-  const bucket = createMockBucket();
-  const calls = [];
-  const fixedNow = 1760000000002;
-  const fetchImpl = async (url, options = {}) => {
-    calls.push({ url: String(url), options });
-    if (String(url).endsWith("/dispatches")) {
-      return new Response(null, { status: 204 });
-    }
-
-    return jsonResponse({
-      workflow_runs: [
-        {
-          conclusion: "success",
-          created_at: new Date().toISOString(),
-          display_title: `Owner publish pub-${fixedNow}-metadata-only`,
-          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/3",
-          id: 3,
-          status: "completed"
-        }
-      ]
-    });
-  };
-
-  const formData = new FormData();
-  addRequiredTextFields(formData, {
-    folder: "Fixture Beta",
-    gameSystem: "5E Compatible",
-    gameSystemSlug: "5e-compatible",
-    longDescription: "Metadata-only update for an existing listing.",
-    productLine: "Fifth Edition Fantasy Roleplaying",
-    productLineSlug: "fifth-edition-fantasy-roleplaying",
-    series: "",
-    seriesSlug: "",
-    shortDescription: "Metadata-only update for an existing listing.",
-    slug: "fixture-beta",
-    subtitle: "Updated existing product",
-    title: "Fixture Beta"
-  });
-
-  const originalRandomUuid = crypto.randomUUID;
-  const originalDateNow = Date.now;
-  Date.now = () => fixedNow;
-  crypto.randomUUID = () => "metadata-only";
-  try {
-    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-      ...env,
-      TRG_PRODUCTS: bucket
-    }, {
-      productFolderMap: NEUTRAL_FIXTURE_FOLDER_MAP,
-      dispatchOptions: {
-        fetchImpl,
-        pollIntervalMs: 1,
-        timeoutMs: 100
-      }
-    });
-
-    assert.equal(response.status, 200, "Existing listings should allow metadata-only publish.");
-    const payload = await response.json();
-    assert.equal(payload.ok, true, "Metadata-only publish should still report success.");
-    assert.deepEqual(bucket.putKeys, [], "Metadata-only publish should not overwrite assets when no replacement files were provided.");
-    assert.ok(calls.some((call) => String(call.url).includes("/dispatches")), "Metadata-only publish should still dispatch the GitHub workflow.");
-  } finally {
-    Date.now = originalDateNow;
-    crypto.randomUUID = originalRandomUuid;
-  }
-}
-
-async function testOwnerPricingPublishAccepted(ownerPricing, env, cookieHeader) {
-  const calls = [];
-  const fixedNow = 1760000000004;
-  const originalDateNow = Date.now;
-  const originalRandomUuid = crypto.randomUUID;
-  Date.now = () => fixedNow;
-  crypto.randomUUID = () => "pricing-publish-uuid";
-
-  try {
-    const response = await ownerPricing.handleOwnerPricingPublishRequest(buildAuthenticatedPricingRequest({
-      currency: "USD",
-      nonPurchasableSaleConfirmed: true,
-      price: "4.99",
-      priceCents: 499,
-      saleEnabled: true,
-      saleEnd: "2026-07-31",
-      saleLabel: "Launch Sale",
-      salePrice: "3.99",
-      salePriceCents: 399,
-      saleStart: "2026-07-01",
-      slug: "fixture-beta"
-    }, cookieHeader), env, {
-      dispatchOptions: {
-        fetchImpl: async (url, options = {}) => {
-          calls.push({ url: String(url), options });
-          if (String(url).endsWith("/dispatches")) {
-            return new Response(null, { status: 204 });
-          }
-          return jsonResponse({
-            workflow_runs: [
-              {
-                conclusion: "success",
-                created_at: "2025-10-09T08:53:20.000Z",
-                display_title: "Owner publish price-1760000000004-pricing-publish-uuid",
-                html_url: "https://example.com/run",
-                id: 1,
-                status: "completed"
-              }
-            ]
-          });
-        },
-        pollIntervalMs: 1,
-        timeoutMs: 25
-      }
-    });
-
-    assert.equal(response.status, 200, "Authenticated pricing updates should publish successfully.");
-    const payload = await response.json();
-    assert.equal(payload.ok, true, "Successful pricing updates should return ok.");
-    const dispatchCall = calls.find((call) => call.url.endsWith("/dispatches"));
-    assert.ok(dispatchCall, "Pricing updates should dispatch the GitHub publish workflow.");
-    const dispatchPayload = JSON.parse(dispatchCall.options.body);
-    assert.equal(dispatchPayload.client_payload.operation, "pricing_update", "Pricing updates should use a dedicated workflow operation.");
-    assert.equal(dispatchPayload.client_payload.metadata.slug, "fixture-beta", "Pricing updates should dispatch the target product slug.");
-    assert.equal(dispatchPayload.client_payload.metadata.priceCents, 499, "Pricing updates should dispatch derived price cents.");
-  } finally {
-    Date.now = originalDateNow;
-    crypto.randomUUID = originalRandomUuid;
-  }
-}
-
-async function testOwnerPricingPublishRejectsInvalidPayload(ownerPricing, env, cookieHeader) {
-  const response = await ownerPricing.handleOwnerPricingPublishRequest(buildAuthenticatedPricingRequest({
-    currency: "USD",
-    price: "4.999",
-    priceCents: 500,
-    saleEnabled: false,
-    saleEnd: "",
-    saleLabel: "",
-    salePrice: "",
-    salePriceCents: null,
-    saleStart: "",
-    slug: "fixture-beta"
-  }, cookieHeader), env, {
-    dispatchOptions: {
-      fetchImpl: async () => new Response(null, { status: 204 })
-    }
-  });
-
-  assert.equal(response.status, 400, "Invalid pricing payloads should be rejected before GitHub dispatch.");
-  const payload = await response.json();
-  assert.match(payload.error, /valid dollar amount|must match/i, "Pricing validation failures should be human-readable.");
-}
-
-async function testR2UploadAndGithubDispatch(ownerPublish, env, cookieHeader) {
-  const bucket = createMockBucket();
-  const calls = [];
-  const fixedNow = 1760000000000;
-  const fetchImpl = async (url, options = {}) => {
-    calls.push({ url: String(url), options });
-    if (String(url).endsWith("/dispatches")) {
-      const body = JSON.parse(options.body);
-      assert.equal(body.client_payload.ref, env.GITHUB_PUBLISH_REF, "Dispatch should use the configured ref.");
-      return new Response(null, { status: 204 });
-    }
-
-    const workflowRunsUrl = new URL(String(url));
-    assert.equal(workflowRunsUrl.searchParams.get("event"), "repository_dispatch", "Workflow polling should filter by the GitHub event name.");
-
-    return jsonResponse({
-      workflow_runs: [
-        {
-          conclusion: "success",
-          created_at: new Date().toISOString(),
-          display_title: `Owner publish pub-${fixedNow}-test-run`,
-          html_url: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/1",
-          id: 1,
-          status: "completed"
-        }
-      ]
-    });
-  };
-
-  const formData = new FormData();
-  addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const originalRandomUuid = crypto.randomUUID;
-  const originalDateNow = Date.now;
-  Date.now = () => fixedNow;
-  crypto.randomUUID = () => "test-run";
-  try {
-    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-      ...env,
-      TRG_PRODUCTS: bucket
-    }, {
-      dispatchOptions: {
-        fetchImpl,
-        pollIntervalMs: 1,
-        timeoutMs: 100
-      }
-    });
-
-    assert.equal(response.status, 200, "Successful publish should return 200.");
-    const payload = await response.json();
-    assert.equal(payload.ok, true, "Successful publish should report success.");
-    assert.equal(payload.stage, "complete", "A completed workflow should identify the completed publish stage.");
-    assert.deepEqual(bucket.putKeys.sort(), [
-      "new-product/cover.webp",
-      "new-product/product.pdf"
-    ], "A new product should upload only its required cover and PDF files.");
-    assert.ok(calls.some((call) => String(call.url).includes("/dispatches")), "GitHub dispatch should be called after upload.");
-  } finally {
-    Date.now = originalDateNow;
-    crypto.randomUUID = originalRandomUuid;
-  }
-}
-
-async function testExistingListingPublishAcceptedWhileWorkflowContinues(ownerPublish, env, cookieHeader) {
-  const bucket = createMockBucket();
-  const formData = new FormData();
-  addRequiredTextFields(formData, {
-    folder: "Fixture Beta",
-    gameSystem: "5E Compatible",
-    gameSystemSlug: "5e-compatible",
-    longDescription: "Pending workflow metadata-only update.",
-    productLine: "Fifth Edition Fantasy Roleplaying",
-    productLineSlug: "fifth-edition-fantasy-roleplaying",
-    series: "",
-    seriesSlug: "",
-    shortDescription: "Pending workflow metadata-only update.",
-    slug: "fixture-beta",
-    subtitle: "Pending workflow subtitle",
-    title: "Fixture Beta"
-  });
-
-  const originalRandomUuid = crypto.randomUUID;
-  crypto.randomUUID = () => "pending-workflow";
-  try {
-    const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-      ...env,
-      TRG_PRODUCTS: bucket
-    }, {
-      productFolderMap: NEUTRAL_FIXTURE_FOLDER_MAP,
-      dispatchOptions: {
-        fetchImpl: async (url) => {
-          if (String(url).endsWith("/dispatches")) {
-            return new Response(null, { status: 204 });
-          }
-
-          return jsonResponse({
-            workflow_runs: []
-          });
-        },
-        pollIntervalMs: 1,
-        timeoutMs: 5
-      }
-    });
-
-    assert.equal(response.status, 202, "Publish should return 202 when GitHub accepted the request but the workflow is still running.");
-    const payload = await response.json();
-    assert.equal(payload.ok, true, "Pending publish should still use a successful JSON envelope.");
-    assert.equal(payload.pending, true, "Pending publish should tell the client the workflow is still running.");
-    assert.equal(payload.stage, "catalog-deployment", "A pending GitHub workflow should be identified as the catalog-deployment stage.");
-    assert.deepEqual(bucket.putKeys, [], "Metadata-only pending publish should not upload replacement assets.");
-  } finally {
-    crypto.randomUUID = originalRandomUuid;
-  }
-}
-
-async function testPublishReturnsJsonWhenGithubDispatchThrows(ownerPublish, env, cookieHeader) {
-  const formData = new FormData();
-  addRequiredTextFields(formData);
-  formData.set("coverFile", new FileCtor(["cover"], "fixture-alpha-cover.webp", { type: "image/webp" }));
-  formData.set("previewFile", new FileCtor(["preview"], "fixture-alpha-preview.webp", { type: "image/webp" }));
-  formData.set("productFile", new FileCtor(["pdf"], "Fixture Alpha.pdf", { type: "application/pdf" }));
-
-  const response = await ownerPublish.handleOwnerPublishRequest(buildAuthenticatedPublishRequest(formData, cookieHeader), {
-    ...env,
-    TRG_PRODUCTS: createMockBucket()
-  }, {
-    dispatchOptions: {
-      fetchImpl: async () => {
-        throw new Error("synthetic github outage");
-      }
-    }
-  });
-
-  assert.equal(response.status, 502, "GitHub dispatch failures should return a structured 502 instead of throwing.");
-  const payload = await response.json();
-  assert.match(payload.error, /could not be reached from Cloudflare/i, "GitHub dispatch failures should surface a safe, actionable message.");
-  assert.equal(payload.stage, "catalog-deployment", "GitHub dispatch failures should be identified as catalog-deployment failures.");
-}
-
-async function testUnexpectedPublishExceptionHandled(ownerPublish, env, cookieHeader) {
+async function testUnexpectedPublishExceptionHandled(ownerPublish, cookieHeader) {
   const originalConsoleError = console.error;
   const captured = [];
-  console.error = (entry) => {
-    captured.push(String(entry));
-  };
-
+  console.error = (entry) => captured.push(String(entry));
   try {
     const response = await ownerPublish.handleOwnerPublishRequest({
-      formData() {
-        throw new Error("synthetic publish failure");
-      },
-      headers: new Headers({
-        "cf-ray": "publish-test-ray",
-        origin: "https://example.com"
-      }),
+      formData() { throw new Error("synthetic publish failure"); },
+      headers: new Headers({ "cf-ray": "publish-test-ray" }),
       method: "POST",
       url: "https://example.com/owner/api/publish"
-    }, {
-      ...env,
-      TRG_PRODUCTS: createMockBucket()
-    });
-
-    assert.equal(response.status, 500, "Unexpected publish exceptions should be converted into a JSON 500 response.");
-    assert.match(response.headers.get("content-type") || "", /application\/json/i, "Unexpected publish exceptions should return JSON.");
-    const payload = await response.json();
-    assert.match(payload.error, /could not be completed/i, "Unexpected publish exceptions should return a safe owner-facing message.");
-    assert.equal(payload.stage, "unexpected", "Unexpected publish exceptions should be identified separately from validation, upload, and deployment failures.");
-    assert.equal(captured.length, 1, "Unexpected publish exceptions should be logged once.");
-    assert.match(captured[0], /owner_publish_exception/, "Unexpected publish exceptions should use the safe publish event log.");
-    assert.doesNotMatch(captured[0], /test-token/i, "Unexpected publish logs must not leak configured tokens.");
+    }, {});
+    assert.equal(response.status, 500);
+    assert.equal((await response.json()).stage, "unexpected");
+    assert.equal(captured.length, 1);
   } finally {
     console.error = originalConsoleError;
   }

@@ -131,7 +131,6 @@ export async function runInactivityCheck(
   {
     nowMs = Date.now(),
     env = {},
-    dispatchOptions = {},
     getCatalogProduct = getRuntimeCatalogProduct,
     pausePublication = pauseListingPublication
   } = {}
@@ -321,7 +320,6 @@ export async function runInactivityCheck(
         actorType: "system",
         actorId: "product-inactivity",
         nowMs,
-        dispatchOptions
       });
       const outcome = await response.json();
       if (!response.ok || !outcome.ok) {
@@ -352,7 +350,7 @@ export async function runInactivityCheck(
             item,
             "system",
             "inactivity_pause_dispatched",
-            { runUrl: outcome.runUrl || "" },
+            {},
             now
           )
         ]);

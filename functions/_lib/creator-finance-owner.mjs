@@ -236,7 +236,6 @@ export async function handleCreatorFinanceOwnerRequest(
         result: await runInactivityCheck(db, {
           nowMs: options.nowMs,
           env,
-          dispatchOptions: options.dispatchOptions || {},
         }),
       });
     if (body.action === "set_inactivity_exemption")

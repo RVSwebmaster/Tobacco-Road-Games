@@ -17,8 +17,7 @@ async function main() {
   await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
   await testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate();
   await testVisibleValidationAndReviewFeedback();
-  await testDuplicatePublishClicksAreBlocked();
-  await testPublishFailureIdentifiesPipelineStage();
+  await testPublicationControlsDisabled();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
   await testExistingListingLoadsMatchingTagCheckboxes();
@@ -34,12 +33,8 @@ async function main() {
   await testAssetChecklistToggle();
   await testIntakeModeSpecificLabels();
   await testExistingListingDraftRestoresAfterReload();
-  await testExistingListingPublishPreservesUnknownTags();
   await testExistingListingReopenRestoresSavedTagCheckboxes();
-  await testExistingListingPublishOmitsUndefinedSeriesFields();
-  await testExistingListingSuccessfulUpdateReturnsToPicker();
   await testIntakeReviewAndDiscardConfirmation();
-  await testNonJsonPublishErrorsShowHttpDetails();
   console.log("Owner intake UI tests passed.");
 }
 
@@ -51,6 +46,15 @@ async function testContentDerivedRuntimeVersion() {
   assert.match(html, new RegExp(`product-intake\\.js\\?v=sha256-${version}`), "Owner Intake must load the exact current runtime by content-derived URL.");
   assert.match(script, /ownerIntakeRuntime = "ready"/, "The runtime must expose successful initialization for browser verification.");
   assert.match(script, /ownerIntakeRuntime = "failed"/, "Initialization errors must become visible instead of leaving dead controls.");
+}
+
+async function testPublicationControlsDisabled() {
+  const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
+  const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
+  assert.match(html, /id="publish-button"[^>]*disabled/);
+  assert.match(html, /Publication is temporarily unavailable/);
+  assert.match(script, /buttons\.publish\.disabled = true/);
+  assert.doesNotMatch(script, /Repo publish path after upload|Commit and push to main|GitHub rebuild workflow/);
 }
 
 async function testIntakeLabelsAndHelperText() {
@@ -279,50 +283,6 @@ async function testVisibleValidationAndReviewFeedback() {
   assert.equal(harness.outputs.checklistPanel.hidden, false, "Review must automatically expose the asset checklist.");
   assert.ok(harness.outputs.reviewSummary.children.length >= 6, "Review must summarize metadata and all required file assignments.");
   assert.match(harness.outputs.reviewSummary.children.map((item) => item.textContent).join(" "), /Back-cover review image: never included/, "Review must make the back-cover exclusion explicit.");
-}
-
-async function testDuplicatePublishClicksAreBlocked() {
-  const harness = createHarness();
-  await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.loadExisting.click();
-  const deferred = createDeferred();
-  harness.mockPublishResponse = deferred.promise;
-
-  harness.buttons.publish.click();
-  harness.buttons.publish.click();
-  await harness.flush();
-
-  assert.equal(harness.publishRequestCount, 1, "Repeated clicks during an active publish must send only one request.");
-  assert.equal(harness.buttons.publish.disabled, true, "The publish control must remain disabled while the request is active.");
-  assert.equal(harness.outputs.feedbackPanel.dataset.kind, "progress", "An active publish must show an unmistakable processing state.");
-
-  deferred.resolve(createJsonResponse({ message: "Published.", ok: true, stage: "complete" }));
-  await harness.flush();
-  await harness.flush();
-  assert.equal(harness.buttons.publish.disabled, false, "Publish should re-enable after the request finishes.");
-  assert.equal(harness.publishRequestCount, 1, "Finishing the request must not replay a duplicate submission.");
-}
-
-async function testPublishFailureIdentifiesPipelineStage() {
-  const harness = createHarness();
-  await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.loadExisting.click();
-  harness.mockPublishResponse = createJsonResponse({
-    error: "Files uploaded to R2, but the catalog workflow failed.",
-    filesUploaded: ["fixture-alpha/cover.webp"],
-    stage: "catalog-deployment"
-  }, 502);
-
-  await harness.buttons.publish.click();
-  await harness.flush();
-
-  assert.equal(harness.outputs.feedbackPanel.dataset.kind, "error", "A failed publish must remain visibly identified as an error.");
-  assert.equal(harness.outputs.feedbackHeading.textContent, "Catalog update or deployment failed", "The Owner must be told which publishing stage failed.");
-  assert.match(harness.outputs.status.textContent, /Files uploaded to R2, but the catalog workflow failed\./, "The server's failure reason must reach the Owner interface.");
-  assert.match(harness.outputs.status.textContent, /fixture-alpha\/cover\.webp/, "The interface must disclose files uploaded before a later pipeline failure.");
-  assert.equal(harness.buttons.publish.disabled, false, "The publish control must recover after a failed request.");
 }
 
 async function testPdfSelectionAutomaticallyProcessesMetadataAndCovers() {
@@ -585,7 +545,8 @@ async function testIntakeModeSpecificLabels() {
   assert.match(harness.outputs.outputHeading.textContent, /Review Listing Changes/, "Existing-listing mode should use a review heading for updates.");
   assert.equal(harness.buttons.analyze.textContent, "Check Existing Listing", "Existing-listing mode should relabel the check action.");
   assert.equal(harness.buttons.review.textContent, "Review Listing Changes", "Existing-listing mode should relabel the review action.");
-  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Existing-listing mode should relabel the publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Existing-listing mode should show the publication pause.");
+  assert.equal(harness.buttons.publish.disabled, true);
   assert.equal(harness.buttons.reset.textContent, "Discard Listing Changes", "Existing-listing mode should relabel the discard action.");
   assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Fixture Alpha/i, "Existing-listing mode should explain that the owner is updating a current listing.");
 }
@@ -662,11 +623,11 @@ async function testExistingListingDraftRestoresAfterReload() {
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
   harness.buttons.analyze.click();
-  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Checking an existing listing must not fall back to the new-product publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Checking an existing listing must not fall back to the new-product publish action.");
   assert.equal(harness.fields.slug.value, "fixture-gamma", "Checking an existing listing must preserve the loaded slug.");
   const generatedBeforeReload = JSON.parse(harness.outputs.json.value);
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Editing Fixture Gamma should stay in existing-listing mode before reload.");
-  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Fixture Gamma should not offer a new-product publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Editing Fixture Gamma should not offer a new-product publish action.");
   assert.equal(generatedBeforeReload.productLineSlug, "other-games-and-experiments", "Editing an existing listing should preserve the original product-line slug when the visible label is unchanged.");
   assert.equal(generatedBeforeReload.priceCents, null, "Editing an existing listing should not convert an empty regular price into zero cents.");
   assert.equal(generatedBeforeReload.salePriceCents, null, "Editing an existing listing should not convert an empty sale price into zero cents.");
@@ -681,7 +642,7 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Reloading should restore the loaded Fixture Gamma listing.");
   assert.equal(reloadedHarness.outputs.listingDetails.hidden, false, "Reloading a persisted existing-listing draft should reveal the listing details workspace.");
-  assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "A restored existing listing must not show the new-product publish action.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Publication Temporarily Unavailable", "A restored existing listing must not show the new-product publish action.");
   assert.equal(reloadedHarness.buttons.reset.textContent, "Discard Listing Changes", "A restored existing listing must keep the existing-listing discard action.");
   assert.equal(reloadedHarness.fields.title.value, "Fixture Gamma", "Reloading should preserve the loaded title.");
   assert.equal(reloadedHarness.fields.slug.value, "fixture-gamma", "Reloading should preserve the loaded slug.");
@@ -698,26 +659,7 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   reloadedHarness.buttons.review.click();
   assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Fixture Gamma draft should still work.");
-  assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "Reviewing the restored draft must not relabel the publish action.");
-}
-
-async function testExistingListingPublishPreservesUnknownTags() {
-  const harness = createHarness();
-  await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.loadExisting.click();
-
-  const fantasyCheckbox = findTagCheckbox(harness, "Fantasy");
-  const historicalCheckbox = findTagCheckbox(harness, "Historical");
-  fantasyCheckbox.checked = false;
-  fantasyCheckbox.dispatch("change");
-  historicalCheckbox.checked = true;
-  historicalCheckbox.dispatch("change");
-
-  await harness.buttons.publish.click();
-  await harness.flush();
-
-  assert.equal(harness.lastPublishFormData.get("tags"), "Historical, Preview", "Publishing should preserve unknown tags while applying the current checkbox selection.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Reviewing the restored draft must not relabel the publish action.");
 }
 
 async function testExistingListingReopenRestoresSavedTagCheckboxes() {
@@ -744,80 +686,6 @@ async function testExistingListingReopenRestoresSavedTagCheckboxes() {
   assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, false, "Reopened listings should clear tags that were unchecked in the saved update.");
   assert.equal(findTagCheckbox(harness, "Historical")?.checked, true, "Reopened listings should restore tags that were checked in the saved update.");
   assert.match(harness.outputs.tagPreservedNote.textContent, /Preview/, "Reopened listings should still preserve unknown tags that survived the update.");
-}
-
-async function testExistingListingPublishOmitsUndefinedSeriesFields() {
-  const harness = createHarness();
-  await harness.flush();
-  harness.fields.existingSelect.value = "fixture-gamma";
-  harness.buttons.loadExisting.click();
-  harness.fields.pageCount.value = "12";
-  harness.fields.pageCount.dispatch("input");
-
-  await harness.buttons.publish.click();
-  await harness.flush();
-
-  assert.ok(harness.lastPublishFormData, "Existing-listing publish should submit FormData.");
-  assert.equal(harness.lastPublishFormData.get("series"), "", "Existing-listing publish should submit an empty series field instead of the string \"undefined\".");
-  assert.equal(harness.lastPublishFormData.get("seriesSlug"), "", "Existing-listing publish should submit an empty series slug instead of the string \"undefined\".");
-}
-
-async function testExistingListingSuccessfulUpdateReturnsToPicker() {
-  const harness = createHarness();
-  const deferred = createDeferred();
-  harness.mockPublishResponse = deferred.promise;
-  await harness.flush();
-  harness.fields.existingSelect.value = "fixture-gamma";
-  harness.buttons.loadExisting.click();
-  harness.fields.pageCount.value = "12";
-  harness.fields.pageCount.dispatch("input");
-
-  harness.buttons.publish.click();
-  await harness.flush();
-
-  assert.equal(harness.buttons.publish.textContent, "Updating...", "Existing-listing updates should show an Updating button state while the request is in flight.");
-  assert.equal(harness.buttons.publish.disabled, true, "Existing-listing updates should disable the update button while the request is in flight.");
-  assert.match(harness.outputs.status.textContent, /waiting for the existing-listing update workflow to finish/i, "Existing-listing updates should show an in-progress status.");
-
-  deferred.resolve(createJsonResponse({
-    message: "Files uploaded and the GitHub rebuild workflow was accepted.",
-    ok: true,
-    pending: true,
-    runUrl: "https://github.com/RVSwebmaster/Tobacco-Road-Games/actions/runs/123"
-  }, 202));
-  await harness.flush();
-
-  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Creating New Product", "A successful existing-listing update should close the editor and return to the picker state.");
-  assert.equal(harness.outputs.listingDetails.hidden, true, "A successful existing-listing update should hide the listing details workspace after returning to the picker.");
-  assert.equal(harness.fields.existingSelect.value, "", "A successful existing-listing update should clear the loaded listing selection.");
-  assert.equal(harness.fields.title.value, "", "A successful existing-listing update should clear the form fields.");
-  assert.equal(harness.fields.slug.value, "", "A successful existing-listing update should clear the loaded slug.");
-  assert.equal(harness.buttons.publish.textContent, "Publish New Product", "A successful existing-listing update should restore the default publish action after returning to the picker.");
-  assert.equal(harness.buttons.publish.disabled, false, "A successful existing-listing update should re-enable the publish button.");
-  assert.match(harness.outputs.status.textContent, /Fixture Gamma updated successfully\./, "A successful existing-listing update should show a clear success confirmation.");
-  assert.match(harness.outputs.status.textContent, /back at the listing picker/i, "A successful existing-listing update should explain that the editor closed and returned to the picker.");
-}
-
-async function testNonJsonPublishErrorsShowHttpDetails() {
-  const harness = createHarness();
-  await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.loadExisting.click();
-  harness.fields.shortDescription.value = "Updated preview copy";
-  harness.fields.shortDescription.dispatch("input");
-  harness.mockPublishResponse = createTextResponse("<!DOCTYPE html><html><body><h1>Failure</h1><p>Origin publish failed hard.</p></body></html>", 500, {
-    "content-type": "text/html; charset=utf-8"
-  });
-
-  await harness.buttons.publish.click();
-  await harness.flush();
-
-  assert.match(harness.outputs.status.textContent, /HTTP 500/, "Non-JSON publish failures should include the HTTP status.");
-  assert.match(harness.outputs.status.textContent, /text\/html/, "Non-JSON publish failures should include the response content type.");
-  assert.match(harness.outputs.status.textContent, /Failure Origin publish failed hard/i, "Non-JSON publish failures should include a safe body summary.");
-  assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Alpha", "Failed existing-listing updates should keep the editor open.");
-  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Failed existing-listing updates should restore the update button label.");
-  assert.equal(harness.buttons.publish.disabled, false, "Failed existing-listing updates should re-enable the update button.");
 }
 
 function createHarness(options = {}) {

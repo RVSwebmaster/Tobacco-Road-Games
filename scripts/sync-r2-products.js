@@ -1,12 +1,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
 const PRODUCTS_PATH = path.join(ROOT, "data", "products.json");
 const INTAKE_MAP_PATH = path.join(ROOT, "data", "product-intake-map.json");
-const BUILD_SCRIPT_PATH = path.join(ROOT, "scripts", "build-store.js");
 const SHARED_FOLDER_MAP_PATH = path.join(ROOT, "shared", "product-folder-map.mjs");
 
 main().catch((error) => {
@@ -29,58 +27,27 @@ async function main() {
   const bucketIndex = groupKeysByFolder(objectKeys);
   const syncResult = syncProducts(existingProducts, intakeMap, sharedFolderMap, bucketIndex);
 
-  if (options.write) {
-    fs.writeFileSync(PRODUCTS_PATH, `${JSON.stringify(syncResult.products, null, 2)}\n`);
-  }
-
-  if (options.reportPath) {
-    fs.writeFileSync(options.reportPath, `${JSON.stringify(syncResult.report, null, 2)}\n`);
-  }
-
   printReport(syncResult.report, {
     manifestPath: options.manifestPath,
-    wroteProducts: options.write,
-    wroteReport: options.reportPath
+    wroteProducts: false
   });
-
-  if (options.write && options.build) {
-    const build = spawnSync(process.execPath, [BUILD_SCRIPT_PATH], {
-      cwd: ROOT,
-      stdio: "inherit"
-    });
-
-    if (build.status !== 0) {
-      process.exitCode = build.status || 1;
-    }
-  }
 }
 
 function parseArgs(args) {
   const options = {
-    manifestPath: "",
-    write: true,
-    build: false,
-    reportPath: ""
+    manifestPath: ""
   };
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
 
     if (arg === "--dry-run") {
-      options.write = false;
       continue;
     }
 
-    if (arg === "--build") {
-      options.build = true;
-      continue;
-    }
+    if (arg === "--build") throw new Error("Repository catalog publication is retired; this command is read-only.");
 
-    if (arg === "--report" && args[index + 1]) {
-      options.reportPath = path.resolve(args[index + 1]);
-      index += 1;
-      continue;
-    }
+    if (arg === "--report") throw new Error("Repository catalog publication is retired; this command is read-only.");
 
     if (!options.manifestPath) {
       options.manifestPath = path.resolve(arg);
@@ -95,7 +62,8 @@ function parseArgs(args) {
 
 function printUsage() {
   console.log("Usage:");
-  console.log("  node scripts/sync-r2-products.js <manifest-path> [--dry-run] [--build] [--report <report-path>]");
+  console.log("  node scripts/sync-r2-products.js <manifest-path>");
+  console.log("  Read-only manifest analysis; repository catalog publication is retired.");
   console.log("");
   console.log("Manifest input can be:");
   console.log("  - JSON object listing export");
@@ -501,9 +469,6 @@ async function loadSharedFolderMap() {
 function printReport(report, options) {
   console.log(`R2 product sync manifest: ${options.manifestPath}`);
   console.log(options.wroteProducts ? "products.json updated." : "Dry run only. products.json not changed.");
-  if (options.wroteReport) {
-    console.log(`Report written to ${options.wroteReport}`);
-  }
   console.log("");
   console.log(`Added: ${report.added.length}`);
   console.log(`Updated: ${report.updated.length}`);

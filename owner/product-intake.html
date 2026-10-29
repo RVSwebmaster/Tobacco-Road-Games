@@ -756,7 +756,7 @@
         <div class="section-heading">
           <p class="section-heading__kicker">Owner Tool</p>
           <h1 id="intake-heading">Product Intake Bench</h1>
-          <p>Use this Owner workbench to publish one storefront product at a time. It uploads the required files to R2, then sends the metadata through the normal GitHub build path.</p>
+          <p>Use this Owner workbench to prepare and review product metadata and files. Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.</p>
           <p>Required files: one cover WebP and one product PDF. The intake stores them under the standard internal object keys after upload. The cover becomes public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
@@ -802,7 +802,7 @@
             <div>
               <strong>PDF Autofill</strong>
               <h2 id="pdf-prefill-heading">Read PDF and Prefill Listing</h2>
-              <p>Select the finished product PDF once. Metadata and both cover candidates are processed automatically in this browser; nothing uploads or publishes, and the same selected file remains attached for the normal publish workflow.</p>
+              <p>Select the finished product PDF once. Metadata and both cover candidates are processed locally in this browser; nothing uploads or publishes.</p>
             </div>
             <div class="intake-field">
               <label for="product-pdf-file">Product PDF File</label>
@@ -1154,7 +1154,7 @@
               </div>
 
               <div class="intake-field intake-field--full">
-                <span class="intake-help">The PDF selected in the autofill panel above is also the product file used by the normal publish workflow. Reading it never uploads it.</span>
+                <span class="intake-help">The PDF selected in the autofill panel above remains attached for review. Reading it never uploads it.</span>
               </div>
             </div>
             </section>
@@ -1194,7 +1194,7 @@
                 <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
                 <li>For a new listing, choose the two required files: one cover WebP and the product PDF. For an existing listing, leave file inputs blank to keep the current assets or add only the replacements you want.</li>
                 <li>Use Check to validate missing or invalid information, then use Review to inspect the generated metadata and asset plan.</li>
-                <li>Use Publish or Update only after the review looks right. The page uploads to R2 first and only reports success after the GitHub build path finishes cleanly.</li>
+                <li>Review the product details. Publication is temporarily unavailable; this workbench will not upload files or change the live catalog.</li>
               </ol>
             </div>
             </aside>
@@ -1225,8 +1225,8 @@
           </div>
           <div class="intake-action-card">
             <strong id="intake-publish-label">Publish New Product</strong>
-            <button id="publish-button" class="button button--primary" type="button" aria-describedby="intake-publish-help">Publish New Product</button>
-            <p id="intake-publish-help">Creates a new listing or updates the loaded listing, uploads any selected replacement files, and rebuilds the store.</p>
+            <button id="publish-button" class="button button--primary" type="button" aria-describedby="intake-publish-help" disabled>Publication Temporarily Unavailable</button>
+            <p id="intake-publish-help">Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.</p>
           </div>
           <div class="intake-action-card">
             <strong id="intake-reset-label">Clear New Product Form</strong>
@@ -1324,6 +1324,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=sha256-9eff1f0c03e71e61"></script>
+  <script src="../assets/js/product-intake.js?v=sha256-78c31463c2e58cfb"></script>
 </body>
 </html>

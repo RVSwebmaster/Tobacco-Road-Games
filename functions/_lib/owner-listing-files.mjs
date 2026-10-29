@@ -113,7 +113,7 @@ async function replaceFile(request, db, bucket, actorId, nowMs) {
   const slug = safeSlug(existing.public_product_slug || existing.slug || existing.source_product_slug),
     targetKey = deliveryKey(slug, existing.purpose);
   if (["product", "cover", "preview"].includes(existing.purpose) && (!slug || !targetKey || existing.delivery_object_key !== targetKey))
-    return json({ error: "This file has not entered canonical delivery; use the normal review/publication workflow." }, 409);
+    return json({ error: "This file has not entered canonical delivery. Publication is temporarily unavailable." }, 409);
   const id = crypto.randomUUID(), now = new Date(Number.isFinite(nowMs) ? nowMs : Date.now()).toISOString(),
     quarantineKey = `creator-quarantine/${existing.creator_id}/${existing.listing_id}/${id}/${prepared.normalizedFilename}`;
   try {

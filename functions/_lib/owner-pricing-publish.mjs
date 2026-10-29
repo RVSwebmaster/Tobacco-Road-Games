@@ -1,5 +1,5 @@
-import { dispatchPublishWorkflow } from "./github-dispatch.mjs";
-import { OWNER_ACTOR_ID, jsonResponse, normalizeSlug } from "./owner-runtime.mjs";
+import { PUBLICATION_UNAVAILABLE } from "./publication-unavailable.mjs";
+import { jsonResponse, normalizeSlug } from "./owner-runtime.mjs";
 
 export async function handleOwnerPricingPublishRequest(request, env, options = {}) {
   if (String(request.method || "GET").toUpperCase() !== "POST") {
@@ -16,35 +16,11 @@ export async function handleOwnerPricingPublishRequest(request, env, options = {
       }, 400);
     }
 
-    const dispatchPayload = {
-      metadata: parsed.metadata,
-      operation: "pricing_update",
-      pricingConfirmation: parsed.pricingConfirmation,
-      publish_id: `price-${Date.now()}-${crypto.randomUUID()}`,
-      ref: String(env.GITHUB_PUBLISH_REF || "main"),
-      requested_by: OWNER_ACTOR_ID
-    };
-
-    const dispatchResult = await dispatchPublishWorkflow(dispatchPayload, env, options.dispatchOptions);
-    if (!dispatchResult.ok) {
-      return jsonResponse({
-        error: `The pricing update could not be published. ${dispatchResult.userMessage}`,
-        runUrl: dispatchResult.runUrl || ""
-      }, 502);
-    }
-
-    return jsonResponse({
-      message: dispatchResult.pending
-        ? "Pricing update accepted. The GitHub rebuild workflow is still running, so the live store may take another minute to update."
-        : "Pricing update published successfully.",
-      ok: true,
-      pending: Boolean(dispatchResult.pending),
-      runUrl: dispatchResult.runUrl || ""
-    }, dispatchResult.pending ? 202 : 200);
+    return jsonResponse({ error: PUBLICATION_UNAVAILABLE }, 503);
   } catch (error) {
     logOwnerPricingPublishException(request, error);
     return jsonResponse({
-      error: "Owner pricing publish could not be completed. Please try again. If the problem persists, check Cloudflare bindings and the GitHub workflow configuration."
+      error: "Owner pricing publish could not be completed."
     }, 500);
   }
 }

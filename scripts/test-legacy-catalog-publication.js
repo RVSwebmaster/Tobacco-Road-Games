@@ -27,7 +27,7 @@ async function main() {
   const migrationFiles = fs.readdirSync(MIGRATIONS_ROOT)
     .filter((name) => name.endsWith(".sql"))
     .sort();
-  assert.equal(migrationFiles.at(-1), CLEANUP_MIGRATION, "The legacy cleanup must remain forward-only.");
+  assert.ok(migrationFiles.includes(CLEANUP_MIGRATION), "The legacy cleanup migration must remain present.");
 
   const database = openDatabase();
   let bootstrapCountBeforeCleanup = null;

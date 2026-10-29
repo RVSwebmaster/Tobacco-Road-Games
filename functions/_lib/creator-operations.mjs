@@ -730,7 +730,6 @@ async function pauseCreatorListing(db, creator, id, env, options) {
     actorType: "creator",
     actorId: creator.user_id,
     nowMs: options.nowMs,
-    dispatchOptions: options.dispatchOptions || {},
   });
 }
 async function analytics(db, creator) {

@@ -722,8 +722,8 @@
       return result;
     } catch (error) {
       outputs.pdfPrefillStatus.textContent = isEditingLoadedListing()
-        ? `The PDF could not be read: ${error?.message || "unknown extraction error"}. The local review file remains separate from the publishing workflow.`
-        : `The PDF could not be read: ${error?.message || "unknown extraction error"}. The file remains selected and may still be used by the normal publishing workflow.`;
+        ? `The PDF could not be read: ${error?.message || "unknown extraction error"}. The local review file remains separate from the product file selection.`
+        : `The PDF could not be read: ${error?.message || "unknown extraction error"}. The file remains selected for review.`;
       outputs.pdfPrefillFileStatus.textContent = isEditingLoadedListing()
         ? `${file.name} remains selected for local review only and will not replace the published PDF.`
         : `${file.name} remains selected for publishing.`;
@@ -1021,9 +1021,9 @@
       modeTitle: `Editing Existing Listing: ${loadedProductRecord?.title || loadedProductSlug}`,
       outputCopy: "Check for missing or invalid information, then review the generated catalog entry and update plan before publishing changes.",
       outputHeading: "Review Listing Changes",
-      publishButton: "Update Existing Listing",
-      publishHelp: "Updates the existing listing, uploads only selected replacement files, rebuilds the store, and returns you to the listing picker after success.",
-      publishLabel: "Update Existing Listing",
+      publishButton: "Publication Temporarily Unavailable",
+      publishHelp: "Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.",
+      publishLabel: "Publication Temporarily Unavailable",
       resetButton: "Discard Listing Changes",
       resetHelp: "Discards unsaved edits for the loaded listing. Published data is not affected.",
       resetLabel: "Discard Listing Changes",
@@ -1039,9 +1039,9 @@
       modeTitle: "Creating New Product",
       outputCopy: "Check for missing or invalid information, then review the generated catalog entry and file plan before publishing.",
       outputHeading: "Review New Product",
-      publishButton: "Publish New Product",
-      publishHelp: "Creates a new listing, uploads the selected files, and rebuilds the store.",
-      publishLabel: "Publish New Product",
+      publishButton: "Publication Temporarily Unavailable",
+      publishHelp: "Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.",
+      publishLabel: "Publication Temporarily Unavailable",
       resetButton: "Clear New Product Form",
       resetHelp: "Clears unsaved work from the new-product form only. Published data is not affected.",
       resetLabel: "Clear New Product Form",
@@ -1093,6 +1093,7 @@
     }
     if (buttons.publish) {
       buttons.publish.textContent = labels.publishButton;
+      buttons.publish.disabled = true;
     }
     if (buttons.reset) {
       buttons.reset.textContent = labels.resetButton;
@@ -1712,12 +1713,7 @@
       "Published public asset paths:",
       `/product-assets/${payload.slug}/cover.webp`,
       "",
-      "Repo publish path after upload:",
-      "- Update shared folder map",
-      "- Update data/product-intake-map.json",
-      "- Update data/products.json",
-      "- Run node scripts/build-store.js",
-      "- Commit and push to main"
+      "Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt."
     ].join("\n");
   }
 
@@ -1787,13 +1783,7 @@
   }
 
   function formatPublishSuccessMessage(productTitle, responsePayload) {
-    const liveNote = responsePayload.json.pending
-      ? " The live store may take another minute to catch up."
-      : "";
-    const workflowNote = responsePayload.json.runUrl
-      ? ` Workflow: ${responsePayload.json.runUrl}`
-      : "";
-    return `${productTitle} updated successfully. The editor is closed and you are back at the listing picker.${liveNote}${workflowNote}`;
+    return `${productTitle} updated successfully. The editor is closed and you are back at the listing picker.`;
   }
 
   function getPublishFailureHeading(stage) {
@@ -1801,14 +1791,14 @@
       validation: "Server validation failed",
       configuration: "Publishing configuration failed",
       upload: "R2 file upload failed",
-      "catalog-deployment": "Catalog update or deployment failed",
+      unavailable: "Publication temporarily unavailable",
       unexpected: "Publishing failed"
     })[stage] || "Publishing failed";
   }
 
   function setPublishBusyState(busy) {
     publishBusy = busy;
-    buttons.publish.disabled = busy;
+    buttons.publish.disabled = true;
     for (const button of [buttons.analyze, buttons.review, buttons.reset]) {
       if (button) button.disabled = busy;
     }
@@ -1837,8 +1827,8 @@
       kind: "progress",
       heading: isEditingLoadedListing() ? "Updating listing" : "Publishing new product",
       message: isEditingLoadedListing()
-        ? "Preparing metadata, uploading any selected replacement files to R2, and waiting for the existing-listing update workflow to finish..."
-        : "Preparing metadata, uploading the two required files to R2, and waiting for the new-listing publish workflow to finish..."
+        ? "Submitting the existing listing update..."
+        : "Submitting the new listing..."
     });
 
     try {
@@ -1901,13 +1891,10 @@
 
       if (!response.ok) {
         const errorMessage = responsePayload.json.error || formatUnexpectedResponseError("Publish", responsePayload);
-        const uploadedFiles = Array.isArray(responsePayload.json.filesUploaded) && responsePayload.json.filesUploaded.length
-          ? ` R2 accepted these files before the later failure: ${responsePayload.json.filesUploaded.join(", ")}.`
-          : "";
         showActionFeedback({
           kind: "error",
           heading: getPublishFailureHeading(responsePayload.json.stage),
-          message: `${errorMessage}${uploadedFiles}`
+          message: errorMessage
         });
         return;
       }
@@ -1928,10 +1915,8 @@
 
       showActionFeedback({
         kind: "success",
-        heading: responsePayload.json.pending ? "Publish accepted - catalog workflow still running" : "Product published successfully",
-        message: responsePayload.json.runUrl
-          ? `${responsePayload.json.message} Workflow: ${responsePayload.json.runUrl}`
-          : responsePayload.json.message
+        heading: "Product published successfully",
+        message: responsePayload.json.message
       });
       markDraftBaseline();
       persistExistingListingDraft();
