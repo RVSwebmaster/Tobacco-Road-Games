@@ -13,11 +13,10 @@ import {
 } from "./orders-d1.mjs";
 import { parsePendingOrderRequest, resolvePendingOrderItems } from "./orders-pending.mjs";
 import {
-  getRuntimeCatalogMap,
-  getRuntimeCatalogProducts,
   getRuntimePricingPolicy,
   normalizeSlug
 } from "./runtime-catalog.mjs";
+import { resolveHybridCartCatalog } from "./cart-catalog.mjs";
 import { createStripeHostedCheckoutSession, StripeCheckoutError } from "./stripe-checkout.mjs";
 import { readStoreState, storeClosedResponse } from "./store-state.mjs";
 import { getSessionFromRequest } from "./account-auth.mjs";
@@ -90,16 +89,18 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     }, 400);
   }
 
-  const catalogProducts = Array.isArray(options.catalogProducts) ? options.catalogProducts : getRuntimeCatalogProducts();
-  const catalogMap = options.catalogMap instanceof Map
-    ? options.catalogMap
-    : Array.isArray(options.catalogProducts)
-      ? new Map(catalogProducts.map((product) => [String(product.slug || "").trim().toLowerCase(), product]))
-      : getRuntimeCatalogMap();
   const allowedProductSlug = normalizeSlug(options.allowedProductSlug || env.STAGING_CHECKOUT_PRODUCT_SLUG);
-  const checkoutCatalogMap = allowedProductSlug
-    ? new Map(catalogMap.has(allowedProductSlug) ? [[allowedProductSlug, catalogMap.get(allowedProductSlug)]] : [])
-    : catalogMap;
+  let checkoutCatalogMap;
+  try {
+    ({ catalogMap: checkoutCatalogMap } = await resolveHybridCartCatalog(
+      database,
+      parsed.body.items.map(item => item?.slug),
+      { ...options, allowedProductSlug }
+    ));
+  } catch (error) {
+    console.error(JSON.stringify({ event: "checkout_catalog_resolution_failed", message: String(error?.message || error) }));
+    return jsonResponse({ error: "Verified catalog pricing is temporarily unavailable." }, 503);
+  }
   const now = Number.isFinite(options.now) ? options.now : Date.now();
   const pricingPolicy = options.pricingPolicy || getRuntimePricingPolicy();
   const resolution = resolvePendingOrderItems(parsed.body.items, checkoutCatalogMap, { now });
@@ -121,6 +122,16 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     return jsonResponse({
       error: "Checkout requires a valid order currency."
     }, 400);
+  }
+
+  const nativeItems = resolution.items.filter(item => item.catalogSource === "native-d1");
+  if (nativeItems.length) {
+    return jsonResponse({
+      code: "native_checkout_unavailable",
+      error: "Native catalog pricing is verified, but payment and acquisition are not active for these products yet.",
+      items: resolution.responseItems,
+      retryable: false
+    }, 409);
   }
 
   const customerEmailHash = await createCustomerEmailHash(email.normalized, emailHashSecret);

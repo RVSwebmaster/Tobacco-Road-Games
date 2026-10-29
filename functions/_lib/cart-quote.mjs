@@ -1,7 +1,6 @@
 import pricingModule from "../../shared/pricing.js";
+import { resolveHybridCartCatalog } from "./cart-catalog.mjs";
 import {
-  getRuntimeCatalogMap,
-  getRuntimeCatalogProducts,
   getRuntimePricingPolicy,
   normalizeSlug
 } from "./runtime-catalog.mjs";
@@ -33,22 +32,25 @@ export async function handleCartQuoteRequest(request, options = {}) {
     }, parsed.status);
   }
 
-  const catalogProducts = Array.isArray(options.catalogProducts) ? options.catalogProducts : getRuntimeCatalogProducts();
-  const catalogMap = options.catalogMap instanceof Map
-    ? options.catalogMap
-    : Array.isArray(options.catalogProducts)
-      ? buildCatalogMap(catalogProducts)
-      : getRuntimeCatalogMap();
   const allowedProductSlug = normalizeSlug(options.allowedProductSlug);
-  const quoteCatalogMap = allowedProductSlug
-    ? new Map(catalogMap.has(allowedProductSlug) ? [[allowedProductSlug, catalogMap.get(allowedProductSlug)]] : [])
-    : catalogMap;
+  let quoteCatalogMap;
+  try {
+    ({ catalogMap: quoteCatalogMap } = await resolveHybridCartCatalog(
+      options.database,
+      parsed.items.map(item => item.slug),
+      { ...options, allowedProductSlug }
+    ));
+  } catch (error) {
+    console.error(JSON.stringify({ event: "cart_catalog_resolution_failed", message: String(error?.message || error) }));
+    return jsonResponse({ error: "Verified catalog pricing is temporarily unavailable." }, 503);
+  }
   const now = Number.isFinite(options.now) ? options.now : Date.now();
   const policy = options.pricingPolicy || getRuntimePricingPolicy();
 
   const quotedItems = [];
   const unavailableItems = [];
   let subtotalCents = 0;
+  let checkoutAllowed = true;
 
   for (const item of parsed.items) {
     const product = quoteCatalogMap.get(item.slug);
@@ -57,7 +59,18 @@ export async function handleCartQuoteRequest(request, options = {}) {
       continue;
     }
 
-    if (!["available-direct", "pay-what-you-want"].includes(product.status)) {
+    if (product.nativeAvailabilityCode) {
+      const messages = {
+        ineligible_creator: "This product's Creator is not currently eligible for marketplace sales.",
+        paused_product: "This product is currently paused.",
+        unpublished_product: "This product has not been published for sale."
+      };
+      unavailableItems.push(buildUnavailableItem(item.slug, product.nativeAvailabilityCode,
+        messages[product.nativeAvailabilityCode] || "This product is not currently available for checkout."));
+      continue;
+    }
+
+    if (!["available-direct", "pay-what-you-want", "free-download"].includes(product.status)) {
       unavailableItems.push(buildUnavailableItem(item.slug, "inactive_product", "This item is not currently available for direct purchase."));
       continue;
     }
@@ -90,10 +103,14 @@ export async function handleCartQuoteRequest(request, options = {}) {
 
     const lineTotalCents = priceCheck.details.effectivePriceCents;
     subtotalCents += lineTotalCents;
+    if (product.catalogSource === "native-d1") checkoutAllowed = false;
     quotedItems.push({
       authorDisplay: String(product.authorDisplay || "").trim(),
       coverUrl: String(product.coverUrl || "").trim(),
       currency: priceCheck.details.currency,
+      catalogRevision: Number.isInteger(product.catalogRevision) ? product.catalogRevision : null,
+      catalogSource: product.catalogSource || "legacy",
+      detailUrl: String(product.url || "").trim(),
       effectivePriceCents: priceCheck.details.effectivePriceCents,
       lineTotalCents,
       quantity: 1,
@@ -108,6 +125,8 @@ export async function handleCartQuoteRequest(request, options = {}) {
   }
 
   return jsonResponse({
+    checkoutAllowed,
+    checkoutBlockReason: checkoutAllowed ? "" : "Native catalog checkout is not active yet. Pricing is verified, but payment and acquisition remain disabled.",
     includedTaxTotalCents: policy.includedTaxTotalCents ?? null,
     items: quotedItems,
     pricingNote: String(policy.pricingNote || ""),
@@ -212,10 +231,6 @@ async function parseQuoteRequest(request) {
   };
 }
 
-function buildCatalogMap(products) {
-  return new Map(products.map((product) => [normalizeSlug(product.slug), product]));
-}
-
 function buildUnavailableItem(slug, code, message) {
   return {
     code,
@@ -228,6 +243,7 @@ function buildUnavailableItem(slug, code, message) {
 function jsonResponse(payload, status = 200) {
   return new Response(JSON.stringify(payload), {
     headers: {
+      "cache-control": "no-store",
       "content-type": "application/json; charset=utf-8"
     },
     status

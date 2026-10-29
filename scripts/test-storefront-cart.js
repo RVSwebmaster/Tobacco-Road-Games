@@ -13,10 +13,48 @@ async function main() {
   testCartStorageHelpers();
   testCartBrowserInitAndStorageSync();
   await testCartQuoteFailureAndRetry();
+  await testNativeQuoteOnlyCartPresentation();
   await testCartUnavailableRemoval();
   await testCartCheckoutRedirect();
   testStoreGenerationCartMode();
   console.log("Storefront cart tests passed.");
+}
+
+async function testNativeQuoteOnlyCartPresentation() {
+  const document = createCartPageDocument([]);
+  const storage = createStorage();
+  storage.setItem("trg_cart_v1", JSON.stringify({
+    version: 1,
+    items: [{ addedAt: new Date().toISOString(), amountCents: 525, quantity: 1, slug: "native-pwyw" }],
+    updatedAt: new Date().toISOString()
+  }));
+  const fetchImpl = async () => createJsonResponse({
+    checkoutAllowed: false,
+    checkoutBlockReason: "Native catalog checkout is not active yet. Pricing is verified, but payment and acquisition remain disabled.",
+    includedTaxTotalCents: null,
+    items: [{
+      authorDisplay: "RV Sawyer", catalogRevision: 2, catalogSource: "native-d1",
+      coverUrl: "/product-assets/native-pwyw/cover.webp", currency: "USD",
+      detailUrl: "/store/products/native-pwyw/", effectivePriceCents: 525,
+      lineTotalCents: 525, minimumPriceCents: 250, pricingModel: "pwyw", quantity: 1,
+      regularPriceCents: 700, saleActive: false, slug: "native-pwyw",
+      suggestedPriceCents: 700, title: "Native PWYW"
+    }],
+    pricingNote: TAX_NOTE, quotedAt: new Date().toISOString(), subtotalCents: 525,
+    taxInclusive: true, totalCents: 525, unavailableItems: []
+  });
+  const { api } = loadCartScript({ document, fetchImpl, storage, window: createWindow() });
+  await api.renderAll(document, storage, { fetchImpl });
+  assert.equal(document.total.textContent, "$5.25", "Native products should render their verified D1 quote in the existing cart.");
+  assert.match(document.items.innerHTML, /Native PWYW/);
+  assert.match(document.items.innerHTML, /\/store\/products\/native-pwyw\//);
+  assert.match(document.note.textContent, /payment and acquisition remain disabled/i);
+  assert.match(document.status.textContent, /Verified pricing is shown/i);
+  document.emailInput.value = "buyer@example.com";
+  document.emailInput.dispatchInput();
+  document.emailConfirmationInput.value = "buyer@example.com";
+  document.emailConfirmationInput.dispatchInput();
+  assert.equal(document.checkoutSubmitButton.disabled, true, "A native quote must not enable Stripe checkout even with valid email fields.");
 }
 
 function testCartStorageHelpers() {

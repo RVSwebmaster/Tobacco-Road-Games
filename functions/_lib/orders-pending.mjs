@@ -209,7 +209,18 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       unavailableItems.push(buildUnavailableItem(slug, "unknown_slug", "This item is not available for pending order creation."));
       continue;
     }
-    if (!["available-direct", "pay-what-you-want"].includes(product.status)) {
+    if (product.nativeAvailabilityCode) {
+      unavailableItems.push(buildUnavailableItem(slug, product.nativeAvailabilityCode,
+        product.nativeAvailabilityCode === "paused_product"
+          ? "This product is currently paused."
+          : product.nativeAvailabilityCode === "unpublished_product"
+            ? "This product has not been published for sale."
+            : product.nativeAvailabilityCode === "ineligible_creator"
+              ? "This product's Creator is not currently eligible for marketplace sales."
+              : "This product is not currently available for new acquisition."));
+      continue;
+    }
+    if (!["available-direct", "pay-what-you-want", "free-download"].includes(product.status)) {
       unavailableItems.push(buildUnavailableItem(slug, "inactive_product", "This item is not currently available for direct purchase."));
       continue;
     }
@@ -239,6 +250,8 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
     subtotalCents += priceCheck.details.effectivePriceCents;
     resolvedItems.push({
       authorDisplay: String(product.authorDisplay || "").trim(),
+      catalogRevision: Number.isInteger(product.catalogRevision) ? product.catalogRevision : null,
+      catalogSource: product.catalogSource || "legacy",
       createdAt: new Date(options.now || Date.now()).toISOString(),
       currency: priceCheck.details.currency,
       effectiveUnitPriceCents: priceCheck.details.effectivePriceCents,
@@ -247,6 +260,7 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       listPriceCents: priceCheck.details.regularPriceCents,
       primaryAuthorSlug: Array.isArray(product.authorSlugs) && product.authorSlugs.length ? String(product.authorSlugs[0]) : "unknown",
       productSlug: product.slug,
+      productId: product.nativeProductId || null,
       productTitleSnapshot: product.title,
       quantity: 1,
       saleActive: priceCheck.details.saleActive,
@@ -254,6 +268,7 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       pricingModel: isPayWhatYouWantProduct(product) ? "pwyw" : String(product.pricingModel || "fixed"),
       minimumPriceCents: priceCheck.details.minimumPriceCents ?? null,
       suggestedPriceCents: priceCheck.details.suggestedPriceCents ?? null,
+      deliveryR2Key: product.deliveryR2Key || null,
       versionSnapshot: String(product.version || "").trim()
     });
   }
@@ -277,6 +292,8 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
     items: resolvedItems,
     responseItems: resolvedItems.map((item) => ({
       authorDisplay: item.authorDisplay,
+      catalogRevision: item.catalogRevision,
+      catalogSource: item.catalogSource,
       currency: item.currency,
       effectiveUnitPriceCents: item.effectiveUnitPriceCents,
       lineTotalCents: item.lineTotalCents,

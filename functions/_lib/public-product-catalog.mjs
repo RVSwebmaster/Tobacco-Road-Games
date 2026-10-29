@@ -103,7 +103,7 @@ export function publicProduct(product, creator = {}) {
     previewUrl: product.previewR2Key ? `/product-assets/${encodeURIComponent(product.slug)}/preview.webp` : "",
     detailUrl: `/store/products/${encodeURIComponent(product.slug)}/`,
     storefrontVisibility: LISTED_STATUSES.has(product.status) ? "listed" : "unlisted",
-    purchaseAvailability: "temporarily-unavailable",
+    purchaseAvailability: "cart-quote-only",
     metadata,
     publishedAt: product.publishedAt,
     updatedAt: product.updatedAt

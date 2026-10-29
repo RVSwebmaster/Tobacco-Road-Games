@@ -150,8 +150,9 @@ async function main() {
     assert.match(detailHtml, /RV Sawyer/);
     assert.match(detailHtml, /Pay What You Want — \$2\.00 minimum; \$7\.00 suggested/);
     assert.match(detailHtml, new RegExp(`/product-assets/${slug}/cover\\.webp`));
-    assert.match(detailHtml, /Purchase temporarily unavailable/);
-    assert.doesNotMatch(detailHtml, /data-cart-add|delivery\.pdf|catalog-publications/);
+    assert.match(detailHtml, /data-cart-add=/);
+    assert.match(detailHtml, /Payment and acquisition.*are not active yet/);
+    assert.doesNotMatch(detailHtml, /delivery\.pdf|catalog-publications/);
     const cover = await fetch(`${ORIGIN}/product-assets/${slug}/cover.webp`, { cache: "no-store" });
     assert.equal(cover.status, 200);
     assert.equal(cover.headers.get("content-type"), "image/webp");

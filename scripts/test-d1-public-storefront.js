@@ -54,8 +54,9 @@ async function main() {
   assert.match(html, /RV Sawyer/);
   assert.match(html, /Pay What You Want — \$2\.00 minimum; \$7\.00 suggested/);
   assert.match(html, /\/product-assets\/storefront-native-item\/cover\.webp/);
-  assert.match(html, /Purchase temporarily unavailable/);
-  assert.doesNotMatch(html, /data-cart-add/);
+  assert.match(html, /Add to Cart/);
+  assert.match(html, /data-cart-add="storefront-native-item"/);
+  assert.match(html, /Payment and acquisition.*are not active yet/);
   assert.doesNotMatch(html, /delivery\.pdf|road-test\.pdf|catalog-publications/);
 
   await catalog.updateProduct(db, created.id, { subtitle: "Updated without deployment", suggestedPriceCents: 900 }, {

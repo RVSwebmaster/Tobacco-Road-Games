@@ -36,7 +36,7 @@ async function main() {
   assert.equal(publicItem.coverUrl, "/product-assets/public-item/cover.webp");
   assert.equal(publicItem.detailUrl, "/store/products/public-item/");
   assert.equal(publicItem.storefrontVisibility, "listed");
-  assert.equal(publicItem.purchaseAvailability, "temporarily-unavailable");
+  assert.equal(publicItem.purchaseAvailability, "cart-quote-only");
   assert.deepEqual(publicItem.metadata.authors, ["RV Sawyer"]);
   assert.equal(publicItem.metadata.privateNote, undefined);
   assert.equal(publicItem.coverR2Key, undefined);

@@ -86,7 +86,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
     url: canonical
   }).replace(/</g, "\\u003c");
   const purchaseMessage = product.storefrontVisibility === "listed"
-    ? "Purchasing for Cloudflare-native catalog products is temporarily unavailable while checkout integration is completed."
+    ? "Add this product to the cart for a server-verified quote. Payment and acquisition for Cloudflare-native products are not active yet."
     : "This catalog record is not currently available for purchase.";
 
   return `<!DOCTYPE html>
@@ -133,7 +133,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
             ${version ? `<span>${escapeHtml(version)}</span>` : ""}
           </div>
           <div class="hero__actions">
-            <button type="button" class="button button--primary" disabled>Purchase temporarily unavailable</button>
+            ${renderNativeCartControl(product)}
             ${product.previewUrl ? `<a class="button button--secondary" href="${escapeAttribute(product.previewUrl)}" target="_blank" rel="noopener noreferrer">Open Preview</a>` : ""}
           </div>
           <p class="fulfillment-note">${escapeHtml(purchaseMessage)}</p>
@@ -176,6 +176,18 @@ export function formatPublicPriceDetails(product) {
   }
   const sale = activeSalePrice(product);
   return sale === null ? money(product.priceCents, product.currency) : `${money(sale, product.currency)} sale price; normally ${money(product.priceCents, product.currency)}`;
+}
+
+function renderNativeCartControl(product) {
+  if (product.storefrontVisibility !== "listed") {
+    return `<button type="button" class="button button--primary" disabled>Currently unavailable</button>`;
+  }
+  if (product.pricingModel === "pwyw") {
+    const minimum = (Number(product.minimumPriceCents || 0) / 100).toFixed(2);
+    const suggested = (Number(product.suggestedPriceCents || 0) / 100).toFixed(2);
+    return `<div class="pwyw-purchase"><label for="pwyw-${escapeAttribute(product.slug)}">Choose your price</label><input id="pwyw-${escapeAttribute(product.slug)}" class="dock-input" type="number" inputmode="decimal" min="${minimum}" step="0.01" value="${suggested}" data-pwyw-amount-for="${escapeAttribute(product.slug)}"><span>${escapeHtml(formatPublicPriceDetails(product))}</span><button type="button" class="button button--primary" data-cart-add="${escapeAttribute(product.slug)}" data-pwyw-minimum-cents="${Number(product.minimumPriceCents || 0)}" data-pwyw-suggested-cents="${Number(product.suggestedPriceCents || 0)}">Add to Cart</button></div>`;
+  }
+  return `<button type="button" class="button button--primary" data-cart-add="${escapeAttribute(product.slug)}">${product.pricingModel === "free" ? "Add Free Product to Cart" : "Add to Cart"}</button>`;
 }
 
 function activeSalePrice(product, nowMs = Date.now()) {

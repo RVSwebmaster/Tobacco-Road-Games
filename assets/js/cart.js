@@ -364,7 +364,7 @@
     if (!product) {
       return {
         coverUrl: "",
-        meta: "This product is no longer available in the current generated cart catalog.",
+        meta: "Waiting for the server-authoritative catalog quote.",
         priceDisplay: "Unavailable",
         slug: entry.slug,
         title: entry.slug,
@@ -436,7 +436,7 @@
       suggestedPriceCents: Number.isInteger(item.suggestedPriceCents) ? item.suggestedPriceCents : null,
       slug: item.slug,
       title: item.title,
-      url: catalog.get(item.slug)?.url || ""
+      url: item.detailUrl || catalog.get(item.slug)?.url || ""
     }));
 
     const unavailableItems = quote.unavailableItems.map((item) => {
@@ -449,12 +449,13 @@
       };
     });
 
+    const nativeCheckoutBlocked = quote.checkoutAllowed === false;
     return {
-      checkoutReady: items.length > 0 && unavailableItems.length === 0,
+      checkoutReady: !nativeCheckoutBlocked && items.length > 0 && unavailableItems.length === 0,
       items,
-      note: quote.pricingNote || DEFAULT_ESTIMATE_NOTE,
+      note: nativeCheckoutBlocked ? (quote.checkoutBlockReason || "Native catalog checkout is not active yet.") : (quote.pricingNote || DEFAULT_ESTIMATE_NOTE),
       retryHidden: true,
-      status: unavailableItems.length ? QUOTE_PARTIAL_STATUS : QUOTE_SUCCESS_STATUS,
+      status: unavailableItems.length ? QUOTE_PARTIAL_STATUS : nativeCheckoutBlocked ? "Verified pricing is shown. Checkout for native catalog products is not active yet." : QUOTE_SUCCESS_STATUS,
       totalCents: Number.isInteger(quote.totalCents) ? quote.totalCents : 0,
       totalLabel: "Final Listed Total",
       unavailableItems
