@@ -1,6 +1,6 @@
 # Operation Severance: Task 2 handoff
 
-Tasks 2A–2C now provide the D1 schema, product-data module, and direct Cloudflare publication handler described in [D1 product catalog foundation](D1-PRODUCT-CATALOG-FOUNDATION.md). A read-only public D1 catalog API is also available in staging. The integration work below remains for subsequent tasks.
+Tasks 2A–2D now provide the D1 schema, product-data module, direct Cloudflare publication handler, public D1 catalog API, and D1-backed public R2 asset route described in [D1 product catalog foundation](D1-PRODUCT-CATALOG-FOUNDATION.md). The integration work below remains for subsequent tasks.
 
 Task 1 removes the runtime GitHub publishing path. Product, pricing, homepage, bundle, and pause publication now return HTTP 503 after relevant validation and do not promote files or mark products published. Creator compliance review, file decisions, and bundle approval remain available. No deployment was made as part of Task 1.
 
@@ -15,7 +15,6 @@ These dependencies are deliberately preserved for the authorized D1 catalog reco
 | `functions/_lib/runtime-catalog.mjs` | Reads generated `shared/runtime-catalog.mjs` | Replace with D1 catalog queries and a deliberate cache strategy. |
 | `functions/_lib/cart-quote.mjs`, `cart-checkout.mjs`, `orders-pending.mjs`, `creator-balance-route.mjs` | Prices, saleability, and order snapshots derive from the bundled catalog | Read D1 catalog and preserve sale-time snapshots and pricing checks. |
 | `functions/_lib/free-download.mjs`, `product-delivery.mjs`, `account-library.mjs` | Eligibility and delivery metadata derive from generated products; free download also uses the static folder map | Resolve D1 product and delivery records while preserving entitlements and private R2 delivery. |
-| `functions/product-assets/[slug]/[asset].js` | Uses generated slug-to-folder map for public images | Resolve approved image objects through D1-backed mapping. |
 | `functions/_lib/creator-operations.mjs`, `creator-publication.mjs`, `product-inactivity.mjs` | Listing compatibility, slug checks, and inactivity decisions consult the bundled catalog | Use D1 product identity and publication state. Rebuild publication and pause atomically before enabling actions. |
 | `functions/_lib/owner-publish.mjs` | Validation determines existing products through the generated folder map | Use D1 identity and asset references when the Cloudflare publish transaction is implemented. |
 | `assets/js/product-intake.js`, `owner-pricing-editor.js`, `owner-homepage-editor.js` | Owner screens fetch static `/data/products.json`; homepage editor also fetches `/data/homepage.json` | Load D1-backed Owner APIs; re-enable publication only when Cloudflare writes and reads are complete. |

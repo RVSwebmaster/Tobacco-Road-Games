@@ -163,6 +163,20 @@ async function main() {
     assert.deepEqual(r2Download(byId.deliveryR2Key, path.join(testDir, "delivery.pdf")), PDF);
     console.log("Native staging R2: cover and PDF bytes verified independently.");
 
+    const coverRoute = await fetch(`${ORIGIN}/product-assets/${slug}/cover.webp`);
+    assert.equal(coverRoute.status, 200);
+    assert.equal(coverRoute.headers.get("content-type"), "image/webp");
+    assert.equal(coverRoute.headers.get("x-content-type-options"), "nosniff");
+    assert.deepEqual(Buffer.from(await coverRoute.arrayBuffer()), WEBP);
+    const coverHead = await fetch(`${ORIGIN}/product-assets/${slug}/cover.webp`, { method: "HEAD" });
+    assert.equal(coverHead.status, 200);
+    assert.equal(coverHead.headers.get("content-type"), "image/webp");
+    assert.equal((await coverHead.arrayBuffer()).byteLength, 0);
+    assert.equal((await fetch(`${ORIGIN}/product-assets/${slug}/preview.webp`)).status, 404);
+    assert.equal((await fetch(`${ORIGIN}/product-assets/${slug}/delivery.pdf`)).status, 404);
+    assert.equal((await fetch(`${ORIGIN}/product-assets/${slug}/${encodeURIComponent(byId.deliveryR2Key)}`)).status, 404);
+    console.log("Public asset route: D1-resolved cover GET/HEAD passed; preview and private PDF paths rejected.");
+
     const failed = await fetch(`${ORIGIN}/owner/api/catalog-publication`, { method: "POST",
       body: form(metadata(failedId, failedSlug, { creatorListingId: `missing-${suffix}` })), headers });
     const failedBody = await failed.json();
@@ -194,6 +208,7 @@ async function main() {
     }
     assert.equal(await catalog.getProductBySlug(db, slug), null);
     assert.equal((await fetch(`${ORIGIN}/api/catalog?slug=${slug}`)).status, 404);
+    assert.equal((await fetch(`${ORIGIN}/product-assets/${slug}/cover.webp`)).status, 404);
     assert.equal(await catalog.getProductById(db, failedId), null);
     if (failedAttemptId) {
       let orphan = false;

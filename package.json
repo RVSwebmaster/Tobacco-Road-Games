@@ -27,6 +27,7 @@
     "test:product-catalog-d1": "node scripts/test-product-catalog-d1.js",
     "test:product-publication": "node scripts/test-product-publication.js",
     "test:public-product-catalog": "node scripts/test-public-product-catalog.js",
+    "test:public-product-assets": "node scripts/test-public-product-assets.js",
     "test:creator-closure": "node scripts/test-creator-account-closure.js",
     "test:creator-publishing-sandbox": "node scripts/test-creator-publishing-sandbox.js",
     "test:creator-product-submission-sandbox": "node scripts/test-creator-product-submission-sandbox.js",

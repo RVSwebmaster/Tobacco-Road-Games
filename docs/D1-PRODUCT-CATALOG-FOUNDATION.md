@@ -10,6 +10,8 @@ Migration 057 is applied to `trg-orders-staging` only. Task 2C added `/owner/api
 
 `/api/catalog` now provides read-only D1 lookup and listing of published products. Its public projection excludes private R2 delivery keys and unapproved metadata fields. Storefront pages, checkout, fulfillment, and Owner Intake do not yet consume this API.
 
+Task 2D changed `/product-assets/{slug}/{asset}` to resolve published products and approved `cover.webp` or `preview.webp` keys from D1, then read the object through the private `TRG_PRODUCTS` binding. The route rejects unpublished products, missing objects, non-WebP objects, delivery keys, and every other asset name. Native staging verification retrieved a disposable cover through the preserved public URL and confirmed that PDF paths remained inaccessible.
+
 ## Remaining integration requirements
 
-The repository's current `data/products.json`, generated runtime catalog, and product folder map are empty, so there are no existing product rows to backfill from them at this checkpoint. Remaining work must connect public assets and storefront pages, Owner reads and Intake, checkout, downloads, pricing, homepage, bundle, Creator, and inactivity consumers to D1 while preserving historical snapshots. Keep the old publication actions unavailable until their Cloudflare reads and writes are connected and verified.
+The repository's current `data/products.json`, generated runtime catalog, and product folder map are empty, so there are no existing product rows to backfill from them at this checkpoint. Remaining work must connect storefront pages, Owner reads and Intake, checkout, downloads, pricing, homepage, bundle, Creator, and inactivity consumers to D1 while preserving historical snapshots. Keep the old publication actions unavailable until their Cloudflare reads and writes are connected and verified.
