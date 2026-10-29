@@ -1,5 +1,7 @@
 # Operation Severance: Task 2 handoff
 
+Task 2A now provides the D1 schema and product-data module described in [D1 product catalog foundation](D1-PRODUCT-CATALOG-FOUNDATION.md). The integration work below remains for subsequent tasks.
+
 Task 1 removes the runtime GitHub publishing path. Product, pricing, homepage, bundle, and pause publication now return HTTP 503 after relevant validation and do not promote files or mark products published. Creator compliance review, file decisions, and bundle approval remain available. No deployment was made as part of Task 1.
 
 ## Repository-generated product data still in use
