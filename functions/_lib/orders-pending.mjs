@@ -269,6 +269,11 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       minimumPriceCents: priceCheck.details.minimumPriceCents ?? null,
       suggestedPriceCents: priceCheck.details.suggestedPriceCents ?? null,
       deliveryR2Key: product.deliveryR2Key || null,
+      deliveryFilename: product.deliveryFilename || null,
+      deliveryContentType: product.deliveryContentType || null,
+      nativeCreatorId: product.nativeCreatorId || null,
+      productStatus: String(product.status || ""),
+      publicationState: String(product.publicationState || ""),
       versionSnapshot: String(product.version || "").trim()
     });
   }

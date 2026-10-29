@@ -42,6 +42,51 @@ export async function createCheckoutRequestHash(input, secret) {
   return bytesToHex(new Uint8Array(signature));
 }
 
+export async function createNativeOrderRequestHash(input, secret) {
+  const normalizedSecret = String(secret || "");
+  if (!normalizedSecret) {
+    throw new Error("ORDER_EMAIL_HASH_SECRET is not configured.");
+  }
+  const canonicalRequest = JSON.stringify({
+    currency: String(input?.currency || "").trim().toUpperCase(),
+    customerEmailNormalized: String(input?.customerEmailNormalized || "").trim().toLowerCase(),
+    items: (Array.isArray(input?.items) ? input.items : []).map(item => ({
+      catalogRevision: requiredInteger(item?.catalogRevision, "catalogRevision"),
+      currency: String(item?.currency || "").trim().toUpperCase(),
+      deliveryContentType: String(item?.deliveryContentType || "").trim(),
+      deliveryFilename: String(item?.deliveryFilename || "").trim(),
+      deliveryR2Key: String(item?.deliveryR2Key || "").trim(),
+      effectiveUnitPriceCents: requiredInteger(item?.effectiveUnitPriceCents, "effectiveUnitPriceCents"),
+      lineTotalCents: requiredInteger(item?.lineTotalCents, "lineTotalCents"),
+      listPriceCents: requiredInteger(item?.listPriceCents, "listPriceCents"),
+      nativeCreatorId: String(item?.nativeCreatorId || "").trim(),
+      nativeProductId: String(item?.nativeProductId || "").trim(),
+      pricingModel: String(item?.pricingModel || "").trim(),
+      productSlug: String(item?.productSlug || "").trim().toLowerCase(),
+      productStatus: String(item?.productStatus || "").trim(),
+      productTitleSnapshot: String(item?.productTitleSnapshot || "").trim(),
+      publicationState: String(item?.publicationState || "").trim(),
+      quantity: requiredInteger(item?.quantity, "quantity")
+    })).sort((left, right) => left.productSlug.localeCompare(right.productSlug)),
+    subtotalCents: requiredInteger(input?.subtotalCents, "subtotalCents"),
+    totalCents: requiredInteger(input?.totalCents, "totalCents")
+  });
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(normalizedSecret),
+    { hash: "SHA-256", name: "HMAC" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(`trg-native-order-request-v1:${canonicalRequest}`)
+  );
+  return bytesToHex(new Uint8Array(signature));
+}
+
 function normalizeHashItems(items) {
   return (Array.isArray(items) ? items : []).map((item) => ({
     currency: String(item?.currency || "").trim().toUpperCase(),
