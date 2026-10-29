@@ -113,16 +113,21 @@ export async function listProducts(database, { creatorId, publicationState, stat
 }
 
 export async function createProduct(database, input, { nowMs = Date.now() } = {}) {
-  assertFields(input, CREATE_NAMES);
-  const id = input.id === undefined ? crypto.randomUUID() : requiredText(input.id, "id");
-  const slug = requiredSlug(input.slug);
-  const creatorId = requiredText(input.creatorId, "creatorId");
-  const product = normalize({ ...DEFAULTS, ...input, id, slug, creatorId });
+  const product = validateProductInput(input);
+  const { id, slug, creatorId } = product;
   const now = timestamp(nowMs);
   const values = [id, slug, creatorId, ...FIELDS.map(([name]) => toDatabase(name, product[name])), now, now, 1];
   await database.prepare(`INSERT INTO marketplace_products(${COLUMNS.join(",")}) VALUES(${COLUMNS.map(() => "?").join(",")})`)
     .bind(...values).run();
   return getProductById(database, id);
+}
+
+export function validateProductInput(input) {
+  assertFields(input, CREATE_NAMES);
+  const id = input.id === undefined ? crypto.randomUUID() : requiredText(input.id, "id");
+  const slug = requiredSlug(input.slug);
+  const creatorId = requiredText(input.creatorId, "creatorId");
+  return normalize({ ...DEFAULTS, ...input, id, slug, creatorId });
 }
 
 export async function updateProduct(database, id, patch, { expectedRevision, nowMs = Date.now() } = {}) {
