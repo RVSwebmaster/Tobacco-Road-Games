@@ -166,7 +166,7 @@ async function main() {
   assert.equal(productionCalled, false);
 
   assert.ok(JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8")).include.includes("/api/cart/pay-order"));
-  assert.equal(count(raw, "download_entitlements"), 0, "Task 2H must not create any entitlement.");
+  assert.equal(count(raw, "download_entitlements"), 0, "Native payment must not create a delivery-capable entitlement.");
   raw.close();
   console.log("Native D1 Stripe payment tests passed.");
 }

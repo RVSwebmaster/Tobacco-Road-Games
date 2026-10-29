@@ -57,12 +57,33 @@ export async function findDuplicateDigitalOwnership(
 ) {
   if (!productSlugs.length) return [];
   const marks = productSlugs.map(() => "?").join(",");
-  const result = await database
-    .prepare(
-      `SELECT DISTINCT e.product_slug FROM download_entitlements e JOIN orders o ON o.id=e.order_id WHERE e.status='active' AND o.payment_status IN ('paid','refunded','disputed') AND e.product_slug IN (${marks}) AND (o.user_id=? OR o.customer_email_hash=?)`,
-    )
-    .bind(...productSlugs, userId, emailHash)
-    .all();
+  let result;
+  try {
+    result = await database
+      .prepare(
+        `SELECT DISTINCT owned.product_slug FROM (
+           SELECT e.product_slug AS product_slug,o.user_id,o.customer_email_hash
+           FROM download_entitlements e JOIN orders o ON o.id=e.order_id
+           WHERE e.status='active' AND o.payment_status IN ('paid','refunded','disputed')
+           UNION ALL
+           SELECT npe.product_slug_snapshot AS product_slug,o.user_id,o.customer_email_hash
+           FROM native_product_entitlements npe JOIN orders o ON o.id=npe.order_id
+           WHERE npe.status='active' AND o.payment_status IN ('paid','refunded','disputed')
+         ) owned
+         WHERE owned.product_slug IN (${marks})
+           AND (owned.user_id=? OR owned.customer_email_hash=?)`,
+      )
+      .bind(...productSlugs, userId, emailHash)
+      .all();
+  } catch (error) {
+    if (!/no such table:\s*native_product_entitlements/i.test(String(error))) throw error;
+    result = await database
+      .prepare(
+        `SELECT DISTINCT e.product_slug FROM download_entitlements e JOIN orders o ON o.id=e.order_id WHERE e.status='active' AND o.payment_status IN ('paid','refunded','disputed') AND e.product_slug IN (${marks}) AND (o.user_id=? OR o.customer_email_hash=?)`,
+      )
+      .bind(...productSlugs, userId, emailHash)
+      .all();
+  }
   return (result.results || []).map((x) => x.product_slug);
 }
 export function assertRefundEligibility(reason) {

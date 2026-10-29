@@ -14,6 +14,7 @@ import {fulfillCreditPurchase} from './creator-advertising.mjs';
 import { settleStripeIdentityCoverage } from "./creator-identity-billing.mjs";
 import { settleAnnualPreferredStripe } from "./preferred-billing.mjs";
 import { processStripeCreatorFinanceEvent, STRIPE_CREATOR_FINANCE_EVENTS } from "./creator-provider-finance.mjs";
+import { grantNativePaidOrderEntitlements, markNativeEntitlementFailure } from "./native-entitlements-d1.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
   "checkout.session.completed",
@@ -165,6 +166,11 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)&&["processed","ignored"].includes(eventRecord.event.processing_status))return{duplicate:true,event:eventRecord.event,processingResult:eventRecord.event.processing_result||"duplicate_noop"};
 
   if (["processed", "ignored"].includes(eventRecord.event.processing_status)) {
+    const nativeEntitlements = await repairProcessedNativeEntitlements(
+      database,
+      eventRecord.event,
+      { nowMs: options.nowMs }
+    );
     const fulfillment = await repairProcessedPaidOrder(
       database,
       eventRecord.event,
@@ -182,6 +188,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       delivery,
       event: eventRecord.event,
       fulfillment,
+      nativeEntitlements,
       processingResult: eventRecord.event.processing_result || "duplicate_noop"
     };
   }
@@ -193,6 +200,11 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   if (!claimed.claimed) {
     if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)&&["processed","ignored"].includes(claimed.event?.processing_status))return{duplicate:true,event:claimed.event,processingResult:claimed.event.processing_result||"duplicate_noop"};
     if (["processed", "ignored"].includes(claimed.event?.processing_status)) {
+      const nativeEntitlements = await repairProcessedNativeEntitlements(
+        database,
+        claimed.event,
+        { nowMs: options.nowMs }
+      );
       const fulfillment = await repairProcessedPaidOrder(
         database,
         claimed.event,
@@ -210,6 +222,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
         delivery,
         event: claimed.event,
         fulfillment,
+        nativeEntitlements,
         processingResult: claimed.event.processing_result || "duplicate_noop"
       };
     }
@@ -552,6 +565,9 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     });
   }
 
+  const nativeEntitlements = orderAction === "paid" && isNativeOrder(order)
+    ? await grantNativeEntitlementsOrThrow(database, Number(order.id), { nowMs: options.nowMs })
+    : null;
   const fulfillment = orderAction === "paid" && !isNativeOrder(order)
     ? await repairPaidOrderFulfillment(database, options.productsBucket, Number(order.id), {
       deliveryProducts: options.deliveryProducts,
@@ -561,7 +577,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   const delivery = orderAction === "paid"
     ? await deliverProcessedPaidOrder(database, result.event, fulfillment, options)
     : null;
-  return { ...result, duplicate: false, delivery, fulfillment };
+  return { ...result, duplicate: false, delivery, fulfillment, nativeEntitlements };
 }
 
 async function deliverProcessedPaidOrder(database, eventRecord, fulfillment, options) {
@@ -615,6 +631,38 @@ async function repairProcessedPaidOrder(database, eventRecord, productsBucket, o
     deliveryProducts: options.deliveryProducts,
     nowMs: options.nowMs
   });
+}
+
+async function repairProcessedNativeEntitlements(database, eventRecord, options = {}) {
+  const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
+  if (!orderId || eventRecord?.processing_status !== "processed") return null;
+  const order = await getOrderById(database, orderId);
+  if (!order || !isNativeOrder(order) || order.payment_status !== "paid") return null;
+  return grantNativeEntitlementsOrThrow(database, orderId, options);
+}
+
+async function grantNativeEntitlementsOrThrow(database, orderId, options = {}) {
+  try {
+    const result = await grantNativePaidOrderEntitlements(database, orderId, options);
+    if (!result.ready) throw new Error(`Native entitlement grant did not become ready: ${result.result}.`);
+    return {
+      entitlementCount: Number(result.entitlementCount || 0),
+      ready: true,
+      result: result.result
+    };
+  } catch (error) {
+    await markNativeEntitlementFailure(
+      database,
+      orderId,
+      "native_entitlement_processing_failed",
+      options
+    ).catch(() => {});
+    throw new StripeWebhookError("Native ownership creation failed and remains retryable.", {
+      cause: error,
+      code: "native_entitlement_processing_failed",
+      httpStatus: 500
+    });
+  }
 }
 
 async function finalizeWebhookEvent(database, eventRecord, processingToken, outcome) {

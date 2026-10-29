@@ -151,7 +151,7 @@ async function main() {
     assert.equal(order.fulfillment_status, "pending");
     assert.equal(query(`SELECT COUNT(*) n FROM download_entitlements WHERE order_id=${order.id}`).results[0].n, 0);
     assert.equal(query(`SELECT COUNT(*) n FROM creator_sale_snapshots WHERE order_id=${order.id}`).results[0].n, 0);
-    console.log("Verified webhook: signed test-mode event marked the native order paid with no entitlement, fulfillment, or Creator accounting.");
+    console.log("Verified webhook: signed test-mode event marked the native order paid with no download entitlement, fulfillment, or Creator accounting.");
 
     response = await sendEvent(event);
     result = await response.json();
@@ -166,6 +166,7 @@ async function main() {
 
   try {
     if (order?.id) {
+      query(`DELETE FROM native_product_entitlements WHERE order_id=${Number(order.id)}`);
       query(`DELETE FROM webhook_events WHERE provider_event_id LIKE ${sql(`evt_task2h_${suffix}%`)}`);
       query(`DELETE FROM orders WHERE id=${Number(order.id)}`);
     }

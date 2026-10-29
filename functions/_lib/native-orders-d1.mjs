@@ -111,8 +111,8 @@ function prepareOrderInsert(database, order) {
       included_tax_cents,total_cents,processor_fee_cents,net_proceeds_cents,
       payment_status,fulfillment_status,email_status,created_at,payment_source,
       settlement_method,catalog_source,native_order_state,native_prepared_at,
-      native_payment_expires_at
-    ) VALUES(?,?,?,?,'legacy',?,?,?,?,?,?,NULL,?,NULL,NULL,'pending','pending','pending',?,'none','no_payment','native_d1','pending',?,?)
+      native_payment_expires_at,native_entitlement_status
+    ) VALUES(?,?,?,?,'legacy',?,?,?,?,?,?,NULL,?,NULL,NULL,'pending','pending','pending',?,'none','no_payment','native_d1','pending',?,?,'pending')
   `).bind(
     order.publicId,
     order.userId,
