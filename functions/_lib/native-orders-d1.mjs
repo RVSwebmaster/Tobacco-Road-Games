@@ -41,6 +41,67 @@ export async function createOrGetNativePendingOrder(database, orderInput, itemSn
   return { created: true, order: created };
 }
 
+export async function attachNativeStripeCheckoutSession(database, orderId, sessionInput, options = {}) {
+  const id = positiveInteger(orderId, "orderId");
+  const sessionId = requiredText(sessionInput?.id, "stripeCheckoutSessionId");
+  const sessionUrl = requiredText(sessionInput?.url, "stripeCheckoutSessionUrl");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+  await database.prepare(`
+    UPDATE orders
+    SET stripe_checkout_session_id=?, stripe_checkout_session_url=?,
+        checkout_session_status='active', checkout_failure_code=NULL,
+        checkout_updated_at=?, native_payment_started_at=COALESCE(native_payment_started_at,?),
+        payment_source='stripe', settlement_method='external_provider'
+    WHERE id=? AND catalog_source='native_d1' AND native_order_state='pending'
+      AND payment_status='pending'
+      AND (stripe_checkout_session_id IS NULL OR stripe_checkout_session_id=?)
+  `).bind(sessionId, sessionUrl, updatedAt, updatedAt, id, sessionId).run();
+  const order = await database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+  if (!order || order.stripe_checkout_session_id !== sessionId
+    || order.stripe_checkout_session_url !== sessionUrl
+    || order.checkout_session_status !== "active") {
+    throw new Error("The native Stripe Checkout Session could not be attached.");
+  }
+  return order;
+}
+
+export async function markNativePaymentRetryable(database, orderId, failureCode, options = {}) {
+  const id = positiveInteger(orderId, "orderId");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+  await database.prepare(`
+    UPDATE orders SET checkout_session_status='retryable',checkout_failure_code=?,checkout_updated_at=?
+    WHERE id=? AND catalog_source='native_d1' AND native_order_state='pending'
+      AND payment_status='pending' AND stripe_checkout_session_id IS NULL
+  `).bind(requiredText(failureCode, "failureCode"), updatedAt, id).run();
+  return database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+}
+
+export async function failNativePaymentAttempt(database, orderId, failureCode, options = {}) {
+  const id = positiveInteger(orderId, "orderId");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+  await database.prepare(`
+    UPDATE orders
+    SET payment_status='failed',fulfillment_status='canceled',native_order_state='failed',
+        checkout_session_status='failed_terminal',checkout_failure_code=?,checkout_updated_at=?
+    WHERE id=? AND catalog_source='native_d1' AND native_order_state='pending'
+      AND payment_status='pending' AND stripe_checkout_session_id IS NULL
+  `).bind(requiredText(failureCode, "failureCode"), updatedAt, id).run();
+  return database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+}
+
+export async function cancelNativePendingOrder(database, orderId, failureCode, options = {}) {
+  const id = positiveInteger(orderId, "orderId");
+  const updatedAt = String(options.updatedAt || new Date().toISOString());
+  await database.prepare(`
+    UPDATE orders
+    SET payment_status='expired',fulfillment_status='canceled',native_order_state='canceled',
+        checkout_session_status='failed_terminal',checkout_failure_code=?,checkout_updated_at=?
+    WHERE id=? AND catalog_source='native_d1' AND native_order_state='pending'
+      AND payment_status='pending' AND stripe_checkout_session_id IS NULL
+  `).bind(requiredText(failureCode, "failureCode"), updatedAt, id).run();
+  return database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+}
+
 function prepareOrderInsert(database, order) {
   return database.prepare(`
     INSERT INTO orders(
@@ -49,8 +110,9 @@ function prepareOrderInsert(database, order) {
       customer_email_normalized,customer_email_hash,currency,subtotal_cents,
       included_tax_cents,total_cents,processor_fee_cents,net_proceeds_cents,
       payment_status,fulfillment_status,email_status,created_at,payment_source,
-      settlement_method,catalog_source,native_order_state,native_prepared_at
-    ) VALUES(?,?,?,?,'legacy',?,?,?,?,?,?,NULL,?,NULL,NULL,'pending','pending','pending',?,'none','no_payment','native_d1','pending',?)
+      settlement_method,catalog_source,native_order_state,native_prepared_at,
+      native_payment_expires_at
+    ) VALUES(?,?,?,?,'legacy',?,?,?,?,?,?,NULL,?,NULL,NULL,'pending','pending','pending',?,'none','no_payment','native_d1','pending',?,?)
   `).bind(
     order.publicId,
     order.userId,
@@ -64,7 +126,8 @@ function prepareOrderInsert(database, order) {
     order.subtotalCents,
     order.totalCents,
     order.createdAt,
-    order.createdAt
+    order.createdAt,
+    order.paymentExpiresAt
   );
 }
 
@@ -121,6 +184,13 @@ function normalizeOrder(input, options) {
   const subtotalCents = nonnegativeInteger(input?.subtotalCents, "subtotalCents");
   const totalCents = nonnegativeInteger(input?.totalCents, "totalCents");
   if (subtotalCents !== totalCents) throw new Error("Native prepared order totals must balance.");
+  const preparedAtMs = Date.parse(createdAt);
+  const paymentExpiresAt = String(input?.paymentExpiresAt
+    || new Date(preparedAtMs + (Number.isFinite(options.paymentTtlMs) ? Number(options.paymentTtlMs) : 60 * 60 * 1000)).toISOString());
+  if (!Number.isFinite(preparedAtMs) || !Number.isFinite(Date.parse(paymentExpiresAt))
+    || Date.parse(paymentExpiresAt) <= preparedAtMs) {
+    throw new Error("A future native payment expiration is required.");
+  }
   return {
     checkoutAttemptId: requiredText(input?.checkoutAttemptId, "checkoutAttemptId"),
     checkoutRequestHash,
@@ -130,6 +200,7 @@ function normalizeOrder(input, options) {
     customerEmailHash: requiredText(input?.customerEmailHash, "customerEmailHash"),
     customerEmailNormalized: requiredText(input?.customerEmailNormalized, "customerEmailNormalized"),
     publicId: String(input?.publicId || options.publicIdGenerator?.() || generatePublicOrderReference()),
+    paymentExpiresAt,
     subtotalCents,
     totalCents,
     userId: optionalText(input?.userId)

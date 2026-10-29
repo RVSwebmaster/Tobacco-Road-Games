@@ -114,8 +114,16 @@ function buildStripeCheckoutFormBody(input) {
   params.set("client_reference_id", requiredString(input?.clientReferenceId, "clientReferenceId"));
   params.set("customer_email", requiredString(input?.customerEmail, "customerEmail"));
   params.set("payment_method_types[0]", "card");
+  if (input?.expiresAt !== undefined) {
+    params.set("expires_at", String(requiredPositiveInteger(input.expiresAt, "expiresAt")));
+  }
   params.set("metadata[trg_checkout_attempt_id]", requiredString(input?.checkoutAttemptId, "checkoutAttemptId"));
   params.set("payment_intent_data[metadata][trg_checkout_attempt_id]", requiredString(input?.checkoutAttemptId, "checkoutAttemptId"));
+  if (input?.orderSource) {
+    const orderSource = requiredString(input.orderSource, "orderSource");
+    params.set("metadata[trg_order_source]", orderSource);
+    params.set("payment_intent_data[metadata][trg_order_source]", orderSource);
+  }
   if(input?.serviceType){
     params.set("metadata[trg_service_type]", requiredString(input.serviceType,"serviceType"));
     params.set("metadata[trg_service_reference_id]", requiredString(input.clientReferenceId,"clientReferenceId"));

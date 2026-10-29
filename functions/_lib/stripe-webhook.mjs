@@ -552,7 +552,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     });
   }
 
-  const fulfillment = orderAction === "paid"
+  const fulfillment = orderAction === "paid" && !isNativeOrder(order)
     ? await repairPaidOrderFulfillment(database, options.productsBucket, Number(order.id), {
       deliveryProducts: options.deliveryProducts,
       nowMs: options.nowMs
@@ -608,6 +608,9 @@ async function repairProcessedPaidOrder(database, eventRecord, productsBucket, o
   if (!order || order.payment_status !== "paid") {
     return null;
   }
+  if (isNativeOrder(order)) {
+    return null;
+  }
   return repairPaidOrderFulfillment(database, productsBucket, orderId, {
     deliveryProducts: options.deliveryProducts,
     nowMs: options.nowMs
@@ -641,17 +644,41 @@ async function finalizeWebhookEvent(database, eventRecord, processingToken, outc
       outcome.order.currency,
       outcome.paymentIntentId
     ));
-    statements.push(...await creatorSaleStatements(database,outcome.order,outcome.feePolicy||resolveFeePolicy({},Date.parse(outcome.paidAt)),outcome.paidAt));
+    if (isNativeOrder(outcome.order)) {
+      statements.push(database.prepare(`
+        UPDATE orders
+        SET native_order_state='paid', payment_source='stripe',
+            settlement_method='external_provider'
+        WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
+          AND native_order_state IN ('pending','failed','canceled')
+      `).bind(Number(outcome.order.id)));
+    } else {
+      statements.push(...await creatorSaleStatements(database,outcome.order,outcome.feePolicy||resolveFeePolicy({},Date.parse(outcome.paidAt)),outcome.paidAt));
+    }
   } else if (outcome.orderAction === "expired") {
     statements.push(database.prepare(`
       UPDATE orders SET payment_status = 'expired'
       WHERE id = ? AND payment_status = 'pending'
     `).bind(Number(outcome.order.id)));
+    if (isNativeOrder(outcome.order)) {
+      statements.push(database.prepare(`
+        UPDATE orders SET native_order_state='canceled',fulfillment_status='canceled'
+        WHERE id=? AND catalog_source='native_d1' AND payment_status='expired'
+          AND native_order_state='pending'
+      `).bind(Number(outcome.order.id)));
+    }
   } else if (outcome.orderAction === "failed") {
     statements.push(database.prepare(`
       UPDATE orders SET payment_status = 'failed'
       WHERE id = ? AND payment_status = 'pending'
     `).bind(Number(outcome.order.id)));
+    if (isNativeOrder(outcome.order)) {
+      statements.push(database.prepare(`
+        UPDATE orders SET native_order_state='failed',fulfillment_status='canceled'
+        WHERE id=? AND catalog_source='native_d1' AND payment_status='failed'
+          AND native_order_state='pending'
+      `).bind(Number(outcome.order.id)));
+    }
   }
 
   statements.push(database.prepare(`
@@ -675,7 +702,7 @@ async function finalizeWebhookEvent(database, eventRecord, processingToken, outc
   ));
 
   await database.batch(statements);
-  if(outcome.orderAction==='paid')await recordQualifyingActivity(database,{orderId:Number(outcome.order.id),nowMs:Date.parse(outcome.paidAt)}).catch(()=>{});
+  if(outcome.orderAction==='paid' && !isNativeOrder(outcome.order))await recordQualifyingActivity(database,{orderId:Number(outcome.order.id),nowMs:Date.parse(outcome.paidAt)}).catch(()=>{});
   const finalizedEvent = await getWebhookEventById(database, Number(eventRecord.id));
   if (!finalizedEvent || finalizedEvent.processing_status !== outcome.processingStatus) {
     throw new Error("The webhook event did not reach its final state.");
@@ -700,6 +727,13 @@ function reconcileCheckoutSession(order, session, paymentIntentId) {
     && String(session?.metadata?.trg_checkout_attempt_id || "") !== order.checkout_attempt_id) {
     return "checkout_attempt_metadata_mismatch";
   }
+  const eventOrderSource = String(session?.metadata?.trg_order_source || "");
+  if (isNativeOrder(order) && eventOrderSource !== "native_d1") {
+    return "native_order_source_metadata_mismatch";
+  }
+  if (!isNativeOrder(order) && eventOrderSource === "native_d1") {
+    return "legacy_order_source_metadata_mismatch";
+  }
   if (!Number.isInteger(session.amount_total) || Number(session.amount_total) !== Number(order.total_cents)) {
     return "amount_total_mismatch";
   }
@@ -710,6 +744,10 @@ function reconcileCheckoutSession(order, session, paymentIntentId) {
     return "payment_intent_id_mismatch";
   }
   return null;
+}
+
+function isNativeOrder(order) {
+  return order?.catalog_source === "native_d1";
 }
 
 function parseSignatureHeader(header) {
