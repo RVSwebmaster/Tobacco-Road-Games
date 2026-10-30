@@ -50,7 +50,8 @@ export async function handleCartQuoteRequest(request, options = {}) {
   const quotedItems = [];
   const unavailableItems = [];
   let subtotalCents = 0;
-  let checkoutAllowed = true;
+  let hasLegacy = false;
+  let hasNative = false;
 
   for (const item of parsed.items) {
     const product = quoteCatalogMap.get(item.slug);
@@ -103,7 +104,8 @@ export async function handleCartQuoteRequest(request, options = {}) {
 
     const lineTotalCents = priceCheck.details.effectivePriceCents;
     subtotalCents += lineTotalCents;
-    if (product.catalogSource === "native-d1") checkoutAllowed = false;
+    if (product.catalogSource === "native-d1") hasNative = true;
+    else hasLegacy = true;
     quotedItems.push({
       authorDisplay: String(product.authorDisplay || "").trim(),
       coverUrl: String(product.coverUrl || "").trim(),
@@ -124,9 +126,13 @@ export async function handleCartQuoteRequest(request, options = {}) {
     });
   }
 
+  const nativeFreeAcquisition = hasNative && !hasLegacy && quotedItems.length > 0
+    && unavailableItems.length === 0 && subtotalCents === 0;
+  const checkoutAllowed = !hasNative || nativeFreeAcquisition;
   return jsonResponse({
     checkoutAllowed,
-    checkoutBlockReason: checkoutAllowed ? "" : "Native catalog checkout is not active yet. Pricing is verified, but payment and acquisition remain disabled.",
+    checkoutBlockReason: checkoutAllowed ? "" : "Paid native catalog checkout remains unavailable through the cart.",
+    checkoutMode: nativeFreeAcquisition ? "native-free" : "legacy",
     includedTaxTotalCents: policy.includedTaxTotalCents ?? null,
     items: quotedItems,
     pricingNote: String(policy.pricingNote || ""),

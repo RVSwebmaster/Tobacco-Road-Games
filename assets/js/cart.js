@@ -3,6 +3,7 @@
   const SCHEMA_VERSION = 1;
   const QUOTE_ENDPOINT = "/api/cart/quote";
   const CHECKOUT_ENDPOINT = "/api/cart/checkout";
+  const NATIVE_FREE_ACQUISITION_ENDPOINT = "/api/cart/acquire-free";
   const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const DEFAULT_ESTIMATE_NOTE = "Final product availability and pricing will be verified during checkout.";
   const QUOTE_LOADING_NOTE = "Loading a verified quote from the store.";
@@ -245,12 +246,12 @@
     return payload;
   }
 
-  async function requestCheckout(cart, email, emailConfirmation, checkoutAttemptId, fetchImpl = globalThis.fetch) {
+  async function requestCheckout(cart, email, emailConfirmation, checkoutAttemptId, fetchImpl = globalThis.fetch, endpoint = CHECKOUT_ENDPOINT) {
     if (typeof fetchImpl !== "function") {
       throw new Error("Checkout request is unavailable.");
     }
 
-    const response = await fetchImpl(CHECKOUT_ENDPOINT, {
+    const response = await fetchImpl(endpoint, {
       body: JSON.stringify(createCheckoutRequest(cart, email, emailConfirmation, checkoutAttemptId)),
       headers: {
         "content-type": "application/json"
@@ -452,6 +453,7 @@
     const nativeCheckoutBlocked = quote.checkoutAllowed === false;
     return {
       checkoutReady: !nativeCheckoutBlocked && items.length > 0 && unavailableItems.length === 0,
+      checkoutMode: quote.checkoutMode || "legacy",
       items,
       note: nativeCheckoutBlocked ? (quote.checkoutBlockReason || "Native catalog checkout is not active yet.") : (quote.pricingNote || DEFAULT_ESTIMATE_NOTE),
       retryHidden: true,
@@ -711,7 +713,9 @@
 
     state.checkoutBusy = true;
     state.checkoutFeedbackMode = "server";
-    setCheckoutFeedback(nodes, "Opening Stripe-hosted checkout.");
+    setCheckoutFeedback(nodes, state.latestModel?.checkoutMode === "native-free"
+      ? "Completing your free acquisition."
+      : "Opening Stripe-hosted checkout.");
     updateCheckoutControls(nodes, state);
 
     try {
@@ -729,7 +733,10 @@
         email,
         emailConfirmation,
         state.checkoutAttemptId,
-        options.fetchImpl || globalThis.fetch
+        options.fetchImpl || globalThis.fetch,
+        state.latestModel?.checkoutMode === "native-free"
+          ? NATIVE_FREE_ACQUISITION_ENDPOINT
+          : CHECKOUT_ENDPOINT
       );
       if (payload.acquisitionComplete === true) {
         clearCart(storage);

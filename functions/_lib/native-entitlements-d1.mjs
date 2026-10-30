@@ -77,6 +77,96 @@ export async function grantNativePaidOrderEntitlements(database, orderId, option
   };
 }
 
+export async function grantNativeFreeOrderEntitlements(database, orderId, options = {}) {
+  const id = positiveInteger(orderId);
+  if (!id) return { entitlements: [], ready: false, result: "order_not_found" };
+  const order = await database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+  if (!order) return { entitlements: [], ready: false, result: "order_not_found" };
+  if (order.catalog_source !== "native_d1") {
+    return { entitlements: [], order, ready: false, result: "not_native_order" };
+  }
+  const items = await getNativeOrderItemSnapshots(database, id);
+  if (!items.length || items.some(item => !isFreeNativeSnapshot(item)) || Number(order.total_cents) !== 0) {
+    return { entitlements: [], order, ready: false, result: "native_free_snapshot_invalid" };
+  }
+  const existing = await getNativeOrderEntitlements(database, id, { activeOnly: true });
+  if (order.payment_status === "paid" && order.native_order_state === "free_acquired"
+    && order.native_entitlement_status === "ready" && existing.length === items.length) {
+    return { entitlementCount: existing.length, entitlements: existing, order, ready: true, result: "already_entitled" };
+  }
+  if (order.payment_status !== "pending" || order.native_order_state !== "pending"
+    || order.fulfillment_status !== "pending" || !order.user_id
+    || order.stripe_checkout_session_id || order.stripe_payment_intent_id) {
+    return { entitlements: existing, order, ready: false, result: "order_not_free_acquirable" };
+  }
+  if (typeof database?.batch !== "function") {
+    throw new Error("Native free entitlement creation requires D1 transactional batch support.");
+  }
+  const acquiredAt = nowIso(options.nowMs);
+  const statements = [database.prepare(`
+    UPDATE orders
+    SET payment_status='paid',paid_at=?,processor_fee_cents=0,net_proceeds_cents=0,
+        payment_source='none',settlement_method='no_payment',native_order_state='free_acquired',
+        fulfillment_status='ready',checkout_session_status='legacy',checkout_failure_code=NULL,
+        checkout_updated_at=?,native_entitlement_status='pending',native_entitlement_failure_code=NULL,
+        native_entitlement_updated_at=?
+    WHERE id=? AND catalog_source='native_d1' AND payment_status='pending'
+      AND native_order_state='pending' AND fulfillment_status='pending' AND total_cents=0
+      AND user_id IS NOT NULL AND stripe_checkout_session_id IS NULL
+      AND stripe_payment_intent_id IS NULL
+  `).bind(acquiredAt, acquiredAt, acquiredAt, id)];
+  for (const item of items) {
+    statements.push(database.prepare(`
+      INSERT OR IGNORE INTO native_product_entitlements(
+        order_id,order_item_id,purchaser_user_id,purchaser_email_hash_snapshot,
+        native_product_id,product_slug_snapshot,product_title_snapshot,native_creator_id,
+        catalog_revision_snapshot,version_snapshot,pricing_model_snapshot,
+        selected_price_cents_snapshot,currency_snapshot,entitlement_source,status,
+        acquired_at,created_at,download_reference
+      )
+      SELECT o.id,oi.id,o.user_id,o.customer_email_hash,
+        oi.native_product_id,oi.product_slug,oi.product_title_snapshot,oi.native_creator_id,
+        oi.catalog_revision,oi.version_snapshot,oi.pricing_model_snapshot,
+        oi.selected_price_cents,oi.currency,'native_free','active',?,?,?
+      FROM orders o JOIN order_items oi ON oi.order_id=o.id
+      WHERE o.id=? AND oi.id=? AND o.catalog_source='native_d1'
+        AND o.native_order_state='free_acquired' AND o.payment_status='paid'
+        AND o.payment_source='none' AND o.settlement_method='no_payment'
+        AND o.user_id IS NOT NULL AND oi.catalog_source='native_d1'
+        AND oi.selected_price_cents=0 AND oi.effective_unit_price_cents=0
+        AND oi.line_total_cents=0 AND oi.pricing_model_snapshot IN ('fixed','free','pwyw')
+        AND (oi.pricing_model_snapshot<>'pwyw' OR COALESCE(oi.minimum_price_cents_snapshot,0)=0)
+    `).bind(acquiredAt, acquiredAt, randomDownloadReference(), id, Number(item.id)));
+  }
+  statements.push(database.prepare(`
+    UPDATE orders
+    SET native_entitlement_status='ready',native_entitlement_failure_code=NULL,
+        native_entitlement_updated_at=?
+    WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
+      AND native_order_state='free_acquired'
+      AND NOT EXISTS (
+        SELECT 1 FROM order_items oi
+        LEFT JOIN native_product_entitlements npe
+          ON npe.order_item_id=oi.id AND npe.order_id=oi.order_id AND npe.status='active'
+        WHERE oi.order_id=orders.id AND oi.catalog_source='native_d1' AND npe.id IS NULL
+      )
+  `).bind(acquiredAt, id));
+  await database.batch(statements);
+  const entitlements = await getNativeOrderEntitlements(database, id, { activeOnly: true });
+  const acquiredOrder = await database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
+  if (entitlements.length !== items.length || acquiredOrder?.native_entitlement_status !== "ready") {
+    await markNativeEntitlementFailure(database, id, "native_free_entitlement_reconciliation_failed", options);
+    throw new Error("Native free entitlements did not reconcile.");
+  }
+  return {
+    entitlementCount: entitlements.length,
+    entitlements,
+    order: acquiredOrder,
+    ready: true,
+    result: "native_free_entitlements_ready"
+  };
+}
+
 export async function getNativeOrderEntitlements(database, orderId, options = {}) {
   const id = positiveInteger(orderId);
   if (!id) return [];
@@ -137,7 +227,7 @@ export async function listNativeEntitlementsForLibrary(database, purchaserUserId
     LEFT JOIN marketplace_products mp ON mp.id=npe.native_product_id
     WHERE npe.purchaser_user_id=? AND npe.status='active'
       AND o.user_id=? AND o.catalog_source='native_d1'
-      AND o.payment_status='paid' AND o.native_order_state='paid'
+      AND o.payment_status='paid' AND o.native_order_state IN ('paid','free_acquired')
       AND oi.catalog_source='native_d1'
     ORDER BY npe.acquired_at DESC,npe.id ASC
   `).bind(userId, userId).all();
@@ -151,7 +241,7 @@ export function isNativeEntitlementOwnedBySession(entitlement, session) {
       && session.user?.email_verified === 1
       && entitlement.status === "active"
       && entitlement.order_payment_status === "paid"
-      && entitlement.order_native_state === "paid"
+      && ["paid", "free_acquired"].includes(entitlement.order_native_state)
       && entitlement.order_catalog_source === "native_d1"
       && entitlement.item_catalog_source === "native_d1"
       && entitlement.purchaser_user_id
@@ -193,7 +283,7 @@ export async function recordNativeSuccessfulDownload(database, entitlement, opti
       SET fulfillment_status='fulfilled',fulfillment_failure_code=NULL,
           fulfillment_updated_at=?,completed_at=COALESCE(completed_at,?)
       WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
-        AND native_order_state='paid'
+        AND native_order_state IN ('paid','free_acquired')
     `).bind(attemptedAt, attemptedAt, orderId)
   ]);
 }
@@ -205,7 +295,7 @@ export async function markNativeDeliveryFailure(database, orderId, failureCode, 
     UPDATE orders
     SET fulfillment_status='failed',fulfillment_failure_code=?,fulfillment_updated_at=?
     WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
-      AND native_order_state='paid'
+      AND native_order_state IN ('paid','free_acquired')
   `).bind(String(failureCode || "native_delivery_failed"), nowIso(options.nowMs), id).run();
   return database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
 }
@@ -218,7 +308,7 @@ export async function markNativeEntitlementFailure(database, orderId, failureCod
     SET native_entitlement_status='failed',native_entitlement_failure_code=?,
         native_entitlement_updated_at=?
     WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
-      AND native_order_state='paid' AND native_entitlement_status<>'ready'
+      AND native_order_state IN ('paid','free_acquired') AND native_entitlement_status<>'ready'
   `).bind(String(failureCode || "native_entitlement_failed"), nowIso(options.nowMs), id).run();
   return database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
 }
@@ -232,6 +322,20 @@ function isPaidNativeSnapshot(item) {
     && ["fixed", "pwyw"].includes(item.pricing_model_snapshot)
     && Number.isInteger(Number(item.selected_price_cents))
     && Number(item.selected_price_cents) > 0;
+}
+
+function isFreeNativeSnapshot(item) {
+  return item?.catalog_source === "native_d1"
+    && Boolean(String(item.native_product_id || "").trim())
+    && Boolean(String(item.native_creator_id || "").trim())
+    && Number.isInteger(Number(item.catalog_revision))
+    && Number(item.catalog_revision) > 0
+    && ["fixed", "free", "pwyw"].includes(item.pricing_model_snapshot)
+    && Number(item.selected_price_cents) === 0
+    && Number(item.effective_unit_price_cents) === 0
+    && Number(item.line_total_cents) === 0
+    && (item.pricing_model_snapshot !== "pwyw"
+      || Number(item.minimum_price_cents_snapshot || 0) === 0);
 }
 
 function positiveInteger(value) {
