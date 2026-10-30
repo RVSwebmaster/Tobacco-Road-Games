@@ -164,6 +164,19 @@
     for (const item of payload.items) {
       const card = document.createElement("article");
       card.className = "product-card";
+      if (item.coverImage) {
+        const media = document.createElement("div");
+        media.className = "product-card__media";
+        const image = document.createElement("img");
+        image.src = item.coverImage;
+        image.alt = `${item.productTitle} cover`;
+        image.loading = "lazy";
+        image.addEventListener("error", () => {
+          media.hidden = true;
+        });
+        media.append(image);
+        card.append(media);
+      }
       const body = document.createElement("div");
       body.className = "product-card__body";
       const title = document.createElement("h3");
@@ -176,8 +189,25 @@
         : "Creator information unavailable";
       const order = document.createElement("p");
       order.className = "product-card__meta";
-      order.textContent = `Order ${item.orderReference} · ${new Date(item.purchaseDate).toLocaleDateString()} · ${item.paymentDescription || "Paid through secure checkout"}`;
+      const purchaseAmount = Number.isInteger(item.purchaseAmountCents)
+        ? new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: item.purchaseCurrency || "USD",
+          }).format(item.purchaseAmountCents / 100)
+        : "";
+      order.textContent = [
+        `Order ${item.orderReference}`,
+        new Date(item.purchaseDate).toLocaleDateString(),
+        purchaseAmount,
+        item.paymentDescription || "Paid through secure checkout",
+      ].filter(Boolean).join(" · ");
       body.append(title, creator, order);
+      if (item.purchasedVersion) {
+        const version = document.createElement("p");
+        version.className = "product-card__meta";
+        version.textContent = `Purchased version ${item.purchasedVersion}`;
+        body.append(version);
+      }
       if (item.downloadUrl) {
         const link = document.createElement("a");
         link.className = "button button--primary";

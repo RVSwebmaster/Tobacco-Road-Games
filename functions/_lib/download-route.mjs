@@ -8,6 +8,7 @@ import { getDeliveryProduct, isExactDeliveryMapping } from "./product-delivery.m
 import { getSessionFromRequest } from "./account-auth.mjs";
 import {
   getNativeEntitlementByDownloadReference,
+  isNativeEntitlementOwnedBySession,
   markNativeDeliveryFailure,
   recordNativeSuccessfulDownload
 } from "./native-entitlements-d1.mjs";
@@ -84,23 +85,8 @@ async function handleNativeAuthorizedDownload(request, env, authorization, optio
   const session = options.accountSession === undefined
     ? await getSessionFromRequest(request, env, options.accountSessionOptions || {})
     : options.accountSession;
-  const authorized = Boolean(
-    entitlement
-      && session?.valid === true
-      && session.user?.email_verified === 1
-      && entitlement.status === "active"
-      && entitlement.order_payment_status === "paid"
-      && entitlement.order_native_state === "paid"
-      && entitlement.order_catalog_source === "native_d1"
-      && entitlement.item_catalog_source === "native_d1"
-      && entitlement.purchaser_user_id
-      && entitlement.purchaser_user_id === session.user.id
-      && entitlement.order_user_id === session.user.id
-      && entitlement.native_product_id === entitlement.item_native_product_id
-      && entitlement.native_creator_id === entitlement.item_native_creator_id
-      && entitlement.product_slug_snapshot === entitlement.item_product_slug
-      && isValidNativeDeliverySnapshot(entitlement)
-  );
+  const authorized = isNativeEntitlementOwnedBySession(entitlement, session)
+    && isValidNativeDeliverySnapshot(entitlement);
   if (!authorized) return errorResponse("download_not_authorized", 403);
 
   let object;

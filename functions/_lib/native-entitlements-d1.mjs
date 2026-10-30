@@ -108,12 +108,59 @@ export async function getNativeEntitlementByDownloadReference(database, download
       oi.product_slug AS item_product_slug,
       oi.delivery_r2_key_snapshot,
       oi.delivery_filename_snapshot,
-      oi.delivery_content_type_snapshot
+      oi.delivery_content_type_snapshot,
+      mp.cover_r2_key AS current_cover_r2_key
     FROM native_product_entitlements npe
     JOIN orders o ON o.id=npe.order_id
     JOIN order_items oi ON oi.id=npe.order_item_id AND oi.order_id=npe.order_id
+    LEFT JOIN marketplace_products mp ON mp.id=npe.native_product_id
     WHERE npe.download_reference=?
   `).bind(reference).first();
+}
+
+export async function listNativeEntitlementsForLibrary(database, purchaserUserId) {
+  const userId = String(purchaserUserId || "").trim();
+  if (!userId) return [];
+  const result = await database.prepare(`
+    SELECT npe.download_reference,npe.native_product_id,npe.product_slug_snapshot,
+      npe.product_title_snapshot,npe.native_creator_id,npe.catalog_revision_snapshot,
+      npe.version_snapshot,npe.pricing_model_snapshot,npe.selected_price_cents_snapshot,
+      npe.currency_snapshot,npe.status AS entitlement_status,npe.acquired_at,
+      o.public_id,o.created_at,o.payment_source,
+      oi.author_slugs_json,oi.last_updated_snapshot,
+      c.slug AS creator_slug,c.display_name AS creator_display_name,
+      mp.cover_r2_key AS current_cover_r2_key,mp.updated_at AS current_updated_at
+    FROM native_product_entitlements npe
+    JOIN orders o ON o.id=npe.order_id
+    JOIN order_items oi ON oi.id=npe.order_item_id AND oi.order_id=npe.order_id
+    LEFT JOIN marketplace_creators c ON c.id=npe.native_creator_id
+    LEFT JOIN marketplace_products mp ON mp.id=npe.native_product_id
+    WHERE npe.purchaser_user_id=? AND npe.status='active'
+      AND o.user_id=? AND o.catalog_source='native_d1'
+      AND o.payment_status='paid' AND o.native_order_state='paid'
+      AND oi.catalog_source='native_d1'
+    ORDER BY npe.acquired_at DESC,npe.id ASC
+  `).bind(userId, userId).all();
+  return Array.isArray(result) ? result : result?.results || [];
+}
+
+export function isNativeEntitlementOwnedBySession(entitlement, session) {
+  return Boolean(
+    entitlement
+      && session?.valid === true
+      && session.user?.email_verified === 1
+      && entitlement.status === "active"
+      && entitlement.order_payment_status === "paid"
+      && entitlement.order_native_state === "paid"
+      && entitlement.order_catalog_source === "native_d1"
+      && entitlement.item_catalog_source === "native_d1"
+      && entitlement.purchaser_user_id
+      && entitlement.purchaser_user_id === session.user.id
+      && entitlement.order_user_id === session.user.id
+      && entitlement.native_product_id === entitlement.item_native_product_id
+      && entitlement.native_creator_id === entitlement.item_native_creator_id
+      && entitlement.product_slug_snapshot === entitlement.item_product_slug
+  );
 }
 
 export async function recordNativeSuccessfulDownload(database, entitlement, options = {}) {
