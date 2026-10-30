@@ -36,6 +36,28 @@ export async function createDownloadCredential(entitlement, secret, options = {}
   return `${encodedPayload}.${base64urlEncode(signature)}`;
 }
 
+export async function createNativeDownloadCredential(entitlement, secret, options = {}) {
+  assertSecret(secret);
+  const nowSeconds = Math.floor((Number.isFinite(options.nowMs) ? Number(options.nowMs) : Date.now()) / 1000);
+  const ttlSeconds = Number.isInteger(options.ttlSeconds)
+    ? Math.max(1, options.ttlSeconds)
+    : DOWNLOAD_CREDENTIAL_TTL_SECONDS;
+  const entitlementReference = String(entitlement?.download_reference || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{32}$/.test(entitlementReference)) {
+    throw new DownloadAuthorizationError("invalid_entitlement");
+  }
+  const payload = {
+    entitlementKind: "native_d1",
+    entitlementReference,
+    expiresAt: nowSeconds + ttlSeconds,
+    issuedAt: nowSeconds,
+    version: 2
+  };
+  const encodedPayload = base64urlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = await sign(encodedPayload, secret);
+  return `${encodedPayload}.${base64urlEncode(signature)}`;
+}
+
 export async function verifyDownloadCredential(credential, secret, options = {}) {
   assertSecret(secret);
   const parts = String(credential || "").split(".");
@@ -65,13 +87,16 @@ export async function verifyDownloadCredential(credential, secret, options = {})
   } catch {
     throw new DownloadAuthorizationError("credential_malformed");
   }
-  if (payload?.version !== 1
-    || !positiveInteger(payload.entitlementId)
-    || !positiveInteger(payload.orderId)
-    || !positiveInteger(payload.orderItemId)
-    || typeof payload.productSlug !== "string"
-    || !Number.isInteger(payload.issuedAt)
-    || !Number.isInteger(payload.expiresAt)) {
+  const commonValid = Number.isInteger(payload?.issuedAt) && Number.isInteger(payload?.expiresAt);
+  const legacyValid = payload?.version === 1
+    && positiveInteger(payload.entitlementId)
+    && positiveInteger(payload.orderId)
+    && positiveInteger(payload.orderItemId)
+    && typeof payload.productSlug === "string";
+  const nativeValid = payload?.version === 2
+    && payload.entitlementKind === "native_d1"
+    && /^[a-f0-9]{32}$/.test(String(payload.entitlementReference || ""));
+  if (!commonValid || (!legacyValid && !nativeValid)) {
     throw new DownloadAuthorizationError("credential_malformed");
   }
   const nowSeconds = Math.floor((Number.isFinite(options.nowMs) ? Number(options.nowMs) : Date.now()) / 1000);
