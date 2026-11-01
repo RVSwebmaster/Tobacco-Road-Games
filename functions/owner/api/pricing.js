@@ -4,17 +4,10 @@ export function onRequestPost(context) {
   return handleOwnerPricingPublishRequest(context.request, context.env);
 }
 
-export function onRequest(context) {
-  if (String(context.request.method || "GET").toUpperCase() === "POST") {
-    return onRequestPost(context);
-  }
+export function onRequestGet(context) {
+  return handleOwnerPricingPublishRequest(context.request, context.env);
+}
 
-  return new Response(JSON.stringify({
-    error: "Pricing updates only accept POST requests."
-  }), {
-    headers: {
-      "content-type": "application/json; charset=utf-8"
-    },
-    status: 405
-  });
+export function onRequest(context) {
+  return handleOwnerPricingPublishRequest(context.request, context.env);
 }

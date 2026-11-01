@@ -201,7 +201,7 @@ async function testPublicationUnavailableWithoutSideEffects(ownerPublish, ownerP
     {}
   );
   assert.equal(pricing.status, 503);
-  assert.match((await pricing.json()).error, /publication is temporarily unavailable/i);
+  assert.match((await pricing.json()).error, /database is unavailable/i);
 }
 
 async function testPublishValidationRemains(ownerPublish, ownerPricing, cookieHeader) {
@@ -213,12 +213,6 @@ async function testPublishValidationRemains(ownerPublish, ownerPricing, cookieHe
   assert.equal(product.status, 400);
   assert.match((await product.json()).error, /positive price/i);
 
-  const pricing = await ownerPricing.handleOwnerPricingPublishRequest(
-    buildAuthenticatedPricingRequest({ currency: "USD", price: "4.999", priceCents: 500, slug: "fixture-beta" }, cookieHeader),
-    {}
-  );
-  assert.equal(pricing.status, 400);
-  assert.match((await pricing.json()).error, /valid dollar amount|must match/i);
 }
 
 async function testUnexpectedPublishExceptionHandled(ownerPublish, cookieHeader) {

@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -6,444 +7,234 @@ const vm = require("node:vm");
 const ROOT = path.resolve(__dirname, "..");
 
 async function main() {
-  await testPricingEditorLabels();
-  await testPricingEditorLoadsExistingProduct();
-  await testPricingEditorReviewAndPublish();
-  await testPricingEditorConfirmationAndDiscard();
-  await testPricingEditorValidation();
+  testPricingEditorMarkup();
+  await testNativeAndLegacyLoading();
+  await testFixedPriceRevisionUpdate();
+  await testFreeAndPwywValidation();
+  await testConflictRefreshAndInvalidSale();
   console.log("Owner pricing editor tests passed.");
 }
 
-async function testPricingEditorLabels() {
+function testPricingEditorMarkup() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "pricing.html"), "utf8");
-  assert.match(html, /Editing Existing Listing: Select a product to begin\./, "Pricing editor should show a clear existing-listing mode indicator.");
-  assert.match(html, />Check Pricing</, "Pricing editor should expose a Check Pricing action.");
-  assert.match(html, />Review Pricing Changes</, "Pricing editor should expose a Review Pricing Changes action.");
-  assert.match(html, />Update Pricing</, "Pricing editor should expose an Update Pricing action.");
-  assert.match(html, />Discard Pricing Changes</, "Pricing editor should expose a Discard Pricing Changes action.");
-  assert.match(html, /Checks pricing fields for missing or invalid information\. Does not save changes\./, "Pricing editor should describe the check action.");
-  assert.match(html, /Shows exactly what will change before anything is published\./, "Pricing editor should describe the review action.");
-  assert.match(html, /Clears unsaved pricing edits and restores the loaded values\. Published data is not affected\./, "Pricing editor should describe the discard action.");
-  assert.match(html, /Status, purchase mode, availability, files, artwork, descriptions, authors, and fulfillment settings will not change\./, "Pricing editor should state which unrelated fields stay unchanged.");
-  assert.doesNotMatch(html, /Publish Product/, "Pricing editor should not use the vague Publish Product label.");
+  const script = fs.readFileSync(path.join(ROOT, "assets", "js", "owner-pricing-editor.js"), "utf8").replace(/\r\n/g, "\n");
+  const version = crypto.createHash("sha256").update(script).digest("hex").slice(0, 16);
+  assert.match(html, new RegExp(`owner-pricing-editor\\.js\\?v=sha256-${version}`));
+  assert.match(html, /Load a native D1 product/);
+  assert.match(html, /Legacy-only products remain visible.*read-only/i);
+  assert.match(html, /id="pricing-model"/);
+  assert.match(html, /id="pricing-availability"/);
+  assert.match(html, /id="pricing-suggested-price"/);
+  assert.match(html, /id="pricing-minimum-price"/);
+  assert.match(html, />Update Pricing</);
+  assert.doesNotMatch(html, /Publication Temporarily Unavailable/);
+  assert.match(html, /Stable product ID, slug, Creator ownership, R2 references/);
 }
 
-async function testPricingEditorLoadsExistingProduct() {
-  const products = [
-    {
-      buyMode: "preview-only",
-      currency: "USD",
-      price: "4.99",
-      priceCents: 499,
-      saleEnabled: false,
-      saleEnd: "",
-      saleLabel: "",
-      salePrice: "",
-      salePriceCents: null,
-      saleStart: "",
-      slug: "fixture-alpha",
-      status: "coming-soon",
-      title: "Fixture Alpha"
-    }
-  ];
-
-  const harness = createHarness(products);
+async function testNativeAndLegacyLoading() {
+  const harness = createHarness({ nativeProducts: [nativeProduct()], legacyProducts: [
+    { slug: "legacy-only", title: "Legacy Only", price: "4.99", currency: "USD", status: "available-direct", buyMode: "cart" },
+    { slug: "native-product", title: "Conflicting Legacy", price: "1.00" }
+  ] });
   await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
+  assert.match(harness.fields.existingSelect.innerHTML, /\[Native D1\] Native Product/);
+  assert.match(harness.fields.existingSelect.innerHTML, /\[Legacy · read only\] Legacy Only/);
+  assert.doesNotMatch(harness.fields.existingSelect.innerHTML, /Conflicting Legacy/);
+  harness.fields.existingSelect.value = "native-product";
   harness.buttons.load.click();
-
-  assert.equal(harness.fields.currentTitle.textContent, "Fixture Alpha", "Loading a product should show the current title.");
-  assert.equal(harness.fields.currentSlug.textContent, "fixture-alpha", "Loading a product should show the current slug.");
-  assert.equal(harness.inputs.regularPrice.value, "4.99", "Loading a product should hydrate the current regular price.");
-  assert.equal(harness.inputs.currency.value, "USD", "Loading a product should hydrate the current currency.");
-  assert.equal(harness.inputs.saleEnabled.checked, false, "Loading a product should hydrate the current sale flag.");
+  assert.equal(harness.fields.currentSource.textContent, "Native D1");
+  assert.equal(harness.fields.currentRevision.textContent, "3");
+  assert.equal(harness.fields.regularPrice.value, "5.00");
+  assert.equal(harness.fields.editorPanel.hidden, false);
+  harness.fields.existingSelect.value = "legacy-only";
+  harness.buttons.load.click();
+  assert.equal(harness.fields.editorPanel.hidden, true);
+  assert.match(harness.fields.pricingStatus.textContent, /Legacy-only products cannot be changed/);
 }
 
-async function testPricingEditorReviewAndPublish() {
-  const products = [
-    {
-      buyMode: "preview-only",
-      currency: "USD",
-      price: "4.99",
-      priceCents: 499,
-      saleEnabled: false,
-      saleEnd: "",
-      saleLabel: "",
-      salePrice: "",
-      salePriceCents: null,
-      saleStart: "",
-      slug: "fixture-alpha",
-      status: "coming-soon",
-      title: "Fixture Alpha"
-    }
-  ];
-
+async function testFixedPriceRevisionUpdate() {
   const requests = [];
-  const harness = createHarness(products, async (url, options = {}) => {
-    if (String(url).includes("/data/products.json")) {
-      return createJsonResponse(products);
+  const harness = createHarness({
+    nativeProducts: [nativeProduct()],
+    post: async body => {
+      requests.push(body);
+      return response({ ok: true, message: "Pricing for Native Product was updated in the native catalog.",
+        product: nativeProduct({ priceCents: 725, revision: 4 }) });
     }
-    requests.push({ url: String(url), options });
-    return createJsonResponse({
-      message: "Pricing update published successfully.",
-      ok: true,
-      runUrl: "https://example.com/run"
-    });
   });
   await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.load.click();
-
-  harness.inputs.regularPrice.value = "6.99";
-  harness.inputs.regularPrice.dispatch("input");
-  harness.inputs.saleEnabled.checked = true;
-  harness.inputs.saleEnabled.dispatch("change");
-  harness.inputs.salePrice.value = "4.99";
-  harness.inputs.salePrice.dispatch("input");
-  harness.inputs.saleStart.value = "2026-08-01";
-  harness.inputs.saleStart.dispatch("change");
-  harness.inputs.saleEnd.value = "2026-08-15";
-  harness.inputs.saleEnd.dispatch("change");
-  harness.inputs.saleLabel.value = "Event Sale";
-  harness.inputs.saleLabel.dispatch("input");
-  harness.inputs.nonPurchasableConfirm.checked = true;
-  harness.inputs.nonPurchasableConfirm.dispatch("change");
-
+  loadNative(harness);
+  harness.fields.regularPrice.value = "7.25";
+  harness.fields.regularPrice.dispatch("input");
+  harness.buttons.check.click();
+  assert.match(harness.fields.pricingStatus.textContent, /valid.*Nothing has been saved/i);
   harness.buttons.review.click();
-  assert.equal(harness.fields.confirmPanel.hidden, false, "Reviewing a valid change should show the confirmation panel.");
-  assert.ok(harness.fields.confirmBody.children.length >= 6, "Confirmation should list the concrete pricing fields that will change.");
-  assert.equal(harness.fields.pricingStatus.textContent, "Review the pricing summary below. Nothing has been published yet.", "Pricing review should clearly stay in preview mode.");
-
+  assert.equal(harness.fields.confirmPanel.hidden, false);
+  assert.equal(harness.buttons.publish.disabled, false);
+  assert.match(harness.fields.pricingStatus.textContent, /native revision 3/);
   harness.buttons.publish.click();
   await harness.flush();
-
-  assert.equal(requests.length, 1, "Publishing should send a single pricing update request.");
-  assert.equal(requests[0].url, "/owner/api/pricing", "Pricing editor should post to the dedicated pricing endpoint.");
-  const body = JSON.parse(requests[0].options.body);
-  assert.equal(body.slug, "fixture-alpha", "Pricing editor should publish the loaded product slug.");
-  assert.equal(body.price, "6.99", "Pricing editor should publish the revised regular price.");
-  assert.equal(body.priceCents, 699, "Pricing editor should derive integer regular-price cents.");
-  assert.equal(body.salePrice, "4.99", "Pricing editor should publish the revised sale price.");
-  assert.equal(body.salePriceCents, 499, "Pricing editor should derive integer sale-price cents.");
-  assert.equal(body.saleStart, "2026-08-01", "Pricing editor should publish scheduled sale dates.");
-  assert.equal(body.saleEnd, "2026-08-15", "Pricing editor should publish scheduled sale dates.");
-  assert.equal(body.saleLabel, "Event Sale", "Pricing editor should publish the sale label.");
-  assert.ok(!("status" in body), "Pricing editor must not publish product status changes.");
-  assert.ok(!("buyMode" in body), "Pricing editor must not publish buy mode changes.");
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].slug, "native-product");
+  assert.equal(requests[0].expectedRevision, 3);
+  assert.equal(requests[0].priceCents, 725);
+  assert.equal(requests[0].pricingModel, "fixed");
+  assert.equal(harness.lastPostHeaders["x-csrf-token"], "pricing-csrf");
+  assert.equal(harness.fields.currentRevision.textContent, "4");
+  assert.equal(harness.fields.regularPrice.value, "7.25");
+  assert.match(harness.fields.pricingStatus.textContent, /Revision 4 is now authoritative/);
 }
 
-async function testPricingEditorConfirmationAndDiscard() {
-  const products = [
-    {
-      buyMode: "preview-only",
-      currency: "USD",
-      price: "4.99",
-      priceCents: 499,
-      saleEnabled: false,
-      saleEnd: "",
-      saleLabel: "",
-      salePrice: "",
-      salePriceCents: null,
-      saleStart: "",
-      slug: "fixture-alpha",
-      status: "coming-soon",
-      title: "Fixture Alpha"
-    }
-  ];
-
-  const harness = createHarness(products);
+async function testFreeAndPwywValidation() {
+  const requests = [];
+  const harness = createHarness({ nativeProducts: [nativeProduct()], post: async body => {
+    requests.push(body);
+    return response({ ok: true, message: "Updated.", product: nativeProduct({ ...body, revision: body.expectedRevision + 1,
+      status: body.pricingModel === "free" ? "free-download" : "pay-what-you-want",
+      buyMode: body.pricingModel === "free" ? "free-download" : "cart" }) });
+  } });
   await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.load.click();
-
-  assert.equal(harness.fields.modeIndicator.textContent, "Editing Existing Listing: Fixture Alpha", "Loading a product should update the mode indicator.");
-
-  harness.inputs.regularPrice.value = "6.99";
-  harness.inputs.regularPrice.dispatch("input");
-  harness.buttons.check.click();
-  assert.equal(harness.fields.pricingStatus.textContent, "Pricing looks valid so far. Nothing has been saved or published.", "Check Pricing should validate without publishing.");
-
+  loadNative(harness);
+  harness.fields.pricingModel.value = "free";
+  harness.fields.pricingModel.dispatch("change");
   harness.buttons.review.click();
-  assert.equal(harness.fields.confirmTitle.textContent, "Fixture Alpha", "Confirmation should include the product title.");
-  assert.equal(harness.fields.confirmSlug.textContent, "fixture-alpha", "Confirmation should include the product slug.");
-  assert.equal(harness.fields.confirmCurrentEffective.textContent, "$4.99", "Confirmation should include the current effective price.");
-  assert.equal(harness.fields.confirmNextEffective.textContent, "$6.99", "Confirmation should include the resulting effective price.");
-  assert.match(harness.fields.confirmPreservation.textContent, /will not change/i, "Confirmation should include the unrelated-field preservation statement.");
-  assert.match(harness.fields.confirmBody.children[0].innerHTML, /Current|4\.99|499/, "Confirmation rows should render concrete before values.");
-
-  harness.confirmResponse = false;
-  harness.buttons.reset.click();
-  assert.equal(harness.confirmMessages.length, 1, "Discarding unsaved pricing changes should require confirmation.");
-  assert.equal(harness.inputs.regularPrice.value, "6.99", "Declining the discard confirmation should preserve unsaved edits.");
-
-  harness.confirmResponse = true;
-  harness.buttons.reset.click();
-  assert.equal(harness.inputs.regularPrice.value, "4.99", "Accepting the discard confirmation should restore the loaded value.");
-}
-
-async function testPricingEditorValidation() {
-  const products = [
-    {
-      buyMode: "fixed-price",
-      currency: "USD",
-      price: "4.99",
-      priceCents: 499,
-      saleEnabled: false,
-      saleEnd: "",
-      saleLabel: "",
-      salePrice: "",
-      salePriceCents: null,
-      saleStart: "",
-      slug: "fixture-alpha",
-      status: "available-direct",
-      title: "Fixture Alpha"
-    }
-  ];
-
-  const harness = createHarness(products);
+  assert.equal(harness.buttons.publish.disabled, false);
+  harness.buttons.publish.click();
   await harness.flush();
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.load.click();
+  assert.equal(requests[0].pricingModel, "free");
+  assert.equal(requests[0].priceCents, 0);
+  assert.equal(requests[0].suggestedPriceCents, null);
 
-  harness.inputs.regularPrice.value = "4.999";
-  harness.inputs.regularPrice.dispatch("input");
-  harness.buttons.review.click();
-  assert.match(harness.fields.pricingStatus.textContent, /valid dollar amount/i, "Malformed regular prices should be rejected.");
-
-  harness.inputs.regularPrice.value = "4.99";
-  harness.inputs.regularPrice.dispatch("input");
-  harness.inputs.saleEnabled.checked = true;
-  harness.inputs.saleEnabled.dispatch("change");
-  harness.inputs.salePrice.value = "4.99";
-  harness.inputs.salePrice.dispatch("input");
-  harness.buttons.review.click();
-  assert.match(harness.fields.pricingStatus.textContent, /lower than the regular price/i, "Sale prices at or above the regular price should be rejected.");
-
-  harness.inputs.salePrice.value = "3.99";
-  harness.inputs.salePrice.dispatch("input");
-  harness.inputs.saleStart.value = "2026-08-15";
-  harness.inputs.saleStart.dispatch("change");
-  harness.inputs.saleEnd.value = "2026-08-01";
-  harness.inputs.saleEnd.dispatch("change");
-  harness.buttons.review.click();
-  assert.match(harness.fields.pricingStatus.textContent, /Sale end cannot be earlier than sale start/i, "Invalid sale schedules should be rejected.");
+  const pwywHarness = createHarness({ nativeProducts: [nativeProduct()] });
+  await pwywHarness.flush();
+  loadNative(pwywHarness);
+  pwywHarness.fields.pricingModel.value = "pwyw";
+  pwywHarness.fields.pricingModel.dispatch("change");
+  pwywHarness.fields.suggestedPrice.value = "5.00";
+  pwywHarness.fields.minimumPrice.value = "6.00";
+  pwywHarness.buttons.review.click();
+  assert.match(pwywHarness.fields.pricingStatus.textContent, /at or above its minimum/i);
+  pwywHarness.fields.minimumPrice.value = "0.00";
+  pwywHarness.buttons.review.click();
+  assert.equal(pwywHarness.buttons.publish.disabled, false);
 }
 
-function createHarness(products, fetchImpl) {
+async function testConflictRefreshAndInvalidSale() {
+  const harness = createHarness({ nativeProducts: [nativeProduct()], post: async () => response({
+    code: "revision_conflict",
+    error: "This product changed after it was loaded. Reload its current pricing before trying again.",
+    product: nativeProduct({ priceCents: 600, revision: 4 })
+  }, 409) });
+  await harness.flush();
+  loadNative(harness);
+  harness.fields.regularPrice.value = "7.25";
+  harness.buttons.review.click();
+  harness.buttons.publish.click();
+  await harness.flush();
+  assert.equal(harness.fields.currentRevision.textContent, "4");
+  assert.equal(harness.fields.regularPrice.value, "6.00");
+  assert.match(harness.fields.pricingStatus.textContent, /changed after it was loaded/);
+
+  harness.fields.saleEnabled.checked = true;
+  harness.fields.saleEnabled.dispatch("change");
+  harness.fields.salePrice.value = "6.00";
+  harness.fields.nonPurchasableConfirm.checked = true;
+  harness.buttons.review.click();
+  assert.match(harness.fields.pricingStatus.textContent, /lower than the fixed price/i);
+}
+
+function nativeProduct(overrides = {}) {
+  return {
+    availability: "available", buyMode: "cart", currency: "USD", editable: true,
+    id: "native-product", minimumPriceCents: null, priceCents: 500, pricingModel: "fixed",
+    publicationState: "published", revision: 3, saleEnabled: false, saleEnd: "", saleLabel: "",
+    salePriceCents: null, saleStart: "", slug: "native-product", source: "native-d1",
+    status: "available-direct", suggestedPriceCents: null, title: "Native Product", updatedAt: "2026-11-01T00:00:00Z",
+    ...overrides
+  };
+}
+
+function loadNative(harness) {
+  harness.fields.existingSelect.value = "native-product";
+  harness.buttons.load.click();
+}
+
+function createHarness({ nativeProducts = [], legacyProducts = [], post } = {}) {
   const document = createDocument();
+  const ids = [
+    "pricing-availability", "pricing-confirmation-body", "pricing-confirm-current-effective",
+    "pricing-confirm-current-sale-state", "pricing-confirmation-empty", "pricing-confirm-next-effective",
+    "pricing-confirm-next-sale-state", "pricing-confirmation", "pricing-confirm-preservation",
+    "pricing-confirm-slug", "pricing-confirmation-table", "pricing-confirm-title", "pricing-currency",
+    "pricing-current-buy-mode", "pricing-current-display", "pricing-current-effective", "pricing-current-revision",
+    "pricing-current-slug", "pricing-current-source", "pricing-current-status", "pricing-current-title",
+    "pricing-editor-panel", "pricing-product-select", "pricing-load-copy", "pricing-minimum-price",
+    "pricing-mode-indicator", "pricing-next-display", "pricing-next-effective", "pricing-nonpurchasable-confirm",
+    "pricing-preview-copy", "pricing-model", "pricing-status", "pricing-regular-price", "pricing-regular-price-label",
+    "pricing-sale-enabled", "pricing-sale-end", "pricing-sale-label", "pricing-sale-price", "pricing-sale-start",
+    "pricing-sale-warning", "pricing-suggested-price", "pricing-cancel-review-button", "pricing-check-button",
+    "pricing-load-button", "pricing-publish-button", "pricing-reset-button", "pricing-review-button"
+  ];
+  for (const id of ids) document.register(id, createElement(id.includes("button") ? "button" : id.includes("select") || id === "pricing-model" || id === "pricing-availability" ? "select" : "div"));
   const fields = {
-    modeIndicator: createElement("span"),
-    existingSelect: createElement("select"),
-    currentTitle: createElement("span"),
-    currentSlug: createElement("span"),
-    currentStatus: createElement("span"),
-    currentBuyMode: createElement("span"),
-    currentDisplay: createElement("span"),
-    currentEffective: createElement("span"),
-    nextDisplay: createElement("span"),
-    nextEffective: createElement("span"),
-    editorPanel: createElement("div"),
-    loadCopy: createElement("p"),
-    previewCopy: createElement("p"),
-    pricingStatus: createElement("p"),
-    saleWarning: createElement("div"),
-    confirmPanel: createElement("section"),
-    confirmEmpty: createElement("div"),
-    confirmTable: createElement("table"),
-    confirmBody: createElement("tbody"),
-    confirmTitle: createElement("span"),
-    confirmSlug: createElement("span"),
-    confirmCurrentEffective: createElement("span"),
-    confirmNextEffective: createElement("span"),
-    confirmCurrentSaleState: createElement("span"),
-    confirmNextSaleState: createElement("span"),
-    confirmPreservation: createElement("p")
+    availability: document.getElementById("pricing-availability"), confirmPanel: document.getElementById("pricing-confirmation"),
+    currentRevision: document.getElementById("pricing-current-revision"), currentSource: document.getElementById("pricing-current-source"),
+    editorPanel: document.getElementById("pricing-editor-panel"), existingSelect: document.getElementById("pricing-product-select"),
+    minimumPrice: document.getElementById("pricing-minimum-price"), nonPurchasableConfirm: document.getElementById("pricing-nonpurchasable-confirm"),
+    pricingModel: document.getElementById("pricing-model"), pricingStatus: document.getElementById("pricing-status"),
+    regularPrice: document.getElementById("pricing-regular-price"), saleEnabled: document.getElementById("pricing-sale-enabled"),
+    salePrice: document.getElementById("pricing-sale-price"), suggestedPrice: document.getElementById("pricing-suggested-price")
   };
-
-  const inputs = {
-    regularPrice: createInput(""),
-    currency: createInput("USD"),
-    saleEnabled: createCheckbox(false),
-    salePrice: createInput(""),
-    saleStart: createInput(""),
-    saleEnd: createInput(""),
-    saleLabel: createInput(""),
-    nonPurchasableConfirm: createCheckbox(false)
-  };
-
   const buttons = {
-    check: createButton(),
-    load: createButton(),
-    reset: createButton(),
-    review: createButton(),
-    publish: createButton(),
-    cancelReview: createButton()
+    load: document.getElementById("pricing-load-button"), publish: document.getElementById("pricing-publish-button"),
+    review: document.getElementById("pricing-review-button"), check: document.getElementById("pricing-check-button")
   };
-
-  const confirmMessages = [];
-
-  document.cookie = "";
-  document.register("pricing-mode-indicator", fields.modeIndicator);
-  document.register("pricing-product-select", fields.existingSelect);
-  document.register("pricing-current-title", fields.currentTitle);
-  document.register("pricing-current-slug", fields.currentSlug);
-  document.register("pricing-current-status", fields.currentStatus);
-  document.register("pricing-current-buy-mode", fields.currentBuyMode);
-  document.register("pricing-current-display", fields.currentDisplay);
-  document.register("pricing-current-effective", fields.currentEffective);
-  document.register("pricing-next-display", fields.nextDisplay);
-  document.register("pricing-next-effective", fields.nextEffective);
-  document.register("pricing-editor-panel", fields.editorPanel);
-  document.register("pricing-load-copy", fields.loadCopy);
-  document.register("pricing-preview-copy", fields.previewCopy);
-  document.register("pricing-status", fields.pricingStatus);
-  document.register("pricing-sale-warning", fields.saleWarning);
-  document.register("pricing-confirmation", fields.confirmPanel);
-  document.register("pricing-confirmation-empty", fields.confirmEmpty);
-  document.register("pricing-confirmation-table", fields.confirmTable);
-  document.register("pricing-confirmation-body", fields.confirmBody);
-  document.register("pricing-confirm-title", fields.confirmTitle);
-  document.register("pricing-confirm-slug", fields.confirmSlug);
-  document.register("pricing-confirm-current-effective", fields.confirmCurrentEffective);
-  document.register("pricing-confirm-next-effective", fields.confirmNextEffective);
-  document.register("pricing-confirm-current-sale-state", fields.confirmCurrentSaleState);
-  document.register("pricing-confirm-next-sale-state", fields.confirmNextSaleState);
-  document.register("pricing-confirm-preservation", fields.confirmPreservation);
-  document.register("pricing-regular-price", inputs.regularPrice);
-  document.register("pricing-currency", inputs.currency);
-  document.register("pricing-sale-enabled", inputs.saleEnabled);
-  document.register("pricing-sale-price", inputs.salePrice);
-  document.register("pricing-sale-start", inputs.saleStart);
-  document.register("pricing-sale-end", inputs.saleEnd);
-  document.register("pricing-sale-label", inputs.saleLabel);
-  document.register("pricing-nonpurchasable-confirm", inputs.nonPurchasableConfirm);
-  document.register("pricing-check-button", buttons.check);
-  document.register("pricing-load-button", buttons.load);
-  document.register("pricing-reset-button", buttons.reset);
-  document.register("pricing-review-button", buttons.review);
-  document.register("pricing-publish-button", buttons.publish);
-  document.register("pricing-cancel-review-button", buttons.cancelReview);
-
-  const scriptPath = path.join(ROOT, "assets", "js", "owner-pricing-editor.js");
-  const script = fs.readFileSync(scriptPath, "utf8");
-  const context = {
-    console,
-    Intl,
-    JSON,
-    Date,
-    Request,
-    Response,
-    document,
-    fetch: fetchImpl || (async (url) => {
-      if (String(url).includes("/data/products.json")) {
-        return createJsonResponse(products);
-      }
-      return createJsonResponse({ ok: true });
-    }),
-    globalThis: null
+  document.getElementById("pricing-currency").value = "USD";
+  document.getElementById("pricing-model").value = "fixed";
+  document.getElementById("pricing-availability").value = "available";
+  const harness = { buttons, fields, flush, lastPostHeaders: null };
+  const fetchImpl = async (url, options = {}) => {
+    if (String(url) === "/owner/api/pricing" && (!options.method || options.method === "GET")) {
+      return response({ csrfToken: "pricing-csrf", products: nativeProducts });
+    }
+    if (String(url) === "/data/products.json") return response(legacyProducts);
+    harness.lastPostHeaders = options.headers;
+    const body = JSON.parse(options.body);
+    return post ? post(body) : response({ ok: true, message: "Updated.", product: nativeProduct({ ...body, revision: body.expectedRevision + 1 }) });
   };
+  const context = { console, Date, document, fetch: fetchImpl, Intl, JSON, Request, Response, globalThis: null };
   context.globalThis = context;
-  context.confirm = (message) => {
-    confirmMessages.push(String(message));
-    return harness.confirmResponse;
-  };
-  vm.runInNewContext(script, context, { filename: scriptPath });
-
-  const harness = {
-    buttons,
-    confirmMessages,
-    confirmResponse: true,
-    fields,
-    flush,
-    inputs
-  };
+  context.confirm = () => true;
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "assets/js/owner-pricing-editor.js"), "utf8"), context);
   return harness;
 }
 
 function createDocument() {
   const byId = new Map();
   return {
-    cookie: "",
-    createElement(tagName) {
-      return createElement(tagName);
-    },
-    getElementById(id) {
-      return byId.get(id) || null;
-    },
-    register(id, element) {
-      byId.set(id, element);
-    }
+    documentElement: { dataset: {} },
+    createElement: tag => createElement(tag),
+    getElementById: id => byId.get(id) || null,
+    register(id, element) { byId.set(id, element); }
   };
 }
-
 function createElement(tagName = "div") {
   return {
-    checked: false,
-    children: [],
-    className: "",
-    dataset: {},
-    hidden: false,
-    innerHTML: "",
-    listeners: new Map(),
-    tagName: String(tagName || "div").toUpperCase(),
-    textContent: "",
-    value: "",
-    addEventListener(type, handler) {
-      this.listeners.set(type, handler);
-    },
-    append(child) {
-      this.children.push(child);
-    },
-    click() {
-      const handler = this.listeners.get("click");
-      if (handler) {
-        handler({ currentTarget: this, preventDefault() {} });
-      }
-    },
-    dispatch(type) {
-      const handler = this.listeners.get(type);
-      if (handler) {
-        handler({ currentTarget: this, preventDefault() {} });
-      }
-    },
-    replaceChildren(...children) {
-      this.children = children;
-    }
+    checked: false, children: [], disabled: false, hidden: false, innerHTML: "", listeners: new Map(),
+    tagName: String(tagName).toUpperCase(), textContent: "", value: "",
+    addEventListener(type, handler) { this.listeners.set(type, handler); },
+    append(child) { this.children.push(child); },
+    click() { const handler = this.listeners.get("click"); if (handler) handler({ preventDefault() {} }); },
+    dispatch(type) { const handler = this.listeners.get(type); if (handler) handler({ preventDefault() {} }); },
+    replaceChildren(...children) { this.children = children; }
   };
 }
-
-function createInput(value) {
-  const element = createElement("input");
-  element.value = value;
-  return element;
+function response(payload, status = 200) {
+  return new Response(JSON.stringify(payload), { status, headers: { "content-type": "application/json" } });
 }
-
-function createCheckbox(checked) {
-  const element = createElement("input");
-  element.checked = checked;
-  return element;
-}
-
-function createButton() {
-  return createElement("button");
-}
-
-function createJsonResponse(payload, status = 200) {
-  return {
-    async json() {
-      return payload;
-    },
-    ok: status >= 200 && status < 300,
-    status
-  };
-}
-
 async function flush() {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main().catch(error => { console.error(error); process.exitCode = 1; });

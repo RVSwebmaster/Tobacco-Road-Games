@@ -25,7 +25,10 @@ async function main() {
       request({ slug: "fixture-alpha", currency: "USD", price: "5.00", priceCents: 500 }),
       {}
     );
-    await assertUnavailable(pricingResponse);
+    assert.equal(pricingResponse.status, 503);
+    const pricingBody = await pricingResponse.json();
+    assert.equal(pricingBody.code, "bindings_unavailable");
+    assert.notEqual(pricingBody.ok, true);
 
     const paused = await creator.pauseListingPublication({ listing: { id: "listing", public_product_slug: "fixture-alpha" } });
     await assertUnavailable(paused);
