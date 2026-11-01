@@ -756,8 +756,8 @@
         <div class="section-heading">
           <p class="section-heading__kicker">Owner Tool</p>
           <h1 id="intake-heading">Product Intake Bench</h1>
-          <p>Use this Owner workbench to prepare and review product metadata and files. Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.</p>
-          <p>Required files: one cover WebP and one product PDF. The intake stores them under the standard internal object keys after upload. The cover becomes public through <code>/product-assets/</code>. The PDF stays private.</p>
+          <p>Use this Owner workbench to prepare, validate, and publish new products directly to the native Cloudflare catalog.</p>
+          <p>Required files: one cover WebP and one product PDF. Publication assigns unique private R2 object keys, verifies both uploads, and commits the D1 product record before success is reported. The cover becomes public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
         <section class="intake-output" aria-labelledby="intake-picker-heading">
@@ -898,7 +898,7 @@
               </div>
 
               <div class="intake-field">
-                <label for="product-folder">R2 Folder Name</label>
+                <label for="product-folder">Storage Label</label>
                 <input id="product-folder" class="dock-input" type="text" placeholder="sirrocans">
               </div>
 
@@ -1180,7 +1180,7 @@
 
             <div class="about__panel">
               <p class="note-card__label">Suggested asset folder</p>
-              <p id="asset-folder-output" class="intake-preview-copy">R2 folder: untitled-product</p>
+              <p id="asset-folder-output" class="intake-preview-copy">Storage label: untitled-product</p>
             </div>
 
             <div class="about__panel">
@@ -1191,10 +1191,10 @@
             <div class="about__panel">
               <p class="note-card__label">How to use this</p>
               <ol class="intake-list">
-                <li>Fill in the required product metadata and the exact R2 folder name you want to publish into.</li>
+                <li>Fill in the required product metadata and a storage label for the publication record.</li>
                 <li>For a new listing, choose the two required files: one cover WebP and the product PDF. For an existing listing, leave file inputs blank to keep the current assets or add only the replacements you want.</li>
                 <li>Use Check to validate missing or invalid information, then use Review to inspect the generated metadata and asset plan.</li>
-                <li>Review the product details. Publication is temporarily unavailable; this workbench will not upload files or change the live catalog.</li>
+                <li>Review the product details, then publish. Success appears only after native R2 verification and the D1 catalog commit both finish.</li>
               </ol>
             </div>
             </aside>
@@ -1225,8 +1225,8 @@
           </div>
           <div class="intake-action-card">
             <strong id="intake-publish-label">Publish New Product</strong>
-            <button id="publish-button" class="button button--primary" type="button" aria-describedby="intake-publish-help" disabled>Publication Temporarily Unavailable</button>
-            <p id="intake-publish-help">Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.</p>
+            <button id="publish-button" class="button button--primary" type="button" aria-describedby="intake-publish-help">Publish New Product</button>
+            <p id="intake-publish-help">Publishes directly to the native Cloudflare D1 catalog and private R2 product storage.</p>
           </div>
           <div class="intake-action-card">
             <strong id="intake-reset-label">Clear New Product Form</strong>
@@ -1300,7 +1300,7 @@
         <div class="intake-output">
           <button id="toggle-generated-json" class="button button--secondary" type="button" aria-controls="generated-json-panel" aria-expanded="false">View JSON</button>
           <div id="generated-json-panel" hidden>
-            <label for="generated-json">Generated products.json entry</label>
+            <label for="generated-json">Generated native catalog metadata</label>
             <textarea id="generated-json" spellcheck="false" aria-label="Generated JSON entry"></textarea>
           </div>
         </div>
@@ -1324,6 +1324,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=sha256-78c31463c2e58cfb"></script>
+  <script src="../assets/js/product-intake.js?v=sha256-689dd6d724167c01"></script>
 </body>
 </html>

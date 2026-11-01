@@ -18,6 +18,8 @@
 
   try {
   const CART_BUY_MODE = "cart";
+  const NATIVE_PUBLICATION_ENDPOINT = "/owner/api/catalog-publication";
+  const OWNER_CREATOR_ID = "creator-rv-sawyer";
   const ALLOWED_BUY_MODES = new Set([
     "available-direct",
     "cart",
@@ -228,6 +230,7 @@
   let slugTouched = false;
   let folderTouched = false;
   let publishBusy = false;
+  let publishedProductSlug = "";
   let availableProducts = [];
   let selectedRelatedProducts = [];
   let loadedProductSlug = "";
@@ -1021,9 +1024,9 @@
       modeTitle: `Editing Existing Listing: ${loadedProductRecord?.title || loadedProductSlug}`,
       outputCopy: "Check for missing or invalid information, then review the generated catalog entry and update plan before publishing changes.",
       outputHeading: "Review Listing Changes",
-      publishButton: "Publication Temporarily Unavailable",
-      publishHelp: "Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.",
-      publishLabel: "Publication Temporarily Unavailable",
+      publishButton: "Existing Listing Updates Unavailable",
+      publishHelp: "Native publication is create-only. Existing listing updates remain unavailable in this task.",
+      publishLabel: "Existing Listing Updates Unavailable",
       resetButton: "Discard Listing Changes",
       resetHelp: "Discards unsaved edits for the loaded listing. Published data is not affected.",
       resetLabel: "Discard Listing Changes",
@@ -1039,9 +1042,11 @@
       modeTitle: "Creating New Product",
       outputCopy: "Check for missing or invalid information, then review the generated catalog entry and file plan before publishing.",
       outputHeading: "Review New Product",
-      publishButton: "Publication Temporarily Unavailable",
-      publishHelp: "Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.",
-      publishLabel: "Publication Temporarily Unavailable",
+      publishButton: publishedProductSlug ? "Product Published" : "Publish New Product",
+      publishHelp: publishedProductSlug
+        ? "This product is published. Clear the form before preparing another listing."
+        : "Publishes directly to the native Cloudflare D1 catalog and private R2 product storage.",
+      publishLabel: publishedProductSlug ? "Publication Complete" : "Publish New Product",
       resetButton: "Clear New Product Form",
       resetHelp: "Clears unsaved work from the new-product form only. Published data is not affected.",
       resetLabel: "Clear New Product Form",
@@ -1093,7 +1098,7 @@
     }
     if (buttons.publish) {
       buttons.publish.textContent = labels.publishButton;
-      buttons.publish.disabled = true;
+      buttons.publish.disabled = publishBusy || isEditingLoadedListing() || Boolean(publishedProductSlug);
     }
     if (buttons.reset) {
       buttons.reset.textContent = labels.resetButton;
@@ -1586,6 +1591,8 @@
     const minimumPriceCents = minimumPriceRaw === "" ? 0 : (parsePriceNumber(minimumPriceRaw) === null ? null : Math.round(parsePriceNumber(minimumPriceRaw) * 100));
     const salePriceRaw = normalizeMoneyText(fields.salePrice.value);
     const salePriceCents = parsePriceNumber(salePriceRaw) === null ? null : Math.round(parsePriceNumber(salePriceRaw) * 100);
+    const freeProduct = fields.status.value === "free-download" && fields.buyMode.value === "free-download";
+    const pwywProduct = fields.status.value === "pay-what-you-want" && fields.buyMode.value === CART_BUY_MODE;
     const selectedPdfName = fields.pdfFile.files[0]?.name?.trim() || "";
     const fileList = selectedPdfName
       ? [selectedPdfName]
@@ -1630,7 +1637,7 @@
       suggestedPriceCents,
       minimumPrice: minimumPriceRaw || "0.00",
       minimumPriceCents,
-      pricingModel: fields.status.value === "pay-what-you-want" && fields.buyMode.value === CART_BUY_MODE ? "pwyw" : "fixed",
+      pricingModel: pwywProduct ? "pwyw" : freeProduct ? "free" : "fixed",
       productLine,
       productLineSlug: isEditingLoadedListing() && productLine === existingProductLine
         ? (existingProductLineSlug || slugify(productLine))
@@ -1672,6 +1679,72 @@
     return payload;
   };
 
+  const buildNativePublicationMetadata = (payload = buildPayload()) => {
+    const metadata = {
+      authorSlugs: payload.authorSlugs,
+      authors: payload.authors,
+      contentDescriptors: payload.contentDescriptors || [],
+      features: payload.features,
+      fileList: payload.fileList,
+      format: payload.format,
+      fulfillmentNote: payload.fulfillmentNote,
+      gameSystemSlug: payload.gameSystemSlug,
+      lastUpdated: payload.lastUpdated,
+      legalNote: payload.legalNote,
+      openRulesEligible: payload.openRulesEligible,
+      pageCount: payload.pageCount,
+      productLineSlug: payload.productLineSlug,
+      relatedProducts: payload.relatedProducts,
+      releaseDate: payload.releaseDate,
+      series: payload.series || "",
+      seriesSlug: payload.seriesSlug || "",
+      storageLabel: payload.folder,
+      tags: payload.tags,
+      teaserVideo: payload.teaserVideo,
+      version: payload.version
+    };
+    for (const key of ["playerCountMin", "playerCountMax", "gmMode", "prepBurden", "playDuration", "playMode", "rulesComplexity", "language"]) {
+      if (Object.prototype.hasOwnProperty.call(payload, key)) metadata[key] = payload[key];
+    }
+    return {
+      id: payload.slug,
+      slug: payload.slug,
+      creatorId: OWNER_CREATOR_ID,
+      title: payload.title,
+      subtitle: payload.subtitle,
+      shortDescription: payload.shortDescription,
+      longDescription: payload.longDescription,
+      publisher: payload.publisher,
+      gameSystem: payload.gameSystem,
+      productLine: payload.productLine,
+      genre: payload.genre || "",
+      mediaType: payload.mediaType,
+      status: payload.status,
+      buyMode: payload.buyMode,
+      buyUrl: payload.buyUrl,
+      currency: payload.currency,
+      pricingModel: payload.pricingModel,
+      priceCents: payload.pricingModel === "pwyw" ? payload.suggestedPriceCents : payload.priceCents,
+      suggestedPriceCents: payload.pricingModel === "pwyw" ? payload.suggestedPriceCents : null,
+      minimumPriceCents: payload.pricingModel === "pwyw" ? payload.minimumPriceCents : null,
+      saleEnabled: payload.saleEnabled,
+      salePriceCents: payload.saleEnabled ? payload.salePriceCents : null,
+      saleStart: null,
+      saleEnd: null,
+      metadata
+    };
+  };
+
+  const loadOwnerPublicationAuth = async () => {
+    const response = await fetch("/api/account/me", { credentials: "same-origin", headers: { accept: "application/json" } });
+    const account = await response.json();
+    if (!response.ok || !account.authenticated || !["owner", "admin"].includes(account.user?.role)) {
+      throw new Error("Sign in with an Owner account before publishing.");
+    }
+    if (!account.csrfToken) throw new Error("The Owner session did not provide a publication security token.");
+    return account.csrfToken;
+  };
+
   const updatePreview = () => {
     const payload = buildPayload();
     outputs.previewStatus.textContent = payload.statusLabel;
@@ -1679,7 +1752,7 @@
     outputs.previewTitle.textContent = payload.title || "Untitled Product";
     outputs.previewSubtitle.textContent = payload.subtitle || "Subtitle will appear here.";
     outputs.previewCopy.textContent = payload.shortDescription || "Short description preview will appear here.";
-    outputs.assetFolder.textContent = `R2 folder: ${payload.folder || "untitled-product"}`;
+    outputs.assetFolder.textContent = `Storage label: ${payload.folder || "untitled-product"}`;
     outputs.json.value = `${JSON.stringify(payload, null, 2)}`;
     outputs.checklist.textContent = buildChecklist(payload);
     renderAssetFileList(payload);
@@ -1692,7 +1765,7 @@
     const requiresFiles = requiresFullAssetSet();
 
     return [
-      `R2 folder: ${payload.folder}`,
+      `Storage label: ${payload.folder}`,
       existingMode ? `Editing existing listing: ${loadedProductRecord?.title || loadedProductSlug}` : "Creating new listing",
       "",
       requiresFiles ? "Required uploaded files:" : "Optional replacement files:",
@@ -1706,14 +1779,14 @@
         ? ["", "Leave file inputs blank to preserve the current bucket assets."]
         : []),
       "",
-      "Internal bucket object paths after publish:",
-      `- ${payload.folder}/cover.webp`,
-      `- ${payload.folder}/product.pdf`,
+      "Private Cloudflare storage after publish:",
+      "- Unique create-only cover.webp key assigned by the publication service",
+      "- Unique create-only delivery.pdf key assigned by the publication service",
       "",
       "Published public asset paths:",
       `/product-assets/${payload.slug}/cover.webp`,
       "",
-      "Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt."
+      "Publication commits only after both private R2 objects are verified and the D1 product record succeeds."
     ].join("\n");
   }
 
@@ -1728,7 +1801,7 @@
       `Product: ${payload.title} (${payload.slug}).`,
       `Storefront state: ${payload.statusLabel}; buy mode: ${payload.buyMode}.`,
       ...(payload.pricingModel === "pwyw" ? [`PWYW pricing: suggested $${payload.suggestedPrice || payload.price || "0.00"}; minimum $${payload.minimumPrice || "0.00"}.`] : []),
-      `R2 folder: ${payload.folder}.`,
+      `Storage label: ${payload.folder}.`,
       `Product PDF: ${selectedPdf || (existingMode ? `preserve ${currentPdf}` : "not selected")}.`,
       `cover.webp: ${fields.coverFile.files[0]?.name || (existingMode ? "preserve current cover" : "not selected")}.`,
       "Back-cover review image: never included in the publishing payload.",
@@ -1739,8 +1812,8 @@
   function renderAssetFileList(payload) {
     const items = [
       ...payload.fileList,
-      `${payload.folder}/cover.webp`,
-      `${payload.folder}/product.pdf`,
+      "Private R2 cover key assigned at publish time",
+      "Private R2 delivery key assigned at publish time",
       `/product-assets/${payload.slug}/cover.webp`
     ];
 
@@ -1782,8 +1855,9 @@
       : "Publishing...";
   }
 
-  function formatPublishSuccessMessage(productTitle, responsePayload) {
-    return `${productTitle} updated successfully. The editor is closed and you are back at the listing picker.`;
+  function formatPublishSuccessMessage(product) {
+    const storefrontUrl = `/store/products/${encodeURIComponent(product.slug)}/`;
+    return `${product.title} published as ${product.id} (${product.slug}). Storefront URL: ${storefrontUrl}`;
   }
 
   function getPublishFailureHeading(stage) {
@@ -1792,13 +1866,21 @@
       configuration: "Publishing configuration failed",
       upload: "R2 file upload failed",
       unavailable: "Publication temporarily unavailable",
+      invalid_file: "File validation failed",
+      invalid_metadata: "Product validation failed",
+      creator_unavailable: "Creator is not eligible",
+      product_exists: "Product already exists",
+      asset_exists: "Publication assets already exist",
+      asset_verification_failed: "R2 verification failed",
+      cleanup_incomplete: "Publication cleanup needs attention",
+      commit_unverified: "D1 publication could not be verified",
       unexpected: "Publishing failed"
     })[stage] || "Publishing failed";
   }
 
   function setPublishBusyState(busy) {
     publishBusy = busy;
-    buttons.publish.disabled = true;
+    buttons.publish.disabled = busy || isEditingLoadedListing() || Boolean(publishedProductSlug);
     for (const button of [buttons.analyze, buttons.review, buttons.reset]) {
       if (button) button.disabled = busy;
     }
@@ -1807,6 +1889,14 @@
 
   async function publishProduct() {
     if (publishBusy) {
+      return;
+    }
+    if (isEditingLoadedListing()) {
+      showActionFeedback({
+        kind: "error",
+        heading: "Existing listing update unavailable",
+        message: "Native publication is create-only. No request was sent and the existing product was not changed."
+      });
       return;
     }
 
@@ -1832,57 +1922,18 @@
     });
 
     try {
-      const startedInExistingMode = isEditingLoadedListing();
       const payload = buildPayload();
+      const metadata = buildNativePublicationMetadata(payload);
+      const csrfToken = await loadOwnerPublicationAuth();
       const formData = new FormData();
-      formData.set("title", payload.title);
-      formData.set("slug", payload.slug);
-      formData.set("folder", payload.folder);
-      formData.set("subtitle", payload.subtitle);
-      formData.set("gameSystem", payload.gameSystem);
-      formData.set("gameSystemSlug", payload.gameSystemSlug);
-      formData.set("productLine", payload.productLine);
-      formData.set("productLineSlug", payload.productLineSlug);
-      formData.set("series", Object.prototype.hasOwnProperty.call(payload, "series") ? payload.series : "");
-      formData.set("seriesSlug", Object.prototype.hasOwnProperty.call(payload, "seriesSlug") ? payload.seriesSlug : "");
-      formData.set("format", payload.format.join(", "));
-      formData.set("pageCount", payload.pageCount === null ? "" : String(payload.pageCount));
-      formData.set("price", payload.price);
-      formData.set("suggestedPrice", payload.suggestedPrice);
-      formData.set("minimumPrice", payload.minimumPrice);
-      formData.set("salePrice", payload.salePrice);
-      formData.set("saleEnabled", payload.saleEnabled ? "true" : "false");
-      formData.set("openRulesEligible", payload.openRulesEligible ? "true" : "false");
-      formData.set("currency", payload.currency);
-      for (const field of ["genre", "playerCountMin", "playerCountMax", "gmMode", "prepBurden", "playDuration", "playMode", "rulesComplexity", "mediaType", "language"]) {
-        formData.set(field, Object.prototype.hasOwnProperty.call(payload, field) ? String(payload[field]) : "");
-      }
-      formData.set("contentDescriptors", (payload.contentDescriptors || []).join(", "));
-      formData.set("status", payload.status);
-      formData.set("buyMode", payload.buyMode);
-      formData.set("buyUrl", payload.buyUrl);
-      formData.set("shortDescription", payload.shortDescription);
-      formData.set("longDescription", payload.longDescription);
-      formData.set("features", payload.features.join("\n"));
-      formData.set("tags", payload.tags.join(", "));
-      formData.set("fulfillmentNote", payload.fulfillmentNote);
-      formData.set("teaserVideo", payload.teaserVideo);
-      formData.set("legalNote", payload.legalNote);
-      formData.set("version", payload.version);
-      formData.set("releaseDate", payload.releaseDate);
-      formData.set("lastUpdated", payload.lastUpdated);
-      formData.set("relatedProducts", payload.relatedProducts.join(", "));
+      formData.set("metadata", JSON.stringify(metadata));
+      formData.set("cover", fields.coverFile.files[0]);
+      formData.set("pdf", fields.pdfFile.files[0]);
 
-      if (fields.coverFile.files[0]) {
-        formData.set("coverFile", fields.coverFile.files[0]);
-      }
-      if (fields.pdfFile.files[0]) {
-        formData.set("productFile", fields.pdfFile.files[0]);
-      }
-
-      const response = await fetch("/owner/api/publish", {
+      const response = await fetch(NATIVE_PUBLICATION_ENDPOINT, {
         method: "POST",
         credentials: "same-origin",
+        headers: { "x-csrf-token": csrfToken },
         body: formData,
         redirect: "manual"
       });
@@ -1893,30 +1944,27 @@
         const errorMessage = responsePayload.json.error || formatUnexpectedResponseError("Publish", responsePayload);
         showActionFeedback({
           kind: "error",
-          heading: getPublishFailureHeading(responsePayload.json.stage),
+          heading: getPublishFailureHeading(responsePayload.json.code || responsePayload.json.stage),
           message: errorMessage
         });
         return;
       }
 
-      if (startedInExistingMode) {
-        const updatedTitle = loadedProductRecord?.title || payload.title || payload.slug || "The listing";
-        resetFormToDefaults();
-        showActionFeedback({
-          kind: "success",
-          heading: "Existing listing updated",
-          message: formatPublishSuccessMessage(updatedTitle, responsePayload)
-        });
-        if (typeof fields.existingSelect?.focus === "function") {
-          fields.existingSelect.focus();
-        }
-        return;
+      const product = responsePayload.json.product;
+      if (!product?.id || !product?.slug || product.publicationState !== "published") {
+        throw new Error("The server response did not contain a verified published product identity.");
       }
+      publishedProductSlug = product.slug;
 
       showActionFeedback({
         kind: "success",
         heading: "Product published successfully",
-        message: responsePayload.json.message
+        message: formatPublishSuccessMessage(product),
+        reviewItems: [
+          `Product ID: ${product.id}`,
+          `Slug: ${product.slug}`,
+          `Storefront URL: /store/products/${encodeURIComponent(product.slug)}/`
+        ]
       });
       markDraftBaseline();
       persistExistingListingDraft();
@@ -1934,11 +1982,12 @@
 
   function validateListingIssues() {
     const issues = [];
+    const existingMode = isEditingLoadedListing();
     const requireFiles = requiresFullAssetSet();
     const requiredTextFields = [
       [fields.title, "Title"],
       [fields.slug, "Slug"],
-      [fields.folder, "R2 folder name"],
+      [fields.folder, "Storage label"],
       [fields.subtitle, "Subtitle"],
       [fields.system, "Game system"],
       [fields.line, "Product line"],
@@ -1947,6 +1996,7 @@
       [fields.status, "Status"],
       [fields.buyMode, "Buy mode"]
     ];
+    if (!existingMode) requiredTextFields.push([fields.mediaType, "Media type"]);
 
     for (const [field, label] of requiredTextFields) {
       if (!field.value.trim()) {
@@ -1961,7 +2011,7 @@
 
     const folder = fields.folder.value.trim();
     if (folder && (folder.includes("/") || folder.includes("\\") || folder.includes("..") || !/^[A-Za-z0-9 _-]+$/.test(folder))) {
-      issues.push({ field: fields.folder, label: "R2 folder name", message: "R2 folder name may use only letters, numbers, spaces, underscores, and hyphens." });
+      issues.push({ field: fields.folder, label: "Storage label", message: "Storage label may use only letters, numbers, spaces, underscores, and hyphens." });
     }
 
     if (!parseList(fields.format.value).length) {
@@ -2018,8 +2068,19 @@
     validateSelectedFile(fields.coverFile, "Cover image", "image/webp", ".webp");
     validateSelectedFile(fields.pdfFile, "Product PDF", "application/pdf", ".pdf");
 
+    const pwyw = fields.status.value === "pay-what-you-want" && fields.buyMode.value === CART_BUY_MODE;
+    const free = fields.status.value === "free-download" && fields.buyMode.value === "free-download";
+    if (!existingMode) {
+      if ((fields.status.value === "pay-what-you-want" && fields.buyMode.value !== CART_BUY_MODE)
+        || fields.buyMode.value === "pay-what-you-want") {
+        issues.push({ field: fields.buyMode, label: "PWYW buy mode", message: "Pay What You Want products must use the cart buy mode." });
+      }
+      if ((fields.status.value === "free-download") !== (fields.buyMode.value === "free-download")) {
+        issues.push({ field: fields.buyMode, label: "Free buy mode", message: "Free products must use both Free Download status and free-download buy mode." });
+      }
+    }
+
     if (fields.buyMode.value === CART_BUY_MODE) {
-      const pwyw = fields.status.value === "pay-what-you-want";
       if (!pwyw && fields.status.value !== "available-direct") {
         issues.push({ field: fields.status, label: "Status", message: "Cart products must use Available Direct or Pay What You Want status." });
       }
@@ -2038,6 +2099,24 @@
         const parsedPrice = parsePriceNumber(fields.price.value);
         if (parsedPrice === null || parsedPrice <= 0) {
           issues.push({ field: fields.price, label: "Price", message: "Fixed-price cart products require a positive price." });
+        }
+      }
+    }
+    if (!existingMode) {
+      const parsedPrice = parsePriceNumber(fields.price.value);
+      if (free) {
+        if (parsedPrice !== 0) {
+          issues.push({ field: fields.price, label: "Price", message: "Free products require an explicit 0.00 price." });
+        }
+      } else if (!pwyw && parsedPrice === null) {
+        issues.push({ field: fields.price, label: "Price", message: "Enter the product price explicitly; zero is allowed only for non-cart availability states." });
+      }
+      if (fields.saleEnabled.checked) {
+        const salePrice = parsePriceNumber(fields.salePrice.value);
+        if (pwyw || free) {
+          issues.push({ field: fields.saleEnabled, label: "Sale", message: "Sales apply only to fixed-price products." });
+        } else if (salePrice === null || parsedPrice === null || salePrice >= parsedPrice) {
+          issues.push({ field: fields.salePrice, label: "Sale price", message: "An active sale requires a valid sale price below the regular price." });
         }
       }
     }
@@ -2130,6 +2209,7 @@
       return;
     }
 
+    publishedProductSlug = "";
     loadedProductSlug = product.slug;
     loadedProductFolder = product.folder || product.slug;
     loadedProductRecord = product;
@@ -2473,6 +2553,7 @@
   });
 
   const resetFormToDefaults = ({ hideDetails = true } = {}) => {
+    publishedProductSlug = "";
     clearActionFeedback();
     document.querySelectorAll("input, textarea, select").forEach((field) => {
       if (field.type === "file") {
@@ -2489,6 +2570,17 @@
     fields.authors.value = "RV Sawyer";
     fields.publisher.value = "Tobacco Road Games";
     fields.system.value = "5E Compatible";
+    if (fields.genre) fields.genre.value = "";
+    if (fields.playerCountMin) fields.playerCountMin.value = "";
+    if (fields.playerCountMax) fields.playerCountMax.value = "";
+    if (fields.gmMode) fields.gmMode.value = "";
+    if (fields.prepBurden) fields.prepBurden.value = "";
+    if (fields.playDuration) fields.playDuration.value = "";
+    if (fields.playMode) fields.playMode.value = "";
+    if (fields.rulesComplexity) fields.rulesComplexity.value = "";
+    if (fields.mediaType) fields.mediaType.value = "";
+    if (fields.language) fields.language.value = "";
+    if (fields.contentDescriptors) fields.contentDescriptors.value = "";
     fields.line.value = "Fifth Edition Fantasy Roleplaying";
     fields.series.value = "";
     fields.format.value = "PDF";
@@ -2509,6 +2601,7 @@
     fields.features.value = "";
     applyTagValues([]);
     fields.fulfillmentNote.value = "";
+    if (fields.teaserVideo) fields.teaserVideo.value = "";
     fields.legalNote.value = "";
     fields.version.value = "";
     fields.releaseDate.value = "";
@@ -3221,6 +3314,7 @@
     addOwnerTagGroup,
     applyPdfPrefillResultsForTests: applyPdfPrefillResults,
     applySelectedPdfPrefillSuggestionsForTests: applySelectedPdfPrefillSuggestions,
+    buildNativePublicationMetadataForTests: buildNativePublicationMetadata,
     clearPdfPrefillResultsForTests: clearPdfPrefillResults,
     getPdfReviewFileForTests: getPdfReviewFile,
     downloadPdfForReviewForTests: downloadPdfForReview,

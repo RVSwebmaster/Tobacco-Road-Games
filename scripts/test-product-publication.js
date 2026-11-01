@@ -93,7 +93,9 @@ async function main() {
   });
   const ownerResponse = await publication.handleOwnerCatalogPublicationRequest(ownerRequest, { TRG_ORDERS: db, TRG_PRODUCTS: bucket });
   assert.equal(ownerResponse.status, 201);
-  assert.equal((await ownerResponse.json()).product.slug, "publication-owner-route");
+  const ownerPayload = await ownerResponse.json();
+  assert.equal(ownerPayload.product.slug, "publication-owner-route");
+  assert.equal(ownerPayload.storefrontUrl, "/store/products/publication-owner-route/");
   assert.equal((await catalog.getProductBySlug(db, "publication-owner-route")).publicationState, "published");
   const badCsrf = new Request("https://example.test/owner/api/catalog-publication", {
     method: "POST", headers: { origin: "https://example.test",

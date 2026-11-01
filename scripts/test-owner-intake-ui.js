@@ -17,7 +17,7 @@ async function main() {
   await testLocalPdfReviewSelectionStaysOutOfPublishPayload();
   await testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate();
   await testVisibleValidationAndReviewFeedback();
-  await testPublicationControlsDisabled();
+  await testNativePublicationControlsAndMappings();
   await testListingDetailsStayHiddenUntilWorkStarts();
   await testTablecraftListingStillLoadsWithProductLine();
   await testExistingListingLoadsMatchingTagCheckboxes();
@@ -48,13 +48,67 @@ async function testContentDerivedRuntimeVersion() {
   assert.match(script, /ownerIntakeRuntime = "failed"/, "Initialization errors must become visible instead of leaving dead controls.");
 }
 
-async function testPublicationControlsDisabled() {
+async function testNativePublicationControlsAndMappings() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
   const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
-  assert.match(html, /id="publish-button"[^>]*disabled/);
-  assert.match(html, /Publication is temporarily unavailable/);
-  assert.match(script, /buttons\.publish\.disabled = true/);
+  assert.doesNotMatch(html, /id="publish-button"[^>]*disabled/);
+  assert.match(html, /Publishes directly to the native Cloudflare D1 catalog and private R2 product storage/);
+  assert.match(script, /NATIVE_PUBLICATION_ENDPOINT = "\/owner\/api\/catalog-publication"/);
+  assert.match(script, /"x-csrf-token": csrfToken/);
   assert.doesNotMatch(script, /Repo publish path after upload|Commit and push to main|GitHub rebuild workflow/);
+
+  const fixed = createHarness();
+  await fixed.flush();
+  prepareValidNewListing(fixed, { status: "available-direct", buyMode: "cart", price: "7.25" });
+  fixed.buttons.analyze.click();
+  assert.match(fixed.outputs.feedbackHeading.textContent, /Validation passed/);
+  await fixed.buttons.publish.click();
+  await fixed.flush();
+  assert.equal(fixed.publishRequestCount, 1);
+  assert.equal(fixed.lastPublishHeaders["x-csrf-token"], "owner-intake-csrf");
+  assert.equal(fixed.lastPublishFormData.get("cover").name, "cover.webp");
+  assert.equal(fixed.lastPublishFormData.get("pdf").name, "product.pdf");
+  assert.equal(fixed.lastPublishFormData.get("coverFile"), null);
+  assert.equal(fixed.lastPublishFormData.get("productFile"), null);
+  const fixedMetadata = JSON.parse(fixed.lastPublishFormData.get("metadata"));
+  assert.equal(fixedMetadata.id, "native-intake-product");
+  assert.equal(fixedMetadata.slug, "native-intake-product");
+  assert.equal(fixedMetadata.creatorId, "creator-rv-sawyer");
+  assert.equal(fixedMetadata.pricingModel, "fixed");
+  assert.equal(fixedMetadata.priceCents, 725);
+  assert.equal(fixedMetadata.mediaType, "digital");
+  assert.match(fixed.outputs.status.textContent, /Storefront URL: \/store\/products\/native-intake-product\//);
+  assert.equal(fixed.buttons.publish.disabled, true, "A successful submission must not be accidentally submitted twice.");
+
+  const free = createHarness();
+  await free.flush();
+  prepareValidNewListing(free, { status: "free-download", buyMode: "free-download", price: "0.00" });
+  const freeMetadata = free.api.buildNativePublicationMetadataForTests();
+  assert.equal(free.api.validateRequiredFields().length, 0);
+  assert.equal(freeMetadata.pricingModel, "free");
+  assert.equal(freeMetadata.priceCents, 0);
+  assert.equal(freeMetadata.suggestedPriceCents, null);
+  assert.equal(freeMetadata.minimumPriceCents, null);
+
+  const pwyw = createHarness();
+  await pwyw.flush();
+  prepareValidNewListing(pwyw, { status: "pay-what-you-want", buyMode: "cart", price: "", suggestedPrice: "5.00", minimumPrice: "0.00" });
+  const pwywMetadata = pwyw.api.buildNativePublicationMetadataForTests();
+  assert.equal(pwyw.api.validateRequiredFields().length, 0);
+  assert.equal(pwywMetadata.pricingModel, "pwyw");
+  assert.equal(pwywMetadata.priceCents, 500);
+  assert.equal(pwywMetadata.suggestedPriceCents, 500);
+  assert.equal(pwywMetadata.minimumPriceCents, 0);
+
+  pwyw.fields.minimumPrice.value = "6.00";
+  assert.match(pwyw.api.validateRequiredFields().join(" "), /cannot be lower than the minimum/i);
+
+  const existing = createHarness();
+  await existing.flush();
+  existing.fields.existingSelect.value = "fixture-alpha";
+  existing.buttons.loadExisting.click();
+  assert.equal(existing.buttons.publish.disabled, true);
+  assert.equal(existing.buttons.publish.textContent, "Existing Listing Updates Unavailable");
 }
 
 async function testIntakeLabelsAndHelperText() {
@@ -187,8 +241,8 @@ async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
 
   await harness.buttons.publish.click();
   await harness.flush();
-  assert.equal(harness.lastPublishFormData.get("productFile"), null, "The review-only PDF must never enter the existing-listing publish payload.");
-  assert.equal(harness.lastPublishFormData.get("reviewPdfFile"), null, "No review-only field may be submitted to publishing.");
+  assert.equal(harness.publishRequestCount, 0, "Existing-listing review files must never be sent to the create-only native publication endpoint.");
+  assert.match(harness.outputs.status.textContent, /No request was sent/);
 }
 
 async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
@@ -248,10 +302,8 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
 
   await harness.buttons.publish.click();
   await harness.flush();
-  assert.equal(harness.lastPublishFormData.get("productFile"), null, "Review-only PDF selection must remain absent from the publishing payload.");
-  assert.equal(harness.lastPublishFormData.get("coverFile").name, "cover.webp", "Explicitly accepted cover should use the normal publishing slot.");
-  assert.equal(harness.lastPublishFormData.get("previewFile"), null, "Cover extraction must not silently add a storefront preview image.");
-  assert.equal(harness.lastPublishFormData.get("creationMethod"), null, "Owner publishing must not send retired Creation Method metadata.");
+  assert.equal(harness.publishRequestCount, 0, "Existing-listing cover review must remain local while native updates are unavailable.");
+  assert.match(harness.outputs.status.textContent, /No request was sent/);
 }
 
 async function testVisibleValidationAndReviewFeedback() {
@@ -545,7 +597,7 @@ async function testIntakeModeSpecificLabels() {
   assert.match(harness.outputs.outputHeading.textContent, /Review Listing Changes/, "Existing-listing mode should use a review heading for updates.");
   assert.equal(harness.buttons.analyze.textContent, "Check Existing Listing", "Existing-listing mode should relabel the check action.");
   assert.equal(harness.buttons.review.textContent, "Review Listing Changes", "Existing-listing mode should relabel the review action.");
-  assert.equal(harness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Existing-listing mode should show the publication pause.");
+  assert.equal(harness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Existing-listing mode should show the create-only boundary.");
   assert.equal(harness.buttons.publish.disabled, true);
   assert.equal(harness.buttons.reset.textContent, "Discard Listing Changes", "Existing-listing mode should relabel the discard action.");
   assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Fixture Alpha/i, "Existing-listing mode should explain that the owner is updating a current listing.");
@@ -623,11 +675,11 @@ async function testExistingListingDraftRestoresAfterReload() {
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
   harness.buttons.analyze.click();
-  assert.equal(harness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Checking an existing listing must not fall back to the new-product publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Checking an existing listing must not fall back to the new-product publish action.");
   assert.equal(harness.fields.slug.value, "fixture-gamma", "Checking an existing listing must preserve the loaded slug.");
   const generatedBeforeReload = JSON.parse(harness.outputs.json.value);
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Editing Fixture Gamma should stay in existing-listing mode before reload.");
-  assert.equal(harness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Editing Fixture Gamma should not offer a new-product publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Editing Fixture Gamma should not offer a new-product publish action.");
   assert.equal(generatedBeforeReload.productLineSlug, "other-games-and-experiments", "Editing an existing listing should preserve the original product-line slug when the visible label is unchanged.");
   assert.equal(generatedBeforeReload.priceCents, null, "Editing an existing listing should not convert an empty regular price into zero cents.");
   assert.equal(generatedBeforeReload.salePriceCents, null, "Editing an existing listing should not convert an empty sale price into zero cents.");
@@ -642,7 +694,7 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Reloading should restore the loaded Fixture Gamma listing.");
   assert.equal(reloadedHarness.outputs.listingDetails.hidden, false, "Reloading a persisted existing-listing draft should reveal the listing details workspace.");
-  assert.equal(reloadedHarness.buttons.publish.textContent, "Publication Temporarily Unavailable", "A restored existing listing must not show the new-product publish action.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "A restored existing listing must not show the new-product publish action.");
   assert.equal(reloadedHarness.buttons.reset.textContent, "Discard Listing Changes", "A restored existing listing must keep the existing-listing discard action.");
   assert.equal(reloadedHarness.fields.title.value, "Fixture Gamma", "Reloading should preserve the loaded title.");
   assert.equal(reloadedHarness.fields.slug.value, "fixture-gamma", "Reloading should preserve the loaded slug.");
@@ -659,7 +711,7 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   reloadedHarness.buttons.review.click();
   assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Fixture Gamma draft should still work.");
-  assert.equal(reloadedHarness.buttons.publish.textContent, "Publication Temporarily Unavailable", "Reviewing the restored draft must not relabel the publish action.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Reviewing the restored draft must not relabel the publish action.");
 }
 
 async function testExistingListingReopenRestoresSavedTagCheckboxes() {
@@ -677,15 +729,30 @@ async function testExistingListingReopenRestoresSavedTagCheckboxes() {
 
   await harness.buttons.publish.click();
   await harness.flush();
-  await harness.api.loadAvailableProductsForTests();
-  await harness.flush();
-
-  harness.fields.existingSelect.value = "fixture-alpha";
-  harness.buttons.loadExisting.click();
-
+  assert.equal(harness.publishRequestCount, 0, "Existing-listing changes must not be sent to the native create-only endpoint.");
   assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, false, "Reopened listings should clear tags that were unchecked in the saved update.");
   assert.equal(findTagCheckbox(harness, "Historical")?.checked, true, "Reopened listings should restore tags that were checked in the saved update.");
-  assert.match(harness.outputs.tagPreservedNote.textContent, /Preview/, "Reopened listings should still preserve unknown tags that survived the update.");
+  assert.match(harness.outputs.status.textContent, /No request was sent/, "The UI must accurately report the create-only update boundary.");
+}
+
+function prepareValidNewListing(harness, overrides = {}) {
+  harness.buttons.startNew.click();
+  harness.fields.title.value = "Native Intake Product";
+  harness.fields.slug.value = "native-intake-product";
+  harness.fields.folder.value = "native-intake-product";
+  harness.fields.subtitle.value = "A native publication fixture";
+  harness.fields.system.value = "System Neutral";
+  harness.fields.line.value = "Tablecraft";
+  harness.fields.mediaType.value = "digital";
+  harness.fields.shortDescription.value = "A complete short description for the native intake test.";
+  harness.fields.longDescription.value = "A complete long description proving Owner Intake metadata reaches the native D1 catalog.";
+  harness.fields.status.value = overrides.status || "available-direct";
+  harness.fields.buyMode.value = overrides.buyMode || "cart";
+  harness.fields.price.value = overrides.price ?? "7.25";
+  harness.fields.suggestedPrice.value = overrides.suggestedPrice || "";
+  harness.fields.minimumPrice.value = overrides.minimumPrice || "";
+  harness.fields.coverFile.files = [new File([Buffer.from("RIFFxxxxWEBPVP8 ")], "cover.webp", { type: "image/webp" })];
+  harness.fields.pdfFile.files = [new File([Buffer.from("%PDF-1.7\nnative intake\n%%EOF")], "product.pdf", { type: "application/pdf" })];
 }
 
 function createHarness(options = {}) {
@@ -836,6 +903,14 @@ function createHarness(options = {}) {
     publisher: register("product-publisher", createInput("Tobacco Road Games")),
     system: register("product-system", createInput("5E Compatible")),
     genre: register("product-genre", createInput("")),
+    playerCountMin: register("product-player-min", createInput("", "number")),
+    playerCountMax: register("product-player-max", createInput("", "number")),
+    gmMode: register("product-gm-mode", createElement("select")),
+    prepBurden: register("product-prep-burden", createElement("select")),
+    playDuration: register("product-play-duration", createElement("select")),
+    playMode: register("product-play-mode", createElement("select")),
+    rulesComplexity: register("product-rules-complexity", createElement("select")),
+    mediaType: register("product-media-type", createElement("select")),
     language: register("product-language", createInput("")),
     contentDescriptors: register("product-content-descriptors", createInput("")),
     line: register("product-line", createElement("select")),
@@ -877,6 +952,7 @@ function createHarness(options = {}) {
   };
   fields.status.value = "preview-available";
   fields.buyMode.value = "preview-only";
+  fields.mediaType.value = "digital";
   fields.shortDescription.value = "Original preview copy";
   fields.longDescription.value = "Long description";
   fields.features.value = "Feature one";
@@ -1123,10 +1199,9 @@ function createHarness(options = {}) {
     fields,
     flush,
     lastPublishFormData: null,
+    lastPublishHeaders: null,
     publishRequestCount: 0,
-    mockPublishResponse: createJsonResponse({
-      message: "Published."
-    }),
+    mockPublishResponse: null,
     outputs,
     sessionStorageStore
   };
@@ -1167,21 +1242,37 @@ function createHarness(options = {}) {
       if (String(url).includes("/data/product-intake-map.json")) {
         return createJsonResponse(intakeMap);
       }
-      if (String(url).includes("/owner/api/publish")) {
+      if (String(url).includes("/api/account/me")) {
+        return createJsonResponse({
+          authenticated: true,
+          csrfToken: "owner-intake-csrf",
+          user: { id: "owner-user", role: "owner", status: "active" }
+        });
+      }
+      if (String(url).includes("/owner/api/catalog-publication")) {
         harness.publishRequestCount += 1;
         harness.lastPublishFormData = options.body || null;
+        harness.lastPublishHeaders = options.headers || null;
+        let metadata = {};
         if (harness.lastPublishFormData && typeof harness.lastPublishFormData.get === "function") {
-          const slug = String(harness.lastPublishFormData.get("slug") || "").trim();
-          const tags = String(harness.lastPublishFormData.get("tags") || "")
-            .split(",")
-            .map((entry) => entry.trim())
-            .filter(Boolean);
+          metadata = JSON.parse(String(harness.lastPublishFormData.get("metadata") || "{}"));
+          const slug = String(metadata.slug || "").trim();
+          const tags = Array.isArray(metadata.metadata?.tags) ? metadata.metadata.tags : [];
           const matchingProduct = products.find((product) => product.slug === slug);
           if (matchingProduct) {
             matchingProduct.tags = tags;
           }
         }
-        return harness.mockPublishResponse;
+        return harness.mockPublishResponse || createJsonResponse({
+          ok: true,
+          product: {
+            id: metadata.id,
+            slug: metadata.slug,
+            title: metadata.title,
+            publicationState: "published"
+          },
+          storefrontUrl: `/store/products/${metadata.slug}/`
+        }, 201);
       }
       throw new Error(`Unexpected fetch: ${url}`);
     },

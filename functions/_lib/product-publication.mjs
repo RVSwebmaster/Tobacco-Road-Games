@@ -44,7 +44,11 @@ export async function handleOwnerCatalogPublicationRequest(request, env) {
     const product = await publishProduct(env.TRG_ORDERS, env.TRG_PRODUCTS, {
       metadata, coverFile: form.get("cover"), pdfFile: form.get("pdf")
     });
-    return jsonResponse({ ok: true, product }, 201);
+    return jsonResponse({
+      ok: true,
+      product,
+      storefrontUrl: `/store/products/${encodeURIComponent(product.slug)}/`
+    }, 201);
   } catch (error) {
     const failure = error instanceof ProductPublicationError ? error
       : new ProductPublicationError("publication_failed", "Product publication failed.");
@@ -80,10 +84,10 @@ export async function publishProduct(database, bucket, { metadata, coverFile, pd
   } catch (error) {
     throw new ProductPublicationError("invalid_metadata", error.message, 400);
   }
-  const creator = await database.prepare("SELECT id,marketplace_status FROM marketplace_creators WHERE id=?")
+  const creator = await database.prepare("SELECT id,marketplace_status,registration_status,closure_state FROM marketplace_creators WHERE id=?")
     .bind(candidate.creatorId).first();
-  if (!creator || creator.marketplace_status !== "approved") {
-    throw new ProductPublicationError("creator_unavailable", "Product Creator is not approved.", 409);
+  if (!creator || creator.marketplace_status !== "approved" || creator.registration_status !== "active" || creator.closure_state !== "active") {
+    throw new ProductPublicationError("creator_unavailable", "Product Creator is not approved and active.", 409);
   }
   if (await getProductById(database, candidate.id) || await getProductBySlug(database, candidate.slug)) {
     throw new ProductPublicationError("product_exists", "Product ID or slug already exists.", 409);
