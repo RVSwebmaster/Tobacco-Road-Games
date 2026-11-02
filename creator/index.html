@@ -260,6 +260,40 @@
             </form>
             <p id="creator-draft-status" role="status"></p>
           </details>
+          <details id="creator-edit-details" hidden>
+            <summary>Edit Listing for Owner Review</summary>
+            <form id="creator-edit-form" class="account-form">
+              <input name="listingId" type="hidden" />
+              <input name="expectedRevision" type="hidden" />
+              <label>Title <input name="title" required maxlength="160" /></label>
+              <label>Short description <textarea name="shortDescription" maxlength="500" required></textarea></label>
+              <label>Full description <textarea name="longDescription" maxlength="10000" required></textarea></label>
+              <label>Pricing
+                <select name="pricingModel" required>
+                  <option value="fixed">Fixed price</option>
+                  <option value="free">Free</option>
+                  <option value="pwyw">Pay What You Want</option>
+                </select>
+              </label>
+              <label data-edit-fixed-price>Price in cents <input name="priceCents" type="number" min="1" step="1" /></label>
+              <label data-edit-pwyw-price hidden>PWYW minimum in cents <input name="minimumPriceCents" type="number" min="0" step="1" /></label>
+              <label data-edit-pwyw-price hidden>PWYW suggested price in cents <input name="suggestedPriceCents" type="number" min="0" step="1" /></label>
+              <label>Media type
+                <select name="mediaType" required>
+                  <option value="digital">Digital</option>
+                  <option value="physical">Physical</option>
+                  <option value="hybrid">Hybrid</option>
+                </select>
+              </label>
+              <label>Format <input name="format" required /></label>
+              <label>Game system <input name="gameSystem" required /></label>
+              <label>Genre <input name="genre" required /></label>
+              <button class="button button--primary">Save Changes</button>
+              <button class="button button--secondary" id="creator-edit-cancel" type="button">Cancel</button>
+            </form>
+            <p class="account-help">Changes to a paused product remain private until you submit them and the Owner approves publication again.</p>
+            <p id="creator-edit-status" role="status"></p>
+          </details>
           <details>
             <summary>Attach a Private Listing File</summary>
             <form id="creator-file-form" class="account-form">

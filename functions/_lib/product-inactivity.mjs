@@ -298,7 +298,7 @@ export async function runInactivityCheck(
         continue;
       }
 
-      const catalogProduct = await getCatalogProduct(item.public_product_slug);
+      const catalogProduct = await resolveCatalogProduct(database, item, getCatalogProduct);
       if (isConfirmedUnavailable(catalogProduct)) {
         await finalizeInactivity(database, item, now);
         summary.inactivated += 1;
@@ -356,9 +356,7 @@ export async function runInactivityCheck(
         ]);
       }
 
-      const refreshedCatalogProduct = await getCatalogProduct(
-        item.public_product_slug
-      );
+      const refreshedCatalogProduct = await resolveCatalogProduct(database, item, getCatalogProduct);
       if (isConfirmedUnavailable(refreshedCatalogProduct)) {
         await finalizeInactivity(database, item, now);
         summary.inactivated += 1;
@@ -539,12 +537,28 @@ async function finalizeInactivity(database, item, now) {
 
 function isConfirmedUnavailable(product) {
   if (!product) return false;
+  if (product.publicationState)
+    return product.publicationState !== "published";
   return (
     product.saleEnabled === false ||
     product.buyMode === "retired" ||
     product.status === "legacy-not-for-sale" ||
     product.status === "retired"
   );
+}
+
+async function resolveCatalogProduct(database, listing, legacyLookup) {
+  try {
+    const product = await database
+      .prepare("SELECT publication_state FROM marketplace_products WHERE creator_listing_id=?")
+      .bind(listing.id)
+      .first();
+    if (product) return { publicationState: product.publication_state };
+  } catch (error) {
+    if (!/no such table:\s*marketplace_products/i.test(String(error?.message || error)))
+      throw error;
+  }
+  return legacyLookup(listing.public_product_slug);
 }
 
 function addCalendarYears(value, years) {

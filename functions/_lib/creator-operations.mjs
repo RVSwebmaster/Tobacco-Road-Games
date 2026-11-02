@@ -3,7 +3,6 @@ import {
   validateSameOriginRequest,
   validateSessionCsrf,
 } from "./account-auth.mjs";
-import { getRuntimeCatalogProduct } from "./runtime-catalog.mjs";
 import { getCreatorFinance, statementCsv } from "./creator-finance.mjs";
 import { getCreatorPayoutStatus } from "./creator-payout-readiness.mjs";
 import { reactivateListing } from "./product-inactivity.mjs";
@@ -188,6 +187,7 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
     );
   if (request.method === "POST" && /^listings\/[^/]+\/pause$/.test(route))
     return pauseCreatorListing(
+      request,
       database,
       creator,
       route.split("/")[1],
@@ -474,7 +474,19 @@ async function listings(db, creator) {
   const listingRows = await all(
     db
       .prepare(
-        "SELECT * FROM creator_listings WHERE creator_id=? ORDER BY updated_at DESC,title",
+        `SELECT cl.*,
+          mp.id catalog_product_id,mp.slug catalog_slug,mp.title catalog_title,
+          mp.publication_state catalog_publication_state,mp.pricing_model catalog_pricing_model,
+          mp.price_cents catalog_price_cents,mp.minimum_price_cents catalog_minimum_price_cents,
+          mp.suggested_price_cents catalog_suggested_price_cents,mp.media_type catalog_media_type,
+          mp.cover_r2_key catalog_cover_r2_key,mp.revision catalog_revision,
+          mp.updated_at catalog_updated_at,
+          EXISTS(SELECT 1 FROM creator_listing_files cf
+            WHERE cf.listing_id=cl.id AND cf.creator_id=cl.creator_id
+              AND cf.purpose='cover' AND cf.validation_state<>'superseded') has_cover_file
+         FROM creator_listings cl
+         LEFT JOIN marketplace_products mp ON mp.creator_listing_id=cl.id
+         WHERE cl.creator_id=? ORDER BY cl.updated_at DESC,cl.title`,
       )
       .bind(creator.id),
   );
@@ -601,11 +613,16 @@ async function updateListing(request, db, creator, id) {
       "Only drafts, paused listings, or listings needing changes can be edited.",
     );
   const body = await bodyJson(request),
+    expectedRevision = body.expectedRevision === undefined ? Number(current.revision) : Number(body.expectedRevision),
     mediaType =
       body.mediaType === undefined
         ? current.media_type
         : String(body.mediaType);
   if (!MEDIA_TYPES.has(mediaType)) return invalid("Media type is invalid.");
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 1)
+    return invalid("A current listing revision is required.");
+  if (expectedRevision !== Number(current.revision))
+    return listingRevisionConflict(current);
   let pricing;
   try {
     pricing = normalizeListingPricing(body, current);
@@ -615,9 +632,9 @@ async function updateListing(request, db, creator, id) {
   const title =
     body.title === undefined ? current.title : bounded(body.title, 160);
   if (!title) return invalid("Title is required.");
-  await db
+  const result = await db
     .prepare(
-      `UPDATE creator_listings SET title=?,short_description=?,long_description=?,listed_price_cents=?,pricing_model=?,suggested_price_cents=?,minimum_price_cents=?,sale_price_cents=?,sale_start=?,sale_end=?,media_type=?,format_json=?,game_system=?,genre=?,discovery_json=?,cover_image=?,updated_at=? WHERE id=? AND creator_id=?`,
+      `UPDATE creator_listings SET title=?,short_description=?,long_description=?,listed_price_cents=?,pricing_model=?,suggested_price_cents=?,minimum_price_cents=?,sale_price_cents=?,sale_start=?,sale_end=?,media_type=?,format_json=?,game_system=?,genre=?,discovery_json=?,cover_image=?,updated_at=?,revision=revision+1 WHERE id=? AND creator_id=? AND revision=?`,
     )
     .bind(
       title,
@@ -655,9 +672,14 @@ async function updateListing(request, db, creator, id) {
       new Date().toISOString(),
       id,
       creator.id,
+      expectedRevision,
     )
     .run();
-  return json({ ok: true, message: "Draft listing saved." });
+  if (changeCount(result) !== 1) {
+    const latest = await db.prepare("SELECT revision,lifecycle_state,publication_state FROM creator_listings WHERE id=?").bind(id).first();
+    return listingRevisionConflict(latest);
+  }
+  return json({ ok: true, message: "Listing changes saved for Owner review.", revision: expectedRevision + 1 });
 }
 async function changeListingState(request, db, creator, id, state) {
   if (!["manager", "editor"].includes(creator.permission)) return forbidden();
@@ -668,6 +690,12 @@ async function changeListingState(request, db, creator, id, state) {
     .bind(id, creator.id)
     .first();
   if (!current) return notFound();
+  const body = await bodyJson(request);
+  const expectedRevision = body.expectedRevision === undefined ? Number(current.revision) : Number(body.expectedRevision);
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 1)
+    return invalid("A current listing revision is required.");
+  if (expectedRevision !== Number(current.revision))
+    return listingRevisionConflict(current);
   if (Number(current.owner_review_hold) === 1)
     return invalid("Tobacco Road Games has placed this listing on Owner Review Hold. Corrective edits and file replacement remain available, but only Tobacco Road Games can restore saleability.");
   if (state === "submitted" && !EDITABLE_STATES.has(current.lifecycle_state))
@@ -694,7 +722,6 @@ async function changeListingState(request, db, creator, id, state) {
       schema = false;
     }
     if (schema) {
-      const body = await bodyJson(request);
       try {
         await recordListingDeclaration(db, {
           listingId: id,
@@ -710,29 +737,42 @@ async function changeListingState(request, db, creator, id, state) {
     }
   }
   const nextState = state === "withdrawn" ? "draft" : state;
-  await db.batch([
-    db
+  const nextRevision = expectedRevision + 1;
+  try {
+    await db.batch([
+      db
       .prepare(
-        `UPDATE creator_listings SET lifecycle_state=?,submitted_at=CASE WHEN ?='submitted' THEN ? ELSE submitted_at END,updated_at=? WHERE id=? AND creator_id=?`,
+        `UPDATE creator_listings SET lifecycle_state=?,publication_state='not_approved',submitted_at=CASE WHEN ?='submitted' THEN ? ELSE submitted_at END,updated_at=?,revision=revision+1 WHERE id=? AND creator_id=? AND revision=?`,
       )
-      .bind(nextState, nextState, now, now, id, creator.id),
-    db
+      .bind(nextState, nextState, now, now, id, creator.id, expectedRevision),
+      db
       .prepare(
-        "INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'creator',?,?,?,?)",
+        `INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at)
+         VALUES((SELECT id FROM creator_listings WHERE id=? AND creator_id=? AND lifecycle_state=? AND revision=?),?,'creator',?,?,?,?)`,
       )
       .bind(
         id,
+        creator.id,
+        nextState,
+        nextRevision,
         creator.id,
         creator.user_id,
         state === "submitted" ? "submitted" : "submission_withdrawn",
         JSON.stringify({ from: current.lifecycle_state, to: nextState }),
         now,
       ),
-  ]);
+    ]);
+  } catch (cause) {
+    if (/NOT NULL constraint failed: creator_publication_audit\.listing_id/i.test(String(cause?.message || cause))) {
+      const latest = await db.prepare("SELECT revision,lifecycle_state,publication_state FROM creator_listings WHERE id=?").bind(id).first();
+      return listingRevisionConflict(latest);
+    }
+    throw cause;
+  }
   return json({ ok: true, state: nextState });
 }
 
-async function pauseCreatorListing(db, creator, id, env, options) {
+async function pauseCreatorListing(request, db, creator, id, env, options) {
   if (!["manager", "editor"].includes(creator.permission)) return forbidden();
   const listing = await db
     .prepare("SELECT * FROM creator_listings WHERE id=? AND creator_id=?")
@@ -745,12 +785,15 @@ async function pauseCreatorListing(db, creator, id, env, options) {
     !listing.public_product_slug
   )
     return invalid("Only an active published listing can be taken off sale.");
+  const body = await bodyJson(request);
   return pauseListingPublication({
     listing,
     database: db,
     env,
     actorType: "creator",
     actorId: creator.user_id,
+    expectedListingRevision: body.expectedRevision,
+    expectedProductRevision: body.expectedProductRevision,
     nowMs: options.nowMs,
   });
 }
@@ -983,9 +1026,7 @@ function publicCreator(row) {
   };
 }
 function publicListing(row) {
-  const current = row.source_product_slug
-    ? getRuntimeCatalogProduct(row.source_product_slug)
-    : null;
+  const publicSlug = row.catalog_slug || row.public_product_slug || "";
   return {
     id: row.id,
     slug: row.slug,
@@ -995,11 +1036,11 @@ function publicListing(row) {
     publicationErrors: JSON.parse(row.publication_errors_json || "[]"),
     reviewNote: row.review_note || "",
     reviewedAt: row.reviewed_at || null,
-    priceCents:
-      row.listed_price_cents ??
-      current?.effectivePriceCents ??
-      current?.listedPriceCents ??
-      null,
+    revision: Number(row.revision || 1),
+    productId: row.catalog_product_id || null,
+    productRevision: row.catalog_revision == null ? null : Number(row.catalog_revision),
+    catalogPublicationState: row.catalog_publication_state || null,
+    priceCents: row.listed_price_cents ?? row.catalog_price_cents ?? null,
     pricingModel: row.pricing_model || "fixed",
     suggestedPriceCents: row.suggested_price_cents ?? null,
     minimumPriceCents: row.minimum_price_cents ?? null,
@@ -1011,8 +1052,10 @@ function publicListing(row) {
     salePriceCents: row.sale_price_cents,
     saleStart: row.sale_start,
     saleEnd: row.sale_end,
-    mediaType: row.media_type || current?.mediaType || "",
-    coverImage: row.cover_image || current?.coverUrl || "",
+    mediaType: row.media_type || row.catalog_media_type || "",
+    coverImage: Number(row.has_cover_file) === 1
+      ? `/api/creator/listings/${encodeURIComponent(row.id)}/cover`
+      : row.cover_image || "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     inactivityState: row.inactivity_state || "active",
@@ -1026,10 +1069,10 @@ function publicListing(row) {
     inactivityGraceEndsAt: row.inactivity_grace_ends_at || null,
     inactivityTransitionedAt: row.inactivity_transitioned_at || null,
     publicUrl:
-      row.public_product_slug || row.source_product_slug
-        ? `/store/products/${row.public_product_slug || row.source_product_slug}/`
+      publicSlug || row.source_product_slug
+        ? `/store/products/${publicSlug || row.source_product_slug}/`
         : "",
-    discoveryMetadataComplete: Boolean(current?.genre && current?.mediaType),
+    discoveryMetadataComplete: Boolean(row.genre && (row.media_type || row.catalog_media_type)),
   };
 }
 export function requiresCurrentEligibility(method, route) {
@@ -1062,6 +1105,27 @@ function registrationRequired(readiness) {
       },
     },
     403,
+  );
+}
+function changeCount(result) {
+  return Number(result?.meta?.changes ?? result?.changes ?? 0);
+}
+function listingRevisionConflict(listing) {
+  return json(
+    {
+      error: {
+        code: "revision_conflict",
+        message: "The listing changed after it was loaded. Refresh before saving again.",
+        listing: listing
+          ? {
+              revision: Number(listing.revision || 0),
+              lifecycleState: listing.lifecycle_state || null,
+              publicationState: listing.publication_state || null,
+            }
+          : null,
+      },
+    },
+    409,
   );
 }
 function safeDiscovery(value) {

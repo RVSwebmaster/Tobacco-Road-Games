@@ -141,6 +141,24 @@ export function validateProductInput(input) {
 }
 
 export async function updateProduct(database, id, patch, { expectedRevision, nowMs = Date.now() } = {}) {
+  const prepared = await prepareUpdateProduct(database, id, patch, { expectedRevision, nowMs });
+  const result = await prepared.statement.run();
+  if (Number(result.meta?.changes ?? result.changes ?? 0) !== 1) {
+    throw new ProductCatalogError("conflict", "Product revision has changed.");
+  }
+  return getProductById(database, prepared.product.id);
+}
+
+// Exposes the validated optimistic update for callers that must coordinate a
+// product revision with another D1 record in a single batch. The optional
+// Creator transition is a fixed, parameterized guard; callers cannot inject
+// arbitrary SQL into the product update.
+export async function prepareUpdateProduct(
+  database,
+  id,
+  patch,
+  { expectedRevision, nowMs = Date.now(), creatorTransition = null } = {},
+) {
   assertFields(patch, FIELD_NAMES);
   if (!Object.keys(patch).length) invalid("At least one product field must be updated.");
   const current = await getProductById(database, id);
@@ -154,12 +172,32 @@ export async function updateProduct(database, id, patch, { expectedRevision, now
   const product = normalize({ ...current, ...patch });
   const assignments = FIELDS.map(([, column]) => `${column}=?`).join(",");
   const values = [...FIELDS.map(([name]) => toDatabase(name, product[name])), timestamp(nowMs), current.id, current.revision];
-  const result = await database.prepare(`UPDATE marketplace_products SET ${assignments},updated_at=?,revision=revision+1 WHERE id=? AND revision=?`)
-    .bind(...values).run();
-  if (Number(result.meta?.changes ?? result.changes ?? 0) !== 1) {
-    throw new ProductCatalogError("conflict", "Product revision has changed.");
+  let transitionSql = "";
+  if (creatorTransition !== null) {
+    if (!creatorTransition || typeof creatorTransition !== "object" ||
+      typeof creatorTransition.listingId !== "string" || !creatorTransition.listingId ||
+      !Number.isInteger(creatorTransition.listingRevision) || creatorTransition.listingRevision < 1) {
+      invalid("creatorTransition requires a listing ID and positive integer revision.");
+    }
+    const lifecycleState = creatorTransition.lifecycleState || "submitted";
+    const publicationState = creatorTransition.publicationState || "publishing";
+    if (!["submitted", "paused"].includes(lifecycleState) || !["publishing", "paused"].includes(publicationState)) {
+      invalid("creatorTransition state is invalid.");
+    }
+    transitionSql = ` AND EXISTS (
+      SELECT 1 FROM creator_listings
+      WHERE id=? AND lifecycle_state=?
+        AND publication_state=? AND revision=?
+    )`;
+    values.push(creatorTransition.listingId, lifecycleState, publicationState, creatorTransition.listingRevision);
   }
-  return getProductById(database, current.id);
+  return {
+    current,
+    product,
+    expectedNextRevision: current.revision + 1,
+    statement: database.prepare(`UPDATE marketplace_products SET ${assignments},updated_at=?,revision=revision+1 WHERE id=? AND revision=?${transitionSql}`)
+      .bind(...values),
+  };
 }
 
 // Disposable drafts may be removed before publication or sales. The D1 trigger

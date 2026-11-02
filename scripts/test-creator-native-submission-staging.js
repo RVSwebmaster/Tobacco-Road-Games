@@ -35,12 +35,20 @@ const PDF = Buffer.from("%PDF-1.7\nTask 2O-B disposable Creator product\n%%EOF",
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
 function cli(...args) {
-  const result = childProcess.spawnSync(process.execPath, [WRANGLER, ...args], {
+  const invocation = wranglerInvocation(args);
+  const result = childProcess.spawnSync(invocation.command, invocation.args, {
     cwd: ROOT, encoding: "utf8", maxBuffer: 8 * 1024 * 1024
   });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Wrangler failed: ${result.stderr || result.stdout}`);
   return result.stdout;
+}
+function wranglerInvocation(args) {
+  return WRANGLER
+    ? { command: process.execPath, args: [WRANGLER, ...args] }
+    : process.platform === "win32"
+      ? { command: process.execPath, args: [path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js"), "wrangler", ...args] }
+      : { command: "npx", args: ["wrangler", ...args] };
 }
 function sql(value) {
   if (value === null || value === undefined) return "NULL";
@@ -48,7 +56,8 @@ function sql(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 function query(command) {
-  const result = JSON.parse(cli("d1", "execute", DB_NAME, "--remote", "--config", CONFIG, "--json", "--command", command));
+  const statement = command.trim().endsWith(";") ? command : `${command};`;
+  const result = JSON.parse(cli("d1", "execute", DB_NAME, "--remote", "--config", CONFIG, "--json", "--command", statement));
   if (result.length !== 1 || result[0].success !== true)
     throw new Error(`Staging D1 query failed: ${JSON.stringify(result)}`);
   return result[0];
@@ -82,14 +91,14 @@ function r2Delete(key) {
   cli("r2", "object", "delete", `${BUCKET}/${key}`, "--remote", "--config", CONFIG);
 }
 function r2Get(key) {
-  const result = childProcess.spawnSync(process.execPath, [WRANGLER, "r2", "object", "get", `${BUCKET}/${key}`,
-    "--remote", "--config", CONFIG, "--pipe"], { cwd: ROOT, encoding: null, maxBuffer: 8 * 1024 * 1024 });
+  const invocation = wranglerInvocation(["r2", "object", "get", `${BUCKET}/${key}`, "--remote", "--config", CONFIG, "--pipe"]);
+  const result = childProcess.spawnSync(invocation.command, invocation.args, { cwd: ROOT, encoding: null, maxBuffer: 8 * 1024 * 1024 });
   assert.equal(result.status, 0, Buffer.from(result.stderr || "").toString());
   return Buffer.from(result.stdout);
 }
 function assertR2Missing(key) {
-  const result = childProcess.spawnSync(process.execPath, [WRANGLER, "r2", "object", "get", `${BUCKET}/${key}`,
-    "--remote", "--config", CONFIG, "--pipe"], { cwd: ROOT, encoding: null, maxBuffer: 8 * 1024 * 1024 });
+  const invocation = wranglerInvocation(["r2", "object", "get", `${BUCKET}/${key}`, "--remote", "--config", CONFIG, "--pipe"]);
+  const result = childProcess.spawnSync(invocation.command, invocation.args, { cwd: ROOT, encoding: null, maxBuffer: 8 * 1024 * 1024 });
   assert.equal(result.status, 1);
 }
 function findBrowserExecutable() {
@@ -213,7 +222,6 @@ function removeDirectoryWithRetries(directory) {
 }
 
 async function main() {
-  assert.ok(WRANGLER, "TRG_WRANGLER_PATH is required.");
   assert.ok(new URL(ORIGIN || "").hostname.endsWith(".tobacco-road-games-staging.pages.dev"));
   const info = JSON.parse(cli("d1", "info", DB_NAME, "--json", "--config", CONFIG));
   assert.equal(info.uuid, DB_ID);
@@ -394,7 +402,7 @@ async function main() {
       }
       await waitFor(cdp, `([...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(title)}) || {}).innerText.includes('accepted')`, "Owner file acceptance was not reflected in the UI.");
     }
-    assert.equal(query(`SELECT revision FROM creator_listings WHERE id=${sql(listing.id)}`).results[0].revision, 3);
+    assert.equal(query(`SELECT revision FROM creator_listings WHERE id=${sql(listing.id)}`).results[0].revision, 4);
 
     response = await fetch(`${ORIGIN}/owner/api/creator-reviews`, {
       method: "POST", headers: { ...authHeaders(ownerSessionToken, ownerCsrfToken), "content-type": "application/json" },
@@ -403,7 +411,7 @@ async function main() {
     assert.equal(response.status, 409);
     response = await fetch(`${ORIGIN}/owner/api/creator-reviews`, {
       method: "POST", headers: { ...authHeaders(), "content-type": "application/json" },
-      body: JSON.stringify({ listingId: listing.id, expectedRevision: 3, action: "approve" })
+      body: JSON.stringify({ listingId: listing.id, expectedRevision: 4, action: "approve" })
     });
     assert.equal(response.status, 403);
     console.log("Failure handling: stale approval returned 409; Creator self-approval returned 403.");
@@ -434,6 +442,96 @@ async function main() {
     await navigate(cdp, `${ORIGIN}${publicProduct.detailUrl}`);
     await waitFor(cdp, `document.body.innerText.includes(${JSON.stringify(title)}) && document.body.innerText.includes('$7.25')`, "Published Creator product did not render on the storefront.");
     console.log("Approval: D1 transitioned to published, public catalog/detail appeared immediately, and the R2 cover loaded without redeployment.");
+
+    await setIdentityCookies(cdp, sessionToken, csrfToken);
+    await navigate(cdp, `${ORIGIN}/creator/`);
+    await waitFor(cdp, `document.getElementById('creator-listing-list')?.innerText.includes(${JSON.stringify(title)}) && document.getElementById('creator-listing-list')?.innerText.includes('Pause Sales')`, "Creator catalog did not show the native published product and pause control.");
+    const nativeCatalogText = await evaluate(cdp, `([...document.querySelectorAll('#creator-listing-list article')].find(node => node.querySelector('h3')?.textContent === ${JSON.stringify(title)}) || {}).innerText || ''`);
+    assert.match(nativeCatalogText, /publication published/);
+    assert.match(nativeCatalogText, /\$7\.25/);
+    assert.match(nativeCatalogText, /revision 6/);
+
+    response = await fetch(`${ORIGIN}/api/creator/listings/${listing.id}`, {
+      method: "POST", headers: { ...authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ expectedRevision: 6, title: "Forbidden Active Edit" })
+    });
+    assert.equal(response.status, 400, "An active published listing must be paused before editing.");
+    await evaluate(cdp, "window.confirm = () => true");
+    const pauseClick = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#creator-listing-list article')].find(node => node.querySelector('h3')?.textContent === ${JSON.stringify(title)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Pause Sales');
+      if (!button) return 'missing'; button.click(); return 'clicked';
+    })()`);
+    assert.equal(pauseClick, "clicked");
+    await waitFor(cdp, `document.getElementById('creator-listing-list')?.innerText.includes('paused · publication paused')`, "Creator pause did not update the catalog UI.");
+    assert.deepEqual(query(`SELECT lifecycle_state,publication_state,revision FROM creator_listings WHERE id=${sql(listing.id)}`).results[0], { lifecycle_state: "paused", publication_state: "paused", revision: 7 });
+    assert.deepEqual(query(`SELECT publication_state,revision FROM marketplace_products WHERE id=${sql(listing.id)}`).results[0], { publication_state: "paused", revision: 2 });
+    assert.equal((await fetch(`${ORIGIN}/api/catalog?slug=${encodeURIComponent(slug)}`)).status, 404);
+    response = await fetch(`${ORIGIN}/api/creator/listings/${listing.id}/cover`, { headers: authHeaders() });
+    assert.equal(response.status, 200);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), WEBP);
+    response = await fetch(`${ORIGIN}/api/creator/listings/${listing.id}/cover`, { headers: authHeaders(ownerSessionToken, ownerCsrfToken) });
+    assert.equal(response.status, 404, "Another identity cannot read the Creator's private cover.");
+
+    const editClick = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#creator-listing-list article')].find(node => node.querySelector('h3')?.textContent === ${JSON.stringify(title)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Edit Listing');
+      if (!button) return 'missing'; button.click(); return 'clicked';
+    })()`);
+    assert.equal(editClick, "clicked");
+    await evaluate(cdp, `(() => {
+      const form = document.getElementById('creator-edit-form');
+      form.title.value = ${JSON.stringify(`${title} Revised`)};
+      form.shortDescription.value = 'Revised staging short description.';
+      form.longDescription.value = 'Revised staging long description for native Creator catalog management.';
+      form.pricingModel.value = 'fixed';
+      form.priceCents.value = '850';
+      form.pricingModel.dispatchEvent(new Event('change'));
+      form.requestSubmit();
+    })()`);
+    await waitFor(cdp, `document.getElementById('creator-edit-status').textContent.includes('saved for Owner review')`, "Creator edit form did not report success.");
+    assert.equal(query(`SELECT revision FROM creator_listings WHERE id=${sql(listing.id)}`).results[0].revision, 8);
+    assert.equal(query(`SELECT title FROM marketplace_products WHERE id=${sql(listing.id)}`).results[0].title, title, "Paused edits must remain private before reapproval.");
+    response = await fetch(`${ORIGIN}/api/creator/listings/${listing.id}`, {
+      method: "POST", headers: { ...authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ expectedRevision: 7, title: "Stale overwrite" })
+    });
+    assert.equal(response.status, 409);
+    response = await fetch(`${ORIGIN}/api/creator/listings/${listing.id}`, {
+      method: "POST", headers: { ...authHeaders(ownerSessionToken, ownerCsrfToken), "content-type": "application/json" },
+      body: JSON.stringify({ expectedRevision: 8, title: "Owner cross-account overwrite" })
+    });
+    assert.equal(response.status, 403, "A non-member Owner session cannot use Creator catalog controls.");
+
+    const submitClick = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#creator-listing-list article')].find(node => node.querySelector('h3')?.textContent === ${JSON.stringify(`${title} Revised`)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Submit for Review');
+      if (!button) return 'missing'; button.click(); return 'clicked';
+    })()`);
+    assert.equal(submitClick, "clicked");
+    await waitFor(cdp, `document.getElementById('creator-listing-list')?.innerText.includes('submitted · publication not_approved')`, "Revised Creator product did not re-enter Owner review.");
+    assert.equal(query(`SELECT revision FROM creator_listings WHERE id=${sql(listing.id)}`).results[0].revision, 9);
+
+    await setIdentityCookies(cdp, ownerSessionToken, ownerCsrfToken);
+    await navigate(cdp, `${ORIGIN}/owner/creator-reviews.html`);
+    await waitFor(cdp, `document.getElementById('review-queue')?.innerText.includes(${JSON.stringify(`${title} Revised`)})`, "Owner review did not show the revised native product.");
+    const republishClick = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(`${title} Revised`)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Approve & Publish');
+      if (!button || button.disabled) return 'missing'; button.click(); return 'clicked';
+    })()`);
+    assert.equal(republishClick, "clicked");
+    await waitFor(cdp, `document.getElementById('review-status').textContent.includes('/store/products/${slug}/')`, "Owner UI did not report revised native publication success.");
+    const revised = query(`SELECT title,price_cents,publication_state,revision FROM marketplace_products WHERE id=${sql(listing.id)}`).results[0];
+    assert.deepEqual(revised, { title: `${title} Revised`, price_cents: 850, publication_state: "published", revision: 3 });
+    response = await fetch(`${ORIGIN}/api/catalog?slug=${encodeURIComponent(slug)}`);
+    const revisedPublic = (await response.json()).product;
+    assert.equal(revisedPublic.title, `${title} Revised`);
+    assert.equal(revisedPublic.priceCents, 850);
+    assert.equal(JSON.stringify(revisedPublic).includes("creator-quarantine/"), false);
+    await navigate(cdp, `${ORIGIN}${revisedPublic.detailUrl}`);
+    await waitFor(cdp, `document.body.innerText.includes(${JSON.stringify(`${title} Revised`)}) && document.body.innerText.includes('$8.50')`, "Reapproved catalog changes did not appear on the storefront without redeployment.");
+    console.log("Creator catalog management: authenticated listing, pause, private edit, stale/unauthorized rejection, Owner reapproval, and immediate storefront reflection passed.");
 
     response = await fetch(`${ORIGIN}/owner/api/creator-reviews`, {
       method: "POST", headers: { ...authHeaders(ownerSessionToken, ownerCsrfToken), "content-type": "application/json" },
@@ -505,7 +603,7 @@ async function main() {
     removeDirectoryWithRetries(mediaDirectory);
   }
   if (mainError) throw mainError;
-  console.log("Task 2O-B authenticated Creator review and publication browser verification passed.");
+  console.log("Task 2O-C authenticated Creator catalog-management browser verification passed.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

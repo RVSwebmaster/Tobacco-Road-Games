@@ -264,27 +264,21 @@ async function main() {
       { database: db, nowMs: NOW_MS, dispatchOptions }
     );
     assert.equal(response.status, 200);
-    await publishIntake.applyPublishPayload(catalogRoot, dispatch.latest());
     assert.equal(listing(raw, "manual-unlist").publication_state, "paused");
-    assert.equal(catalogProduct(catalogRoot, "manual-unlist").saleEnabled, false);
+    assert.equal(raw.prepare("SELECT publication_state FROM marketplace_products WHERE id='manual-unlist'").get().publication_state, "paused");
+    assert.equal(catalogProduct(catalogRoot, "manual-unlist").saleEnabled, true);
 
-    response = await creatorPublication.handleCreatorPublicationRequest(
-      ownerFixture.jsonRequest("/owner/api/creator-publication", {
-        action: "pause_publication",
-        listingId: "owner-moderation"
-      }),
-      environment,
-      {
-        database: db,
-        nowMs: NOW_MS,
-        dispatchOptions,
-        ...ownerFixture.options
-      }
-    );
+    response = await creatorPublication.pauseListingPublication({
+      listing: listing(raw, "owner-moderation"),
+      database: db,
+      actorType: "operator",
+      actorId: OWNER_ID,
+      nowMs: NOW_MS
+    });
     assert.equal(response.status, 200);
-    await publishIntake.applyPublishPayload(catalogRoot, dispatch.latest());
     assert.equal(listing(raw, "owner-moderation").publication_state, "paused");
-    assert.equal(catalogProduct(catalogRoot, "owner-moderation").saleEnabled, false);
+    assert.equal(raw.prepare("SELECT publication_state FROM marketplace_products WHERE id='owner-moderation'").get().publication_state, "paused");
+    assert.equal(catalogProduct(catalogRoot, "owner-moderation").saleEnabled, true);
     assert.equal(
       count(
         raw,
@@ -307,7 +301,8 @@ async function main() {
     assert.ok(result.inactivated >= 1);
     assert.equal(state(raw, "expire-after-grace"), "inactive");
     assert.equal(listing(raw, "expire-after-grace").publication_state, "paused");
-    assert.equal(catalogProduct(catalogRoot, "expire-after-grace").saleEnabled, false);
+    assert.equal(raw.prepare("SELECT publication_state FROM marketplace_products WHERE id='expire-after-grace'").get().publication_state, "paused");
+    assert.equal(catalogProduct(catalogRoot, "expire-after-grace").saleEnabled, true);
     for (const exemptSlug of ["founder-old", "rv-sawyer-old", "trg-house-old"]) {
       assert.equal(state(raw, exemptSlug), "active");
       assert.equal(listing(raw, exemptSlug).publication_state, "published");
@@ -334,12 +329,13 @@ async function main() {
       {
         catalogProducts: [catalogProduct(catalogRoot, "expire-after-grace")],
         database: db,
+        includeNative: true,
         now: expireAt
       }
     );
     const quote = await response.json();
     assert.deepEqual(quote.items, []);
-    assert.equal(quote.unavailableItems[0].code, "inactive_product");
+    assert.equal(quote.unavailableItems[0].code, "paused_product");
 
     const transitionAudits = count(
       raw,
@@ -452,9 +448,6 @@ async function runCheck(
     getCatalogProduct: (slug) => catalogProduct(catalogRoot, slug),
     pausePublication: async (input) => {
       const response = await creatorPublication.pauseListingPublication(input);
-      const outcome = await response.clone().json();
-      if (response.ok && outcome.ok && !outcome.pending)
-        await publishIntake.applyPublishPayload(catalogRoot, dispatch.latest());
       return response;
     }
   });
@@ -476,6 +469,21 @@ async function seedPublishedListing(raw, bucket, slug, creatorId, model, firstPu
     `Fixture ${slug}`,
     model,
     firstPublishedAt,
+    firstPublishedAt,
+    firstPublishedAt,
+    firstPublishedAt
+  );
+  raw.prepare(
+    `INSERT INTO marketplace_products(
+      id,slug,creator_id,creator_listing_id,publication_state,title,status,buy_mode,
+      pricing_model,price_cents,created_at,updated_at,published_at
+    ) VALUES(?,?,?,?,'published',?,'available-direct','cart','fixed',500,?,?,?)`
+  ).run(
+    slug,
+    slug,
+    creatorId,
+    slug,
+    `Fixture ${slug}`,
     firstPublishedAt,
     firstPublishedAt,
     firstPublishedAt

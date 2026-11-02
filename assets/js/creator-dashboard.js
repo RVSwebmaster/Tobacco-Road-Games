@@ -42,7 +42,7 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok)
       throw new Error(
-        payload?.error?.message || "Creator tools are unavailable.",
+        payload?.error?.message || payload?.error || "Creator tools are unavailable.",
       );
     return payload;
   }
@@ -332,6 +332,13 @@
         body.className = "product-card__body";
         const title = document.createElement("h3");
         title.textContent = item.title;
+        if (item.coverImage) {
+          const cover = document.createElement("img");
+          cover.src = item.coverImage;
+          cover.alt = `${item.title} cover`;
+          cover.loading = "lazy";
+          body.append(cover);
+        }
         const meta = document.createElement("p");
         const price = item.pricingModel === "free"
           ? "free"
@@ -340,7 +347,7 @@
             : item.priceCents == null
               ? "price unset"
               : `$${(item.priceCents / 100).toFixed(2)}`;
-        meta.textContent = `${item.lifecycleState} · publication ${item.publicationState} · ${item.mediaType || "media unset"} · ${price}`;
+        meta.textContent = `${item.lifecycleState} · publication ${item.publicationState} · ${item.mediaType || "media unset"} · ${price} · revision ${item.revision}`;
         body.append(title, meta);
         if (item.ownerReviewHold) {
           const hold = document.createElement("p");
@@ -384,14 +391,38 @@
           item.inactivityState !== "inactive" &&
           !item.ownerReviewHold
         ) {
+          const edit = document.createElement("button");
+          edit.className = "button button--secondary";
+          edit.textContent = "Edit Listing";
+          edit.onclick = () => openListingEditor(item);
+          body.append(edit);
           const button = document.createElement("button");
           button.className = "button button--secondary";
           button.textContent = "Submit for Review";
           button.onclick = async () => {
-            await api(`listings/${item.id}/submit`, {});
+            await api(`listings/${item.id}/submit`, { expectedRevision: item.revision });
             await load();
           };
           body.append(button);
+        }
+        if (
+          item.lifecycleState === "active" &&
+          item.publicationState === "published" &&
+          item.productRevision &&
+          !item.ownerReviewHold
+        ) {
+          const pause = document.createElement("button");
+          pause.className = "button button--secondary";
+          pause.textContent = "Pause Sales";
+          pause.onclick = async () => {
+            if (!confirm("Pause this product on the storefront? Existing ownership and downloads will remain intact.")) return;
+            await api(`listings/${item.id}/pause`, {
+              expectedRevision: item.revision,
+              expectedProductRevision: item.productRevision,
+            });
+            await load();
+          };
+          body.append(pause);
         }
         if (item.inactivityState === "inactive" && !item.ownerReviewHold) {
           const button = document.createElement("button");
@@ -407,6 +438,28 @@
         return card;
       }),
     );
+  }
+  function openListingEditor(item) {
+    const details = document.querySelector("#creator-edit-details"),
+      form = document.querySelector("#creator-edit-form");
+    details.hidden = false;
+    details.open = true;
+    form.listingId.value = item.id;
+    form.expectedRevision.value = item.revision;
+    form.title.value = item.title || "";
+    form.shortDescription.value = item.shortDescription || "";
+    form.longDescription.value = item.longDescription || "";
+    form.pricingModel.value = item.pricingModel || "fixed";
+    form.priceCents.value = item.priceCents ?? "";
+    form.minimumPriceCents.value = item.minimumPriceCents ?? "";
+    form.suggestedPriceCents.value = item.suggestedPriceCents ?? "";
+    form.mediaType.value = item.mediaType || "digital";
+    form.format.value = (item.formats || []).join(", ");
+    form.gameSystem.value = item.gameSystem || "";
+    form.genre.value = item.genre || "";
+    form.pricingModel.dispatchEvent(new Event("change"));
+    document.querySelector("#creator-edit-status").textContent = "";
+    details.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function formatDate(value) {
     return value
@@ -556,6 +609,49 @@
     creatorDraftForm.suggestedPriceCents.required = model === "pwyw";
   });
   creatorDraftForm.pricingModel.dispatchEvent(new Event("change"));
+  const creatorEditForm = document.querySelector("#creator-edit-form"),
+    creatorEditDetails = document.querySelector("#creator-edit-details");
+  creatorEditForm.pricingModel.addEventListener("change", () => {
+    const model = creatorEditForm.pricingModel.value;
+    for (const label of creatorEditForm.querySelectorAll("[data-edit-fixed-price]"))
+      label.hidden = model !== "fixed";
+    for (const label of creatorEditForm.querySelectorAll("[data-edit-pwyw-price]"))
+      label.hidden = model !== "pwyw";
+    creatorEditForm.priceCents.required = model === "fixed";
+    creatorEditForm.minimumPriceCents.required = model === "pwyw";
+    creatorEditForm.suggestedPriceCents.required = model === "pwyw";
+  });
+  creatorEditForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget,
+      output = document.querySelector("#creator-edit-status"),
+      model = form.pricingModel.value;
+    try {
+      const result = await api(`listings/${form.listingId.value}`, {
+        expectedRevision: Number(form.expectedRevision.value),
+        title: form.title.value,
+        shortDescription: form.shortDescription.value,
+        longDescription: form.longDescription.value,
+        pricingModel: model,
+        priceCents: model === "fixed" ? Number(form.priceCents.value) : undefined,
+        minimumPriceCents: model === "pwyw" ? Number(form.minimumPriceCents.value) : undefined,
+        suggestedPriceCents: model === "pwyw" ? Number(form.suggestedPriceCents.value) : undefined,
+        mediaType: form.mediaType.value,
+        format: form.format.value.split(",").map((value) => value.trim()).filter(Boolean),
+        gameSystem: form.gameSystem.value,
+        genre: form.genre.value,
+      });
+      form.expectedRevision.value = result.revision;
+      output.textContent = result.message;
+      await load();
+    } catch (error) {
+      output.textContent = error.message;
+    }
+  });
+  document.querySelector("#creator-edit-cancel").addEventListener("click", () => {
+    creatorEditDetails.open = false;
+    creatorEditDetails.hidden = true;
+  });
   for (const button of document.querySelectorAll(
     "[data-preferred-balance-plan]",
   ))

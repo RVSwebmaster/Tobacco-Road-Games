@@ -1,7 +1,7 @@
 import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf } from "./account-auth.mjs";
 import { mapApprovedListingToPublishPayload } from "./creator-publication-map.mjs";
 import { assertPublicationCapacity } from "./marketplace-policy.mjs";
-import { prepareCreateProduct } from "./product-catalog-d1.mjs";
+import { prepareCreateProduct, prepareUpdateProduct } from "./product-catalog-d1.mjs";
 import { assertCreatorPublicationReadiness } from "./publication-readiness.mjs";
 import { jsonResponse } from "./owner-runtime.mjs";
 
@@ -60,6 +60,7 @@ export async function handleCreatorReviewRequest(request, env = {}, options = {}
   } catch (cause) {
     if (cause instanceof CreatorReviewError) return failure(cause.code, cause.message, cause.status, cause.details);
     if (/UNIQUE constraint failed: marketplace_products\.(?:id|slug)/i.test(String(cause?.message || cause))) return failure("product_conflict", "A native product already uses this product ID or slug.", 409);
+    if (/NOT NULL constraint failed: creator_review_audit\.listing_id/i.test(String(cause?.message || cause))) return revisionConflict(database, listingId);
     console.error(JSON.stringify({ event: "creator_review_failed", listingId, action, message: String(cause?.message || cause) }));
     return failure("review_failed", "The Creator review decision could not be completed.", 503);
   }
@@ -87,7 +88,7 @@ export async function publishApprovedCreatorListing(database, bucket, input) {
   await verifyAcceptedObject(bucket, mapped.files.product, "product");
 
   const publishedAt = new Date(input.nowMs).toISOString(), metadata = mapped.metadata;
-  const prepared = prepareCreateProduct(database, {
+  const productInput = {
     id: metadata.id, slug: metadata.slug, creatorId: metadata.creatorId, creatorListingId: listing.id,
     publicationState: "published", title: metadata.title, subtitle: metadata.subtitle,
     shortDescription: metadata.shortDescription, longDescription: metadata.longDescription,
@@ -105,8 +106,26 @@ export async function publishApprovedCreatorListing(database, bucket, input) {
       creatorReviewRevision: input.expectedRevision + 1,
       ...Object.fromEntries(DISCOVERY_FIELDS.filter(key => metadata[key] !== undefined).map(key => [key, metadata[key]]))
     }, publishedAt
-  }, { nowMs: input.nowMs });
+  };
   const nextRevision = input.expectedRevision + 1;
+  const existing = await database.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=? OR id=?").bind(listing.id, metadata.id).first();
+  if (existing && (existing.id !== metadata.id || existing.slug !== metadata.slug || existing.creator_id !== listing.creator_id || existing.creator_listing_id !== listing.id)) {
+    throw new CreatorReviewError("product_conflict", "The existing native product identity does not match this Creator listing.", 409);
+  }
+  const prepared = existing
+    ? await prepareUpdateProduct(database, existing.id, Object.fromEntries(Object.entries(productInput).filter(([key]) => !["id", "slug", "creatorId"].includes(key))), {
+        expectedRevision: Number(existing.revision),
+        nowMs: input.nowMs,
+        creatorTransition: { listingId: listing.id, listingRevision: nextRevision },
+      })
+    : prepareCreateProduct(database, productInput, { nowMs: input.nowMs });
+  const productNextRevision = existing ? prepared.expectedNextRevision : 1;
+  const guardedReviewAudit = existing
+    ? database.prepare(`INSERT INTO creator_review_audit(listing_id,creator_id,actor_user_id,action,note,created_at)
+        VALUES((SELECT creator_listing_id FROM marketplace_products WHERE id=? AND revision=?),?,?,?,?,?)`)
+        .bind(existing.id, productNextRevision, listing.creator_id, input.actorId, "approve", input.note, publishedAt)
+    : database.prepare("INSERT INTO creator_review_audit(listing_id,creator_id,actor_user_id,action,note,created_at) VALUES(?,?,?,?,?,?)")
+        .bind(listing.id, listing.creator_id, input.actorId, "approve", input.note, publishedAt);
   await database.batch([
     database.prepare(`UPDATE creator_listings SET publication_state='publishing',updated_at=?,revision=revision+1
       WHERE id=? AND lifecycle_state='submitted' AND publication_state='not_approved' AND revision=?`).bind(publishedAt, listing.id, input.expectedRevision),
@@ -115,8 +134,8 @@ export async function publishApprovedCreatorListing(database, bucket, input) {
       WHERE id=? AND lifecycle_state='submitted' AND publication_state='publishing' AND revision=?`)
       .bind(metadata.slug, publishedAt, input.note, publishedAt, publishedAt, publishedAt, listing.id, nextRevision),
     database.prepare("UPDATE creator_listing_files SET delivery_object_key=? WHERE id=?").bind(mapped.files.product.quarantine_key, mapped.files.product.id),
-    database.prepare("INSERT INTO creator_review_audit(listing_id,creator_id,actor_user_id,action,note,created_at) VALUES(?,?,?,?,?,?)").bind(listing.id, listing.creator_id, input.actorId, "approve", input.note, publishedAt),
-    audit(database, listing.id, listing.creator_id, input.actorId, "published", { note: input.note, productId: prepared.product.id, slug: prepared.product.slug, sourceRevision: input.expectedRevision, publishedRevision: nextRevision + 1 }, publishedAt)
+    guardedReviewAudit,
+    audit(database, listing.id, listing.creator_id, input.actorId, existing ? "republished" : "published", { note: input.note, productId: prepared.product.id, slug: prepared.product.slug, sourceRevision: input.expectedRevision, publishedRevision: nextRevision + 1, productRevision: productNextRevision }, publishedAt)
   ]);
   const product = await database.prepare("SELECT id,slug,title,publication_state,revision FROM marketplace_products WHERE id=?").bind(prepared.product.id).first();
   const committed = await database.prepare("SELECT publication_state,revision FROM creator_listings WHERE id=?").bind(listing.id).first();

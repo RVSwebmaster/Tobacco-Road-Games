@@ -1,5 +1,6 @@
 import { getSessionFromRequest, validateSameOriginRequest, validateSessionCsrf } from "./account-auth.mjs";
 import { PUBLICATION_UNAVAILABLE } from "./publication-unavailable.mjs";
+import { prepareUpdateProduct, ProductCatalogError } from "./product-catalog-d1.mjs";
 
 export async function handleCreatorPublicationRequest(request, env = {}, options = {}) {
   if (request.method !== "POST") return json({ error: "Use POST." }, 405);
@@ -36,7 +37,7 @@ export async function handleCreatorPublicationRequest(request, env = {}, options
   }
   if (action === "approve_bundle") return approveBundle(body, db, auth, now);
   if (action === "publish_bundle") return publishBundle(body, db);
-  if (action === "pause_publication") return pausePublication(body, db);
+  if (action === "pause_publication") return pausePublication(body, db, auth, options);
   if (action !== "publish") return json({ error: "Publication action is invalid." }, 400);
 
   return unavailable();
@@ -63,14 +64,79 @@ async function publishBundle(body, db) {
   return unavailable();
 }
 
-async function pausePublication(body, db) {
+async function pausePublication(body, db, auth, options) {
   const listing = await db.prepare("SELECT * FROM creator_listings WHERE id=?").bind(String(body.listingId || "")).first();
-  return pauseListingPublication({ listing });
+  return pauseListingPublication({
+    listing,
+    database: db,
+    actorType: "operator",
+    actorId: auth.username,
+    expectedListingRevision: body.expectedRevision,
+    expectedProductRevision: body.expectedProductRevision,
+    nowMs: options.nowMs,
+  });
 }
 
-export async function pauseListingPublication({ listing } = {}) {
+export async function pauseListingPublication({
+  listing,
+  database,
+  actorType = "system",
+  actorId = "system",
+  expectedListingRevision,
+  expectedProductRevision,
+  nowMs = Date.now(),
+} = {}) {
   if (!listing?.public_product_slug) return json({ error: "Published listing not found." }, 404);
-  return unavailable();
+  if (!database?.prepare) return unavailable();
+  if (listing.lifecycle_state !== "active" || listing.publication_state !== "published") {
+    return json({ error: "Only an active published listing can be taken off sale.", code: "listing_not_published" }, 409);
+  }
+  const product = await database.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").bind(listing.id).first();
+  if (!product) return unavailable();
+  const listingRevision = expectedListingRevision === undefined ? Number(listing.revision) : Number(expectedListingRevision);
+  const productRevision = expectedProductRevision === undefined ? Number(product.revision) : Number(expectedProductRevision);
+  if (!Number.isInteger(listingRevision) || listingRevision < 1 || !Number.isInteger(productRevision) || productRevision < 1) {
+    return json({ error: "Current listing and product revisions are required.", code: "invalid_request" }, 400);
+  }
+  if (listingRevision !== Number(listing.revision) || productRevision !== Number(product.revision)) {
+    return json({ error: "The listing changed after it was loaded.", code: "revision_conflict", listingRevision: Number(listing.revision), productRevision: Number(product.revision) }, 409);
+  }
+  const now = new Date(Number.isFinite(nowMs) ? nowMs : Date.now()).toISOString();
+  const nextListingRevision = listingRevision + 1;
+  try {
+    const prepared = await prepareUpdateProduct(database, product.id, { publicationState: "paused" }, {
+      expectedRevision: productRevision,
+      nowMs,
+      creatorTransition: {
+        listingId: listing.id,
+        listingRevision: nextListingRevision,
+        lifecycleState: "paused",
+        publicationState: "paused",
+      },
+    });
+    const nextProductRevision = prepared.expectedNextRevision;
+    await database.batch([
+      database.prepare(`UPDATE creator_listings SET lifecycle_state='paused',publication_state='paused',updated_at=?,revision=revision+1
+        WHERE id=? AND lifecycle_state='active' AND publication_state='published' AND revision=?`)
+        .bind(now, listing.id, listingRevision),
+      prepared.statement,
+      database.prepare(`INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at)
+        VALUES((SELECT cl.id FROM creator_listings cl JOIN marketplace_products mp ON mp.creator_listing_id=cl.id
+          WHERE cl.id=? AND cl.lifecycle_state='paused' AND cl.publication_state='paused' AND cl.revision=?
+            AND mp.id=? AND mp.publication_state='paused' AND mp.revision=?),?,?,?,?,?,?)`)
+        .bind(listing.id, nextListingRevision, product.id, nextProductRevision, listing.creator_id, actorType, actorId, "publication_paused", JSON.stringify({ productId: product.id, productRevision: nextProductRevision }), now),
+    ]);
+    return json({ ok: true, state: "paused", revision: nextListingRevision, productRevision: nextProductRevision });
+  } catch (cause) {
+    if (cause instanceof ProductCatalogError && cause.code === "conflict") {
+      return json({ error: "The listing changed after it was loaded.", code: "revision_conflict" }, 409);
+    }
+    if (/NOT NULL constraint failed: creator_publication_audit\.listing_id/i.test(String(cause?.message || cause))) {
+      return json({ error: "The listing changed after it was loaded.", code: "revision_conflict" }, 409);
+    }
+    console.error(JSON.stringify({ event: "creator_publication_pause_failed", listingId: listing.id, message: String(cause?.message || cause) }));
+    return json({ error: "The native product could not be paused.", code: "pause_failed" }, 503);
+  }
 }
 
 function unavailable() { return json({ error: PUBLICATION_UNAVAILABLE }, 503); }

@@ -15,6 +15,8 @@ async function main() {
   const auth = await load("functions/_lib/account-auth.mjs");
   const review = await load("functions/_lib/creator-review.mjs");
   const publication = await load("functions/_lib/creator-publication.mjs");
+  const creatorOperations = await load("functions/_lib/creator-operations.mjs");
+  const creatorCover = await load("functions/_lib/creator-catalog-cover.mjs");
   const catalog = await load("functions/_lib/product-catalog-d1.mjs");
   const publicCatalog = await load("functions/_lib/public-product-catalog.mjs");
   const publicAssets = await load("functions/_lib/public-product-assets.mjs");
@@ -82,6 +84,51 @@ async function main() {
   response = await publicAssets.handlePublicProductAssetRequest({ params: { slug: "creator-native-publish", asset: "delivery.pdf" }, env });
   assert.equal(response.status, 404, "Private delivery assets are never available through the public asset route.");
 
+  response = await creatorOperations.handleCreatorRequest(creatorApi("GET", "listings"), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200);
+  let creatorCatalog = await response.json();
+  let managed = creatorCatalog.listings.find(row => row.id === "listing-task2ob-publish");
+  assert.equal(managed.productId, "listing-task2ob-publish");
+  assert.equal(managed.productRevision, 1);
+  assert.equal(managed.revision, 5);
+  assert.equal(managed.coverImage, "/api/creator/listings/listing-task2ob-publish/cover");
+  response = await creatorCover.handleCreatorCatalogCover(creatorApi("GET", "listings/listing-task2ob-publish/cover"), env, "listing-task2ob-publish", { database: db });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  response = await creatorCover.handleCreatorCatalogCover(ownerGet(), env, "listing-task2ob-publish", { database: db });
+  assert.equal(response.status, 404, "Another authenticated identity cannot retrieve a Creator's private cover.");
+
+  response = await creatorOperations.handleCreatorRequest(creatorApi("POST", "listings/listing-task2ob-publish/pause", { expectedRevision: 5, expectedProductRevision: 1 }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200, "The owning Creator can pause a native D1 product.");
+  assert.deepEqual({ ...raw.prepare("SELECT lifecycle_state,publication_state,revision FROM creator_listings WHERE id='listing-task2ob-publish'").get() }, { lifecycle_state: "paused", publication_state: "paused", revision: 6 });
+  assert.deepEqual({ ...raw.prepare("SELECT publication_state,revision FROM marketplace_products WHERE id='listing-task2ob-publish'").get() }, { publication_state: "paused", revision: 2 });
+
+  response = await creatorOperations.handleCreatorRequest(creatorApi("POST", "listings/listing-task2ob-publish", {
+    expectedRevision: 6, title: "Revised Native Creator Product", shortDescription: "Revised short description.",
+    longDescription: "Revised long description for an Owner-reviewed native product.", pricingModel: "pwyw",
+    minimumPriceCents: 0, suggestedPriceCents: 1500, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "fantasy"
+  }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).revision, 7);
+  assert.equal(raw.prepare("SELECT title FROM marketplace_products WHERE id='listing-task2ob-publish'").get().title, "Title creator-native-publish", "Creator edits remain private until Owner approval.");
+  response = await creatorOperations.handleCreatorRequest(creatorApi("POST", "listings/listing-task2ob-publish", { expectedRevision: 6, title: "Stale overwrite" }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 409, "Stale Creator edits cannot overwrite newer listing data.");
+
+  response = await creatorOperations.handleCreatorRequest(creatorApi("POST", "listings/listing-task2ob-publish/submit", {
+    expectedRevision: 7, rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true
+  }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200);
+  response = await review.handleCreatorReviewRequest(ownerPost({ listingId: "listing-task2ob-publish", expectedRevision: 8, action: "approve", note: "Approved revised catalog entry." }), env, { database: db, nowMs: NOW_MS + 1000 });
+  assert.equal(response.status, 200, "Owner reapproval updates the existing stable product.");
+  const republished = raw.prepare("SELECT title,pricing_model,price_cents,minimum_price_cents,suggested_price_cents,publication_state,revision FROM marketplace_products WHERE id='listing-task2ob-publish'").get();
+  assert.deepEqual({ ...republished }, { title: "Revised Native Creator Product", pricing_model: "pwyw", price_cents: 1500, minimum_price_cents: 0, suggested_price_cents: 1500, publication_state: "published", revision: 3 });
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products WHERE id='listing-task2ob-publish'").get().n, 1, "Reapproval preserves stable product identity.");
+  response = await publicCatalog.handlePublicCatalogRequest(new Request("https://example.com/api/catalog?slug=creator-native-publish"), env);
+  const revisedPublicProduct = (await response.json()).product;
+  assert.equal(revisedPublicProduct.title, "Revised Native Creator Product");
+  assert.equal(revisedPublicProduct.pricingModel, "pwyw");
+  assert.equal(revisedPublicProduct.suggestedPriceCents, 1500);
+
   response = await review.handleCreatorReviewRequest(ownerPost({ listingId: "listing-task2ob-publish", expectedRevision: revision, action: "approve" }), env, { database: db, nowMs: NOW_MS });
   assert.equal(response.status, 409, "Duplicate approval is safely rejected.");
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products WHERE id='listing-task2ob-publish'").get().n, 1);
@@ -101,7 +148,7 @@ async function main() {
   assert.equal(response.status, 409, "Missing private assets block publication.");
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products WHERE id='listing-task2ob-missing'").get().n, 0);
 
-  assert.equal(bucket.getPublicCalls, 1, "Only the approved public cover was retrieved from R2.");
+  assert.equal(bucket.getPublicCalls, 2, "Only the public cover and its owning Creator's private cover were retrieved from R2.");
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM orders").get().n, 0);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM download_entitlements").get().n, 0);
   raw.close();
@@ -110,8 +157,16 @@ async function main() {
   assert.ok(script); new Function(script);
   assert.match(reviewHtml, /Approve & Publish/);
   assert.match(reviewHtml, /x-csrf-token/);
+  const creatorHtml = fs.readFileSync(path.join(ROOT, "creator", "index.html"), "utf8");
+  const creatorScript = fs.readFileSync(path.join(ROOT, "assets", "js", "creator-dashboard.js"), "utf8");
+  assert.match(creatorHtml, /id="creator-edit-form"/);
+  assert.match(creatorHtml, /Changes to a paused product remain private/);
+  assert.match(creatorScript, /expectedProductRevision/);
+  assert.match(creatorScript, /Pause Sales/);
+  assert.match(creatorScript, /Edit Listing/);
+  new Function(creatorScript);
   console.log("Native Creator review/publication tests passed.");
-  console.log("Owner auth + CSRF, Creator self-approval denial, revision conflict, approval, rejection, duplicate, slug conflict, and missing-R2 safety: passed.");
+  console.log("Owner auth + CSRF, Creator self-approval denial, catalog listing, native pause, private edit, revision conflict, reapproval, rejection, duplicate, slug conflict, and missing-R2 safety: passed.");
 }
 
 async function acceptBoth(publication, raw, env, db, listingId) {
@@ -163,6 +218,17 @@ async function seedIdentities(raw, auth) {
 function ownerGet() { return new Request("https://example.com/owner/api/creator-reviews", { headers: { cookie: `__Host-trg_session=${OWNER.token}; trg_account_csrf=${OWNER.csrf}` } }); }
 function ownerPost(body, csrf = OWNER.csrf) { return post(body, OWNER.token, csrf); }
 function creatorPost(body) { return post(body, CREATOR.token, CREATOR.csrf); }
+function creatorApi(method, route, body) {
+  return new Request(`https://example.com/api/creator/${route}`, {
+    method,
+    headers: {
+      origin: "https://example.com",
+      cookie: `__Host-trg_session=${CREATOR.token}; trg_account_csrf=${CREATOR.csrf}`,
+      ...(method === "POST" ? { "x-csrf-token": CREATOR.csrf, "content-type": "application/json" } : {})
+    },
+    body: method === "POST" ? JSON.stringify(body || {}) : undefined
+  });
+}
 function post(body, token, csrf) { return new Request("https://example.com/owner/api/creator-reviews", { method: "POST", headers: { origin: "https://example.com", cookie: `__Host-trg_session=${token}; trg_account_csrf=${csrf}`, "x-csrf-token": csrf, "content-type": "application/json" }, body: JSON.stringify(body) }); }
 function applyMigrations(raw) { for (const name of fs.readdirSync(path.join(ROOT, "migrations")).filter(name => name.endsWith(".sql")).sort()) raw.exec(fs.readFileSync(path.join(ROOT, "migrations", name), "utf8")); }
 function load(relative) { return import(`${pathToFileURL(path.join(ROOT, relative)).href}?v=${Date.now()}-${Math.random()}`); }
