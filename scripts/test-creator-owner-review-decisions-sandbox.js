@@ -17,6 +17,7 @@ const OWNER_ID = "owner-open-workbench";
 const NOW_MS = Date.parse("2026-10-18T19:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
 const EXPIRES_AT = "2027-10-18T19:00:00.000Z";
+const COVER_BYTES = Buffer.from([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80]);
 const PRODUCTS = Object.freeze({
   approval: {
     slug: "mock-owner-approval-task4b",
@@ -370,6 +371,20 @@ async function submitProduct({
   );
   assert.equal(response.status, 201);
   const fileId = (await response.json()).file.id;
+
+  const coverForm = new FormData();
+  coverForm.set("purpose", "cover");
+  coverForm.set(
+    "file",
+    new File([COVER_BYTES], `${product.slug}.webp`, { type: "image/webp" })
+  );
+  response = await creatorFiles.handleCreatorFileUpload(
+    creatorFormRequest(`listings/${productId}/files`, coverForm),
+    environment,
+    productId,
+    { database: d1, nowMs: NOW_MS }
+  );
+  assert.equal(response.status, 201);
 
   response = await creatorOperations.handleCreatorRequest(
     creatorJsonRequest(`listings/${productId}/submit`, {

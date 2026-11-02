@@ -61,12 +61,22 @@ export async function handleCreatorFileUpload(
       },
       403,
     );
-  const listing = await db
-    .prepare(
-      `SELECT cl.id,cl.creator_id,cm.permission FROM creator_listings cl JOIN creator_memberships cm ON cm.creator_id=cl.creator_id WHERE cl.id=? AND cm.user_id=?`,
-    )
-    .bind(listingId, session.user.id)
-    .first();
+  let listing;
+  try {
+    listing = await db
+      .prepare(
+        `SELECT cl.id,cl.creator_id,cl.lifecycle_state,cl.publication_state,cl.owner_review_hold,cm.permission FROM creator_listings cl JOIN creator_memberships cm ON cm.creator_id=cl.creator_id WHERE cl.id=? AND cm.user_id=?`,
+      )
+      .bind(listingId, session.user.id)
+      .first();
+  } catch {
+    listing = await db
+      .prepare(
+        `SELECT cl.id,cl.creator_id,cl.lifecycle_state,cl.publication_state,0 owner_review_hold,cm.permission FROM creator_listings cl JOIN creator_memberships cm ON cm.creator_id=cl.creator_id WHERE cl.id=? AND cm.user_id=?`,
+      )
+      .bind(listingId, session.user.id)
+      .first();
+  }
   if (!listing || !["manager", "editor"].includes(listing.permission))
     return json(
       {
@@ -76,6 +86,20 @@ export async function handleCreatorFileUpload(
         },
       },
       403,
+    );
+  if (
+    !["draft", "needs_changes", "paused"].includes(listing.lifecycle_state) &&
+    !(listing.lifecycle_state === "active" && listing.publication_state !== "published") &&
+    Number(listing.owner_review_hold) !== 1
+  )
+    return json(
+      {
+        error: {
+          code: "creator_listing_not_editable",
+          message: "Files cannot change while this submission is under review.",
+        },
+      },
+      409,
     );
   const readiness = await getCreatorOperationalEligibility(
     db,
@@ -130,49 +154,106 @@ export async function handleCreatorFileUpload(
     now = new Date(
       Number.isFinite(options.nowMs) ? options.nowMs : Date.now(),
     ).toISOString();
-  await env.TRG_PRODUCTS.put(key, bytes, {
-    httpMetadata: { contentType: detected },
-    customMetadata: { listingId: listing.id, purpose, scanState: "pending" },
-  });
-  await db.batch([
-    db
-      .prepare(
-        "UPDATE creator_listing_files SET validation_state='superseded',validated_at=? WHERE listing_id=? AND purpose=? AND validation_state IN ('uploaded','validating','accepted')",
-      )
-      .bind(now, listing.id, purpose),
-    db
-      .prepare(
-        "INSERT INTO creator_listing_files(id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,validation_state,uploaded_at) VALUES(?,?,?,?,?,?,?,?,?,'uploaded',?)",
-      )
-      .bind(
-        id,
-        listing.id,
-        listing.creator_id,
+  let writeCompleted = false;
+  try {
+    const write = await env.TRG_PRODUCTS.put(key, bytes, {
+      onlyIf: new Headers({ "if-none-match": "*" }),
+      httpMetadata: { contentType: detected },
+      customMetadata: {
+        listingId: listing.id,
         purpose,
-        String(file.name).slice(0, 255),
-        name,
-        detected,
-        file.size,
-        key,
-        now,
-      ),
-    db
-      .prepare(
-        "INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'creator',?,'file_uploaded',?,?)",
-      )
-      .bind(
-        listing.id,
-        listing.creator_id,
-        session.user.id,
-        JSON.stringify({
-          fileId: id,
+        scanState: "pending",
+        uploadAttemptId: id,
+      },
+    });
+    if (write === null)
+      return json(
+        {
+          error: {
+            code: "creator_file_conflict",
+            message: "The private upload key is already reserved. Try the upload again.",
+          },
+        },
+        409,
+      );
+    writeCompleted = true;
+    await db.batch([
+      db
+        .prepare(
+          "UPDATE creator_listing_files SET validation_state='superseded',validated_at=? WHERE listing_id=? AND purpose=? AND validation_state IN ('uploaded','validating','accepted')",
+        )
+        .bind(now, listing.id, purpose),
+      db
+        .prepare(
+          "INSERT INTO creator_listing_files(id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,validation_state,uploaded_at) VALUES(?,?,?,?,?,?,?,?,?,'uploaded',?)",
+        )
+        .bind(
+          id,
+          listing.id,
+          listing.creator_id,
           purpose,
-          contentType: detected,
-          sizeBytes: file.size,
-        }),
-        now,
-      ),
-  ]);
+          String(file.name).slice(0, 255),
+          name,
+          detected,
+          file.size,
+          key,
+          now,
+        ),
+      db
+        .prepare(
+          "INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,'creator',?,'file_uploaded',?,?)",
+        )
+        .bind(
+          listing.id,
+          listing.creator_id,
+          session.user.id,
+          JSON.stringify({
+            fileId: id,
+            purpose,
+            contentType: detected,
+            sizeBytes: file.size,
+          }),
+          now,
+        ),
+    ]);
+  } catch (error) {
+    let cleaned = !writeCompleted;
+    try {
+      const stored = env.TRG_PRODUCTS.head
+        ? await env.TRG_PRODUCTS.head(key)
+        : writeCompleted
+          ? { customMetadata: { uploadAttemptId: id } }
+          : null;
+      if (stored?.customMetadata?.uploadAttemptId === id && env.TRG_PRODUCTS.delete) {
+        await env.TRG_PRODUCTS.delete(key);
+        cleaned = true;
+      }
+    } catch {
+      cleaned = false;
+    }
+    console.error(
+      JSON.stringify({
+        message: "creator file staging failed",
+        listingId: listing.id,
+        fileId: id,
+        storageCleaned: cleaned,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return json(
+      {
+        error: {
+          code: cleaned
+            ? "creator_file_staging_failed"
+            : "creator_file_cleanup_failed",
+          message: cleaned
+            ? "The private file could not be recorded. Nothing was submitted."
+            : "The private file could not be recorded or safely cleaned up. Owner attention is required.",
+        },
+      },
+      503,
+    );
+  }
   return json(
     { ok: true, file: { id, purpose, filename: name, state: "uploaded" } },
     201,

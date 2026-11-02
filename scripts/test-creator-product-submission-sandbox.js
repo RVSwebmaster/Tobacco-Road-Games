@@ -19,6 +19,7 @@ const PDF_BYTES = Buffer.from(
   "%PDF-1.7\nTobacco Road Games disposable Task 2 submission\n%%EOF",
   "utf8"
 );
+const COVER_BYTES = Buffer.from([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80]);
 
 async function main() {
   const sandboxRoot = fs.mkdtempSync(
@@ -113,9 +114,101 @@ async function main() {
       environment,
       { database: d1, nowMs: NOW_MS }
     );
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error.message, /WebP cover/i);
+    assert.equal(
+      database.prepare("SELECT lifecycle_state FROM creator_listings WHERE id=?").get(productId).lifecycle_state,
+      "draft"
+    );
+
+    const invalidForm = new FormData();
+    invalidForm.set("purpose", "product");
+    invalidForm.set(
+      "file",
+      new File([COVER_BYTES], "not-a-pdf.webp", { type: "image/webp" })
+    );
+    response = await creatorFiles.handleCreatorFileUpload(
+      formRequest(`listings/${productId}/files`, invalidForm),
+      environment,
+      productId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 415);
+
+    response = await creatorFiles.handleCreatorFileUpload(
+      new Request(`https://example.com/api/creator/listings/${productId}/files`, {
+        method: "POST",
+        headers: { origin: "https://example.com" },
+        body: invalidForm
+      }),
+      environment,
+      productId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 401);
+
+    const coverForm = new FormData();
+    coverForm.set("purpose", "cover");
+    coverForm.set(
+      "file",
+      new File([COVER_BYTES], "mock-product-task2.webp", {
+        type: "image/webp"
+      })
+    );
+    response = await creatorFiles.handleCreatorFileUpload(
+      formRequest(`listings/${productId}/files`, coverForm),
+      environment,
+      productId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 201);
+    const coverUploadResult = await response.json();
+    assert.equal(coverUploadResult.file.purpose, "cover");
+
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest("listings", {
+        title: "Duplicate Product Submission Task 2",
+        slug: PRODUCT_SLUG,
+        pricingModel: "fixed",
+        priceCents: 700,
+        mediaType: "digital"
+      }),
+      environment,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 409);
+
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest(`listings/${productId}/submit`, {
+        rightsConfirmed: true,
+        representationConfirmed: true,
+        licensesConfirmed: true
+      }),
+      environment,
+      { database: d1, nowMs: NOW_MS }
+    );
     assert.equal(response.status, 200);
     const submitResult = await response.json();
     assert.deepEqual(submitResult, { ok: true, state: "submitted" });
+
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest(`listings/${productId}/submit`, {
+        rightsConfirmed: true,
+        representationConfirmed: true,
+        licensesConfirmed: true
+      }),
+      environment,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 400);
+
+    response = await creatorFiles.handleCreatorFileUpload(
+      formRequest(`listings/${productId}/files`, coverForm),
+      environment,
+      productId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 409);
 
     const listing = database
       .prepare("SELECT * FROM creator_listings WHERE id=?")
@@ -134,6 +227,8 @@ async function main() {
     );
     assert.equal(listing.listed_price_cents, 700);
     assert.equal(listing.pricing_model, "fixed");
+    assert.equal(listing.minimum_price_cents, null);
+    assert.equal(listing.suggested_price_cents, null);
     assert.equal(listing.media_type, "digital");
     assert.deepEqual(JSON.parse(listing.format_json), ["PDF"]);
     assert.equal(listing.game_system, "System Neutral");
@@ -163,6 +258,11 @@ async function main() {
     const storedBytes = bucket.read(storedFile.quarantine_key);
     assert.deepEqual(storedBytes, PDF_BYTES);
     assert.equal(sha256Bytes(storedBytes), sha256Bytes(PDF_BYTES));
+    const storedCover = database
+      .prepare("SELECT * FROM creator_listing_files WHERE id=?")
+      .get(coverUploadResult.file.id);
+    assert.equal(storedCover.content_type, "image/webp");
+    assert.deepEqual(bucket.read(storedCover.quarantine_key), COVER_BYTES);
 
     response = await creatorOperations.handleCreatorRequest(
       getRequest("listings"),
@@ -195,6 +295,97 @@ async function main() {
         .get(productId, CREATOR_ID).count,
       1
     );
+
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest("listings", {
+        title: "Mock Free Product Task 2",
+        slug: "mock-free-product-task2",
+        shortDescription: "Free pricing test.",
+        longDescription: "Disposable free pricing fixture.",
+        pricingModel: "free",
+        mediaType: "digital",
+        format: ["PDF"],
+        gameSystem: "System Neutral",
+        genre: "test"
+      }),
+      environment,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 201);
+    const freeId = (await response.json()).listing.id;
+    const freeListing = database
+      .prepare("SELECT pricing_model,listed_price_cents FROM creator_listings WHERE id=?")
+      .get(freeId);
+    assert.equal(freeListing.pricing_model, "free");
+    assert.equal(freeListing.listed_price_cents, 0);
+
+    const keysBeforeFailedCommit = bucket.keys();
+    const rollbackForm = new FormData();
+    rollbackForm.set("purpose", "cover");
+    rollbackForm.set(
+      "file",
+      new File([COVER_BYTES], "rollback-cover.webp", { type: "image/webp" })
+    );
+    const failingD1 = {
+      raw: database,
+      prepare: d1.prepare,
+      async batch() {
+        throw new Error("intentional D1 commit failure");
+      }
+    };
+    response = await creatorFiles.handleCreatorFileUpload(
+      formRequest(`listings/${freeId}/files`, rollbackForm),
+      { TRG_ORDERS: failingD1, TRG_PRODUCTS: bucket },
+      freeId,
+      { database: failingD1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 503);
+    assert.deepEqual(bucket.keys(), keysBeforeFailedCommit);
+    assert.equal(
+      database.prepare("SELECT COUNT(*) count FROM creator_listing_files WHERE listing_id=?").get(freeId).count,
+      0
+    );
+
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest("listings", {
+        title: "Mock PWYW Product Task 2",
+        slug: "mock-pwyw-product-task2",
+        shortDescription: "PWYW pricing test.",
+        longDescription: "Disposable PWYW pricing fixture.",
+        pricingModel: "pwyw",
+        minimumPriceCents: 0,
+        suggestedPriceCents: 500,
+        mediaType: "digital",
+        format: ["PDF"],
+        gameSystem: "System Neutral",
+        genre: "test"
+      }),
+      environment,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 201);
+    const pwywId = (await response.json()).listing.id;
+    const pwywListing = database
+      .prepare("SELECT pricing_model,listed_price_cents,minimum_price_cents,suggested_price_cents FROM creator_listings WHERE id=?")
+      .get(pwywId);
+    assert.equal(pwywListing.pricing_model, "pwyw");
+    assert.equal(pwywListing.listed_price_cents, 500);
+    assert.equal(pwywListing.minimum_price_cents, 0);
+    assert.equal(pwywListing.suggested_price_cents, 500);
+
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest("listings", {
+        title: "Invalid PWYW Product Task 2",
+        slug: "invalid-pwyw-product-task2",
+        pricingModel: "pwyw",
+        minimumPriceCents: 600,
+        suggestedPriceCents: 500,
+        mediaType: "digital"
+      }),
+      environment,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 400);
     assert.equal(
       database
         .prepare(
@@ -204,7 +395,7 @@ async function main() {
       1
     );
 
-    cleanupMockData(database, productId);
+    cleanupMockData(database);
     const remaining = countRemainingMockData(database, productId);
     assert.deepEqual(remaining, {
       users: 0,
@@ -230,9 +421,12 @@ async function main() {
     console.log(`Creator ID: ${CREATOR_ID}`);
     console.log(`Product ID: ${productId}`);
     console.log("Listing status: submitted / not_approved");
-    console.log("File status: uploaded");
+    console.log("PDF and WebP cover status: uploaded");
     console.log(`PDF SHA-256: ${sha256Bytes(PDF_BYTES)}`);
     console.log("Public catalog entry: absent");
+    console.log("Fixed, free, and PWYW pricing validation: passed");
+    console.log("Invalid, duplicate, unauthorized, and repeat submission checks: passed");
+    console.log("Failed D1 commit R2 rollback: passed");
     console.log("Disposable records remaining: 0");
     console.log("Sandbox removed: true");
     console.log("Repository catalog unchanged: true");
@@ -347,21 +541,21 @@ async function createEligibleMockCreator(database, accountAuth) {
     .run(CREATOR_ID, NOW);
 }
 
-function cleanupMockData(database, productId) {
+function cleanupMockData(database) {
   database.exec("BEGIN;");
   try {
     database
-      .prepare("DELETE FROM creator_listing_declarations WHERE listing_id=?")
-      .run(productId);
+      .prepare("DELETE FROM creator_listing_declarations WHERE creator_id=?")
+      .run(CREATOR_ID);
     database
-      .prepare("DELETE FROM creator_publication_audit WHERE listing_id=?")
-      .run(productId);
+      .prepare("DELETE FROM creator_publication_audit WHERE creator_id=?")
+      .run(CREATOR_ID);
     database
-      .prepare("DELETE FROM creator_listing_files WHERE listing_id=?")
-      .run(productId);
+      .prepare("DELETE FROM creator_listing_files WHERE creator_id=?")
+      .run(CREATOR_ID);
     database
-      .prepare("DELETE FROM creator_listings WHERE id=?")
-      .run(productId);
+      .prepare("DELETE FROM creator_listings WHERE creator_id=?")
+      .run(CREATOR_ID);
     database
       .prepare("DELETE FROM creator_account_notices WHERE creator_id=?")
       .run(CREATOR_ID);
@@ -408,7 +602,7 @@ function countRemainingMockData(database, productId) {
       "creator_id",
       CREATOR_ID
     ),
-    listings: count(database, "creator_listings", "id", productId),
+    listings: count(database, "creator_listings", "creator_id", CREATOR_ID),
     files: count(
       database,
       "creator_listing_files",
@@ -439,15 +633,34 @@ function count(database, table, column, value) {
 }
 
 function createLocalBucket(root) {
+  const metadata = new Map();
   return {
-    async put(key, value) {
+    async put(key, value, options = {}) {
       const target = storagePath(root, key);
+      if (options.onlyIf?.get("if-none-match") === "*" && fs.existsSync(target))
+        return null;
       fs.mkdirSync(path.dirname(target), { recursive: true });
       const bytes =
         value instanceof Uint8Array
           ? Buffer.from(value)
           : Buffer.from(await new Response(value).arrayBuffer());
       fs.writeFileSync(target, bytes);
+      metadata.set(key, options.customMetadata || {});
+      return { key };
+    },
+    async head(key) {
+      const target = storagePath(root, key);
+      return fs.existsSync(target)
+        ? { size: fs.statSync(target).size, customMetadata: metadata.get(key) || {} }
+        : null;
+    },
+    async delete(key) {
+      const target = storagePath(root, key);
+      if (fs.existsSync(target)) fs.rmSync(target);
+      metadata.delete(key);
+    },
+    keys() {
+      return [...metadata.keys()].sort();
     },
     read(key) {
       return fs.readFileSync(storagePath(root, key));

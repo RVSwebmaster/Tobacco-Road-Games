@@ -51,6 +51,7 @@ import {
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
+const PRICING_MODELS = new Set(["fixed", "free", "pwyw"]);
 const PROFILE_TEMPLATES = new Set(["catalog", "bookshelf"]);
 
 export async function handleCreatorRequest(request, env = {}, options = {}) {
@@ -538,12 +539,18 @@ async function createDraft(request, db, creator) {
     mediaType = String(body.mediaType || "");
   if (!title || !slug || !MEDIA_TYPES.has(mediaType))
     return invalid("Title, slug, or media type is invalid.");
+  let pricing;
+  try {
+    pricing = normalizeListingPricing(body);
+  } catch (error) {
+    return invalid(error.message);
+  }
   const now = new Date().toISOString(),
     id = crypto.randomUUID();
   try {
     await db
       .prepare(
-        `INSERT INTO creator_listings(id,creator_id,slug,title,short_description,long_description,lifecycle_state,listed_price_cents,media_type,format_json,game_system,genre,discovery_json,cover_image,created_at,updated_at) VALUES(?,?,?,?,?,?,'draft',?,?,?,?,?,?,?, ?,?)`,
+        `INSERT INTO creator_listings(id,creator_id,slug,title,short_description,long_description,lifecycle_state,listed_price_cents,pricing_model,suggested_price_cents,minimum_price_cents,media_type,format_json,game_system,genre,discovery_json,cover_image,created_at,updated_at) VALUES(?,?,?,?,?,?,'draft',?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .bind(
         id,
@@ -552,7 +559,10 @@ async function createDraft(request, db, creator) {
         title,
         bounded(body.shortDescription, 500),
         bounded(body.longDescription, 10000),
-        money(body.priceCents),
+        pricing.priceCents,
+        pricing.pricingModel,
+        pricing.suggestedPriceCents,
+        pricing.minimumPriceCents,
         mediaType,
         JSON.stringify(list(body.format)),
         bounded(body.gameSystem, 120),
@@ -596,12 +606,18 @@ async function updateListing(request, db, creator, id) {
         ? current.media_type
         : String(body.mediaType);
   if (!MEDIA_TYPES.has(mediaType)) return invalid("Media type is invalid.");
+  let pricing;
+  try {
+    pricing = normalizeListingPricing(body, current);
+  } catch (error) {
+    return invalid(error.message);
+  }
   const title =
     body.title === undefined ? current.title : bounded(body.title, 160);
   if (!title) return invalid("Title is required.");
   await db
     .prepare(
-      `UPDATE creator_listings SET title=?,short_description=?,long_description=?,listed_price_cents=?,sale_price_cents=?,sale_start=?,sale_end=?,media_type=?,format_json=?,game_system=?,genre=?,discovery_json=?,cover_image=?,updated_at=? WHERE id=? AND creator_id=?`,
+      `UPDATE creator_listings SET title=?,short_description=?,long_description=?,listed_price_cents=?,pricing_model=?,suggested_price_cents=?,minimum_price_cents=?,sale_price_cents=?,sale_start=?,sale_end=?,media_type=?,format_json=?,game_system=?,genre=?,discovery_json=?,cover_image=?,updated_at=? WHERE id=? AND creator_id=?`,
     )
     .bind(
       title,
@@ -611,9 +627,10 @@ async function updateListing(request, db, creator, id) {
       body.longDescription === undefined
         ? current.long_description
         : bounded(body.longDescription, 10000),
-      body.priceCents === undefined
-        ? current.listed_price_cents
-        : money(body.priceCents),
+      pricing.priceCents,
+      pricing.pricingModel,
+      pricing.suggestedPriceCents,
+      pricing.minimumPriceCents,
       body.salePriceCents === undefined
         ? current.sale_price_cents
         : money(body.salePriceCents),
@@ -663,6 +680,11 @@ async function changeListingState(request, db, creator, id, state) {
     return invalid("Only a pending submission can be withdrawn.");
   const now = new Date().toISOString();
   if (state === "submitted") {
+    try {
+      await assertCreatorSubmissionReady(db, current);
+    } catch (error) {
+      return invalid(error.message);
+    }
     let schema = true;
     try {
       await db
@@ -978,6 +1000,14 @@ function publicListing(row) {
       current?.effectivePriceCents ??
       current?.listedPriceCents ??
       null,
+    pricingModel: row.pricing_model || "fixed",
+    suggestedPriceCents: row.suggested_price_cents ?? null,
+    minimumPriceCents: row.minimum_price_cents ?? null,
+    shortDescription: row.short_description || "",
+    longDescription: row.long_description || "",
+    formats: JSON.parse(row.format_json || "[]"),
+    gameSystem: row.game_system || "",
+    genre: row.genre || "",
     salePriceCents: row.sale_price_cents,
     saleStart: row.sale_start,
     saleEnd: row.sale_end,
@@ -1052,6 +1082,108 @@ function safeDiscovery(value) {
       .filter((key) => value[key] !== undefined)
       .map((key) => [key, value[key]]),
   );
+}
+function normalizeListingPricing(body, current = null) {
+  const previousModel = current?.pricing_model || "fixed";
+  const pricingModel = String(body.pricingModel ?? previousModel);
+  if (!PRICING_MODELS.has(pricingModel))
+    throw new Error("Choose fixed, free, or Pay What You Want pricing.");
+  const changedModel = Boolean(current && pricingModel !== previousModel);
+  if (pricingModel === "free") {
+    return {
+      pricingModel,
+      priceCents: 0,
+      suggestedPriceCents: null,
+      minimumPriceCents: null,
+    };
+  }
+  if (pricingModel === "pwyw") {
+    const suggestedPriceCents = readMoneyField(
+      body,
+      "suggestedPriceCents",
+      changedModel ? null : current?.suggested_price_cents ?? null,
+    );
+    const minimumPriceCents = readMoneyField(
+      body,
+      "minimumPriceCents",
+      changedModel ? null : current?.minimum_price_cents ?? null,
+    );
+    if (
+      suggestedPriceCents !== null &&
+      minimumPriceCents !== null &&
+      suggestedPriceCents < minimumPriceCents
+    )
+      throw new Error("PWYW suggested price must be at or above its minimum.");
+    return {
+      pricingModel,
+      priceCents: suggestedPriceCents,
+      suggestedPriceCents,
+      minimumPriceCents,
+    };
+  }
+  const priceCents = readMoneyField(
+    body,
+    "priceCents",
+    changedModel ? null : current?.listed_price_cents ?? null,
+  );
+  if (priceCents === 0)
+    throw new Error("Fixed-price products require a positive price. Choose Free for a zero-price product.");
+  return {
+    pricingModel,
+    priceCents,
+    suggestedPriceCents: null,
+    minimumPriceCents: null,
+  };
+}
+function readMoneyField(body, key, fallback) {
+  if (body[key] === undefined) return fallback;
+  const value = money(body[key]);
+  if (value === null && body[key] !== null && body[key] !== "")
+    throw new Error(`${key} must be a whole, nonnegative number of cents.`);
+  return value;
+}
+async function assertCreatorSubmissionReady(db, listing) {
+  const errors = [];
+  const formats = JSON.parse(listing.format_json || "[]");
+  if (!bounded(listing.title, 160)) errors.push("a title");
+  if (!bounded(listing.short_description, 500)) errors.push("a short description");
+  if (!bounded(listing.long_description, 10000)) errors.push("a full description");
+  if (!MEDIA_TYPES.has(listing.media_type) || !listing.media_type)
+    errors.push("a media type");
+  if (!formats.length) errors.push("at least one product format");
+  if (["digital", "hybrid"].includes(listing.media_type) && !formats.some((value) => String(value).toLowerCase() === "pdf"))
+    errors.push("PDF as a product format");
+  if (!bounded(listing.game_system, 120)) errors.push("a game system");
+  if (!bounded(listing.genre, 80)) errors.push("a genre");
+  try {
+    const pricing = normalizeListingPricing({}, listing);
+    if (pricing.pricingModel === "fixed" && !Number.isInteger(pricing.priceCents))
+      errors.push("a fixed price");
+    if (
+      pricing.pricingModel === "pwyw" &&
+      (!Number.isInteger(pricing.minimumPriceCents) ||
+        !Number.isInteger(pricing.suggestedPriceCents))
+    )
+      errors.push("PWYW minimum and suggested prices");
+  } catch (error) {
+    errors.push(error.message);
+  }
+  const files = await all(
+    db
+      .prepare(
+        "SELECT purpose,content_type FROM creator_listing_files WHERE listing_id=? AND creator_id=? AND validation_state IN ('uploaded','validating','accepted')",
+      )
+      .bind(listing.id, listing.creator_id),
+  );
+  if (!files.some((file) => file.purpose === "cover" && file.content_type === "image/webp"))
+    errors.push("a private WebP cover upload");
+  if (
+    ["digital", "hybrid"].includes(listing.media_type) &&
+    !files.some((file) => file.purpose === "product" && file.content_type === "application/pdf")
+  )
+    errors.push("a private PDF product upload");
+  if (errors.length)
+    throw new Error(`Complete the listing before review: ${errors.join(", ")}.`);
 }
 function validLinks(value) {
   if (value === undefined) return [];

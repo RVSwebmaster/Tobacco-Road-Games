@@ -20,6 +20,7 @@ const PDF_BYTES = Buffer.from(
   "%PDF-1.7\nTobacco Road Games disposable Task 4A review file\n%%EOF",
   "utf8"
 );
+const COVER_BYTES = Buffer.from([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80]);
 
 async function main() {
   const sandboxRoot = fs.mkdtempSync(
@@ -97,6 +98,22 @@ async function main() {
     assert.equal(response.status, 201);
     fileId = (await response.json()).file.id;
 
+    const coverForm = new FormData();
+    coverForm.set("purpose", "cover");
+    coverForm.set(
+      "file",
+      new File([COVER_BYTES], "mock-owner-review-task4a.webp", {
+        type: "image/webp"
+      })
+    );
+    response = await creatorFiles.handleCreatorFileUpload(
+      creatorFormRequest(`listings/${productId}/files`, coverForm),
+      environment,
+      productId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 201);
+
     response = await creatorOperations.handleCreatorRequest(
       creatorJsonRequest(`listings/${productId}/submit`, {
         rightsConfirmed: true,
@@ -157,12 +174,12 @@ async function main() {
     assert.equal(inspection.listing.id, productId);
     assert.equal(inspection.listing.creator_id, CREATOR_ID);
     assert.equal(inspection.listing.lifecycle_state, "submitted");
-    assert.equal(inspection.files.length, 1);
-    assert.equal(inspection.files[0].id, fileId);
-    assert.equal(inspection.files[0].creator_id, CREATOR_ID);
-    assert.equal(inspection.files[0].storageState, "present");
-    assert.equal(inspection.files[0].secureDeliveryState, "not_current");
-    assert.equal(inspection.files[0].quarantine_key, undefined);
+    assert.equal(inspection.files.length, 2);
+    const inspectedProduct = inspection.files.find((item) => item.id === fileId);
+    assert.equal(inspectedProduct.creator_id, CREATOR_ID);
+    assert.equal(inspectedProduct.storageState, "present");
+    assert.equal(inspectedProduct.secureDeliveryState, "not_current");
+    assert.equal(inspectedProduct.quarantine_key, undefined);
 
     response = await ownerListingFiles.handleOwnerListingFiles(
       ownerRequest(`/owner/api/listing-files?download=${fileId}`),
@@ -191,7 +208,7 @@ async function main() {
       assert.equal(audit.actor_type, "operator");
       assert.equal(audit.actor_id, OWNER_ID);
     }
-    assert.equal(JSON.parse(reviewAudits[0].context_json).fileCount, 1);
+    assert.equal(JSON.parse(reviewAudits[0].context_json).fileCount, 2);
     assert.equal(JSON.parse(reviewAudits[1].context_json).fileId, fileId);
     assert.equal(
       JSON.parse(reviewAudits[1].context_json).validationState,

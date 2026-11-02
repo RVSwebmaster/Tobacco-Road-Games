@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>Creator Dashboard | Tobacco Road Games</title>
     <link rel="stylesheet" href="/styles.css" />
-    <script src="/assets/js/creator-dashboard.js?v=20260907-review-hold" defer></script>
+    <script src="/assets/js/creator-dashboard.js?v=20261101-task2oa" defer></script>
   </head>
   <body class="view-section">
     <div class="page-shell">
@@ -220,21 +220,42 @@
                 <textarea
                   name="shortDescription"
                   maxlength="500"
+                  required
                 ></textarea></label
               ><label
+                >Full description
+                <textarea
+                  name="longDescription"
+                  maxlength="10000"
+                  required
+                ></textarea></label
+              ><label
+                >Pricing
+                <select name="pricingModel" required>
+                  <option value="fixed">Fixed price</option>
+                  <option value="free">Free</option>
+                  <option value="pwyw">Pay What You Want</option>
+                </select></label
+              ><label
+                data-fixed-price
                 >Price in cents
-                <input name="priceCents" type="number" min="0" /></label
+                <input name="priceCents" type="number" min="1" step="1" /></label
+              ><label data-pwyw-price hidden
+                >PWYW minimum in cents
+                <input name="minimumPriceCents" type="number" min="0" step="1" /></label
+              ><label data-pwyw-price hidden
+                >PWYW suggested price in cents
+                <input name="suggestedPriceCents" type="number" min="0" step="1" /></label
               ><label
                 >Media type
-                <select name="mediaType">
-                  <option value="">Not set</option>
+                <select name="mediaType" required>
                   <option value="digital">Digital</option>
                   <option value="physical">Physical</option>
                   <option value="hybrid">Hybrid</option>
                 </select></label
-              ><label>Format <input name="format" placeholder="PDF" /></label
-              ><label>Game system <input name="gameSystem" /></label
-              ><label>Genre <input name="genre" /></label
+              ><label>Format <input name="format" placeholder="PDF" value="PDF" required /></label
+              ><label>Game system <input name="gameSystem" required /></label
+              ><label>Genre <input name="genre" required /></label
               ><button class="button button--primary">Save Draft</button>
             </form>
             <p id="creator-draft-status" role="status"></p>
@@ -253,7 +274,7 @@
                   <option value="preview">Preview image (WebP)</option>
                   <option value="supporting">Supporting file</option>
                 </select></label
-              ><label>File <input name="file" type="file" required /></label
+              ><label>File <input name="file" type="file" accept="application/pdf,image/webp,image/png,image/jpeg" required /></label
               ><button class="button button--primary">
                 Upload for Validation
               </button>

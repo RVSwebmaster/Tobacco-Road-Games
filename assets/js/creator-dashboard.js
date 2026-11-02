@@ -333,7 +333,14 @@
         const title = document.createElement("h3");
         title.textContent = item.title;
         const meta = document.createElement("p");
-        meta.textContent = `${item.lifecycleState} · publication ${item.publicationState} · ${item.mediaType || "media unset"} · ${item.priceCents == null ? "price unset" : `$${(item.priceCents / 100).toFixed(2)}`}`;
+        const price = item.pricingModel === "free"
+          ? "free"
+          : item.pricingModel === "pwyw"
+            ? `PWYW · minimum $${((item.minimumPriceCents || 0) / 100).toFixed(2)} · suggested ${item.suggestedPriceCents == null ? "unset" : `$${(item.suggestedPriceCents / 100).toFixed(2)}`}`
+            : item.priceCents == null
+              ? "price unset"
+              : `$${(item.priceCents / 100).toFixed(2)}`;
+        meta.textContent = `${item.lifecycleState} · publication ${item.publicationState} · ${item.mediaType || "media unset"} · ${price}`;
         body.append(title, meta);
         if (item.ownerReviewHold) {
           const hold = document.createElement("p");
@@ -518,8 +525,11 @@
         await api("listings", {
           title: form.title.value,
           shortDescription: form.shortDescription.value,
-          priceCents:
-            form.priceCents.value === "" ? null : Number(form.priceCents.value),
+          longDescription: form.longDescription.value,
+          pricingModel: form.pricingModel.value,
+          priceCents: form.pricingModel.value === "fixed" ? Number(form.priceCents.value) : undefined,
+          minimumPriceCents: form.pricingModel.value === "pwyw" ? Number(form.minimumPriceCents.value) : undefined,
+          suggestedPriceCents: form.pricingModel.value === "pwyw" ? Number(form.suggestedPriceCents.value) : undefined,
           mediaType: form.mediaType.value,
           format: form.format.value ? [form.format.value] : [],
           gameSystem: form.gameSystem.value,
@@ -534,6 +544,18 @@
           error.message;
       }
     });
+  const creatorDraftForm = document.querySelector("#creator-draft-form");
+  creatorDraftForm.pricingModel.addEventListener("change", () => {
+    const model = creatorDraftForm.pricingModel.value;
+    for (const label of creatorDraftForm.querySelectorAll("[data-fixed-price]"))
+      label.hidden = model !== "fixed";
+    for (const label of creatorDraftForm.querySelectorAll("[data-pwyw-price]"))
+      label.hidden = model !== "pwyw";
+    creatorDraftForm.priceCents.required = model === "fixed";
+    creatorDraftForm.minimumPriceCents.required = model === "pwyw";
+    creatorDraftForm.suggestedPriceCents.required = model === "pwyw";
+  });
+  creatorDraftForm.pricingModel.dispatchEvent(new Event("change"));
   for (const button of document.querySelectorAll(
     "[data-preferred-balance-plan]",
   ))
