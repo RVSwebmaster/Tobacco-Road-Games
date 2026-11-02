@@ -1,4 +1,4 @@
-import { getProductBySlug, listProducts, ProductCatalogError } from "./product-catalog-d1.mjs";
+import { getProductById, getProductBySlug, listProducts, ProductCatalogError } from "./product-catalog-d1.mjs";
 import { jsonResponse } from "./owner-runtime.mjs";
 
 const PUBLIC_METADATA = [
@@ -65,6 +65,13 @@ export async function getApprovedPublicProductBySlug(database, slug) {
   return creator ? publicProduct(product, creator) : null;
 }
 
+export async function getApprovedPublicProductById(database, id) {
+  const product = await getProductById(database, id);
+  if (!product || product.publicationState !== "published") return null;
+  const creator = await getApprovedCreator(database, product.creatorId);
+  return creator ? publicProduct(product, creator) : null;
+}
+
 export function publicProduct(product, creator = {}) {
   const metadata = {};
   for (const key of PUBLIC_METADATA) {
@@ -112,7 +119,7 @@ export function publicProduct(product, creator = {}) {
 
 async function getApprovedCreator(database, creatorId) {
   return database.prepare(`SELECT id,slug,display_name FROM marketplace_creators
-    WHERE id=? AND marketplace_status='approved' AND closure_state='active'`)
+    WHERE id=? AND marketplace_status='approved' AND registration_status='active' AND closure_state='active'`)
     .bind(creatorId).first();
 }
 

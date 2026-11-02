@@ -19,7 +19,10 @@ async function main() {
       request({ featuredSlug: "fixture-alpha", workInProgressSlugs: ["fixture-beta"] }),
       { TRG_PRODUCTS: { put: forbidden } }
     );
-    await assertUnavailable(homepageResponse);
+    assert.equal(homepageResponse.status, 503);
+    const homepageBody = await homepageResponse.json();
+    assert.equal(homepageBody.code, "bindings_unavailable");
+    assert.notEqual(homepageBody.ok, true);
 
     const pricingResponse = await pricing.handleOwnerPricingPublishRequest(
       request({ slug: "fixture-alpha", currency: "USD", price: "5.00", priceCents: 500 }),

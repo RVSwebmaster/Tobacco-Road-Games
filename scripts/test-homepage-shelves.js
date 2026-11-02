@@ -135,10 +135,14 @@ function runtimeProduct(slug, cents, overrides = {}) {
 function testClientWiring() {
   const client = fs.readFileSync(path.join(ROOT, "assets", "js", "homepage-shelves.js"), "utf8");
   const preview = fs.readFileSync(path.join(ROOT, "assets", "js", "guest-product-preview.js"), "utf8");
+  const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.match(client, /\/api\/homepage-shelves/);
+  assert.ok(routes.include.includes("/api/homepage-shelves"), "The public homepage shelf Function must be included in Pages routing.");
   assert.match(client, /slice\(0, 43\)/);
   assert.match(client, /trg:homepage-shelves-updated/);
   assert.match(client, /dataset\.guestProductPreview/);
+  assert.match(client, /readExistingProducts/);
+  assert.match(client, /suppressedSlugs/);
   assert.match(preview, /guestPreviewBound/);
   assert.match(preview, /realProductLink/);
   assert.match(preview, /trg:homepage-shelves-updated/);
