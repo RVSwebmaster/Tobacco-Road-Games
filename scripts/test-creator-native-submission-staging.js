@@ -1,4 +1,4 @@
-// Staging-only Task 2O-A proof through the actual Creator and Owner review interfaces.
+// Staging-only Task 2O-B proof through the actual Creator and Owner review interfaces.
 const assert = require("node:assert/strict");
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
@@ -28,9 +28,10 @@ const ownerCsrfToken = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/
 const title = `Disposable Creator Submission ${suffix.slice(0, 8)}`;
 const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const freeTitle = `Disposable Free Creator ${suffix.slice(0, 8)}`;
+const freeSlug = freeTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const pwywTitle = `Disposable PWYW Creator ${suffix.slice(0, 8)}`;
 const WEBP = Buffer.from("UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA", "base64");
-const PDF = Buffer.from("%PDF-1.7\nTask 2O-A disposable Creator product\n%%EOF", "utf8");
+const PDF = Buffer.from("%PDF-1.7\nTask 2O-B disposable Creator product\n%%EOF", "utf8");
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
 function cli(...args) {
@@ -98,7 +99,7 @@ function findBrowserExecutable() {
     "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
     "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"].filter(Boolean);
   const executable = candidates.find(candidate => fs.existsSync(candidate));
-  assert.ok(executable, "A Chromium browser is required for Task 2O-A staging verification.");
+  assert.ok(executable, "A Chromium browser is required for Task 2O-B staging verification.");
   return executable;
 }
 async function getOpenPort() {
@@ -218,6 +219,7 @@ async function main() {
   assert.equal(info.uuid, DB_ID);
   assert.equal(query("SELECT setting_value FROM runtime_settings WHERE setting_key='store_state'").results[0].setting_value, "CLOSED");
   assert.equal(query("SELECT COUNT(*) n FROM d1_migrations WHERE name='064_creator_native_submission_pricing.sql'").results[0].n, 1);
+  assert.equal(query("SELECT COUNT(*) n FROM d1_migrations WHERE name='065_creator_native_review_publication.sql'").results[0].n, 1);
   const now = new Date();
   const expires = new Date(now.getTime() + 45 * 60_000).toISOString();
   query(`INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES
@@ -271,7 +273,7 @@ async function main() {
 
     await fillDraft(cdp, {
       title, shortDescription: "Disposable native Creator submission.",
-      longDescription: "This product exists only for the Task 2O-A staging verification.",
+      longDescription: "This product exists only for the Task 2O-B staging verification.",
       pricingModel: "fixed", priceCents: "725", mediaType: "digital", format: "PDF",
       gameSystem: "System Neutral", genre: "test"
     });
@@ -280,6 +282,7 @@ async function main() {
     assert.ok(listing);
     assert.equal(listing.listed_price_cents, 725);
     assert.equal(listing.pricing_model, "fixed");
+    await waitFor(cdp, `Boolean(document.querySelector('#creator-file-form [name="listingId"] option[value="${listing.id}"]'))`, "Creator upload selector did not refresh with the new listing.");
     console.log(`Creator UI: created fixed-price draft ${listing.id}.`);
 
     await uploadFromUi(cdp, listing.id, "product", webpPath);
@@ -332,6 +335,21 @@ async function main() {
     await waitFor(cdp, "document.getElementById('creator-draft-status').textContent === 'Draft created.'", "Free draft was not created.");
     const free = query(`SELECT pricing_model,listed_price_cents FROM creator_listings WHERE creator_id=${sql(creatorId)} AND title=${sql(freeTitle)}`).results[0];
     assert.equal(free.pricing_model, "free"); assert.equal(free.listed_price_cents, 0);
+    const freeListing = query(`SELECT id FROM creator_listings WHERE creator_id=${sql(creatorId)} AND title=${sql(freeTitle)}`).results[0];
+    await waitFor(cdp, `Boolean(document.querySelector('#creator-file-form [name="listingId"] option[value="${freeListing.id}"]'))`, "Creator upload selector did not refresh with the free listing.");
+    await uploadFromUi(cdp, freeListing.id, "product", pdfPath);
+    await waitFor(cdp, "document.getElementById('creator-file-status').textContent.includes('uploaded privately')", "Free-product PDF upload did not complete.");
+    await uploadFromUi(cdp, freeListing.id, "cover", webpPath);
+    await waitFor(cdp, "document.getElementById('creator-file-status').textContent.includes('uploaded privately')", "Free-product cover upload did not complete.");
+    const freeFiles = query(`SELECT quarantine_key FROM creator_listing_files WHERE listing_id=${sql(freeListing.id)}`).results;
+    objectKeys.push(...freeFiles.map(file => file.quarantine_key));
+    const freeSubmit = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#creator-listing-list article')].find(node => node.querySelector('h3')?.textContent === ${JSON.stringify(freeTitle)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Submit for Review');
+      if (!button) return 'missing'; window.confirm = () => true; button.click(); return 'clicked';
+    })()`);
+    assert.equal(freeSubmit, "clicked");
+    await waitFor(cdp, `document.getElementById('creator-listing-list').innerText.includes(${JSON.stringify(freeTitle)}) && document.getElementById('creator-listing-list').innerText.includes('submitted · publication not_approved')`, "Free product did not enter review.");
 
     await fillDraft(cdp, {
       title: pwywTitle, shortDescription: "Disposable PWYW product.", longDescription: "Task 2O-A PWYW pricing fixture.",
@@ -356,17 +374,102 @@ async function main() {
     await navigate(cdp, `${ORIGIN}/owner/creator-reviews.html`);
     await waitFor(cdp, `document.getElementById('review-queue').innerText.includes(${JSON.stringify(title)})`, "Owner review UI did not show the Creator submission.");
     const ownerReviewText = await evaluate(cdp, `([...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(title)}) || {}).innerText || ''`);
-    assert.match(ownerReviewText, /review submitted/);
-    assert.match(ownerReviewText, /publication not_approved/);
+    assert.match(ownerReviewText, /Review: submitted/);
+    assert.match(ownerReviewText, /publication: not_approved/);
     assert.match(ownerReviewText, /product:.*uploaded/i);
     assert.match(ownerReviewText, /cover:.*uploaded/i);
-    assert.match(ownerReviewText, /Compliance Check Passed/);
-    console.log("Owner review UI: authenticated Owner identity saw metadata, both private files, and the existing approval controls.");
+    assert.match(ownerReviewText, /Approve & Publish/);
+    console.log("Owner review UI: authenticated Owner identity saw complete metadata, pricing, both private files, and native publication controls.");
+
+    for (let accepted = 1; accepted <= 2; accepted += 1) {
+      const clicked = await evaluate(cdp, `(() => {
+        const card = [...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(title)});
+        const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Accept File');
+        if (!button) return 'missing'; button.click(); return 'clicked';
+      })()`);
+      assert.equal(clicked, "clicked");
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        if (query(`SELECT COUNT(*) n FROM creator_listing_files WHERE listing_id=${sql(listing.id)} AND validation_state='accepted'`).results[0].n === accepted) break;
+        await delay(100);
+      }
+      await waitFor(cdp, `([...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(title)}) || {}).innerText.includes('accepted')`, "Owner file acceptance was not reflected in the UI.");
+    }
+    assert.equal(query(`SELECT revision FROM creator_listings WHERE id=${sql(listing.id)}`).results[0].revision, 3);
+
+    response = await fetch(`${ORIGIN}/owner/api/creator-reviews`, {
+      method: "POST", headers: { ...authHeaders(ownerSessionToken, ownerCsrfToken), "content-type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id, expectedRevision: 2, action: "approve" })
+    });
+    assert.equal(response.status, 409);
+    response = await fetch(`${ORIGIN}/owner/api/creator-reviews`, {
+      method: "POST", headers: { ...authHeaders(), "content-type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id, expectedRevision: 3, action: "approve" })
+    });
+    assert.equal(response.status, 403);
+    console.log("Failure handling: stale approval returned 409; Creator self-approval returned 403.");
+
+    const publishClick = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(title)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Approve & Publish');
+      if (!button || button.disabled) return 'missing'; button.click(); return 'clicked';
+    })()`);
+    assert.equal(publishClick, "clicked");
+    await waitFor(cdp, `document.getElementById('review-status').textContent.includes('/store/products/${slug}/')`, "Owner UI did not report native publication success.");
+    const published = query(`SELECT id,slug,title,creator_id,publication_state,price_cents,pricing_model,cover_r2_key,delivery_r2_key FROM marketplace_products WHERE id=${sql(listing.id)}`).results[0];
+    assert.equal(published.publication_state, "published");
+    assert.equal(published.creator_id, creatorId);
+    assert.equal(published.price_cents, 725);
+    assert.ok(objectKeys.includes(published.cover_r2_key));
+    assert.ok(objectKeys.includes(published.delivery_r2_key));
+    response = await fetch(`${ORIGIN}/api/catalog?slug=${encodeURIComponent(slug)}`);
+    assert.equal(response.status, 200);
+    const publicProduct = (await response.json()).product;
+    assert.equal(publicProduct.title, title);
+    assert.equal(publicProduct.creatorName, "Task 2O-A Creator");
+    assert.equal(publicProduct.priceCents, 725);
+    assert.equal(JSON.stringify(publicProduct).includes("creator-quarantine/"), false);
+    response = await fetch(`${ORIGIN}${publicProduct.coverUrl}`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), WEBP);
+    await navigate(cdp, `${ORIGIN}${publicProduct.detailUrl}`);
+    await waitFor(cdp, `document.body.innerText.includes(${JSON.stringify(title)}) && document.body.innerText.includes('$7.25')`, "Published Creator product did not render on the storefront.");
+    console.log("Approval: D1 transitioned to published, public catalog/detail appeared immediately, and the R2 cover loaded without redeployment.");
+
+    response = await fetch(`${ORIGIN}/owner/api/creator-reviews`, {
+      method: "POST", headers: { ...authHeaders(ownerSessionToken, ownerCsrfToken), "content-type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id, expectedRevision: 3, action: "approve" })
+    });
+    assert.equal(response.status, 409);
+    assert.equal(query(`SELECT COUNT(*) n FROM marketplace_products WHERE id=${sql(listing.id)}`).results[0].n, 1);
+
+    await navigate(cdp, `${ORIGIN}/owner/creator-reviews.html`);
+    await waitFor(cdp, `document.getElementById('review-queue').innerText.includes(${JSON.stringify(freeTitle)})`, "Owner UI did not show the rejection fixture.");
+    const rejectClick = await evaluate(cdp, `(() => {
+      const card = [...document.querySelectorAll('#review-queue article')].find(node => node.querySelector('h2')?.textContent === ${JSON.stringify(freeTitle)});
+      const button = [...(card?.querySelectorAll('button') || [])].find(node => node.textContent === 'Reject');
+      if (!button) return 'missing'; button.click(); return 'clicked';
+    })()`);
+    assert.equal(rejectClick, "clicked");
+    await waitFor(cdp, `document.getElementById('review-status').textContent.includes('rejected')`, "Owner rejection did not complete.");
+    assert.equal(query(`SELECT lifecycle_state FROM creator_listings WHERE id=${sql(freeListing.id)}`).results[0].lifecycle_state, "rejected");
+    assert.equal(query(`SELECT COUNT(*) n FROM marketplace_products WHERE id=${sql(freeListing.id)}`).results[0].n, 0);
+    assert.equal((await fetch(`${ORIGIN}/api/catalog?slug=${encodeURIComponent(freeSlug)}`)).status, 404);
+    console.log("Rejection: separate Creator submission remained private and unavailable publicly.");
+
+    await setIdentityCookies(cdp, sessionToken, csrfToken);
+    await navigate(cdp, `${ORIGIN}/creator/`);
+    await waitFor(cdp, `document.getElementById('creator-listing-list')?.innerText.includes(${JSON.stringify(title)}) && document.getElementById('creator-listing-list')?.innerText.includes('publication published') && document.getElementById('creator-listing-list')?.innerText.includes(${JSON.stringify(freeTitle)})`, "Creator dashboard did not show the Owner decisions.");
+    const creatorDecisionText = await evaluate(cdp, "document.getElementById('creator-listing-list').innerText");
+    assert.match(creatorDecisionText, /publication published/);
+    assert.match(creatorDecisionText, /rejected/);
+    console.log("Creator visibility: dashboard showed the published and rejected decision states.");
   } catch (error) {
     mainError = error;
   }
 
   try {
+    query(`UPDATE marketplace_products SET publication_state='draft' WHERE creator_id=${sql(creatorId)}`);
+    query(`DELETE FROM marketplace_products WHERE creator_id=${sql(creatorId)} AND publication_state='draft'`);
     for (const key of objectKeys) { r2Delete(key); assertR2Missing(key); }
     query(`DELETE FROM creator_listing_declarations WHERE creator_id=${sql(creatorId)}`);
     query(`DELETE FROM creator_review_audit WHERE creator_id=${sql(creatorId)}`);
@@ -386,6 +489,7 @@ async function main() {
     query(`DELETE FROM users WHERE id IN (${sql(userId)},${sql(ownerId)})`);
     assert.equal(query(`SELECT COUNT(*) n FROM creator_listings WHERE creator_id=${sql(creatorId)}`).results[0].n, 0);
     assert.equal(query(`SELECT COUNT(*) n FROM creator_listing_files WHERE creator_id=${sql(creatorId)}`).results[0].n, 0);
+    assert.equal(query(`SELECT COUNT(*) n FROM marketplace_products WHERE creator_id=${sql(creatorId)}`).results[0].n, 0);
     assert.equal(query(`SELECT COUNT(*) n FROM users WHERE id IN (${sql(userId)},${sql(ownerId)})`).results[0].n, 0);
     assert.equal(query("SELECT setting_value FROM runtime_settings WHERE setting_key='store_state'").results[0].setting_value, "CLOSED");
     console.log("Cleanup: disposable listings, identities, sessions, audit rows, and exact R2 objects removed; staging remained CLOSED.");
@@ -401,7 +505,7 @@ async function main() {
     removeDirectoryWithRetries(mediaDirectory);
   }
   if (mainError) throw mainError;
-  console.log("Task 2O-A authenticated Creator submission browser verification passed.");
+  console.log("Task 2O-B authenticated Creator review and publication browser verification passed.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

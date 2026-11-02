@@ -113,13 +113,23 @@ export async function listProducts(database, { creatorId, publicationState, stat
 }
 
 export async function createProduct(database, input, { nowMs = Date.now() } = {}) {
+  const prepared = prepareCreateProduct(database, input, { nowMs });
+  await prepared.statement.run();
+  return getProductById(database, prepared.product.id);
+}
+
+// Exposes the same validated insert used by createProduct so callers that must
+// transition related D1 records atomically can include it in a D1 batch.
+export function prepareCreateProduct(database, input, { nowMs = Date.now() } = {}) {
   const product = validateProductInput(input);
   const { id, slug, creatorId } = product;
   const now = timestamp(nowMs);
   const values = [id, slug, creatorId, ...FIELDS.map(([name]) => toDatabase(name, product[name])), now, now, 1];
-  await database.prepare(`INSERT INTO marketplace_products(${COLUMNS.join(",")}) VALUES(${COLUMNS.map(() => "?").join(",")})`)
-    .bind(...values).run();
-  return getProductById(database, id);
+  return {
+    product,
+    statement: database.prepare(`INSERT INTO marketplace_products(${COLUMNS.join(",")}) VALUES(${COLUMNS.map(() => "?").join(",")})`)
+      .bind(...values)
+  };
 }
 
 export function validateProductInput(input) {

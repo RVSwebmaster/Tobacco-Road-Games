@@ -1,6 +1,112 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Creator Publication Queue | Tobacco Road Games</title><link rel="stylesheet" href="/styles.css"></head><body class="view-section"><div class="page-shell"><header class="site-header"><a class="brand" href="/owner/"><span class="brand__name">Creator Publication Queue</span></a><nav class="site-nav"><a href="/owner/">Owner Dashboard</a></nav></header><main class="store-section"><div class="section-heading"><p class="section-heading__kicker">Operator only</p><h1>Creator Listing Reviews and Publication</h1><p>Approval and publication are separate actions. Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt. Review and file decisions remain available.</p></div><div id="review-queue" class="product-card-grid"></div><p id="review-status" role="status">Loading…</p></main></div><script>
-document.querySelector('h1').textContent='Creator Listing Compliance and Publication';document.querySelector('.section-heading p:last-child').textContent='Compliance review remains available. Publication is temporarily unavailable while the Cloudflare publishing path is rebuilt.';
-async function mutate(path,body){const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const payload=await response.json();if(!response.ok)throw new Error(payload.error||payload.validationErrors?.join(' ')||'Operation failed.');return payload;}
-async function load(){const response=await fetch('/owner/api/creator-reviews',{credentials:'same-origin'}),payload=await response.json();if(!response.ok)throw new Error(payload.error||'Queue unavailable.');const root=document.getElementById('review-queue');root.replaceChildren(...payload.listings.map(item=>{const card=document.createElement('article');card.className='product-card';const body=document.createElement('div');body.className='product-card__body';const heading=document.createElement('h2');heading.textContent=item.title;const meta=document.createElement('p');meta.textContent=`${item.creator_name} · review ${item.lifecycle_state} · publication ${item.publication_state} · target ${item.public_product_slug||item.slug} · ${Number.isInteger(item.listed_price_cents)?'$'+(item.listed_price_cents/100).toFixed(2):'price missing'} · delivery ${item.media_type==='physical'?'physical review required':item.accepted_files?'file staged':'file missing'}`;body.append(heading,meta);const errors=JSON.parse(item.publication_errors_json||'[]');if(errors.length){const error=document.createElement('p');error.textContent=`Validation: ${errors.join(' ')}`;body.append(error);}for(const file of (payload.files||[]).filter(value=>value.listing_id===item.id)){const row=document.createElement('p');row.textContent=`${file.purpose}: ${file.normalized_filename} — ${file.validation_state}${file.validation_message?' — '+file.validation_message:''}`;body.append(row);if(['uploaded','validating'].includes(file.validation_state))body.append(button('Accept File',()=>mutate('/owner/api/creator-publication',{fileId:file.id,action:'accept_file'})),button('Reject File',()=>mutate('/owner/api/creator-publication',{fileId:file.id,action:'reject_file',message:'Operator rejected this file.'})));}if(item.lifecycle_state==='submitted'){body.append(button('Approve',()=>mutate('/owner/api/creator-reviews',{listingId:item.id,action:'approve'})),button('Request Changes',()=>mutate('/owner/api/creator-reviews',{listingId:item.id,action:'request_changes'})));}card.append(body);return card;}));document.getElementById('review-status').textContent=`${payload.listings.length} creator listing${payload.listings.length===1?'':'s'} in review or publication state.`;}
-function button(label,action){const value=document.createElement('button');value.className='button button--secondary';value.textContent=label==='Approve'?'Compliance Check Passed':label;value.onclick=async()=>{try{const result=await action();document.getElementById('review-status').textContent=result.error||'Operation completed.';await load();}catch(error){document.getElementById('review-status').textContent=error.message;}};return value;}load().catch(error=>{document.getElementById('review-status').textContent=error.message;});
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Creator Publication Queue | Tobacco Road Games</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="view-section">
+<div class="page-shell">
+  <header class="site-header"><a class="brand" href="/owner/"><span class="brand__name">Creator Publication Queue</span></a><nav class="site-nav"><a href="/owner/">Owner Dashboard</a></nav></header>
+  <main class="store-section">
+    <div class="section-heading">
+      <p class="section-heading__kicker">Owner only</p>
+      <h1>Creator Listing Review and Publication</h1>
+      <p>Review accepted files and listing details, then approve and publish directly to the native Cloudflare catalog. Rejected products remain private.</p>
+    </div>
+    <div id="review-queue" class="product-card-grid"></div>
+    <p id="review-status" role="status">Loading…</p>
+  </main>
+</div>
+<script>
+(() => {
+  let csrfToken = '';
+  const status = document.getElementById('review-status');
+  const money = cents => Number.isInteger(cents) ? `$${(cents / 100).toFixed(2)}` : 'not set';
+  const pricing = item => item.pricing_model === 'pwyw'
+    ? `PWYW · minimum ${money(item.minimum_price_cents)} · suggested ${money(item.suggested_price_cents)}`
+    : item.pricing_model === 'free' ? 'Free' : `Fixed · ${money(item.listed_price_cents)}`;
+
+  async function mutate(path, body) {
+    const response = await fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify(body) });
+    const payload = await response.json();
+    if (!response.ok) {
+      if (payload.code === 'revision_conflict') await load();
+      throw new Error(payload.error || payload.validationErrors?.join(' ') || 'Operation failed.');
+    }
+    return payload;
+  }
+
+  function actionButton(label, action, item, extra = {}) {
+    const button = document.createElement('button');
+    button.className = 'button button--secondary';
+    button.type = 'button';
+    button.textContent = label;
+    button.dataset.action = extra.action || action;
+    button.dataset.listingId = item.id;
+    if (extra.fileId) button.dataset.fileId = extra.fileId;
+    button.onclick = async () => {
+      button.disabled = true;
+      try {
+        const result = await mutate(extra.path || '/owner/api/creator-reviews', { listingId: item.id, expectedRevision: item.revision, action, ...extra.body });
+        status.textContent = result.product ? `${result.product.title} published at ${result.product.url}` : `Review updated to ${result.state}.`;
+        await load();
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    };
+    return button;
+  }
+
+  function renderCard(item, files) {
+    const card = document.createElement('article'); card.className = 'product-card'; card.dataset.listingId = item.id;
+    const body = document.createElement('div'); body.className = 'product-card__body';
+    const heading = document.createElement('h2'); heading.textContent = item.title;
+    const creator = document.createElement('p'); creator.textContent = `${item.creator_name} (${item.creator_slug}) · revision ${item.revision}`;
+    const state = document.createElement('p'); state.textContent = `Review: ${item.lifecycle_state} · publication: ${item.publication_state} · slug: ${item.public_product_slug || item.slug}`;
+    const details = document.createElement('p'); details.textContent = `${pricing(item)} · ${item.game_system || 'system not set'} · ${item.genre || 'genre not set'} · ${item.media_type || 'media not set'}`;
+    const descriptions = document.createElement('p'); descriptions.textContent = `${item.short_description || 'No short description'} — ${item.long_description || 'No full description'}`;
+    body.append(heading, creator, state, details, descriptions);
+    const errors = JSON.parse(item.publication_errors_json || '[]');
+    if (errors.length) { const row = document.createElement('p'); row.textContent = `Validation: ${errors.join(' ')}`; body.append(row); }
+    for (const file of files) {
+      const row = document.createElement('p');
+      row.textContent = `${file.purpose}: ${file.normalized_filename} · ${file.content_type} · ${file.size_bytes} bytes · ${file.validation_state}${file.validation_message ? ` · ${file.validation_message}` : ''}`;
+      body.append(row);
+      if (item.lifecycle_state === 'submitted' && ['uploaded', 'validating'].includes(file.validation_state)) {
+        body.append(
+          actionButton('Accept File', 'accept_file', item, { action: 'accept-file', fileId: file.id, path: '/owner/api/creator-publication', body: { fileId: file.id } }),
+          actionButton('Reject File', 'reject_file', item, { action: 'reject-file', fileId: file.id, path: '/owner/api/creator-publication', body: { fileId: file.id, message: 'Owner rejected this file.' } })
+        );
+      }
+    }
+    if (item.lifecycle_state === 'submitted') {
+      const accepted = new Set(files.filter(file => file.validation_state === 'accepted').map(file => file.purpose));
+      const approve = actionButton('Approve & Publish', 'approve', item, { action: 'approve-publish' });
+      approve.disabled = !accepted.has('cover') || !accepted.has('product');
+      approve.title = approve.disabled ? 'Accept the WebP cover and PDF before publication.' : '';
+      body.append(approve, actionButton('Request Changes', 'request_changes', item), actionButton('Reject', 'reject', item));
+    }
+    if (item.public_product_slug) {
+      const link = document.createElement('a'); link.href = `/store/products/${item.public_product_slug}/`; link.textContent = 'Open storefront product'; body.append(link);
+    }
+    card.append(body); return card;
+  }
+
+  async function load() {
+    const response = await fetch('/owner/api/creator-reviews', { credentials: 'same-origin' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Queue unavailable.');
+    csrfToken = payload.csrfToken || '';
+    const root = document.getElementById('review-queue');
+    root.replaceChildren(...payload.listings.map(item => renderCard(item, (payload.files || []).filter(file => file.listing_id === item.id))));
+    status.textContent = `${payload.listings.length} Creator listing${payload.listings.length === 1 ? '' : 's'} in review or publication history.`;
+  }
+  load().catch(error => { status.textContent = error.message; });
+})();
+</script>
+</body>
+</html>

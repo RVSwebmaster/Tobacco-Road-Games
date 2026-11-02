@@ -51,7 +51,8 @@ async function main() {
       }
     };
     const bundle = await creator.handleCreatorPublicationRequest(request({ action: "publish_bundle", bundleId: "bundle" }), {}, { database: db });
-    await assertUnavailable(bundle);
+    assert.equal(bundle.status, 401);
+    assert.equal((await bundle.json()).code, "authentication_required");
     assert.equal(writes, 0);
   } finally {
     globalThis.fetch = originalFetch;
