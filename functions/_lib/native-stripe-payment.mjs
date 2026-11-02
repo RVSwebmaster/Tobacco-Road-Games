@@ -1,4 +1,5 @@
 import { getSessionFromRequest } from "./account-auth.mjs";
+import { isNativeGuestCheckoutEnabled } from "./native-guest-purchase-policy.mjs";
 import { createCheckoutAccessCookie } from "./checkout-cookie.mjs";
 import { buildStripeIdempotencyKey, normalizeCheckoutAttemptId } from "./checkout-attempt.mjs";
 import { toNativeCartProduct } from "./cart-catalog.mjs";
@@ -64,6 +65,12 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
   const session = options.accountSession === undefined
     ? await optionalAccountSession(request, env, options)
     : options.accountSession;
+  if (!session?.user && !isNativeGuestCheckoutEnabled(env, options)) {
+    return jsonResponse({
+      code: "native_guest_checkout_unavailable",
+      error: "Native guest checkout is temporarily unavailable while purchase claiming is completed."
+    }, 503);
+  }
   if (!options.skipIdentityChecks) {
     try {
       if (order.user_id && session?.user?.id !== order.user_id) {

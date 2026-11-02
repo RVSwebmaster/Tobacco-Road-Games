@@ -23,6 +23,9 @@ import { getSessionFromRequest } from "./account-auth.mjs";
 import {repairPaidOrderFulfillment} from './order-fulfillment.mjs';
 import {recordQualifyingActivity} from './product-inactivity.mjs';
 import {assertNotFraudBlocked,assertVerifiedPurchaseIdentity,findDuplicateDigitalOwnership} from './transaction-policy.mjs';
+import { handleNativeOrderPreparationRequest } from "./native-order-preparation.mjs";
+import { handleNativeStripePaymentRequest } from "./native-stripe-payment.mjs";
+import { isNativeGuestCheckoutEnabled } from "./native-guest-purchase-policy.mjs";
 
 export async function onRequestPost(context) {
   return handleCartCheckoutRequest(context.request, context.env);
@@ -126,9 +129,20 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
 
   const nativeItems = resolution.items.filter(item => item.catalogSource === "native-d1");
   if (nativeItems.length) {
+    if (nativeItems.length === resolution.items.length
+      && Number(resolution.totalCents) > 0
+      && (accountSession?.user || isNativeGuestCheckoutEnabled(env, options))) {
+      return startNativePaidCheckout(request, env, parsed.body, accountSession, {
+        ...options,
+        database,
+        nativeGuestCheckoutEnabled: isNativeGuestCheckoutEnabled(env, options)
+      });
+    }
     return jsonResponse({
       code: "native_checkout_unavailable",
-      error: "Native catalog pricing is verified, but payment and acquisition are not active for these products yet.",
+      error: nativeItems.length !== resolution.items.length
+        ? "Legacy and native products cannot share one paid checkout yet."
+        : "Native guest checkout is temporarily unavailable while purchase claiming is completed.",
       items: resolution.responseItems,
       retryable: false
     }, 409);
@@ -309,6 +323,27 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     reused: orderResult.created !== true,
     status: orderResult.created === true ? 201 : 200
   });
+}
+
+async function startNativePaidCheckout(request, env, body, accountSession, options) {
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  headers.set("content-type", "application/json");
+  const preparation = await handleNativeOrderPreparationRequest(new Request(request.url, {
+    body: JSON.stringify(body), headers, method: "POST"
+  }), env, { ...options, accountSession });
+  if (!preparation.ok) return preparation;
+  const prepared = await preparation.json();
+  return handleNativeStripePaymentRequest(new Request(request.url, {
+    body: JSON.stringify({
+      checkoutAttemptId: body.checkoutAttemptId,
+      email: body.email,
+      emailConfirmation: body.emailConfirmation,
+      publicOrderReference: prepared.publicOrderReference
+    }),
+    headers,
+    method: "POST"
+  }), env, { ...options, accountSession });
 }
 
 async function getOptionalAccountSession(request, env, options) {

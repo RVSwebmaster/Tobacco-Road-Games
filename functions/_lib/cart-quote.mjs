@@ -1,5 +1,6 @@
 import pricingModule from "../../shared/pricing.js";
 import { resolveHybridCartCatalog } from "./cart-catalog.mjs";
+import { isNativeGuestCheckoutEnabled } from "./native-guest-purchase-policy.mjs";
 import {
   getRuntimePricingPolicy,
   normalizeSlug
@@ -13,7 +14,8 @@ const MAX_CART_ITEMS = 25;
 export async function onRequestPost(context) {
   return handleCartQuoteRequest(context.request, {
     allowedProductSlug: context.env?.STAGING_CHECKOUT_PRODUCT_SLUG,
-    database: context.env?.TRG_ORDERS
+    database: context.env?.TRG_ORDERS,
+    env: context.env
   });
 }
 
@@ -128,11 +130,14 @@ export async function handleCartQuoteRequest(request, options = {}) {
 
   const nativeFreeAcquisition = hasNative && !hasLegacy && quotedItems.length > 0
     && unavailableItems.length === 0 && subtotalCents === 0;
-  const checkoutAllowed = !hasNative || nativeFreeAcquisition;
+  const nativePaidCheckout = hasNative && !hasLegacy && quotedItems.length > 0
+    && unavailableItems.length === 0 && subtotalCents > 0
+    && isNativeGuestCheckoutEnabled(options.env || {}, options);
+  const checkoutAllowed = !hasNative || nativeFreeAcquisition || nativePaidCheckout;
   return jsonResponse({
     checkoutAllowed,
-    checkoutBlockReason: checkoutAllowed ? "" : "Paid native catalog checkout remains unavailable through the cart.",
-    checkoutMode: nativeFreeAcquisition ? "native-free" : "legacy",
+    checkoutBlockReason: checkoutAllowed ? "" : "Paid native guest checkout remains temporarily unavailable while purchase claiming is completed.",
+    checkoutMode: nativeFreeAcquisition ? "native-free" : nativePaidCheckout ? "native-paid" : "legacy",
     includedTaxTotalCents: policy.includedTaxTotalCents ?? null,
     items: quotedItems,
     pricingNote: String(policy.pricingNote || ""),

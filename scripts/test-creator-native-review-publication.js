@@ -31,6 +31,7 @@ async function main() {
   seedListing(raw, bucket, "listing-task2ob-reject", "creator-native-reject", "free", 0, null, null);
   seedListing(raw, bucket, "listing-task2ob-conflict", "creator-native-conflict", "pwyw", 700, 700, 0);
   seedListing(raw, bucket, "listing-task2ob-missing", "creator-native-missing", "fixed", 900, null, null);
+  seedListing(raw, bucket, "listing-task2ob-withdraw", "creator-native-withdraw", "fixed", 800, null, null);
   bucket.deleteSync("creator-quarantine/creator-task2ob/listing-task2ob-missing/product.pdf");
   await catalog.createProduct(db, {
     id: "existing-task2ob-product", slug: "creator-native-conflict", creatorId: CREATOR.id,
@@ -41,7 +42,7 @@ async function main() {
   let response = await review.handleCreatorReviewRequest(ownerGet(), env, { database: db, nowMs: NOW_MS });
   assert.equal(response.status, 200);
   let queue = await response.json();
-  assert.equal(queue.listings.filter(row => row.creator_id === CREATOR.id).length, 4);
+  assert.equal(queue.listings.filter(row => row.creator_id === CREATOR.id).length, 5);
   assert.equal(queue.csrfToken, OWNER.csrf);
 
   response = await review.handleCreatorReviewRequest(creatorPost({ listingId: "listing-task2ob-publish", expectedRevision: 1, action: "approve" }), env, { database: db, nowMs: NOW_MS });
@@ -138,6 +139,12 @@ async function main() {
   assert.equal(raw.prepare("SELECT lifecycle_state FROM creator_listings WHERE id='listing-task2ob-reject'").get().lifecycle_state, "rejected");
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products WHERE id='listing-task2ob-reject'").get().n, 0);
 
+  response = await creatorOperations.handleCreatorRequest(creatorApi("POST", "listings/listing-task2ob-withdraw/withdraw", { expectedRevision: 1 }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200, "A Creator can withdraw their own pending native submission.");
+  assert.deepEqual({ ...raw.prepare("SELECT lifecycle_state,publication_state,revision FROM creator_listings WHERE id='listing-task2ob-withdraw'").get() }, { lifecycle_state: "draft", publication_state: "not_approved", revision: 2 });
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products WHERE id='listing-task2ob-withdraw'").get().n, 0);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM creator_publication_audit WHERE listing_id='listing-task2ob-withdraw' AND action='submission_withdrawn'").get().n, 1);
+
   await acceptBoth(publication, raw, env, db, "listing-task2ob-conflict");
   response = await review.handleCreatorReviewRequest(ownerPost({ listingId: "listing-task2ob-conflict", expectedRevision: 3, action: "approve" }), env, { database: db, nowMs: NOW_MS });
   assert.equal(response.status, 409, "Conflicting slugs must not overwrite an existing product.");
@@ -166,7 +173,7 @@ async function main() {
   assert.match(creatorScript, /Edit Listing/);
   new Function(creatorScript);
   console.log("Native Creator review/publication tests passed.");
-  console.log("Owner auth + CSRF, Creator self-approval denial, catalog listing, native pause, private edit, revision conflict, reapproval, rejection, duplicate, slug conflict, and missing-R2 safety: passed.");
+  console.log("Owner auth + CSRF, Creator self-approval denial, native withdrawal, catalog listing, native pause, private edit, revision conflict, reapproval, rejection, duplicate, slug conflict, and missing-R2 safety: passed.");
 }
 
 async function acceptBoth(publication, raw, env, db, listingId) {

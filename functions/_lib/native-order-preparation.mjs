@@ -1,6 +1,7 @@
 import { createNativeOrderRequestHash, normalizeCheckoutAttemptId } from "./checkout-attempt.mjs";
 import { resolveHybridCartCatalog } from "./cart-catalog.mjs";
 import { getSessionFromRequest } from "./account-auth.mjs";
+import { isNativeGuestCheckoutEnabled } from "./native-guest-purchase-policy.mjs";
 import { createCustomerEmailHash, normalizeConfirmedCustomerEmail } from "./order-privacy.mjs";
 import { parsePendingOrderRequest, resolvePendingOrderItems } from "./orders-pending.mjs";
 import {
@@ -88,6 +89,12 @@ export async function handleNativeOrderPreparationRequest(request, env = {}, opt
   const session = options.accountSession === undefined
     ? await optionalAccountSession(request, env, options)
     : options.accountSession;
+  if (!session?.user && !isNativeGuestCheckoutEnabled(env, options)) {
+    return jsonResponse({
+      code: "native_guest_checkout_unavailable",
+      error: "Native guest checkout is temporarily unavailable while purchase claiming is completed."
+    }, 503);
+  }
   if (!options.skipIdentityChecks) {
     try {
       if (session?.user && String(session.user.email || session.user.email_normalized || "").toLowerCase() !== email.normalized) {
