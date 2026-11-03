@@ -1,0 +1,20 @@
+name = "tobacco-road-games-acceptance"
+pages_build_output_dir = "../../.wrangler/acceptance-pages-output"
+compatibility_date = "2026-06-18"
+
+[vars]
+PAYMENT_PIPELINE_STAGE = "staging"
+PUBLIC_SITE_ORIGIN = "https://tobacco-road-games-acceptance.pages.dev"
+RESEND_DELIVERY_ENABLED = "false"
+NATIVE_GUEST_CHECKOUT_MODE = "disabled"
+NATIVE_GUEST_CLAIM_MODE = "disabled"
+
+[[d1_databases]]
+binding = "TRG_ORDERS"
+database_name = "trg-orders-acceptance"
+database_id = "2fff6e72-4e41-47e7-b497-992dadcab3d6"
+migrations_dir = "../../migrations"
+
+[[r2_buckets]]
+binding = "TRG_PRODUCTS"
+bucket_name = "trg-products-acceptance"
