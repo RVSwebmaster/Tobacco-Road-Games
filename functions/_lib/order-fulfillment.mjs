@@ -1,5 +1,9 @@
 import { getOrderById, getOrderItems } from "./orders-d1.mjs";
 import { getDeliveryProduct, isExactDeliveryMapping } from "./product-delivery.mjs";
+import {
+  getLegacyContinuityDelivery,
+  isAgencyContinuitySlug
+} from "./legacy-product-continuity.mjs";
 
 export async function repairPaidOrderFulfillment(database, productsBucket, orderId, options = {}) {
   const normalizedOrderId = positiveInteger(orderId);
@@ -16,9 +20,22 @@ export async function repairPaidOrderFulfillment(database, productsBucket, order
   }
 
   const items = await getOrderItems(database, normalizedOrderId);
-  const deliveries = items.map((item) => ({
-    item,
-    product: options.deliveryProducts?.[item.product_slug] || getDeliveryProduct(item.product_slug)
+  const existingEntitlements = await getOrderEntitlements(database, normalizedOrderId, { activeOnly: true });
+  const deliveries = await Promise.all(items.map(async (item) => {
+    const entitlement = existingEntitlements.find(
+      (candidate) => Number(candidate.order_item_id) === Number(item.id)
+    );
+    const continuityProduct = await getLegacyContinuityDelivery(
+      database,
+      item.product_slug,
+      entitlement
+    );
+    const product = continuityProduct || (
+      isAgencyContinuitySlug(item.product_slug)
+        ? null
+        : options.deliveryProducts?.[item.product_slug] || getDeliveryProduct(item.product_slug)
+    );
+    return { item, product };
   }));
   if (!deliveries.length || deliveries.some(({ product }) => !product)) {
     const failedOrder = await markFulfillmentFailure(
@@ -64,7 +81,6 @@ export async function repairPaidOrderFulfillment(database, productsBucket, order
     return { order: failedOrder, ready: false, result: "storage_unavailable" };
   }
 
-  const existingEntitlements = await getOrderEntitlements(database, normalizedOrderId, { activeOnly: true });
   const alreadyReady = ["ready", "fulfilled"].includes(order.fulfillment_status)
     && existingEntitlements.length === verifiedDeliveries.length
     && verifiedDeliveries.every(({ item, product, objectSize }) => {

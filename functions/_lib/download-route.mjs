@@ -5,6 +5,10 @@ import {
   recordSuccessfulDownload
 } from "./order-fulfillment.mjs";
 import { getDeliveryProduct, isExactDeliveryMapping } from "./product-delivery.mjs";
+import {
+  getLegacyContinuityDelivery,
+  isAgencyContinuitySlug
+} from "./legacy-product-continuity.mjs";
 import { getSessionFromRequest } from "./account-auth.mjs";
 import {
   getNativeEntitlementByDownloadReference,
@@ -32,8 +36,19 @@ export async function handleAuthorizedDownload(request, env = {}, options = {}) 
   }
 
   const entitlement = await getEntitlementById(env.TRG_ORDERS, authorization.entitlementId);
-  const product = options.deliveryProducts?.[authorization.productSlug]
-    || getDeliveryProduct(authorization.productSlug);
+  const continuityProduct = await getLegacyContinuityDelivery(
+    env.TRG_ORDERS,
+    authorization.productSlug,
+    entitlement
+  );
+  // Agency is cut over exclusively to its retired D1 identity and immutable
+  // entitlement snapshot. Never fall back to a generated catalog mapping.
+  const product = continuityProduct || (
+    isAgencyContinuitySlug(authorization.productSlug)
+      ? null
+      : options.deliveryProducts?.[authorization.productSlug]
+        || getDeliveryProduct(authorization.productSlug)
+  );
   const authorized = Boolean(
     entitlement
       && entitlement.status === "active"
@@ -57,6 +72,10 @@ export async function handleAuthorizedDownload(request, env = {}, options = {}) 
     await markFulfillmentFailure(env.TRG_ORDERS, Number(entitlement.order_id), "object_missing", options.nowMs);
     return errorResponse("download_temporarily_unavailable", 503);
   }
+  if (!object.body || Number(object.size) !== Number(entitlement.object_size_bytes)) {
+    await markFulfillmentFailure(env.TRG_ORDERS, Number(entitlement.order_id), "object_size_mismatch", options.nowMs);
+    return errorResponse("download_temporarily_unavailable", 503);
+  }
 
   try {
     await recordSuccessfulDownload(env.TRG_ORDERS, entitlement, { nowMs: options.nowMs });
@@ -66,8 +85,8 @@ export async function handleAuthorizedDownload(request, env = {}, options = {}) 
 
   const headers = new Headers({
     "cache-control": "private, no-store, max-age=0",
-    "content-disposition": `attachment; filename="${product.customerFilename}"; filename*=UTF-8''${encodeURIComponent(product.customerFilename)}`,
-    "content-type": product.contentType,
+    "content-disposition": `attachment; filename="${entitlement.customer_filename}"; filename*=UTF-8''${encodeURIComponent(entitlement.customer_filename)}`,
+    "content-type": entitlement.content_type,
     "pragma": "no-cache",
     "x-content-type-options": "nosniff"
   });

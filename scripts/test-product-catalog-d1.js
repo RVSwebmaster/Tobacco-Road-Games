@@ -74,9 +74,9 @@ async function main() {
   }, { nowMs: NOW_MS });
   assert.equal(pwyw.minimumPriceCents, 0);
   assert.equal(pwyw.publicationState, "draft");
-  assert.deepEqual((await catalog.listProducts(db)).map(item => item.slug), ["pay-what-you-want-guide", "tablecraft"]);
+  assert.deepEqual((await catalog.listProducts(db)).map(item => item.slug), ["agency", "pay-what-you-want-guide", "tablecraft"]);
   assert.deepEqual((await catalog.listProducts(db, { creatorId, publicationState: "draft", status: "available-direct" })).map(item => item.slug), ["tablecraft"]);
-  assert.deepEqual((await catalog.listProducts(db, { limit: 1, offset: 1 })).map(item => item.slug), ["tablecraft"]);
+  assert.deepEqual((await catalog.listProducts(db, { limit: 1, offset: 1 })).map(item => item.slug), ["pay-what-you-want-guide"]);
 
   const updated = await catalog.updateProduct(db, created.id, {
     title: "Tablecraft Revised", priceCents: 1500,
@@ -116,12 +116,12 @@ async function main() {
   assert.throws(() => raw.prepare("UPDATE marketplace_products SET creator_listing_id=NULL WHERE id=?").run(created.id), /immutable/);
   assert.throws(() => raw.prepare("UPDATE marketplace_products SET price_cents=-1 WHERE id=?").run(created.id), /CHECK constraint/);
   assert.throws(() => raw.prepare("DELETE FROM marketplace_products WHERE id=?").run(created.id), /retire products/);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 2);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 3);
   await assert.rejects(catalog.deleteDraftProduct(db, created.id), /retire products/);
   assert.equal(await catalog.deleteDraftProduct(db, pwyw.id), true);
   assert.equal(await catalog.getProductById(db, pwyw.id), null);
   assert.equal(await catalog.deleteDraftProduct(db, pwyw.id), false);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 1);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 2);
   assert.deepEqual(raw.prepare("PRAGMA foreign_key_check").all(), []);
   raw.close();
   console.log("D1 product catalog tests passed.");

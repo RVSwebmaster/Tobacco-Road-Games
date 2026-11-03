@@ -103,7 +103,7 @@ async function main() {
       "x-csrf-token": "wrong" }, body: new FormData()
   });
   assert.equal((await publication.handleOwnerCatalogPublicationRequest(badCsrf, { TRG_ORDERS: db, TRG_PRODUCTS: bucket })).status, 403);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 2);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 3);
   assert.deepEqual(raw.prepare("PRAGMA foreign_key_check").all(), []);
   raw.close();
   console.log("Native product publication unit tests passed.");

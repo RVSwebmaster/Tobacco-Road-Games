@@ -373,7 +373,7 @@ function createBucket(options = {}) {
       if (options.missing || key !== FIXTURE_PRODUCT.r2ObjectKey) {
         return null;
       }
-      return { size: 9630946 };
+      return { size: PDF_BYTES.length };
     }
   };
 }
