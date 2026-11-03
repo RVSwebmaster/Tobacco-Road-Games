@@ -50,7 +50,13 @@ async function renderPaidOrderBody(order, env) {
   let fulfillmentBody = `
     <p class="cart-summary__copy">Your payment is confirmed. Your download is being prepared. Refresh this page shortly.</p>
   `;
-  if (order.fulfillment_status === "failed") {
+  if (order.catalog_source === "native_d1" && !order.user_id) {
+    fulfillmentBody = order.email_status === "sent"
+      ? `<p class="cart-summary__copy">We sent secure account-claim instructions to the verified purchase email. Use that link to add the products permanently to My Library.</p>`
+      : `<p class="cart-summary__copy">Your ownership record is being prepared. Secure account-claim instructions will be sent to the verified purchase email after processing completes.</p>`;
+  } else if (order.catalog_source === "native_d1" && order.user_id) {
+    fulfillmentBody = `<p class="cart-summary__copy">Your products are available in My Library.</p><p><a class="button" href="/account.html#library-panel">Open My Library</a></p>`;
+  } else if (order.fulfillment_status === "failed") {
     fulfillmentBody = `
       <p class="cart-summary__copy">We received your payment, but your download needs attention. Please contact Tobacco Road Games support and include the order reference below.</p>
     `;

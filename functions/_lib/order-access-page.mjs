@@ -5,12 +5,12 @@ import {
 import { OrderAccessError, verifyOrderAccessToken } from "./order-access.mjs";
 import { getOrderById, getOrderItems } from "./orders-d1.mjs";
 import { getOrderEntitlements } from "./order-fulfillment.mjs";
+import { isNativeGuestClaimEnabled } from "./native-guest-purchase-policy.mjs";
 
 export async function handleOrderAccessPage(request, env = {}, options = {}) {
   if (
     !env.TRG_ORDERS ||
-    !env.ORDER_ACCESS_SIGNING_SECRET ||
-    !isDownloadSigningSecretConfigured(env.DOWNLOAD_SIGNING_SECRET)
+    !env.ORDER_ACCESS_SIGNING_SECRET
   ) {
     return renderPage(
       "Order access is temporarily unavailable.",
@@ -42,6 +42,16 @@ export async function handleOrderAccessPage(request, env = {}, options = {}) {
       "Order access was not authorized.",
       unauthorizedBody(),
       403,
+    );
+  }
+  if (order.catalog_source === "native_d1") {
+    return renderNativeGuestClaimPage(order, token, env, options);
+  }
+  if (!isDownloadSigningSecretConfigured(env.DOWNLOAD_SIGNING_SECRET)) {
+    return renderPage(
+      "Order access is temporarily unavailable.",
+      unavailableBody(),
+      503,
     );
   }
   if (order.fulfillment_status === "failed") {
@@ -116,6 +126,55 @@ export async function handleOrderAccessPage(request, env = {}, options = {}) {
     ${remediation ? `<h2>Product remediation choices</h2><div class="delivery-list">${remediation}</div>` : ""}
     <p class="cart-summary__copy">Each download button uses short-lived authorization. Reload this order link if a button expires.</p>
   `,
+    200,
+  );
+}
+
+async function renderNativeGuestClaimPage(order, token, env, options) {
+  if (order.user_id) {
+    return renderPage(
+      "Purchase already claimed",
+      `<p class="section-heading__kicker">Buying is Owning</p>
+      <h1>This purchase is already in an account.</h1>
+      <p class="cart-summary__copy">Order reference: <strong>${escapeHtml(order.public_id)}</strong></p>
+      <p class="cart-summary__copy">Sign in to the verified account that claimed this order to find the products in My Library.</p>
+      <p><a class="button" href="/account.html#library-panel">Open My Library</a></p>`,
+      200,
+    );
+  }
+  if (!isNativeGuestClaimEnabled(env, options)) {
+    return renderPage(
+      "Purchase claiming is temporarily unavailable.",
+      `<p class="section-heading__kicker">Buying is Owning</p>
+      <h1>Purchase claiming is temporarily unavailable.</h1>
+      <p class="cart-summary__copy">Your verified payment and ownership record are safe. Please try again later.</p>`,
+      503,
+    );
+  }
+  if (order.native_order_state !== "paid" || order.native_entitlement_status !== "ready") {
+    return renderPage(
+      "Your purchase is being prepared.",
+      preparingBody(order),
+      200,
+    );
+  }
+  const items = await getOrderItems(env.TRG_ORDERS, Number(order.id));
+  if (!items.length) {
+    return renderPage("Your purchase is being prepared.", preparingBody(order), 200);
+  }
+  const titles = items
+    .map((item) => `<li>${escapeHtml(item.product_title_snapshot || "Product")}</li>`)
+    .join("");
+  const accountUrl = `/account.html?claim=${encodeURIComponent(token)}#purchase-recovery`;
+  return renderPage(
+    "Claim your purchase",
+    `<p class="section-heading__kicker">Buying is Owning</p>
+    <h1>Claim your purchase.</h1>
+    <p class="cart-summary__copy">Order reference: <strong>${escapeHtml(order.public_id)}</strong></p>
+    <p class="cart-summary__copy">Sign in or create an account using the same verified email address used for this purchase.</p>
+    <ul>${titles}</ul>
+    <p><a class="button" href="${escapeHtml(accountUrl)}">Continue to account claim</a></p>
+    <p class="cart-summary__copy">After claiming, these products remain in My Library and download through your signed-in account.</p>`,
     200,
   );
 }

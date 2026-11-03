@@ -39,6 +39,7 @@
     "test:native-d1-library": "node scripts/test-native-d1-library.js",
     "test:native-d1-free-acquisition": "node scripts/test-native-d1-free-acquisition.js",
     "test:native-guest-purchase-claim": "node scripts/test-native-guest-purchase-claim.js",
+    "test:native-guest-notification-claim": "node scripts/test-native-guest-purchase-claim.js",
     "test:creator-closure": "node scripts/test-creator-account-closure.js",
     "test:creator-publishing-sandbox": "node scripts/test-creator-publishing-sandbox.js",
     "test:creator-product-submission-sandbox": "node scripts/test-creator-product-submission-sandbox.js",

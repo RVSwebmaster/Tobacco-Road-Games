@@ -69,6 +69,8 @@
   let csrfToken = "";
   let googleInitialized = false;
   let googleInitializeAttempts = 0;
+  let currentAccountEmailVerified = false;
+  let pendingClaimCredential = "";
   const maxGoogleInitializeAttempts = 20;
 
   const setStatus = (message, error = false) => {
@@ -105,6 +107,7 @@
     }
     csrfToken = payload.csrfToken || "";
     if (!payload.authenticated) {
+      currentAccountEmailVerified = false;
       summary.textContent = "No account is signed in.";
       signout.hidden = true;
       resend.hidden = true;
@@ -112,10 +115,15 @@
       if (libraryPanel) libraryPanel.hidden = true;
       if (accountProfilePanel) accountProfilePanel.hidden = true;
       if (creatorRegistrationPanel) creatorRegistrationPanel.hidden = true;
-      setStatus("Choose Google, sign in, or create a Tobacco Road Games account.");
+      setStatus(
+        pendingClaimCredential
+          ? "Sign in or create an account with the same email used for the purchase. Verify the email before claiming."
+          : "Choose Google, sign in, or create a Tobacco Road Games account.",
+      );
       return;
     }
     summary.innerHTML = "";
+    currentAccountEmailVerified = Boolean(payload.user.emailVerified);
     const email = document.createElement("p");
     email.textContent = `Signed in as ${payload.user.email}`;
     const verified = document.createElement("p");
@@ -139,7 +147,11 @@
       if (accountProfileStatus)
         accountProfileStatus.textContent = error.message;
     });
-    setStatus("Account loaded.");
+    if (pendingClaimCredential) {
+      presentPendingClaim(payload.user.emailVerified);
+    } else {
+      setStatus("Account loaded.");
+    }
   }
 
   async function refreshLibrary() {
@@ -259,6 +271,8 @@
         );
       const payload = await api("/api/account/claim-order", { credential });
       recoveryStatus.textContent = payload.message;
+      pendingClaimCredential = "";
+      sessionStorage.removeItem("trg.pendingPurchaseClaim");
       recoveryForm.reset();
       await refreshLibrary();
     } catch (error) {
@@ -495,10 +509,11 @@
     .querySelector("#signin-form")
     ?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const data = Object.fromEntries(new FormData(event.currentTarget));
+      const form = event.currentTarget;
+      const data = Object.fromEntries(new FormData(form));
       try {
         await api("/api/auth/login", data);
-        event.currentTarget.reset();
+        form.reset();
         await refreshAccount();
         setStatus("Signed in.");
       } catch (error) {
@@ -510,10 +525,11 @@
     .querySelector("#register-form")
     ?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const data = Object.fromEntries(new FormData(event.currentTarget));
+      const form = event.currentTarget;
+      const data = Object.fromEntries(new FormData(form));
       try {
         await api("/api/auth/register", data);
-        event.currentTarget.reset();
+        form.reset();
         await refreshAccount();
         setStatus("Account created. Check your email to verify the address.");
       } catch (error) {
@@ -525,10 +541,11 @@
     .querySelector("#forgot-form")
     ?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const data = Object.fromEntries(new FormData(event.currentTarget));
+      const form = event.currentTarget;
+      const data = Object.fromEntries(new FormData(form));
       try {
         const payload = await api("/api/auth/request-password-reset", data);
-        event.currentTarget.reset();
+        form.reset();
         setStatus(
           payload.message ||
             "If that account exists, reset instructions will be sent.",
@@ -575,6 +592,17 @@
     const url = new URL(window.location.href);
     const verify = url.searchParams.get("verify");
     const reset = url.searchParams.get("reset");
+    const claim = url.searchParams.get("claim");
+    if (claim && claim.length <= 2048 && claim.startsWith("oa1.")) {
+      pendingClaimCredential = claim;
+      sessionStorage.setItem("trg.pendingPurchaseClaim", claim);
+      url.searchParams.delete("claim");
+      history.replaceState(null, "", url.toString());
+      presentPendingClaim(currentAccountEmailVerified);
+    } else {
+      pendingClaimCredential = sessionStorage.getItem("trg.pendingPurchaseClaim") || "";
+      if (pendingClaimCredential) presentPendingClaim(currentAccountEmailVerified);
+    }
     if (verify) {
       try {
         const payload = await api("/api/auth/verify-email", { token: verify });
@@ -591,6 +619,24 @@
       resetForm.elements.token.value = reset;
       setStatus("Enter a new password to finish the reset.");
     }
+  }
+
+  function presentPendingClaim(emailVerified) {
+    if (!pendingClaimCredential || !recoveryForm) return;
+    const recovery = document.querySelector("#purchase-recovery");
+    if (recovery) recovery.open = true;
+    recoveryForm.elements.accessLink.value = `${window.location.origin}/store/order-access?credential=${encodeURIComponent(pendingClaimCredential)}`;
+    if (recoveryStatus) {
+      recoveryStatus.textContent = emailVerified
+        ? "This purchase is ready to claim. Confirm below to add it to My Library."
+        : "Sign in with the purchase email and verify it before claiming.";
+      recoveryStatus.classList.remove("discussion-status--error");
+    }
+    setStatus(
+      emailVerified
+        ? "Purchase access verified. Confirm the claim in My Library below."
+        : "Sign in or create an account with the same email used for the purchase.",
+    );
   }
 
   window.handleTrgGoogleCredential = async (credentialResponse) => {

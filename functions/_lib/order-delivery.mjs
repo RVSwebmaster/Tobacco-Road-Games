@@ -8,6 +8,8 @@ import {
 import { getOrderById, getOrderItems } from "./orders-d1.mjs";
 import { getOrderEntitlements } from "./order-fulfillment.mjs";
 
+const NATIVE_GUEST_CLAIM_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
+
 export class OrderDeliveryError extends Error {
   constructor(code, options = {}) {
     super("Order delivery could not be completed.");
@@ -49,20 +51,43 @@ export async function ensureOrderDeliveryMessage(database, env, orderId, options
   if (!order || order.payment_status !== "paid") {
     throw new OrderDeliveryError("order_not_paid");
   }
-  if (!['ready', 'fulfilled'].includes(order.fulfillment_status)) {
-    throw new OrderDeliveryError("fulfillment_not_ready", { retryable: true });
-  }
   const items = await getOrderItems(database, normalizedOrderId);
-  const entitlements = await getOrderEntitlements(database, normalizedOrderId, { activeOnly: true });
-  if (!items.length || entitlements.length !== items.length) {
-    throw new OrderDeliveryError("entitlements_not_ready", { retryable: true });
+  const nativeGuest = order.catalog_source === "native_d1";
+  if (nativeGuest) {
+    if (order.user_id) {
+      throw new OrderDeliveryError("native_guest_claim_not_required");
+    }
+    if (order.native_order_state !== "paid" || order.native_entitlement_status !== "ready") {
+      throw new OrderDeliveryError("native_entitlements_not_ready", { retryable: true });
+    }
+    const row = await database.prepare(`
+      SELECT COUNT(*) AS entitlement_count
+      FROM native_product_entitlements
+      WHERE order_id=? AND status='active' AND purchaser_user_id IS NULL
+    `).bind(normalizedOrderId).first();
+    if (!items.length || Number(row?.entitlement_count) !== items.length) {
+      throw new OrderDeliveryError("native_entitlements_not_ready", { retryable: true });
+    }
+  } else {
+    if (!["ready", "fulfilled"].includes(order.fulfillment_status)) {
+      throw new OrderDeliveryError("fulfillment_not_ready", { retryable: true });
+    }
+    const entitlements = await getOrderEntitlements(database, normalizedOrderId, { activeOnly: true });
+    if (!items.length || entitlements.length !== items.length) {
+      throw new OrderDeliveryError("entitlements_not_ready", { retryable: true });
+    }
   }
 
   const access = await ensureActiveOrderAccessCredential(
     database,
     order,
     env.ORDER_ACCESS_SIGNING_SECRET,
-    { nowMs: options.nowMs }
+    {
+      expiresAt: nativeGuest
+        ? new Date(currentTime(options.nowMs) + NATIVE_GUEST_CLAIM_LIFETIME_MS).toISOString()
+        : null,
+      nowMs: options.nowMs
+    }
   );
   const intentional = Boolean(options.intentional);
   let messageNumber = 1;
@@ -152,7 +177,9 @@ export async function dispatchOrderEmail(database, env, outboxId, options = {}) 
     await markOutboxFailure(database, outbox, "access_credential_unavailable", false, options.nowMs);
     throw new OrderDeliveryError("access_credential_unavailable");
   }
-  const accessToken = await reconstructOrderAccessToken(credential, env.ORDER_ACCESS_SIGNING_SECRET);
+  const accessToken = await reconstructOrderAccessToken(credential, env.ORDER_ACCESS_SIGNING_SECRET, {
+    nowMs: options.nowMs
+  });
   const message = buildOrderEmail({
     accessToken,
     items,
@@ -239,6 +266,33 @@ export function buildOrderEmail({ accessToken, items, order, origin, supportEmai
   const productText = productTitles.map((title) => `- ${title}`).join("\n");
   const productHtml = productTitles.map((title) => `<li>${escapeHtml(title)}</li>`).join("");
   const subject = `Your Tobacco Road Games order ${order.public_id}`;
+  if (order.catalog_source === "native_d1" && !order.user_id) {
+    const text = `Your Tobacco Road Games purchase is confirmed.\n\nOrder: ${order.public_id}\nPurchased products:\n${productText}\nAmount paid: ${amount}\n\nClaim this purchase using the verified account with this email address:\n${accessUrl}\n\nThe secure claim link expires in 30 days. After claiming, your products remain in My Library and download through your signed-in account.\n\nNeed help? Reply to this email or contact ${supportEmail}.\n`;
+    const html = `<!doctype html>
+<html lang="en"><body style="margin:0;padding:24px;background:#f7f2e8;color:#24170f;font-family:Arial,sans-serif;line-height:1.55">
+<main style="max-width:620px;margin:0 auto;background:#fff;padding:28px;border:1px solid #ddcfb5;border-radius:12px">
+<h1 style="margin-top:0;font-size:24px">Your purchase is confirmed</h1>
+<p><strong>Order:</strong> ${escapeHtml(order.public_id)}</p>
+<p><strong>Purchased products:</strong></p><ul>${productHtml}</ul>
+<p><strong>Amount paid:</strong> ${escapeHtml(amount)}</p>
+<p>Sign in or create a Tobacco Road Games account with this verified email address, then claim the purchase. Ownership will remain in My Library.</p>
+<p style="margin:28px 0"><a href="${escapeHtml(accessUrl)}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#6f431e;color:#fff;text-decoration:none;font-weight:bold">Claim your purchase</a></p>
+<p style="color:#66584b;font-size:13px">This secure claim link expires in 30 days.</p>
+<p>Need help? Reply to this email or contact <a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>.</p>
+<p style="color:#66584b;font-size:13px">This is a transactional purchase message from Tobacco Road Games.</p>
+</main></body></html>`;
+    return {
+      accessUrl,
+      html,
+      subject,
+      tags: [
+        { name: "category", value: "guest_purchase_claim" },
+        { name: "order_reference", value: String(order.public_id) }
+      ],
+      text,
+      to: order.customer_email
+    };
+  }
   const text = `Your Tobacco Road Games order is ready.\n\nOrder: ${order.public_id}\nPurchased products:\n${productText}\nAmount paid: ${amount}\n\nAccess your downloads:\n${accessUrl}\n\nNeed help? Reply to this email or contact ${supportEmail}.\n`;
   const html = `<!doctype html>
 <html lang="en"><body style="margin:0;padding:24px;background:#f7f2e8;color:#24170f;font-family:Arial,sans-serif;line-height:1.55">
@@ -345,4 +399,8 @@ function escapeHtml(value) {
 
 function nowIso(nowMs) {
   return new Date(Number.isFinite(nowMs) ? Number(nowMs) : Date.now()).toISOString();
+}
+
+function currentTime(nowMs) {
+  return Number.isFinite(nowMs) ? Number(nowMs) : Date.now();
 }

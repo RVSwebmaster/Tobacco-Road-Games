@@ -32,7 +32,7 @@ export async function handleAccountOrderClaimRequest(request, env = {}, options 
     if (!isNativeGuestClaimEnabled(env, options)) {
       return json({ error: { code: "native_guest_claim_unavailable", message: "Native guest purchase claiming is temporarily unavailable." } }, 503);
     }
-    return claimNativeOrder(database, order, session.user.id, now);
+    return claimNativeOrder(database, order, session.user.id, now, access);
   }
   if (order.user_id) return reject(database, order.id, session.user.id, order.user_id === session.user.id ? "already_owned" : "owned_by_another_account", now);
   let results;
@@ -48,9 +48,15 @@ export async function handleAccountOrderClaimRequest(request, env = {}, options 
   return json({ ok: true, message: "Purchase recovered. It is now available in My Library.", orderReference: order.public_id }, 200);
 }
 
-async function claimNativeOrder(database, order, userId, now) {
+async function claimNativeOrder(database, order, userId, now, access) {
+  if (access?.consumed_by_user_id && access.consumed_by_user_id !== userId) {
+    return reject(database, order.id, userId, "credential_already_claimed", now);
+  }
   const complete = await nativeClaimIsComplete(database, order.id, userId);
   if (order.user_id === userId && complete) {
+    if (!access?.consumed_by_user_id) {
+      await bindClaimCredential(database, access?.id, userId, now);
+    }
     return claimSuccess(order.public_id, true);
   }
   if (order.user_id && order.user_id !== userId) {
@@ -76,11 +82,17 @@ async function claimNativeOrder(database, order, userId, now) {
       database.prepare("UPDATE orders SET user_id=? WHERE id=? AND user_id IS NULL").bind(userId, order.id),
       database.prepare("UPDATE native_product_entitlements SET purchaser_user_id=? WHERE order_id=? AND status='active' AND purchaser_user_id IS NULL").bind(userId, order.id),
       database.prepare(`
+        UPDATE order_access_credentials
+        SET consumed_at=?, consumed_by_user_id=?
+        WHERE id=? AND consumed_at IS NULL AND consumed_by_user_id IS NULL
+      `).bind(now, userId, Number(access?.id)),
+      database.prepare(`
         INSERT INTO historical_order_claim_audit(order_id,user_id,outcome,verification_method,reason_code,created_at)
         SELECT ?,?,'succeeded',?,'native_claimed',?
         WHERE EXISTS(SELECT 1 FROM orders WHERE id=? AND user_id=? AND catalog_source='native_d1')
           AND NOT EXISTS(SELECT 1 FROM native_product_entitlements WHERE order_id=? AND status='active' AND purchaser_user_id<>?)
-      `).bind(order.id, userId, METHOD, now, order.id, userId, order.id, userId)
+          AND EXISTS(SELECT 1 FROM order_access_credentials WHERE id=? AND consumed_by_user_id=?)
+      `).bind(order.id, userId, METHOD, now, order.id, userId, order.id, userId, Number(access?.id), userId)
     ]);
   } catch {
     const repaired = await nativeClaimIsComplete(database, order.id, userId);
@@ -90,7 +102,30 @@ async function claimNativeOrder(database, order, userId, now) {
   if (!(await nativeClaimIsComplete(database, order.id, userId))) {
     return reject(database, order.id, userId, "ownership_conflict", now);
   }
+  if (!(await claimCredentialIsBound(database, access?.id, userId))) {
+    return reject(database, order.id, userId, "credential_consumption_failed", now);
+  }
   return claimSuccess(order.public_id, false);
+}
+
+async function bindClaimCredential(database, credentialId, userId, now) {
+  const id = Number(credentialId);
+  if (!Number.isInteger(id) || id < 1) return false;
+  await database.prepare(`
+    UPDATE order_access_credentials
+    SET consumed_at=?, consumed_by_user_id=?
+    WHERE id=? AND consumed_at IS NULL AND consumed_by_user_id IS NULL
+  `).bind(now, userId, id).run();
+  return claimCredentialIsBound(database, id, userId);
+}
+
+async function claimCredentialIsBound(database, credentialId, userId) {
+  const id = Number(credentialId);
+  if (!Number.isInteger(id) || id < 1) return false;
+  const row = await database.prepare(`
+    SELECT consumed_by_user_id FROM order_access_credentials WHERE id=?
+  `).bind(id).first();
+  return row?.consumed_by_user_id === userId;
 }
 
 async function nativeClaimIsComplete(database, orderId, userId) {

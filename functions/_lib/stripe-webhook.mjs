@@ -181,6 +181,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       database,
       eventRecord.event,
       fulfillment,
+      nativeEntitlements,
       options
     );
     return {
@@ -215,6 +216,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
         database,
         claimed.event,
         fulfillment,
+        nativeEntitlements,
         options
       );
       return {
@@ -575,17 +577,24 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     })
     : null;
   const delivery = orderAction === "paid"
-    ? await deliverProcessedPaidOrder(database, result.event, fulfillment, options)
+    ? await deliverProcessedPaidOrder(database, result.event, fulfillment, nativeEntitlements, options)
     : null;
   return { ...result, duplicate: false, delivery, fulfillment, nativeEntitlements };
 }
 
-async function deliverProcessedPaidOrder(database, eventRecord, fulfillment, options) {
+async function deliverProcessedPaidOrder(database, eventRecord, fulfillment, nativeEntitlements, options) {
   if (String(options.deliveryEnv?.RESEND_DELIVERY_ENABLED || "").toLowerCase() !== "true") {
     return null;
   }
   const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
-  if (!orderId || !fulfillment?.ready) {
+  if (!orderId) {
+    return null;
+  }
+  const order = await getOrderById(database, orderId);
+  if (!order) return null;
+  if (isNativeOrder(order)) {
+    if (order.user_id || !nativeEntitlements?.ready) return null;
+  } else if (!fulfillment?.ready) {
     return null;
   }
   try {

@@ -14,7 +14,7 @@ function createElement(id) {
     textContent: "",
     dataset: {},
     elements: { token: { value: "" } },
-    classList: { toggle() {} },
+    classList: { remove() {}, toggle() {} },
     addEventListener() {},
     append(...children) {
       this.children = children;
@@ -25,7 +25,9 @@ function createElement(id) {
   };
 }
 
-function createHarness({ googleClientId = "google-client-id", google = null } = {}) {
+function createHarness({ googleClientId = "google-client-id", google = null, href = "https://tobacco-road-games-staging.pages.dev/account" } = {}) {
+  const recoveryForm = createElement("purchase-recovery-form");
+  recoveryForm.elements.accessLink = { value: "" };
   const elements = new Map([
     ["account-status", createElement("account-status")],
     ["account-summary", createElement("account-summary")],
@@ -37,12 +39,23 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
     ["register-form", createElement("register-form")],
     ["forgot-form", createElement("forgot-form")],
     ["google-unavailable", createElement("google-unavailable")],
-    ["google-signin-control", createElement("google-signin-control")]
+    ["google-signin-control", createElement("google-signin-control")],
+    ["purchase-recovery", createElement("purchase-recovery")],
+    ["purchase-recovery-form", recoveryForm],
+    ["purchase-recovery-status", createElement("purchase-recovery-status")]
   ]);
   const timeouts = [];
   const loadListeners = [];
   const requests = [];
   const calls = { initialize: [], renderButton: [] };
+  const replacedUrls = [];
+  const location = new URL(href);
+  const sessionValues = new Map();
+  const sessionStorage = {
+    getItem(key) { return sessionValues.get(key) || null; },
+    removeItem(key) { sessionValues.delete(key); },
+    setItem(key, value) { sessionValues.set(key, String(value)); }
+  };
   const context = {
     FormData,
     URL,
@@ -78,8 +91,9 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
         ok: true
       };
     },
-    history: { replaceState() {} },
-    location: { href: "https://tobacco-road-games-staging.pages.dev/account" },
+    history: { replaceState(_state, _title, url) { replacedUrls.push(String(url)); } },
+    location,
+    sessionStorage,
     setTimeout(callback) {
       timeouts.push(callback);
       return timeouts.length;
@@ -93,8 +107,8 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
         timeouts.push(callback);
         return timeouts.length;
       },
-      location: { href: "https://tobacco-road-games-staging.pages.dev/account" },
-      history: { replaceState() {} }
+      location,
+      history: { replaceState(_state, _title, url) { replacedUrls.push(String(url)); } }
     }
   };
   context.window.window = context.window;
@@ -103,11 +117,12 @@ function createHarness({ googleClientId = "google-client-id", google = null } = 
   context.window.fetch = context.fetch;
   context.window.URL = URL;
   context.window.decodeURIComponent = decodeURIComponent;
+  context.window.sessionStorage = sessionStorage;
   if (google) context.window.google = google(calls);
 
   vm.runInNewContext(accountScript, context, { filename: "account.js" });
 
-  return { calls, context, elements, loadListeners, requests, timeouts };
+  return { calls, context, elements, loadListeners, replacedUrls, requests, timeouts };
 }
 
 async function flushMicrotasks() {
@@ -192,6 +207,18 @@ async function testGoogleCallbackUsesTrgCsrfHeaderOnly() {
   assert.deepEqual(JSON.parse(request.options.body), { credential: "google-jwt" });
 }
 
+async function testGuestClaimLinkIsCapturedWithoutLeakingInUrl() {
+  const credential = "oa1.42.1.abcdefghijklmnopqrstuvwxyzABCDEF.signature";
+  const harness = createHarness({
+    href: `https://tobacco-road-games-staging.pages.dev/account.html?claim=${encodeURIComponent(credential)}#purchase-recovery`
+  });
+  await flushMicrotasks();
+  assert.equal(harness.elements.get("purchase-recovery").open, true);
+  assert.match(harness.elements.get("purchase-recovery-form").elements.accessLink.value, /\/store\/order-access\?credential=oa1/);
+  assert.match(harness.elements.get("purchase-recovery-status").textContent, /Sign in with the purchase email/);
+  assert.ok(harness.replacedUrls.some((url) => !url.includes("claim=")), "The claim token must be removed from the visible URL after capture.");
+}
+
 (async () => {
   await testConfiguredClientAndGisAvailable();
   await testGisLoadsAfterPageScript();
@@ -199,6 +226,7 @@ async function testGoogleCallbackUsesTrgCsrfHeaderOnly() {
   await testGisScriptFailureShowsUnavailableAfterRetries();
   await testNoDuplicateWidgetInitialization();
   await testGoogleCallbackUsesTrgCsrfHeaderOnly();
+  await testGuestClaimLinkIsCapturedWithoutLeakingInUrl();
   console.log("Account Google UI tests passed.");
 })().catch((error) => {
   console.error(error);

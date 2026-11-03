@@ -21,7 +21,16 @@ export async function ensureActiveOrderAccessCredential(database, order, secret,
     throw new OrderAccessError("order_not_paid");
   }
 
+  const expiration = normalizeExpiration(options.expiresAt, options.nowMs);
   let credential = await getActiveOrderAccessCredential(database, orderId);
+  if (credential && expiration && credentialHasExpired(credential, options.nowMs)) {
+    await database.prepare(`
+      UPDATE order_access_credentials
+      SET status = 'revoked', revoked_at = ?
+      WHERE id = ? AND status = 'active'
+    `).bind(nowIso(options.nowMs), Number(credential.id)).run();
+    credential = null;
+  }
   if (!credential) {
     const generationRow = await database.prepare(`
       SELECT COALESCE(MAX(generation), 0) + 1 AS next_generation
@@ -34,11 +43,18 @@ export async function ensureActiveOrderAccessCredential(database, order, secret,
     const tokenHash = await sha256Hex(token);
     const createdAt = nowIso(options.nowMs);
     try {
-      await database.prepare(`
-        INSERT INTO order_access_credentials (
-          order_id, generation, token_nonce, token_hash, status, created_at
-        ) VALUES (?, ?, ?, ?, 'active', ?)
-      `).bind(orderId, generation, nonce, tokenHash, createdAt).run();
+      const statement = expiration
+        ? database.prepare(`
+          INSERT INTO order_access_credentials (
+            order_id, generation, token_nonce, token_hash, status, created_at, expires_at
+          ) VALUES (?, ?, ?, ?, 'active', ?, ?)
+        `).bind(orderId, generation, nonce, tokenHash, createdAt, expiration)
+        : database.prepare(`
+          INSERT INTO order_access_credentials (
+            order_id, generation, token_nonce, token_hash, status, created_at
+          ) VALUES (?, ?, ?, ?, 'active', ?)
+        `).bind(orderId, generation, nonce, tokenHash, createdAt);
+      await statement.run();
     } catch (error) {
       credential = await getActiveOrderAccessCredential(database, orderId);
       if (!credential) {
@@ -48,9 +64,17 @@ export async function ensureActiveOrderAccessCredential(database, order, secret,
     credential ||= await getActiveOrderAccessCredential(database, orderId);
   }
 
+  if (credential && expiration && !credential.expires_at) {
+    await database.prepare(`
+      UPDATE order_access_credentials SET expires_at = ?
+      WHERE id = ? AND status = 'active' AND expires_at IS NULL
+    `).bind(expiration, Number(credential.id)).run();
+    credential = await getActiveOrderAccessCredential(database, orderId);
+  }
+
   return {
     credential,
-    token: await reconstructOrderAccessToken(credential, secret)
+    token: await reconstructOrderAccessToken(credential, secret, { nowMs: options.nowMs })
   };
 }
 
@@ -114,6 +138,9 @@ export async function verifyOrderAccessToken(database, token, secret, options = 
     )) {
     throw new OrderAccessError("credential_revoked_or_unknown");
   }
+  if (credentialHasExpired(credential, options.nowMs)) {
+    throw new OrderAccessError("credential_expired");
+  }
 
   await database.prepare(`
     UPDATE order_access_credentials SET last_used_at = ?
@@ -134,10 +161,13 @@ export async function getActiveOrderAccessCredential(database, orderId) {
   `).bind(normalizedOrderId).first();
 }
 
-export async function reconstructOrderAccessToken(credential, secret) {
+export async function reconstructOrderAccessToken(credential, secret, options = {}) {
   assertSecret(secret);
   if (!credential || credential.status !== "active") {
     throw new OrderAccessError("credential_revoked_or_unknown");
+  }
+  if (credentialHasExpired(credential, options.nowMs)) {
+    throw new OrderAccessError("credential_expired");
   }
   const token = await buildOrderAccessToken({
     generation: positiveInteger(credential.generation),
@@ -221,4 +251,22 @@ function positiveInteger(value) {
 
 function nowIso(nowMs) {
   return new Date(Number.isFinite(nowMs) ? Number(nowMs) : Date.now()).toISOString();
+}
+
+function normalizeExpiration(value, nowMs) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const timestamp = Date.parse(String(value));
+  const now = Number.isFinite(nowMs) ? Number(nowMs) : Date.now();
+  if (!Number.isFinite(timestamp) || timestamp <= now) {
+    throw new OrderAccessError("credential_expiration_invalid");
+  }
+  return new Date(timestamp).toISOString();
+}
+
+function credentialHasExpired(credential, nowMs) {
+  const timestamp = Date.parse(String(credential?.expires_at || ""));
+  const now = Number.isFinite(nowMs) ? Number(nowMs) : Date.now();
+  return Number.isFinite(timestamp) && timestamp <= now;
 }

@@ -22,6 +22,7 @@ async function main() {
   const quote = await load("functions/_lib/cart-quote.mjs");
   const webhook = await load("functions/_lib/stripe-webhook.mjs");
   const access = await load("functions/_lib/order-access.mjs");
+  const accessPage = await load("functions/_lib/order-access-page.mjs");
   const claim = await load("functions/_lib/account-order-claim.mjs");
   const library = await load("functions/_lib/account-library.mjs");
   const download = await load("functions/_lib/download-route.mjs");
@@ -115,23 +116,76 @@ async function main() {
   assert.equal(order.total_cents, 1300);
   const snapshots = raw.prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY id").all(order.id);
   assert.deepEqual(snapshots.map(row => row.selected_price_cents), [575, 725]);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM email_outbox WHERE order_id=?").get(order.id).n, 0,
+    "Preparing an order must not issue a purchase notification.");
 
-  response = await webhook.handleStripeWebhookRequest(await webhookRequest(order), {
-    PAYMENT_PIPELINE_STAGE: "staging", STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db
-  }, { nowMs: NOW });
+  const deliveryCalls = [];
+  let failDeliveryOnce = true;
+  const webhookEnv = {
+    ORDER_ACCESS_SIGNING_SECRET: ACCESS_SECRET, PAYMENT_PIPELINE_STAGE: "staging",
+    PUBLIC_SITE_ORIGIN: "https://example.test", RESEND_API_KEY: "re_task2pb_test",
+    RESEND_DELIVERY_ENABLED: "true", RESEND_REPLY_TO: "support@example.test",
+    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db
+  };
+  const deliveryFetchImpl = async (_url, options) => {
+    deliveryCalls.push({ body: String(options.body), key: options.headers["idempotency-key"] });
+    if (failDeliveryOnce) {
+      failDeliveryOnce = false;
+      return providerResponse({ name: "internal_server_error" }, 500);
+    }
+    return providerResponse({ id: "email_task2pb_guest_claim" }, 200);
+  };
+  response = await webhook.handleStripeWebhookRequest(await webhookRequest(order), webhookEnv, {
+    deliveryFetchImpl, nowMs: NOW
+  });
   body = await response.json();
-  assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(response.status, 500, "A retryable email-provider failure must keep the verified paid event retryable.");
   order = raw.prepare("SELECT * FROM orders WHERE id=?").get(order.id);
   assert.equal(order.payment_status, "paid");
   assert.equal(order.native_entitlement_status, "ready");
   let entitlements = raw.prepare("SELECT * FROM native_product_entitlements WHERE order_id=? ORDER BY id").all(order.id);
   assert.equal(entitlements.length, 2);
   assert.ok(entitlements.every(row => row.purchaser_user_id === null));
+  assert.equal(raw.prepare("SELECT status FROM email_outbox WHERE order_id=?").get(order.id).status, "delayed");
+
+  response = await webhook.handleStripeWebhookRequest(await webhookRequest(order), webhookEnv, {
+    deliveryFetchImpl, nowMs: NOW + 1000
+  });
+  body = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(body.duplicate, true);
+  assert.equal(deliveryCalls.length, 2);
+  assert.equal(deliveryCalls[0].key, deliveryCalls[1].key, "Webhook retries must reuse the provider idempotency key.");
+  assert.equal(deliveryCalls[0].body, deliveryCalls[1].body, "Webhook retries must reuse the exact email payload.");
+  response = await webhook.handleStripeWebhookRequest(await webhookRequest(order), webhookEnv, {
+    deliveryFetchImpl, nowMs: NOW + 2000
+  });
+  assert.equal(response.status, 200);
+  assert.equal(deliveryCalls.length, 2, "An accepted purchase notification must not be sent again.");
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM email_outbox WHERE order_id=?").get(order.id).n, 1);
+  const emailPayload = JSON.parse(deliveryCalls[1].body);
+  assert.match(emailPayload.subject, /TRG-TASK2PA-GUEST/);
+  assert.match(emailPayload.text, /Claim this purchase/);
+  assert.match(emailPayload.html, /Claim your purchase/);
+  assert.match(emailPayload.text, /30 days/);
+  assert.doesNotMatch(JSON.stringify(emailPayload), /catalog-publications|delivery_r2|order_item_id|purchaser_email_hash/i);
 
   await seedUser(raw, auth, { id: "task2pa-buyer", email: EMAIL, token: "task2pa-buyer-token", csrf: "task2pa-buyer-csrf" });
   await seedUser(raw, auth, { id: "task2pa-other", email: "other-task2pa@example.test", token: "task2pa-other-token", csrf: "task2pa-other-csrf" });
-  const orderAccess = await access.ensureActiveOrderAccessCredential(db, order, ACCESS_SECRET, { nowMs: NOW });
+  const orderAccess = await access.ensureActiveOrderAccessCredential(db, order, ACCESS_SECRET, {
+    expiresAt: new Date(NOW + 30 * 86400000).toISOString(), nowMs: NOW
+  });
+  assert.equal(orderAccess.credential.expires_at, new Date(NOW + 30 * 86400000).toISOString());
   const claimEnv = { ORDER_ACCESS_SIGNING_SECRET: ACCESS_SECRET, PAYMENT_PIPELINE_STAGE: "staging", TRG_ORDERS: db };
+
+  response = await accessPage.handleOrderAccessPage(new Request(`https://example.test/store/order-access?credential=${encodeURIComponent(orderAccess.token)}`), {
+    ...claimEnv, NATIVE_GUEST_CLAIM_MODE: "staging-verification"
+  }, { nowMs: NOW + 2000 });
+  assert.equal(response.status, 200);
+  const accessHtml = await response.text();
+  assert.match(accessHtml, /Claim your purchase/);
+  assert.match(accessHtml, /account\.html\?claim=/);
+  assert.doesNotMatch(accessHtml, /catalog-publications|delivery_r2|\.pdf/i);
 
   response = await claim.handleAccountOrderClaimRequest(claimRequest("task2pa-buyer", orderAccess.token), claimEnv, {
     nativeGuestClaimEnabled: false, nowMs: NOW, sessionOptions: { nowMs: NOW }
@@ -139,6 +193,12 @@ async function main() {
   assert.equal(response.status, 503, "Native claiming must remain disabled by default.");
   assert.equal(raw.prepare("SELECT user_id FROM orders WHERE id=?").get(order.id).user_id, null);
 
+  const claimRouteSource = fs.readFileSync(path.join(ROOT, "functions/api/account/claim-order.js"), "utf8");
+  assert.match(claimRouteSource, /handleAccountOrderClaimRequest\(context\.request, context\.env\)/,
+    "The Pages route must adapt its context to the request handler.");
+  const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
+  assert.ok(routes.include.includes("/api/account/profile"),
+    "The account claim experience must route the existing account profile request through Pages Functions.");
   response = await claim.handleAccountOrderClaimRequest(claimRequest("task2pa-other", orderAccess.token), claimEnv, {
     nativeGuestClaimEnabled: true, nowMs: NOW, sessionOptions: { nowMs: NOW }
   });
@@ -168,6 +228,9 @@ async function main() {
   assert.equal(body.duplicate, true);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM historical_order_claim_audit WHERE order_id=? AND outcome='succeeded'").get(order.id).n, 1);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM native_product_entitlements WHERE order_id=?").get(order.id).n, 2);
+  const consumed = raw.prepare("SELECT consumed_at,consumed_by_user_id FROM order_access_credentials WHERE id=?").get(orderAccess.credential.id);
+  assert.equal(consumed.consumed_by_user_id, "task2pa-buyer");
+  assert.ok(consumed.consumed_at);
 
   const bucket = createBucket(snapshots);
   const customerEnv = { DOWNLOAD_SIGNING_SECRET: DOWNLOAD_SECRET, TRG_ORDERS: db, TRG_PRODUCTS: bucket };
@@ -194,6 +257,14 @@ async function main() {
   }), customerEnv, { nowMs: NOW + 1000, sessionOptions: { nowMs: NOW + 1000 } });
   assert.ok((await response.json()).items.some(item => item.productId === "task2pa-fixed"));
 
+  raw.prepare("UPDATE order_access_credentials SET expires_at=? WHERE id=?").run(
+    new Date(NOW - 1000).toISOString(), orderAccess.credential.id
+  );
+  response = await claim.handleAccountOrderClaimRequest(claimRequest("task2pa-buyer", orderAccess.token), claimEnv, {
+    nativeGuestClaimEnabled: true, nowMs: NOW, sessionOptions: { nowMs: NOW }
+  });
+  assert.equal(response.status, 400, "An expired claim credential must be rejected even for the matching account.");
+
   const registered = await preparation.handleNativeOrderPreparationRequest(jsonRequest("/api/cart/prepare-order", {
     checkoutAttemptId: "trgca_2f000000-0000-4000-8000-000000000002",
     email: EMAIL, emailConfirmation: EMAIL, items: [{ slug: "task2pa-account", quantity: 1 }]
@@ -204,10 +275,8 @@ async function main() {
   assert.equal(registered.status, 201, "Registered native preparation must remain available while the guest gate is off.");
 
   assert.throws(() => raw.prepare("UPDATE native_product_entitlements SET purchaser_user_id='task2pa-other' WHERE order_id=?").run(order.id), /not authorized/);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM email_outbox WHERE order_id=?").get(order.id).n, 0,
-    "Task 2P-A must not add a guest notification delivery system.");
   raw.close();
-  console.log("Native guest purchase and verified account-claim tests passed.");
+  console.log("Native guest purchase notification and verified account-claim tests passed.");
 }
 
 function baseEnv(db) {
@@ -224,7 +293,7 @@ function stripeHarness() {
     calls,
     async fetch(_url, options) {
       calls.push(new URLSearchParams(String(options.body || "")));
-      return response({ id: "cs_test_task2pa_guest", livemode: false, ui_mode: "hosted_page", url: "https://checkout.stripe.test/task2pa" });
+      return providerResponse({ id: "cs_test_task2pa_guest", livemode: false, ui_mode: "hosted_page", url: "https://checkout.stripe.test/task2pa" });
     }
   };
 }
@@ -310,7 +379,7 @@ function d1(raw) {
 }
 
 function count(raw, table) { return raw.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n; }
-function response(payload, status = 200) { return { ok: status >= 200 && status < 300, status, async json() { return payload; } }; }
+function providerResponse(payload, status = 200) { return { ok: status >= 200 && status < 300, status, async json() { return payload; } }; }
 function load(relativePath) { return import(pathToFileURL(path.join(ROOT, relativePath)).href + `?task2pa=${Math.random()}`); }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });
