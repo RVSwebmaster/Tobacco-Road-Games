@@ -3,6 +3,7 @@ import { getProductBySlug } from "./product-catalog-d1.mjs";
 const AGENCY_ID = "legacy:agency";
 const AGENCY_SLUG = "agency";
 const AGENCY_CREATOR_ID = "creator-rv-sawyer";
+const AGENCY_SHA256 = "c503aad77f0736814c578683c0ff50fb83a4ed4ac4a67e823aa141a87a3572c9";
 const AGENCY_DELIVERY = Object.freeze({
   contentType: "application/pdf",
   customerFilename: "Agency.pdf",
@@ -27,9 +28,14 @@ export function isAgencyContinuityProduct(product) {
     && product.publicationState === "retired"
     && product.status === "legacy-not-for-sale"
     && product.buyMode === "retired"
-    && product.deliveryR2Key === null
+    && product.deliveryR2Key === AGENCY_DELIVERY.r2ObjectKey
+    && product.deliveryFilename === AGENCY_DELIVERY.customerFilename
+    && product.deliveryContentType === AGENCY_DELIVERY.contentType
     && marker?.migration === "2R-B"
-    && marker?.continuityIdentity === AGENCY_SLUG;
+    && marker?.continuityIdentity === AGENCY_SLUG
+    && marker?.assetRecoveryMigration === "2R-C"
+    && marker?.deliverySha256 === AGENCY_SHA256
+    && Number(marker?.deliverySizeBytes) === AGENCY_DELIVERY.objectSizeBytes;
 }
 
 export function isAgencyEntitlementSnapshot(entitlement) {

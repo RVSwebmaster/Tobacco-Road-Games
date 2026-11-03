@@ -7,6 +7,7 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS = path.join(ROOT, "migrations");
 const CONTINUITY_MIGRATION = "068_agency_legacy_continuity.sql";
+const RECOVERY_MIGRATION = "069_agency_asset_recovery.sql";
 const NOW = Date.parse("2026-11-03T16:00:00.000Z");
 const SECRET = "agency-continuity-test-secret-long-enough";
 const EXPECTED_SIZE = 9630946;
@@ -27,12 +28,18 @@ async function main() {
   assert.equal(before.entitlements.length, 2);
 
   applyMigration(fixture.raw, CONTINUITY_MIGRATION);
-  verifyContinuityIdentity(fixture.raw);
+  verifyPreRecoveryIdentity(fixture.raw);
   assert.deepEqual(snapshot(fixture.raw), before, "The migration must not alter historical orders or entitlements.");
 
   applyMigration(fixture.raw, CONTINUITY_MIGRATION);
   assert.equal(count(fixture.raw, "marketplace_products", "slug='agency'"), 1, "Migration retry must not duplicate Agency.");
   assert.equal(count(fixture.raw, "download_entitlements"), 2, "Migration retry must not duplicate entitlements.");
+
+  applyMigration(fixture.raw, RECOVERY_MIGRATION);
+  verifyRecoveredIdentity(fixture.raw);
+  assert.deepEqual(snapshot(fixture.raw), before, "Asset recovery must not alter historical orders or entitlements.");
+  applyMigration(fixture.raw, RECOVERY_MIGRATION);
+  assert.equal(count(fixture.raw, "marketplace_products", "slug='agency'"), 1, "Recovery retry must not duplicate Agency.");
 
   await verifySecureContinuity(fixture, authorization, download, fulfillment);
   await verifyCollisionFailsClosed(catalog);
@@ -45,7 +52,7 @@ async function main() {
 async function createHistoricalFixture(orders) {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
-  for (const file of migrationFiles().filter((name) => name !== CONTINUITY_MIGRATION)) {
+  for (const file of migrationFiles().filter((name) => name.localeCompare(CONTINUITY_MIGRATION) < 0)) {
     applyMigration(raw, file);
   }
   const d1 = d1Adapter(raw);
@@ -101,7 +108,7 @@ async function createHistoricalFixture(orders) {
   return { d1, orderIds: created, raw };
 }
 
-function verifyContinuityIdentity(raw) {
+function verifyPreRecoveryIdentity(raw) {
   const product = raw.prepare("SELECT * FROM marketplace_products WHERE slug='agency'").get();
   assert.ok(product, "Agency must have one native continuity identity.");
   assert.equal(product.id, "legacy:agency");
@@ -113,6 +120,23 @@ function verifyContinuityIdentity(raw) {
   assert.equal(product.delivery_r2_key, null, "An unavailable R2 object must not be represented as verified delivery.");
   assert.equal(JSON.parse(product.metadata_json).operationSeverance.deliveryAssetStatus, "authoritative-staging-object-unavailable");
   assert.equal(count(raw, "marketplace_products", `slug IN (${HISTORICAL_SLUGS.map(() => "?").join(",")})`, HISTORICAL_SLUGS), 0);
+}
+
+function verifyRecoveredIdentity(raw) {
+  const product = raw.prepare("SELECT * FROM marketplace_products WHERE slug='agency'").get();
+  const metadata = JSON.parse(product.metadata_json).operationSeverance;
+  assert.equal(product.id, "legacy:agency");
+  assert.equal(product.publication_state, "retired");
+  assert.equal(product.status, "legacy-not-for-sale");
+  assert.equal(product.buy_mode, "retired");
+  assert.equal(product.delivery_r2_key, "agency/product.pdf");
+  assert.equal(product.delivery_filename, "Agency.pdf");
+  assert.equal(product.delivery_content_type, "application/pdf");
+  assert.equal(product.revision, 2);
+  assert.equal(metadata.deliveryAssetStatus, "restored-and-verified");
+  assert.equal(metadata.assetRecoveryMigration, "2R-C");
+  assert.equal(metadata.deliverySha256, "c503aad77f0736814c578683c0ff50fb83a4ed4ac4a67e823aa141a87a3572c9");
+  assert.equal(metadata.deliverySizeBytes, EXPECTED_SIZE);
 }
 
 async function verifySecureContinuity(fixture, authorization, download, fulfillment) {
@@ -166,7 +190,7 @@ async function verifySecureContinuity(fixture, authorization, download, fulfillm
 async function verifyCollisionFailsClosed(catalog) {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
-  for (const file of migrationFiles().filter((name) => name !== CONTINUITY_MIGRATION)) applyMigration(raw, file);
+  for (const file of migrationFiles().filter((name) => name.localeCompare(CONTINUITY_MIGRATION) < 0)) applyMigration(raw, file);
   const d1 = d1Adapter(raw);
   await catalog.createProduct(d1, {
     buyMode: "retired",
