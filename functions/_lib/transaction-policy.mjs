@@ -8,7 +8,7 @@ export const REFUND_ELIGIBLE_REASONS = Object.freeze([
 
 export async function assertVerifiedPurchaseIdentity(
   database,
-  { session, emailHash } = {},
+  { session, emailHash, nowMs = Date.now() } = {},
 ) {
   if (session?.user) {
     if (Number(session.user.email_verified) !== 1)
@@ -28,7 +28,7 @@ export async function assertVerifiedPurchaseIdentity(
     )
     .bind(String(emailHash))
     .first();
-  if (!row?.verified_at || Date.parse(row.expires_at) <= Date.now())
+  if (!row?.verified_at || Date.parse(row.expires_at) <= Number(nowMs))
     throw policyError(
       "verified_email_required",
       "Verify this email address before completing guest checkout.",

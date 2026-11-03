@@ -143,10 +143,18 @@ function base64urlEncode(bytes) {
 }
 
 function base64urlDecode(value) {
-  const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  const encoded = String(value || "");
+  if (!encoded || !/^[A-Za-z0-9_-]+$/.test(encoded)) {
+    throw new Error("Invalid base64url encoding.");
+  }
+  const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
   const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
   const binary = atob(normalized + padding);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const decoded = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  if (base64urlEncode(decoded) !== encoded) {
+    throw new Error("Non-canonical base64url encoding.");
+  }
+  return decoded;
 }
 
 function positiveInteger(value) {

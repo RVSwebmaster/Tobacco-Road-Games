@@ -699,6 +699,7 @@ function isEmail(value) {
 }
 
 function nowMs(options = {}) {
+  if (Number.isFinite(options.nowMs)) return Number(options.nowMs);
   return Number.isFinite(options.now) ? Number(options.now) : Date.now();
 }
 

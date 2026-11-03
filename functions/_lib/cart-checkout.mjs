@@ -153,7 +153,7 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     const injectedTestCatalog=Array.isArray(options.catalogProducts);
     if(!injectedTestCatalog){
     if(accountSession?.user&&String(accountSession.user.email||accountSession.user.email_normalized||'').toLowerCase()!==email.normalized)throw Object.assign(new Error('Use the verified email address on your signed-in account.'),{code:'account_email_mismatch'});
-    await assertVerifiedPurchaseIdentity(database,{session:accountSession,emailHash:customerEmailHash});
+    await assertVerifiedPurchaseIdentity(database,{session:accountSession,emailHash:customerEmailHash,nowMs:now});
     await assertNotFraudBlocked(database,{emailHash:customerEmailHash,userId:accountSession?.user?.id||null});
     const duplicates=await findDuplicateDigitalOwnership(database,{userId:accountSession?.user?.id||null,emailHash:customerEmailHash,productSlugs:resolution.items.map(item=>item.productSlug)});
     if(duplicates.length)return jsonResponse({error:'You already own one or more digital products in this cart. Use My Library or order recovery instead.',code:'digital_product_already_owned',ownedProductSlugs:duplicates,recoveryUrl:'/account.html'},409);

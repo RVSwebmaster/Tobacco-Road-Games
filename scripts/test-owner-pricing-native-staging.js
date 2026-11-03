@@ -15,6 +15,7 @@ const DB_NAME = "trg-orders-staging";
 const DB_ID = "d92594e8-a45c-4f84-8f48-7c3aeba17f29";
 const BUCKET = "trg-products-staging";
 const WEBHOOK_SECRET = "whsec_task2na_isolated_preview_v1";
+const KEEP_SHARED_STORE_CLOSED = process.env.TRG_TASK2SA_KEEP_STORE_CLOSED === "1";
 const suffix = randomUUID().replace(/-/g, "");
 const id = `task2na-${suffix}`;
 const slug = `task2na-pricing-${suffix}`;
@@ -234,28 +235,33 @@ async function main() {
     deliveryKey = product.deliveryR2Key;
     console.log(`Publication: ${id} reached native staging D1/R2 at revision 1.`);
 
-    query("UPDATE runtime_settings SET setting_value='OPEN' WHERE setting_key='store_state'");
-    response = await fetch(`${ORIGIN}/api/cart/prepare-order`, {
-      method: "POST", headers: { ...authHeaders(), "content-type": "application/json" }, body: JSON.stringify({
-        checkoutAttemptId: attempt, email: owner.email_normalized, emailConfirmation: owner.email_normalized,
-        items: [{ slug, quantity: 1, priceCents: 1 }]
-      })
-    });
-    const prepared = await response.json();
-    assert.equal(response.status, 201, JSON.stringify(prepared));
-    assert.equal(prepared.totalCents, 500);
-    order = query(`SELECT * FROM orders WHERE checkout_attempt_id=${sql(attempt)}`).results[0];
-    order = await nativeOrders.attachNativeStripeCheckoutSession(db, Number(order.id), {
-      id: stripeSessionId, url: `https://checkout.stripe.test/${stripeSessionId}`
-    });
-    response = await sendEvent(stripeEvent(order));
-    assert.equal(response.status, 200, await response.text());
-    query("UPDATE runtime_settings SET setting_value='CLOSED' WHERE setting_key='store_state'");
-    snapshotBefore = query(`SELECT catalog_revision,pricing_model_snapshot,selected_price_cents,delivery_r2_key_snapshot FROM order_items WHERE order_id=${Number(order.id)}`).results[0];
-    entitlementBefore = query(`SELECT catalog_revision_snapshot,pricing_model_snapshot,selected_price_cents_snapshot,status FROM native_product_entitlements WHERE order_id=${Number(order.id)}`).results[0];
-    assert.equal(snapshotBefore.catalog_revision, 1);
-    assert.equal(entitlementBefore.selected_price_cents_snapshot, 500);
-    console.log("Snapshot fixture: paid order and entitlement captured immutable revision-1 pricing before edits; staging returned to CLOSED.");
+    if (KEEP_SHARED_STORE_CLOSED) {
+      assert.equal(query("SELECT setting_value FROM runtime_settings WHERE setting_key='store_state'").results[0].setting_value, "CLOSED");
+      console.log("Snapshot fixture: skipped for Task 2S-A so shared staging remained CLOSED throughout the Owner Pricing UI test.");
+    } else {
+      query("UPDATE runtime_settings SET setting_value='OPEN' WHERE setting_key='store_state'");
+      response = await fetch(`${ORIGIN}/api/cart/prepare-order`, {
+        method: "POST", headers: { ...authHeaders(), "content-type": "application/json" }, body: JSON.stringify({
+          checkoutAttemptId: attempt, email: owner.email_normalized, emailConfirmation: owner.email_normalized,
+          items: [{ slug, quantity: 1, priceCents: 1 }]
+        })
+      });
+      const prepared = await response.json();
+      assert.equal(response.status, 201, JSON.stringify(prepared));
+      assert.equal(prepared.totalCents, 500);
+      order = query(`SELECT * FROM orders WHERE checkout_attempt_id=${sql(attempt)}`).results[0];
+      order = await nativeOrders.attachNativeStripeCheckoutSession(db, Number(order.id), {
+        id: stripeSessionId, url: `https://checkout.stripe.test/${stripeSessionId}`
+      });
+      response = await sendEvent(stripeEvent(order));
+      assert.equal(response.status, 200, await response.text());
+      query("UPDATE runtime_settings SET setting_value='CLOSED' WHERE setting_key='store_state'");
+      snapshotBefore = query(`SELECT catalog_revision,pricing_model_snapshot,selected_price_cents,delivery_r2_key_snapshot FROM order_items WHERE order_id=${Number(order.id)}`).results[0];
+      entitlementBefore = query(`SELECT catalog_revision_snapshot,pricing_model_snapshot,selected_price_cents_snapshot,status FROM native_product_entitlements WHERE order_id=${Number(order.id)}`).results[0];
+      assert.equal(snapshotBefore.catalog_revision, 1);
+      assert.equal(entitlementBefore.selected_price_cents_snapshot, 500);
+      console.log("Snapshot fixture: paid order and entitlement captured immutable revision-1 pricing before edits; staging returned to CLOSED.");
+    }
 
     let targets;
     try { targets = await fetchJson(`http://127.0.0.1:${debuggingPort}/json/list`); }
@@ -352,11 +358,13 @@ async function main() {
     assert.equal(quote.unavailableItems[0].code, "paused_product");
     console.log("Availability: pausing through Owner Pricing immediately hid the detail route and rejected new cart quotes.");
 
-    const snapshotAfter = query(`SELECT catalog_revision,pricing_model_snapshot,selected_price_cents,delivery_r2_key_snapshot FROM order_items WHERE order_id=${Number(order.id)}`).results[0];
-    const entitlementAfter = query(`SELECT catalog_revision_snapshot,pricing_model_snapshot,selected_price_cents_snapshot,status FROM native_product_entitlements WHERE order_id=${Number(order.id)}`).results[0];
-    assert.deepEqual(snapshotAfter, snapshotBefore);
-    assert.deepEqual(entitlementAfter, entitlementBefore);
-    console.log("Durability: paid order snapshot and entitlement remained byte-for-byte unchanged through repricing and pause.");
+    if (order) {
+      const snapshotAfter = query(`SELECT catalog_revision,pricing_model_snapshot,selected_price_cents,delivery_r2_key_snapshot FROM order_items WHERE order_id=${Number(order.id)}`).results[0];
+      const entitlementAfter = query(`SELECT catalog_revision_snapshot,pricing_model_snapshot,selected_price_cents_snapshot,status FROM native_product_entitlements WHERE order_id=${Number(order.id)}`).results[0];
+      assert.deepEqual(snapshotAfter, snapshotBefore);
+      assert.deepEqual(entitlementAfter, entitlementBefore);
+      console.log("Durability: paid order snapshot and entitlement remained byte-for-byte unchanged through repricing and pause.");
+    }
   } catch (error) {
     mainError = error;
   }
@@ -381,7 +389,9 @@ async function main() {
     if (deliveryKey) assertR2Missing(deliveryKey);
     assert.equal(query(`SELECT COUNT(*) n FROM marketplace_products WHERE id=${sql(id)}`).results[0].n, 0);
     assert.equal(query(`SELECT COUNT(*) n FROM orders WHERE checkout_attempt_id=${sql(attempt)}`).results[0].n, 0);
-    console.log("Cleanup: product, paid snapshot, entitlement, webhook event, and exact R2 objects removed.");
+    console.log(order
+      ? "Cleanup: product, paid snapshot, entitlement, webhook event, and exact R2 objects removed."
+      : "Cleanup: product and exact R2 objects removed; no paid snapshot, entitlement, or webhook event was created.");
   } catch (cleanupError) {
     if (mainError) console.error("Original staging failure:", mainError);
     throw cleanupError;

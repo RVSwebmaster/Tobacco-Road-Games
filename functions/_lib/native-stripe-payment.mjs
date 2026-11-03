@@ -54,6 +54,7 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
   }
   const publicOrderReference = String(parsed.body.publicOrderReference || "").trim().toUpperCase();
   if (!publicOrderReference) return jsonResponse({ error: "A public order reference is required." }, 400);
+  const now = Number.isFinite(options.now) ? Number(options.now) : Date.now();
   const order = await getPreparedOrderByCheckoutAttempt(database, checkoutAttemptId);
   if (!order || order.public_id !== publicOrderReference || order.catalog_source !== "native_d1") {
     return jsonResponse({ code: "native_order_not_found", error: "The native pending order was not found." }, 404);
@@ -83,7 +84,7 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
         error.code = "account_email_mismatch";
         throw error;
       }
-      await assertVerifiedPurchaseIdentity(database, { session, emailHash: customerEmailHash });
+      await assertVerifiedPurchaseIdentity(database, { session, emailHash: customerEmailHash, nowMs: now });
       await assertNotFraudBlocked(database, { emailHash: customerEmailHash, userId: session?.user?.id || null });
     } catch (error) {
       return jsonResponse({ error: safeMessage(error, "Purchase verification failed."), code: error?.code || "purchase_verification_failed" }, 403);
@@ -101,7 +102,6 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
   if (order.checkout_session_status === "active" && order.stripe_checkout_session_id && order.stripe_checkout_session_url) {
     return successfulResponse(order, checkoutCookieSecret, true);
   }
-  const now = Number.isFinite(options.now) ? Number(options.now) : Date.now();
   if (!order.native_payment_expires_at || Date.parse(order.native_payment_expires_at) <= now) {
     await cancelNativePendingOrder(database, Number(order.id), "native_order_expired", { updatedAt: new Date(now).toISOString() });
     return jsonResponse({ code: "native_order_expired", error: "This native order is stale. Prepare a new order." }, 409);

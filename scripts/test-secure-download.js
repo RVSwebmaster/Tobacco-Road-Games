@@ -192,6 +192,18 @@ async function testCredentialsAndDelivery(orders, fulfillment, authorization, do
   );
   assert.equal(response.status, 403, "An altered credential must fail.");
 
+  const [encodedPayload, encodedSignature] = credential.split(".");
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  const finalIndex = alphabet.indexOf(encodedSignature.at(-1));
+  const nonCanonicalFinalIndex = (finalIndex & 0b110000) | ((finalIndex + 1) & 0b001111);
+  const nonCanonicalCredential = `${encodedPayload}.${encodedSignature.slice(0, -1)}${alphabet[nonCanonicalFinalIndex]}`;
+  response = await download.handleAuthorizedDownload(
+    new Request(`https://example.com/store/download?credential=${nonCanonicalCredential}`),
+    { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: fixture.d1, TRG_PRODUCTS: bucket },
+    { deliveryProducts: DELIVERY_PRODUCTS, nowMs: NOW + 1000 }
+  );
+  assert.equal(response.status, 403, "A non-canonical signature spelling must fail even when it decodes to the same bytes.");
+
   const shortCredential = await authorization.createDownloadCredential(entitlement, SECRET, {
     nowMs: NOW,
     ttlSeconds: 1

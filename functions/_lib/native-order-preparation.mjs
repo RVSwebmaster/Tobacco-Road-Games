@@ -102,7 +102,7 @@ export async function handleNativeOrderPreparationRequest(request, env = {}, opt
         error.code = "account_email_mismatch";
         throw error;
       }
-      await assertVerifiedPurchaseIdentity(database, { session, emailHash: customerEmailHash });
+      await assertVerifiedPurchaseIdentity(database, { session, emailHash: customerEmailHash, nowMs: now });
       await assertNotFraudBlocked(database, { emailHash: customerEmailHash, userId: session?.user?.id || null });
       const duplicates = await findDuplicateDigitalOwnership(database, {
         emailHash: customerEmailHash,
