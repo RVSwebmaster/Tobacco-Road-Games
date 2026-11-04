@@ -197,6 +197,8 @@ async function main() {
   assert.match(claimRouteSource, /handleAccountOrderClaimRequest\(context\.request, context\.env\)/,
     "The Pages route must adapt its context to the request handler.");
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
+  assert.ok(routes.include.includes("/api/checkout-email/*"),
+    "Guest checkout email verification must route through Pages Functions.");
   assert.ok(routes.include.includes("/api/account/profile"),
     "The account claim experience must route the existing account profile request through Pages Functions.");
   response = await claim.handleAccountOrderClaimRequest(claimRequest("task2pa-other", orderAccess.token), claimEnv, {
