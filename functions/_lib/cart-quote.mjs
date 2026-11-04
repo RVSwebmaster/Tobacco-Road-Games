@@ -1,4 +1,5 @@
 import pricingModule from "../../shared/pricing.js";
+import { getSessionFromRequest } from "./account-auth.mjs";
 import { resolveHybridCartCatalog } from "./cart-catalog.mjs";
 import { isNativeGuestCheckoutEnabled } from "./native-guest-purchase-policy.mjs";
 import {
@@ -130,9 +131,22 @@ export async function handleCartQuoteRequest(request, options = {}) {
 
   const nativeFreeAcquisition = hasNative && !hasLegacy && quotedItems.length > 0
     && unavailableItems.length === 0 && subtotalCents === 0;
+  // A signed-in, verified customer may use native paid checkout even while the
+  // separately gated guest-purchase path remains disabled. The checkout
+  // endpoint repeats identity and availability validation before it creates an
+  // order; this only keeps the cart UI from incorrectly blocking that path.
+  let authenticatedNativeCheckout = false;
+  if (hasNative && !hasLegacy && quotedItems.length > 0 && unavailableItems.length === 0 && subtotalCents > 0 && options.env) {
+    try {
+      const session = await getSessionFromRequest(request, options.env);
+      authenticatedNativeCheckout = Boolean(session?.valid && session?.user && Number(session.user.email_verified) === 1);
+    } catch {
+      authenticatedNativeCheckout = false;
+    }
+  }
   const nativePaidCheckout = hasNative && !hasLegacy && quotedItems.length > 0
     && unavailableItems.length === 0 && subtotalCents > 0
-    && isNativeGuestCheckoutEnabled(options.env || {}, options);
+    && (authenticatedNativeCheckout || isNativeGuestCheckoutEnabled(options.env || {}, options));
   const checkoutAllowed = !hasNative || nativeFreeAcquisition || nativePaidCheckout;
   return jsonResponse({
     checkoutAllowed,

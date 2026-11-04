@@ -12,6 +12,7 @@ async function main() {
   const quote = await load("functions/_lib/cart-quote.mjs");
   const checkout = await load("functions/_lib/cart-checkout.mjs");
   const hybrid = await load("functions/_lib/cart-catalog.mjs");
+  const accountAuth = await load("functions/_lib/account-auth.mjs");
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
   for (const name of fs.readdirSync(path.join(ROOT, "migrations")).filter(name => name.endsWith(".sql")).sort()) {
@@ -58,6 +59,28 @@ async function main() {
   assert.equal(body.checkoutAllowed, false);
   assert.equal(body.items[0].deliveryR2Key, undefined);
   assert.equal(JSON.stringify(body).includes("catalog-publications/test/delivery.pdf"), false);
+
+  const sessionToken = "authenticated-native-quote-session";
+  const sessionTokenHash = await accountAuth.hashToken(sessionToken);
+  raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?,?,?,?,?,?,?)")
+    .run("authenticated-quote-user", "authenticated-quote@example.test", 1, "active", "user", "2026-10-29T18:00:00.000Z", "2026-10-29T18:00:00.000Z");
+  raw.prepare("INSERT INTO sessions(id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?,?)")
+    .run("authenticated-quote-session", "authenticated-quote-user", sessionTokenHash, "csrf-hash", "2026-10-29T18:00:00.000Z", "2099-01-01T00:00:00.000Z", "2026-10-29T18:00:00.000Z");
+  response = await quote.handleCartQuoteRequest(new Request("https://example.test/api/cart/quote", {
+    method: "POST",
+    headers: { cookie: `__Host-trg_session=${sessionToken}`, "content-type": "application/json" },
+    body: JSON.stringify({ items: [{ slug: "native-fixed", quantity: 1 }] })
+  }), {
+    database: db,
+    catalogProducts: legacyProducts,
+    env: { PAYMENT_PIPELINE_STAGE: "staging", NATIVE_GUEST_CHECKOUT_MODE: "disabled", TRG_ORDERS: db },
+    includeNative: true,
+    now: NOW
+  });
+  body = await response.json();
+  assert.equal(body.checkoutAllowed, true,
+    "A signed-in verified customer must receive an enabled native paid quote while guest checkout remains disabled.");
+  assert.equal(body.checkoutMode, "native-paid");
   response = await requestQuote([{ productId: "native-fixed", quantity: 1 }]);
   assert.equal(response.status, 400, "A product ID cannot substitute for the authoritative cart slug.");
 
