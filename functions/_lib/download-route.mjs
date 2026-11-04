@@ -105,7 +105,7 @@ async function handleNativeAuthorizedDownload(request, env, authorization, optio
     ? await getSessionFromRequest(request, env, options.accountSessionOptions || {})
     : options.accountSession;
   const authorized = isNativeEntitlementOwnedBySession(entitlement, session)
-    && isValidNativeDeliverySnapshot(entitlement);
+    && isValidNativeDeliverySnapshot(entitlement, env);
   if (!authorized) return errorResponse("download_not_authorized", 403);
 
   let object;
@@ -136,11 +136,13 @@ async function failNativeDelivery(database, orderId, failureCode, options) {
   return errorResponse("download_temporarily_unavailable", 503);
 }
 
-function isValidNativeDeliverySnapshot(entitlement) {
+function isValidNativeDeliverySnapshot(entitlement, env = {}) {
   const key = String(entitlement?.delivery_r2_key_snapshot || "");
   const filename = String(entitlement?.delivery_filename_snapshot || "");
   const contentType = String(entitlement?.delivery_content_type_snapshot || "").toLowerCase();
-  return key.startsWith("catalog-publications/")
+  const stagingAcceptanceKey = String(env.PAYMENT_PIPELINE_STAGE || "").trim().toLowerCase() === "staging"
+    && key.startsWith("acceptance/");
+  return (key.startsWith("catalog-publications/") || stagingAcceptanceKey)
     && key.endsWith("/delivery.pdf")
     && !key.includes("\\")
     && !key.split("/").includes("..")

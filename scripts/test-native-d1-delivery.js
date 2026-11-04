@@ -128,6 +128,24 @@ async function main() {
   assert.equal(response.status, 503);
   assert.equal(raw.prepare("SELECT fulfillment_failure_code FROM orders WHERE id=?").get(fixture.order.id).fulfillment_failure_code, "object_read_failed");
 
+  const acceptanceProduct = await catalog.createProduct(db, productInput({
+    id: "task2j-acceptance", slug: "task2j-acceptance", title: "Task 2J Acceptance",
+    deliveryR2Key: "acceptance/task2j/delivery.pdf", deliveryFilename: "Task 2J Acceptance.pdf"
+  }), { nowMs: NOW });
+  const acceptanceFixture = await paidFixture(nativeOrders, ownership, db, raw, acceptanceProduct, BUYER.id);
+  const acceptanceCredential = await authorization.createNativeDownloadCredential(acceptanceFixture.entitlements[0], SECRET, { nowMs: NOW });
+  const acceptanceRequest = () => new Request(`https://example.test/store/download?credential=${encodeURIComponent(acceptanceCredential)}`);
+  const acceptanceBucket = createBucket(acceptanceProduct.deliveryR2Key);
+  response = await download.handleAuthorizedDownload(acceptanceRequest(), env(db, acceptanceBucket), {
+    accountSession: session(BUYER), nowMs: NOW + 8000
+  });
+  assert.equal(response.status, 403, "Acceptance-only asset keys must remain rejected outside staging.");
+  response = await download.handleAuthorizedDownload(acceptanceRequest(), {
+    ...env(db, acceptanceBucket), PAYMENT_PIPELINE_STAGE: "staging"
+  }, { accountSession: session(BUYER), nowMs: NOW + 8000 });
+  assert.equal(response.status, 200, "Existing isolated staging acceptance assets must remain deliverable through the owned native entitlement.");
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), PDF_BYTES);
+
   const invalidProduct = await catalog.createProduct(db, productInput({
     id: "task2j-invalid", slug: "task2j-invalid", title: "Task 2J Invalid",
     deliveryR2Key: "unapproved-private/arbitrary.pdf", deliveryFilename: "Invalid.pdf"
