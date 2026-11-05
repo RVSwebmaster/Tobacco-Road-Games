@@ -34,9 +34,9 @@ function assertMatrix(build) {
   assert.ok(!keys(creator).includes("owner-office"));
 
   const admin = build({ authenticated: true, role: "admin" });
-  assert.deepEqual(admin.levels, ["guest", "customer", "admin"]);
+  assert.deepEqual(admin.levels, ["guest", "customer", "creator", "admin"]);
   assert.ok(keys(admin).includes("moderation"));
-  assert.ok(!keys(admin).includes("creator-studio"), "Admin must not receive a Creator identity that does not exist.");
+  assert.ok(keys(admin).includes("creator-studio"), "Admin navigation must retain cumulative Creator capabilities.");
   assert.ok(!keys(admin).includes("owner-office"));
 
   const creatorAdmin = build({ authenticated: true, creator: true, role: "admin" });
@@ -44,7 +44,7 @@ function assertMatrix(build) {
   assert.ok(keys(creatorAdmin).includes("creator-studio"));
   assert.ok(keys(creatorAdmin).includes("moderation"));
 
-  const owner = build({ authenticated: true, creator: true, role: "owner" });
+  const owner = build({ authenticated: true, role: "owner" });
   assert.deepEqual(owner.levels, ["guest", "customer", "creator", "admin", "owner"]);
   for (const key of ["library", "creator-studio", "moderation", "owner-office"]) assert.ok(keys(owner).includes(key));
 }
@@ -63,6 +63,15 @@ async function assertHandler(handle) {
   const creator = await response.json();
   assert.deepEqual(creator.levels, ["guest", "customer", "creator"]);
   assert.equal(response.headers.get("cache-control"), "private, no-store, max-age=0");
+
+  response = await handle(new Request("https://example.test/api/navigation"), {}, {
+    getSession: async () => ({ valid: true, user: { id: "owner-user", role: "owner" } }),
+    hasCreatorMembership: async () => false
+  });
+  const owner = await response.json();
+  assert.deepEqual(owner.levels, ["guest", "customer", "creator", "admin", "owner"]);
+  assert.ok(keys(owner).includes("creator-studio"));
+  assert.ok(keys(owner).includes("owner-office"));
 
   response = await handle(new Request("https://example.test/api/navigation", { method: "POST" }), {});
   assert.equal(response.status, 405);

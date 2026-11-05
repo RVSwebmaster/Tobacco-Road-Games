@@ -24,20 +24,21 @@ const OWNER_NAV_ITEMS = Object.freeze([
 
 export function buildProgressiveNavigation({ authenticated = false, creator = false, role = "user" } = {}) {
   const normalizedRole = ["admin", "owner"].includes(role) ? role : "user";
+  const creatorAccess = creator || ["admin", "owner"].includes(normalizedRole);
   const levels = ["guest"];
   const items = PUBLIC_NAV_ITEMS.map((item) => ({ ...item }));
   if (!authenticated) return { authenticated: false, items, levels };
 
   levels.push("customer");
   replaceItem(items, "account", { key: "account", href: "/account.html", label: "My Account" });
-  replaceItem(items, "creator-login", creator
+  replaceItem(items, "creator-login", creatorAccess
     ? CREATOR_NAV_ITEMS[0]
     : { key: "creator-registration", href: "/account.html#creator-registration-panel", label: "Become a Creator" });
   insertBefore(items, "cart", CUSTOMER_NAV_ITEMS);
 
-  // Creator access is membership-backed. Administrative roles do not acquire a
-  // Creator identity merely by being administrative accounts.
-  if (creator) levels.push("creator");
+  // Site privileges are cumulative. A membership-backed Creator receives Creator
+  // Studio, while Admin and Owner roles also retain every lower navigation tier.
+  if (creatorAccess) levels.push("creator");
   if (["admin", "owner"].includes(normalizedRole)) {
     levels.push("admin");
     insertBefore(items, "cart", ADMIN_NAV_ITEMS);
