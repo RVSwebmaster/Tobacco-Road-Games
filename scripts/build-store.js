@@ -24,6 +24,7 @@ const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const GUEST_FEATURE_CACHE_BUST = "20261026-homepage-shelves1";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261101-task2nb1";
+const PROGRESSIVE_NAV_CACHE_BUST = "20261105-progressive-privileges1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1132,11 +1133,11 @@ function buildHomepage(products, indexes, bundleRules) {
   const homepagePath = path.join(ROOT, "index.html");
   if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
-  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary"[^>]*>[\s\S]*?<\/nav>\s*(?=<\/header>)/;
   const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
-  const homepageScriptsPattern = /\s*<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/homepage-shelves\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*(?:<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\s*)?<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/homepage-shelves\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
   let next = html
@@ -1144,8 +1145,8 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, renderHomepageShopWallMain(products).trimStart())
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  next = next.replace(/styles\.css\?v=[^"\s]+/, "styles.css?v=20261025-guest-depth2");
-  const homepageScripts = `\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${PROGRESSIVE_NAV_CACHE_BUST}`);
+  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1156,7 +1157,7 @@ function buildGuestLandingPage(products) {
   const homepagePath = path.join(ROOT, "index.html");
   if (!fs.existsSync(homepagePath)) return;
   const html = fs.readFileSync(homepagePath, "utf8");
-  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary"[^>]*>[\s\S]*?<\/nav>\s*(?=<\/header>)/;
   const mainPattern = /\s*<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
@@ -1378,7 +1379,7 @@ function renderHomepageShelfFixtures() {
 function renderHomepageLibraryBay() {
   const productMockMarkup = renderHomepageProductMock({ modifier: "spine" }, { library: true, alignRight: true });
   return `
-        <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading">
+        <section class="shop-wall-bay shop-wall-bay--library" aria-labelledby="your-library-heading" data-homepage-library>
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
@@ -1467,7 +1468,7 @@ function renderHomepageProductMock(mock, { library = false, alignRight = false }
   const modifier = mock.modifier ? ` shop-wall-product-mock--${escapeAttribute(mock.modifier)}` : "";
   const bookMarkup = `<figure class="shop-wall-product-mock${modifier}" aria-hidden="true"></figure>`;
   if (library) return `<div class="shop-wall-product-row${rowModifier}">
-                <div class="shop-wall-library-books" data-fill-library>
+                <div class="shop-wall-library-books" data-fill-library${alignRight ? " data-personal-library" : ""}>
                   ${bookMarkup}
                 </div>
               </div>`;
@@ -2368,8 +2369,9 @@ function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEM
     : ["store", "catalog", "sales", "product", "collection"].includes(currentNav)
       ? "explore"
       : currentNav;
+  const progressiveAttribute = navItems === HOMEPAGE_NAV_ITEMS ? " data-progressive-navigation" : "";
   return `
-    <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}">
+    <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}"${progressiveAttribute}>
       ${navItems.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
     </nav>`;
 }

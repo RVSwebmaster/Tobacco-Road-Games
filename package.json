@@ -25,6 +25,7 @@
     "test:native-pwyw": "node scripts/test-owner-intake.js && node scripts/test-cart-quote.js && node scripts/test-storefront-cart.js && node scripts/test-cart-checkout.js",
     "test:owner-intake-browser": "node scripts/test-owner-intake-browser.js",
     "test:operation-severance": "node scripts/test-operation-severance.js",
+    "test:progressive-navigation": "node scripts/test-progressive-privilege-navigation.js",
     "test:pages-environment-isolation": "node scripts/test-pages-environment-isolation.js",
     "test:product-catalog-d1": "node scripts/test-product-catalog-d1.js",
     "test:product-publication": "node scripts/test-product-publication.js",

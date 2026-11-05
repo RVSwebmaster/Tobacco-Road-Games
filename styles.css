@@ -5080,6 +5080,25 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   filter: none;
 }
 
+.shop-wall-library-books > .homepage-library-book {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 1px;
+  color: #ecd496;
+  font: 600 10px/1 Georgia, serif;
+  text-decoration: none;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  pointer-events: auto;
+  user-select: auto;
+}
+
+.shop-wall-library-books > .homepage-library-book:focus-visible {
+  outline: 2px solid #f0d089;
+  outline-offset: 2px;
+}
+
 /* Dressing occupies only the existing inner-edge niches, outside book flow.
    Pot contact points are within the supplied trailing-vine bitmaps. */
 .shop-wall-top-dressing {
