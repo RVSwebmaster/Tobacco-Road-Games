@@ -39,6 +39,7 @@
   }
 
   async function loadLibrary() {
+    prepareAuthenticatedGuestLibrary();
     const response = await fetch("/api/account/library", {
       credentials: "same-origin",
       headers: { accept: "application/json" }
@@ -52,6 +53,26 @@
         clearTimeout(libraryRefreshTimer);
         libraryRefreshTimer = setTimeout(renderLibrary, 40);
       }).observe(row);
+    });
+  }
+
+  function prepareAuthenticatedGuestLibrary() {
+    const bay = document.querySelector(".guest-library-bay[data-homepage-library]");
+    if (!bay || bay.querySelector("[data-personal-library]")) return;
+
+    const shelves = bay.querySelector(".shop-wall-shelves--library");
+    if (shelves) shelves.setAttribute("aria-label", "Your personal library shelves");
+    bay.querySelectorAll(".guest-library-empty-row").forEach((row) => {
+      row.classList.remove("guest-library-empty-row");
+      row.removeAttribute("data-magical-bookshelf");
+      row.removeAttribute("data-magical-shelf-order");
+      row.removeAttribute("data-magical-direction");
+      row.removeAttribute("aria-hidden");
+      const books = document.createElement("div");
+      books.className = "shop-wall-library-books";
+      books.dataset.personalLibrary = "";
+      for (let index = 0; index < 18; index += 1) books.append(libraryPlaceholder());
+      row.replaceChildren(books);
     });
   }
 

@@ -70,8 +70,11 @@ async function assertHandler(handle) {
 
 function assertHomepageIntegration() {
   const homepage = read("index.html");
+  const guestHomepage = read("guest/index.html");
   const client = read("assets/js/progressive-navigation.js");
   const build = read("scripts/build-store.js");
+  const redirects = read("_redirects");
+  const routes = JSON.parse(read("_routes.json"));
   const styles = read("styles.css");
   assert.match(homepage, /data-progressive-navigation/);
   assert.equal((homepage.match(/data-personal-library/g) || []).length, 2);
@@ -81,6 +84,12 @@ function assertHomepageIntegration() {
   assert.match(client, /The server-rendered Guest navigation is the fail-closed fallback/);
   assert.match(build, /data-progressive-navigation/);
   assert.match(build, /data-personal-library/);
+  assert.match(redirects, /^\/ \/guest\/ 200\s*$/m, "The polished Guest homepage remains the root document.");
+  assert.match(guestHomepage, /data-progressive-navigation/);
+  assert.match(guestHomepage, /data-homepage-library/);
+  assert.match(guestHomepage, /progressive-navigation\.js/);
+  assert.ok(routes.include.includes("/api/navigation"), "Pages Functions must route the navigation endpoint.");
+  assert.match(client, /prepareAuthenticatedGuestLibrary/);
   assert.match(styles, /\.homepage-library-book[\s\S]*?pointer-events:\s*auto;/);
 }
 

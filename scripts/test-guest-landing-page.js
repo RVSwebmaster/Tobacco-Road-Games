@@ -12,7 +12,7 @@ const guestMagic = read("assets/js/magical-bookshelf.js");
 const builder = read("scripts/build-store.js");
 const outputBuilder = read("scripts/build-pages-output.mjs");
 
-const nav = guest.match(/<nav class="site-nav" aria-label="Primary">([\s\S]*?)<\/nav>/)?.[1] || "";
+const nav = guest.match(/<nav class="site-nav" aria-label="Primary" data-progressive-navigation>([\s\S]*?)<\/nav>/)?.[1] || "";
 const navLabels = [...nav.matchAll(/<a [^>]*>([\s\S]*?)<\/a>/g)].map((match) => match[1].replace(/<span[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
 assert.deepEqual(navLabels, ["Explore", "Support", "Login/Signup", "Cart"]);
 assert.match(nav, /href="\/store\/catalog\/"[^>]*>Explore<\/a>/);
@@ -21,6 +21,8 @@ assert.match(nav, /href="\/account\.html"[^>]*>Login\/Signup<\/a>/);
 assert.match(nav, /href="\/store\/cart\/"[^>]*>Cart <span class="cart-count-badge" data-cart-count>0<\/span><\/a>/);
 
 assert.match(guest, /data-guest-landing/);
+assert.match(guest, /data-homepage-library/);
+assert.match(guest, /\/assets\/js\/progressive-navigation\.js/);
 assert.match(guest, /data-magical-bookshelf-demo/);
 assert.match(guest, /\/assets\/js\/magical-bookshelf\.js/);
 assert.equal((guest.match(/data-magical-bookshelf(?:\s|>)/g) || []).length, 7);

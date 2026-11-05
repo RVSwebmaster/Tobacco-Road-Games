@@ -24,7 +24,7 @@ const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const GUEST_FEATURE_CACHE_BUST = "20261026-homepage-shelves1";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261101-task2nb1";
-const PROGRESSIVE_NAV_CACHE_BUST = "20261105-progressive-privileges1";
+const PROGRESSIVE_NAV_CACHE_BUST = "20261105-progressive-routing1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1215,7 +1215,7 @@ function renderGuestLandingShopWallMain(products) {
 
 function renderGuestLibraryBay() {
   return `
-        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading">
+        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading" data-homepage-library>
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty Guest personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
@@ -2369,7 +2369,7 @@ function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEM
     : ["store", "catalog", "sales", "product", "collection"].includes(currentNav)
       ? "explore"
       : currentNav;
-  const progressiveAttribute = navItems === HOMEPAGE_NAV_ITEMS ? " data-progressive-navigation" : "";
+  const progressiveAttribute = navItems === HOMEPAGE_NAV_ITEMS || navItems === GUEST_NAV_ITEMS ? " data-progressive-navigation" : "";
   return `
     <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}"${progressiveAttribute}>
       ${navItems.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
