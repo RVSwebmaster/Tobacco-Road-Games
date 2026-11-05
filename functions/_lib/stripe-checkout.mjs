@@ -89,6 +89,12 @@ export function validateStripeKey(secretKey, pipelineStage) {
     });
   }
   const normalizedStage = String(pipelineStage || "staging").trim().toLowerCase();
+  if (!["staging", "production"].includes(normalizedStage)) {
+    throw new StripeCheckoutError("PAYMENT_PIPELINE_STAGE must explicitly select staging or production.", {
+      classification: "definitive",
+      code: "stripe_pipeline_stage_invalid"
+    });
+  }
   const production = normalizedStage === "production";
   const expectedPrefix = production ? "sk_live_" : "sk_test_";
   if (!normalizedKey.startsWith(expectedPrefix)) {

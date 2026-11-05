@@ -13,7 +13,7 @@ import {
 } from "./native-orders-d1.mjs";
 import { createCustomerEmailHash, normalizeConfirmedCustomerEmail } from "./order-privacy.mjs";
 import { getProductById } from "./product-catalog-d1.mjs";
-import { createStripeHostedCheckoutSession, StripeCheckoutError } from "./stripe-checkout.mjs";
+import { createStripeHostedCheckoutSession, StripeCheckoutError, validateStripeKey } from "./stripe-checkout.mjs";
 import { readStoreState, storeClosedResponse } from "./store-state.mjs";
 import { assertNotFraudBlocked, assertVerifiedPurchaseIdentity } from "./transaction-policy.mjs";
 
@@ -31,10 +31,20 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
   if (!database) return jsonResponse({ error: "Native payment is temporarily unavailable." }, 503);
   const storeState = await readStoreState(env, { database: options.storeStateDatabase || database });
   if (!storeState.available || storeState.state !== "OPEN") return storeClosedResponse(storeState.state);
-  const pipelineStage = String(options.pipelineStage || env.PAYMENT_PIPELINE_STAGE || "staging").toLowerCase();
+  const pipelineStage = String(options.pipelineStage || env.PAYMENT_PIPELINE_STAGE || "").trim().toLowerCase();
   const stripeSecretKey = String(options.stripeSecretKey || env.STRIPE_SECRET_KEY || "").trim();
-  if (pipelineStage === "production" || !stripeSecretKey.startsWith("sk_test_")) {
-    return jsonResponse({ error: "Native Stripe payment requires an isolated test-mode configuration." }, 503);
+  if (!["staging", "production"].includes(pipelineStage)) {
+    return jsonResponse({ code: "stripe_pipeline_stage_invalid", error: "Native Stripe payment configuration is unavailable." }, 503);
+  }
+  if (pipelineStage === "production"
+    && String(options.liveCheckoutMode || env.NATIVE_LIVE_CHECKOUT_MODE || "").trim().toLowerCase() !== "production-enabled") {
+    return jsonResponse({ code: "native_live_checkout_disabled", error: "Native live checkout is not enabled." }, 503);
+  }
+  try {
+    validateStripeKey(stripeSecretKey, pipelineStage);
+  } catch (error) {
+    const code = error instanceof StripeCheckoutError ? error.code : "stripe_configuration_invalid";
+    return jsonResponse({ code, error: "Native Stripe payment configuration is unavailable." }, 503);
   }
   const emailHashSecret = String(options.emailHashSecret || env.ORDER_EMAIL_HASH_SECRET || "");
   const checkoutCookieSecret = String(options.checkoutCookieSecret || env.CHECKOUT_ACCESS_COOKIE_SECRET || "");
@@ -120,7 +130,10 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
   }
 
   const createdAt = new Date(now).toISOString();
-  const origin = new URL(request.url).origin;
+  const origin = resolveCheckoutOrigin(request, env, options, pipelineStage);
+  if (!origin) {
+    return jsonResponse({ code: "native_checkout_origin_invalid", error: "Native Stripe payment configuration is unavailable." }, 503);
+  }
   let checkoutSession;
   try {
     checkoutSession = await createStripeHostedCheckoutSession({
@@ -141,7 +154,7 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
       apiBase: options.stripeApiBase,
       fetchImpl: options.stripeFetchImpl,
       idempotencyKey: buildStripeIdempotencyKey(checkoutAttemptId),
-      pipelineStage: "staging",
+      pipelineStage,
       secretKey: stripeSecretKey
     });
   } catch (error) {
@@ -174,6 +187,23 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
     }, 503);
   }
   return successfulResponse(attached, checkoutCookieSecret, false, 201);
+}
+
+function resolveCheckoutOrigin(request, env, options, pipelineStage) {
+  const requestOrigin = new URL(request.url).origin;
+  const configured = String(options.publicSiteOrigin || env.PUBLIC_SITE_ORIGIN || "").trim();
+  if (pipelineStage !== "production") return configured ? safeHttpsOrigin(configured) || requestOrigin : requestOrigin;
+  const configuredOrigin = safeHttpsOrigin(configured);
+  return configuredOrigin && configuredOrigin === requestOrigin ? configuredOrigin : "";
+}
+
+function safeHttpsOrigin(value) {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && parsed.origin === String(value).replace(/\/$/, "") ? parsed.origin : "";
+  } catch {
+    return "";
+  }
 }
 
 async function validateCurrentCatalog(database, items) {

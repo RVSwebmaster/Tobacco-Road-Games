@@ -3,7 +3,9 @@ pages_build_output_dir = "../../.wrangler/acceptance-pages-output"
 compatibility_date = "2026-06-18"
 
 [vars]
+MARKETPLACE_WRITE_POLICY = "enabled"
 PAYMENT_PIPELINE_STAGE = "staging"
+NATIVE_LIVE_CHECKOUT_MODE = "disabled"
 PUBLIC_SITE_ORIGIN = "https://tobacco-road-games-acceptance.pages.dev"
 RESEND_DELIVERY_ENABLED = "false"
 NATIVE_GUEST_CHECKOUT_MODE = "disabled"

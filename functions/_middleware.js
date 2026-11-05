@@ -1,9 +1,13 @@
 import { handleOfficeMiddleware } from "./_lib/office-middleware.mjs";
+import { isMarketplaceWriteDisabled, marketplaceWriteDisabledResponse } from "./_lib/preview-write-policy.mjs";
 import { readStoreState } from "./_lib/store-state.mjs";
 import { isPublicStorePage, maintenanceResponse } from "./_lib/store-maintenance.mjs";
 
 export async function onRequest(context) {
   const pathname = new URL(context.request.url).pathname;
+  if (isMarketplaceWriteDisabled(context.env, context.request)) {
+    return marketplaceWriteDisabledResponse();
+  }
   if (new URL(context.request.url).pathname.startsWith("/office")) {
     return handleOfficeMiddleware(context);
   }

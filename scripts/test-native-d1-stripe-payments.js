@@ -157,13 +157,54 @@ async function main() {
   assert.equal(body.code, "native_order_expired");
   assert.equal(orderByAttempt(raw, expired.attempt).native_order_state, "canceled");
 
-  const production = await prepareOrder(preparation, db, "task2h-fixed", undefined);
+  let production = await prepareOrder(preparation, db, "task2h-fixed", undefined);
   let productionCalled = false;
   response = await payOrder(payment, db, production, {
     calls: [], fetch: async () => { productionCalled = true; throw new Error("must not call"); }
-  }, {}, { pipelineStage: "production", stripeSecretKey: "sk_live_forbidden" });
+  }, {}, { pipelineStage: "production", stripeSecretKey: "sk_live_task2v" });
   assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "native_live_checkout_disabled");
   assert.equal(productionCalled, false);
+
+  production = await prepareOrder(preparation, db, "task2h-fixed", undefined);
+  response = await payOrder(payment, db, production, {
+    calls: [], fetch: async () => { productionCalled = true; throw new Error("must not call"); }
+  }, {}, {
+    liveCheckoutMode: "production-enabled", pipelineStage: "production",
+    publicSiteOrigin: "https://example.test", stripeSecretKey: "sk_test_wrong_mode"
+  });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "stripe_configuration_not_live_mode");
+  assert.equal(productionCalled, false);
+
+  const preview = await prepareOrder(preparation, db, "task2h-fixed", undefined);
+  response = await payOrder(payment, db, preview, {
+    calls: [], fetch: async () => { productionCalled = true; throw new Error("must not call"); }
+  }, {}, { pipelineStage: "preview", stripeSecretKey: "sk_test_task2v" });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "stripe_pipeline_stage_invalid");
+  assert.equal(productionCalled, false);
+
+  production = await prepareOrder(preparation, db, "task2h-fixed", undefined);
+  response = await payOrder(payment, db, production, stripeHarness("cs_live_task2v_origin", true), {}, {
+    liveCheckoutMode: "production-enabled", pipelineStage: "production",
+    publicSiteOrigin: "https://www.example.test", stripeSecretKey: "sk_live_task2v"
+  });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "native_checkout_origin_invalid");
+
+  production = await prepareOrder(preparation, db, "task2h-fixed", undefined);
+  const liveStripe = stripeHarness("cs_live_task2v", true);
+  response = await payOrder(payment, db, production, liveStripe, {}, {
+    liveCheckoutMode: "production-enabled", pipelineStage: "production",
+    publicSiteOrigin: "https://example.test", stripeSecretKey: "sk_live_task2v"
+  });
+  body = await response.json();
+  assert.equal(response.status, 201, JSON.stringify(body));
+  assert.equal(body.totalCents, 500);
+  assert.equal(liveStripe.calls.length, 1, "A gated production checkout should create one mocked live Session.");
+  assert.equal(liveStripe.calls[0].form.get("success_url"), "https://example.test/store/checkout/complete?session_id={CHECKOUT_SESSION_ID}");
+  assert.match(liveStripe.calls[0].headers.authorization, /^Bearer sk_live_/);
 
   assert.ok(JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8")).include.includes("/api/cart/pay-order"));
   assert.equal(count(raw, "download_entitlements"), 0, "Native payment must not create a delivery-capable entitlement.");
@@ -205,14 +246,14 @@ function payOrder(payment, db, fixture, stripe, forged = {}, overrides = {}) {
   });
 }
 
-function stripeHarness(id) {
+function stripeHarness(id, livemode = false) {
   const calls = [];
   return {
     calls,
     async fetch(url, options) {
       const form = new URLSearchParams(String(options.body || ""));
       calls.push({ form, headers: options.headers, url: String(url) });
-      return response({ id, livemode: false, ui_mode: "hosted_page", url: `https://checkout.stripe.test/${id}` });
+      return response({ id, livemode, ui_mode: "hosted_page", url: `https://checkout.stripe.test/${id}` });
     }
   };
 }

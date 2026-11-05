@@ -247,7 +247,10 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     });
   };
 
-  const pipelineStage = String(options.pipelineStage || "staging").toLowerCase();
+  const pipelineStage = String(options.pipelineStage || "").trim().toLowerCase();
+  if (!["staging", "production"].includes(pipelineStage)) {
+    return fail("payment_pipeline_stage_invalid", 503);
+  }
   const expectedLivemode = pipelineStage === "production";
   if (stripeEvent?.livemode !== expectedLivemode) {
     return fail(expectedLivemode ? "test_mode_rejected" : "live_mode_rejected");

@@ -1,0 +1,35 @@
+name = "tobacco-road-games"
+pages_build_output_dir = "../../.wrangler/production-pages-output"
+compatibility_date = "2026-06-18"
+
+# Preview deployments intentionally receive no D1 or R2 bindings. They remain useful
+# for static review, but cannot read or mutate marketplace data or call providers.
+[env.preview.vars]
+MARKETPLACE_WRITE_POLICY = "disabled"
+PAYMENT_PIPELINE_STAGE = "preview"
+NATIVE_LIVE_CHECKOUT_MODE = "disabled"
+NATIVE_GUEST_CHECKOUT_MODE = "disabled"
+NATIVE_GUEST_CLAIM_MODE = "disabled"
+RESEND_DELIVERY_ENABLED = "false"
+
+# This manifest is deployment-ready but deliberately leaves live checkout and email
+# disabled. Opaque production secrets remain Cloudflare-managed and must be verified
+# by name during the authorized rollout; secret values never belong in this file.
+[env.production.vars]
+MARKETPLACE_WRITE_POLICY = "enabled"
+PAYMENT_PIPELINE_STAGE = "production"
+PUBLIC_SITE_ORIGIN = "https://tobaccoroadgames.com"
+NATIVE_LIVE_CHECKOUT_MODE = "disabled"
+NATIVE_GUEST_CHECKOUT_MODE = "disabled"
+NATIVE_GUEST_CLAIM_MODE = "disabled"
+RESEND_DELIVERY_ENABLED = "false"
+
+[[env.production.d1_databases]]
+binding = "TRG_ORDERS"
+database_name = "trg-orders"
+database_id = "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+migrations_dir = "../../migrations"
+
+[[env.production.r2_buckets]]
+binding = "TRG_PRODUCTS"
+bucket_name = "trg-products"
