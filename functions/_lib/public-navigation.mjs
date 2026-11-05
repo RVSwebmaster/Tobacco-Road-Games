@@ -2,7 +2,6 @@ export const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "explore", href: "/store/catalog/", label: "Explore" },
   { key: "forum", href: "/forum", label: "Community Forum" },
   { key: "creators", href: "/authors.html", label: "Creators" },
-  { key: "creator-login", href: "/creator/", label: "Creator Login / Sign Up" },
   { key: "ai-policy", href: "/ai-policy.html", label: "AI Policy" },
   { key: "support", href: "/support.html", label: "Support" },
   { key: "account", href: "/account.html", label: "Join / Sign In" },
@@ -31,9 +30,9 @@ export function buildProgressiveNavigation({ authenticated = false, creator = fa
 
   levels.push("customer");
   replaceItem(items, "account", { key: "account", href: "/account.html", label: "My Account" });
-  replaceItem(items, "creator-login", creatorAccess
+  insertBefore(items, "ai-policy", [creatorAccess
     ? CREATOR_NAV_ITEMS[0]
-    : { key: "creator-registration", href: "/account.html#creator-registration-panel", label: "Become a Creator" });
+    : { key: "creator-registration", href: "/account.html#creator-registration-panel", label: "Become a Creator" }]);
   insertBefore(items, "cart", CUSTOMER_NAV_ITEMS);
 
   // Site privileges are cumulative. A membership-backed Creator receives Creator

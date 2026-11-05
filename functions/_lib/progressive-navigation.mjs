@@ -1,4 +1,5 @@
-import { getSessionFromRequest } from "./account-auth.mjs";
+import { establishAccessOwnerSession, getSessionFromRequest } from "./account-auth.mjs";
+import { verifyOwnerAccessIdentity } from "./owner-access-identity.mjs";
 import { buildProgressiveNavigation } from "./public-navigation.mjs";
 
 export async function handleProgressiveNavigationRequest(request, env = {}, options = {}) {
@@ -7,7 +8,17 @@ export async function handleProgressiveNavigationRequest(request, env = {}, opti
   }
   const getSession = options.getSession || getSessionFromRequest;
   const session = await getSession(request, env, options.sessionOptions || {});
-  if (!session.valid) return json(buildProgressiveNavigation(), 200);
+  if (!session.valid) {
+    const verifyOwnerAccess = options.verifyOwnerAccess || verifyOwnerAccessIdentity;
+    const access = await verifyOwnerAccess(request, env, options.ownerAccessOptions || {});
+    if (!access.valid) return json(buildProgressiveNavigation(), 200);
+    const establishOwnerSession = options.establishOwnerSession || establishAccessOwnerSession;
+    const owner = await establishOwnerSession(env, access.email, options.sessionOptions || {});
+    return json(buildProgressiveNavigation({ authenticated: true, creator: true, role: "owner" }), 200, {
+      "cache-control": "private, no-store, max-age=0",
+      "set-cookie": owner.cookieHeaders
+    });
+  }
 
   const database = options.database || env.TRG_ORDERS;
   const creator = await hasCreatorMembership(database, session.user.id, options);
@@ -38,12 +49,16 @@ async function hasCreatorMembership(database, userId, options) {
 }
 
 function json(payload, status = 200, extraHeaders = {}) {
+  const headers = new Headers({
+    "cache-control": "no-store",
+    "content-type": "application/json; charset=utf-8"
+  });
+  for (const [name, value] of Object.entries(extraHeaders)) {
+    if (Array.isArray(value)) value.forEach((entry) => headers.append(name, entry));
+    else headers.set(name, value);
+  }
   return new Response(JSON.stringify(payload), {
     status,
-    headers: {
-      "cache-control": "no-store",
-      "content-type": "application/json; charset=utf-8",
-      ...extraHeaders
-    }
+    headers
   });
 }

@@ -8,8 +8,10 @@ const ROOT = path.resolve(__dirname, "..");
 async function main() {
   const navigation = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "public-navigation.mjs")).href);
   const handler = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "progressive-navigation.mjs")).href);
+  const ownerAccess = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "owner-access-identity.mjs")).href);
 
   assertMatrix(navigation.buildProgressiveNavigation);
+  await assertOwnerAccess(ownerAccess.verifyOwnerAccessIdentity);
   await assertHandler(handler.handleProgressiveNavigationRequest);
   assertHomepageIntegration();
   assertProtectedRoutesRemainProtected();
@@ -18,7 +20,7 @@ async function main() {
 
 function assertMatrix(build) {
   const guest = keys(build());
-  assert.deepEqual(guest, ["explore", "forum", "creators", "creator-login", "ai-policy", "support", "account", "cart"]);
+  assert.deepEqual(guest, ["explore", "forum", "creators", "ai-policy", "support", "account", "cart"]);
   assert.equal(build().items.find((item) => item.key === "account").label, "Join / Sign In");
 
   const customer = build({ authenticated: true, role: "user" });
@@ -73,8 +75,41 @@ async function assertHandler(handle) {
   assert.ok(keys(owner).includes("creator-studio"));
   assert.ok(keys(owner).includes("owner-office"));
 
+  response = await handle(new Request("https://example.test/api/navigation"), {}, {
+    getSession: async () => ({ valid: false }),
+    verifyOwnerAccess: async () => ({ valid: true, email: "owner@example.test" }),
+    establishOwnerSession: async (_env, email) => {
+      assert.equal(email, "owner@example.test");
+      return { cookieHeaders: ["__Host-trg_session=session; Path=/; Secure; HttpOnly", "trg_account_csrf=csrf; Path=/; Secure"] };
+    }
+  });
+  const bridgedOwner = await response.json();
+  assert.deepEqual(bridgedOwner.levels, ["guest", "customer", "creator", "admin", "owner"]);
+  assert.match(response.headers.get("set-cookie"), /__Host-trg_session=session/);
+  assert.match(response.headers.get("set-cookie"), /trg_account_csrf=csrf/);
+
   response = await handle(new Request("https://example.test/api/navigation", { method: "POST" }), {});
   assert.equal(response.status, 405);
+}
+
+async function assertOwnerAccess(verify) {
+  const request = new Request("https://example.test/api/navigation", {
+    headers: { cookie: "CF_Authorization=owner-access-token" }
+  });
+  const result = await verify(request, {
+    OWNER_ACCESS_AUD: "owner-audience",
+    OWNER_ACCESS_EMAIL: "owner@example.test",
+    OWNER_ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com"
+  }, {
+    jwks: {},
+    jwtVerify: async (token, _jwks, options) => {
+      assert.equal(token, "owner-access-token");
+      assert.equal(options.audience, "owner-audience");
+      assert.equal(options.issuer, "https://team.cloudflareaccess.com");
+      return { payload: { email: "OWNER@example.test", sub: "owner-subject" } };
+    }
+  });
+  assert.deepEqual(result, { valid: true, email: "owner@example.test" });
 }
 
 function assertHomepageIntegration() {

@@ -489,6 +489,37 @@ export async function validateSessionCsrf(request, session) {
   return { valid: hash === session.session.csrf_token_hash };
 }
 
+export async function establishAccessOwnerSession(env, email, options = {}) {
+  const db = requireDb(env);
+  const normalizedEmail = normalizeEmail(email);
+  const now = nowIso(options);
+  let user = await getUserByEmail(db, normalizedEmail);
+  if (user) {
+    await db.prepare(`
+      UPDATE users
+      SET email_verified=1, email_verified_at=COALESCE(email_verified_at, ?), status='active', role='owner', updated_at=?
+      WHERE id=?
+    `).bind(now, now, user.id).run();
+  } else {
+    await db.prepare(`
+      INSERT INTO users (id, email_normalized, email_verified, email_verified_at, status, role, created_at, updated_at)
+      VALUES (?, ?, 1, ?, 'active', 'owner', ?, ?)
+    `).bind(randomId(), normalizedEmail, now, now, now).run();
+    user = await getUserByEmail(db, normalizedEmail);
+  }
+  await db.prepare(`
+    INSERT OR IGNORE INTO creator_memberships (user_id, creator_id, permission, created_at)
+    SELECT ?, 'creator-rv-sawyer', 'manager', ?
+    WHERE EXISTS (SELECT 1 FROM marketplace_creators WHERE id='creator-rv-sawyer')
+  `).bind(user.id, now).run();
+  user = await getUserById(db, user.id);
+  const session = await createSession(db, user, options);
+  return {
+    cookieHeaders: buildSessionCookieHeaders(session.sessionToken, session.csrfToken),
+    user
+  };
+}
+
 async function createSession(db, user, options = {}) {
   const sessionToken = randomToken();
   const csrfToken = randomToken();
