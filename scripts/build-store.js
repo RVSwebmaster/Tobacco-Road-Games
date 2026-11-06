@@ -24,28 +24,19 @@ const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const GUEST_FEATURE_CACHE_BUST = "20261026-homepage-shelves1";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261101-task2nb1";
-const PROGRESSIVE_NAV_CACHE_BUST = "20261105-progressive-routing1";
+const PROGRESSIVE_NAV_CACHE_BUST = "20261106-guest-navigation1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
 const CREATOR_TEMPLATES = new Set(["bookshelf", "catalog"]);
 const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "explore", href: "/store/catalog/", label: "Explore" },
-  { key: "forum", href: "/forum", label: "Community Forum" },
-  { key: "creators", href: "/authors.html", label: "Creators" },
-  { key: "creator-login", href: "/creator/", label: "Creator Login / Sign Up" },
-  { key: "ai-policy", href: "/ai-policy.html", label: "AI Policy" },
-  { key: "support", href: SUPPORT_URL, label: "Support" },
-  { key: "account", href: "/account.html", label: "Join / Sign In" },
-  { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
-]);
-const GUEST_NAV_ITEMS = Object.freeze([
-  { key: "explore", href: "/store/catalog/", label: "Explore" },
   { key: "support", href: SUPPORT_URL, label: "Support" },
   { key: "account", href: "/account.html", label: "Login/Signup" },
   { key: "cart", href: "/store/cart/", label: 'Cart <span class="cart-count-badge" data-cart-count>0</span>' }
 ]);
-const HOMEPAGE_NAV_ITEMS = Object.freeze(PUBLIC_NAV_ITEMS.filter((item) => item.key !== "ai-policy"));
+const GUEST_NAV_ITEMS = Object.freeze([...PUBLIC_NAV_ITEMS]);
+const HOMEPAGE_NAV_ITEMS = Object.freeze([...PUBLIC_NAV_ITEMS]);
 const MARKETPLACE_METADATA_ENUMS = Object.freeze({
   gmMode: new Set(["required", "optional", "gm-less"]),
   prepBurden: new Set(["none", "low", "moderate", "high"]),
@@ -882,6 +873,7 @@ function renderLayout({
   structuredData,
   extraScripts = [],
   assetVersion = CACHE_BUST,
+  stylesheetVersion = assetVersion,
   brandLogo = "/assets/logo.png",
   brandTag = "",
   metaRobots = "",
@@ -919,7 +911,7 @@ function renderLayout({
   <meta name="theme-color" content="#120c08">
   ${metaRobots ? `<meta name="robots" content="${escapeAttribute(metaRobots)}">` : ""}
   <link rel="icon" type="image/png" href="${escapeAttribute(brandLogo)}?v=${assetVersion}">
-  <link rel="stylesheet" href="/styles.css?v=${assetVersion}">
+  <link rel="stylesheet" href="/styles.css?v=${stylesheetVersion}">
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
   ${scriptSources.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
@@ -964,6 +956,7 @@ function renderShelfStoreHome(products, indexes) {
     ogImage: home.openRules[0]?.assetSet.cover || "/assets/logo.png",
     currentNav: "store",
     assetVersion: STOREFRONT_CACHE_BUST,
+    stylesheetVersion: PROGRESSIVE_NAV_CACHE_BUST,
     brandLogo: "/assets/tobacco-road-games-logo.png",
     brandTag: "",
     extraScripts: ["/shared/marketplace-discovery.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/d1-storefront.js?v=20261029-d1-catalog1", "/assets/js/storefront.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/discovery-labels.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/sponsor-marquee.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-themes.js?v=" + STOREFRONT_CACHE_BUST, "/assets/js/storefront-shelf-dressing.js?v=" + STOREFRONT_CACHE_BUST],
@@ -1647,10 +1640,10 @@ function buildAccountPage() {
   const accountPath = path.join(ROOT, "account.html");
   if (!fs.existsSync(accountPath)) return;
   const html = fs.readFileSync(accountPath, "utf8");
-  const navPattern = /\s*<nav class="site-nav" aria-label="Primary">[\s\S]*?<\/nav>\s*(?=<\/header>)/;
+  const navPattern = /\s*<nav class="site-nav" aria-label="Primary"[^>]*>[\s\S]*?<\/nav>\s*(?=<\/header>)/;
   if (!navPattern.test(html)) throw new Error("Account navigation could not be found.");
   const next = html
-    .replace(navPattern, `${renderSharedPublicNav("account", "Primary")}\n    `)
+    .replace(navPattern, `${renderSharedPublicNav("account", "Primary", GUEST_NAV_ITEMS)}\n    `)
     .replace("Your Tobacco Road Games Account", "Account / My Library")
     .replace("Shared account foundation", "Customer account");
   fs.writeFileSync(accountPath, stripPublicBrandTag(next));

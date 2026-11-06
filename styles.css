@@ -5972,6 +5972,20 @@ a.shop-wall-hero-book:focus-visible,
   gap: 18px;
 }
 
+@media (max-width: 560px) {
+  body:has(.shelf-storefront) .site-nav a[href="/support.html"] {
+    display: inline-flex;
+  }
+
+  body:has(.shelf-storefront) .site-nav a[href="/account.html"] {
+    font-size: 0.67rem;
+  }
+
+  body:has(.shelf-storefront) .site-nav a[href="/account.html"]::after {
+    content: none;
+  }
+}
+
 @media (max-width: 700px) {
   .open-rules-library-fixture__shelves {
     min-height: 300px;

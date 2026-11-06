@@ -5,7 +5,7 @@ const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
 
 const page = read("store/index.html"), css = read("styles.css"), storefront = read("assets/js/storefront.js"), sponsor = read("assets/js/sponsor-marquee.js"), rotation = read("functions/_lib/ad-rotation.mjs"), middleware = read("functions/_middleware.js"), build = read("scripts/build-store.js");
-assert.match(page, /styles\.css\?v=20261004-frozen-cabinet1/); assert.match(page, /storefront\.js\?v=20261004-frozen-cabinet1/);
+assert.match(page, /styles\.css\?v=20261106-guest-navigation1/); assert.match(page, /storefront\.js\?v=20261004-frozen-cabinet1/);
 const order = ["id=\"shop-window\"", "id=\"browse-by-path\"", "class=\"sponsor-marquee", "id=\"new-this-week-heading\"", "id=\"best-sellers\"", "id=\"open-rules-pwyw\"", "id=\"product-lines\"", "id=\"creator-feature\"", "id=\"find-the-right-game\"", "id=\"back-room\"", "id=\"lower-shop\""];
 for (let index = 1; index < order.length; index += 1) assert.ok(page.indexOf(order[index - 1]) < page.indexOf(order[index]), `${order[index - 1]} must precede ${order[index]}.`);
 const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]); assert.equal(new Set(ids).size, ids.length, "Storefront section IDs must remain unique.");
@@ -18,10 +18,10 @@ assert.match(build, /bookshelf-book__spine/); assert.match(build, /bookshelf-boo
 assert.match(build, /bookshelf-book__badges/); assert.match(build, /bookshelf-book__creator/); assert.match(build, /bookshelf-book__publisher/); assert.match(build, /bookshelf-book__price/); assert.match(build, /const examinationMeta/);
 assert.match(build, /data-spine-width/); assert.match(build, /data-spine-source/); assert.match(build, /page-count/); assert.match(build, /catalog-fallback/); assert.match(build, /Math\.log1p/); assert.doesNotMatch(build, /file.*size.*spine|byte.*spine/i);
 assert.match(page, /data-search-results="true"/); assert.match(storefront, /Search Results —/); assert.match(storefront, /api\/discovery-labels/); assert.doesNotMatch(storefront, /best.?sell.*sort/i);
-const headerOrder = ["Explore", "Community Forum", "Creators", "Creator Login / Sign Up", "AI Policy", "Support", "Join / Sign In", "Cart"];
+const headerOrder = ["Explore", "Support", "Login/Signup", "Cart"];
 const publicHeaderNav = page.match(/<nav class="site-nav"[\s\S]*?<\/nav>/)?.[0] || "";
 for (let index = 1; index < headerOrder.length; index += 1) assert.ok(publicHeaderNav.indexOf(`>${headerOrder[index - 1]}`) < publicHeaderNav.indexOf(`>${headerOrder[index]}`), `Public header must keep ${headerOrder[index - 1]} before ${headerOrder[index]}.`);
-for (const [key, href] of [["explore", "/store/catalog/"], ["forum", "/forum"], ["creators", "/authors.html"], ["creator-login", "/creator/"], ["ai-policy", "/ai-policy.html"], ["support", "/support.html"], ["account", "/account.html"], ["cart", "/store/cart/"]]) {
+for (const [key, href] of [["explore", "/store/catalog/"], ["support", "/support.html"], ["account", "/account.html"], ["cart", "/store/cart/"]]) {
   assert.match(publicHeaderNav, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `Store header must preserve ${key} navigation.`);
 }
 assert.doesNotMatch(publicHeaderNav, /Marketplace|New This Week|Sales & Bundles|Physical Goods|About Tobacco Road Games|Search games, Creators, or keywords/);

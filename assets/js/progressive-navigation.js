@@ -19,10 +19,12 @@
   function renderNavigation(state) {
     const cartCount = nav.querySelector("[data-cart-count]")?.textContent || "0";
     const items = Array.isArray(state.items) ? state.items : [];
-    const homepageItems = items.filter((item) => item.key !== "ai-policy");
-    nav.replaceChildren(...homepageItems.map((item) => {
+    nav.replaceChildren(...items.map((item) => {
       const link = document.createElement("a");
       link.href = item.href;
+      if (new URL(item.href, location.origin).pathname === location.pathname) {
+        link.setAttribute("aria-current", "page");
+      }
       if (item.key === "cart") {
         link.append("Cart ");
         const badge = document.createElement("span");

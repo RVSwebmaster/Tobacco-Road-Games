@@ -11,6 +11,7 @@ async function main() {
   const ownerAccess = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "owner-access-identity.mjs")).href);
 
   assertMatrix(navigation.buildProgressiveNavigation);
+  assertPublicHeaders(navigation.renderPublicNavigation);
   await assertOwnerAccess(ownerAccess.verifyOwnerAccessIdentity);
   await assertHandler(handler.handleProgressiveNavigationRequest);
   assertHomepageIntegration();
@@ -19,36 +20,33 @@ async function main() {
 }
 
 function assertMatrix(build) {
-  const guest = keys(build());
-  assert.deepEqual(guest, ["explore", "forum", "creators", "ai-policy", "support", "account", "cart"]);
-  assert.equal(build().items.find((item) => item.key === "account").label, "Join / Sign In");
+  const guest = build().items;
+  assert.deepEqual(guest, [
+    { key: "explore", href: "/store/catalog/", label: "Explore" },
+    { key: "support", href: "/support.html", label: "Support" },
+    { key: "account", href: "/account.html", label: "Login/Signup" },
+    { key: "cart", href: "/store/cart/", label: "Cart" }
+  ]);
 
   const customer = build({ authenticated: true, role: "user" });
   assert.deepEqual(customer.levels, ["guest", "customer"]);
-  assert.deepEqual(keys(customer), ["explore", "forum", "creators", "creator-registration", "ai-policy", "support", "account", "library", "cart"]);
-  assert.equal(customer.items.find((item) => item.key === "account").label, "My Account");
+  assert.deepEqual(customer.items, guest);
 
   const creator = build({ authenticated: true, creator: true, role: "user" });
   assert.deepEqual(creator.levels, ["guest", "customer", "creator"]);
-  assert.ok(keys(creator).includes("creator-studio"));
-  assert.ok(keys(creator).includes("library"));
-  assert.ok(!keys(creator).includes("moderation"));
-  assert.ok(!keys(creator).includes("owner-office"));
+  assert.deepEqual(creator.items, guest);
 
   const admin = build({ authenticated: true, role: "admin" });
   assert.deepEqual(admin.levels, ["guest", "customer", "creator", "admin"]);
-  assert.ok(keys(admin).includes("moderation"));
-  assert.ok(keys(admin).includes("creator-studio"), "Admin navigation must retain cumulative Creator capabilities.");
-  assert.ok(!keys(admin).includes("owner-office"));
+  assert.deepEqual(admin.items, guest);
 
   const creatorAdmin = build({ authenticated: true, creator: true, role: "admin" });
   assert.deepEqual(creatorAdmin.levels, ["guest", "customer", "creator", "admin"]);
-  assert.ok(keys(creatorAdmin).includes("creator-studio"));
-  assert.ok(keys(creatorAdmin).includes("moderation"));
+  assert.deepEqual(creatorAdmin.items, guest);
 
   const owner = build({ authenticated: true, role: "owner" });
   assert.deepEqual(owner.levels, ["guest", "customer", "creator", "admin", "owner"]);
-  for (const key of ["library", "creator-studio", "moderation", "owner-office"]) assert.ok(keys(owner).includes(key));
+  assert.deepEqual(owner.items, guest);
 }
 
 async function assertHandler(handle) {
@@ -72,8 +70,7 @@ async function assertHandler(handle) {
   });
   const owner = await response.json();
   assert.deepEqual(owner.levels, ["guest", "customer", "creator", "admin", "owner"]);
-  assert.ok(keys(owner).includes("creator-studio"));
-  assert.ok(keys(owner).includes("owner-office"));
+  assert.deepEqual(owner.items, buildGuestItems());
 
   response = await handle(new Request("https://example.test/api/navigation"), {}, {
     getSession: async () => ({ valid: false }),
@@ -85,6 +82,7 @@ async function assertHandler(handle) {
   });
   const bridgedOwner = await response.json();
   assert.deepEqual(bridgedOwner.levels, ["guest", "customer", "creator", "admin", "owner"]);
+  assert.deepEqual(bridgedOwner.items, buildGuestItems());
   assert.match(response.headers.get("set-cookie"), /__Host-trg_session=session/);
   assert.match(response.headers.get("set-cookie"), /trg_account_csrf=csrf/);
 
@@ -141,6 +139,34 @@ function assertHomepageIntegration() {
   assert.match(styles, /\.homepage-library-book[\s\S]*?pointer-events:\s*auto;/);
 }
 
+function assertPublicHeaders(renderPublicNavigation) {
+  const pages = [
+    "index.html", "guest/index.html", "account.html", "support.html", "ai-policy.html",
+    "authors.html", "authors/rv-sawyer/index.html", "creators/index.html",
+    "creators/rv-sawyer/index.html", "store/index.html", "store/catalog/index.html",
+    "store/cart/index.html", "store/open-rules-library/index.html",
+    "store/authors/index.html", "store/authors/rv-sawyer/index.html",
+    "store/bundles/bundle-what-you-want/index.html", "best-sellers-bookshelf-preview.html",
+    "launch-week/index.html",
+    ...fs.readdirSync(path.join(ROOT, "guest", "preview-products"))
+      .map((slug) => `guest/preview-products/${slug}/index.html`)
+  ];
+  for (const page of pages) assertGuestLinks(read(page), page);
+  assertGuestLinks(renderPublicNavigation(), "server-rendered public navigation");
+  assertGuestLinks(read("functions/_lib/public-storefront.mjs"), "dynamic product navigation");
+}
+
+function assertGuestLinks(source, label) {
+  const nav = source.match(/<nav class="site-nav" aria-label="Primary"[^>]*>([\s\S]*?)<\/nav>/)?.[1];
+  assert.ok(nav, `${label} has no primary navigation`);
+  const links = [...nav.matchAll(/<a href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)]
+    .map((match) => [match[1], match[2].replace(/<[^>]+>/g, "").replace(/\s+0$/, "").trim()]);
+  assert.deepEqual(links, [
+    ["/store/catalog/", "Explore"], ["/support.html", "Support"],
+    ["/account.html", "Login/Signup"], ["/store/cart/", "Cart"]
+  ], `${label} must use the original Guest navigation`);
+}
+
 function assertProtectedRoutesRemainProtected() {
   const creator = read("functions/_lib/creator-operations.mjs");
   const moderation = read("functions/_lib/forum-moderation.mjs");
@@ -151,7 +177,12 @@ function assertProtectedRoutesRemainProtected() {
   assert.match(ownerReview, /OWNER_ROLES = new Set\(\["owner", "admin"\]\)/);
 }
 
-function keys(state) { return state.items.map((item) => item.key); }
+function buildGuestItems() { return [
+  { key: "explore", href: "/store/catalog/", label: "Explore" },
+  { key: "support", href: "/support.html", label: "Support" },
+  { key: "account", href: "/account.html", label: "Login/Signup" },
+  { key: "cart", href: "/store/cart/", label: "Cart" }
+]; }
 function read(relative) { return fs.readFileSync(path.join(ROOT, relative), "utf8"); }
 
 main().catch((error) => {

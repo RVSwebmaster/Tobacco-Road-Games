@@ -65,7 +65,7 @@ assert.match(guest, /\/assets\/js\/guest-product-preview\.js\?v=20261026-homepag
 assert.match(builder, /GUEST_FEATURE_CACHE_BUST = "20261026-homepage-shelves1"/);
 assert.match(builder, /guest-product-preview\.js\?v=\$\{GUEST_FEATURE_CACHE_BUST\}/);
 
-assert.doesNotMatch(homepage, /data-guest-landing|guest-library-sign|Login\/Signup/);
+assert.doesNotMatch(homepage, /data-guest-landing|guest-library-sign/);
 assert.doesNotMatch(guestCss, /(^|\n)\s*(\.homepage-shop-wall|\.shop-wall-)/m);
 assert.match(guestCss, /\.guest-landing-page \.guest-library-sign/);
 assert.match(guestCss, /@media \(max-width: 1023px\)/);

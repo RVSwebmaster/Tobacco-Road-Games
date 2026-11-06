@@ -214,7 +214,7 @@ function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char
 function escapeAttribute(value) { return escapeHtml(value); }
 
 function renderHeader() {
-  return `<header class="site-header"><a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/logo.png" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span></div></a><nav class="site-nav" aria-label="Primary"><a href="/store/catalog/" aria-current="page">Explore</a><a href="/forum">Community Forum</a><a href="/authors.html">Creators</a><a href="/creator/">Creator Login / Sign Up</a><a href="/ai-policy.html">AI Policy</a><a href="/support.html">Support</a><a href="/account.html">Join / Sign In</a><a href="/store/cart/">Cart <span class="cart-count-badge" data-cart-count>0</span></a></nav></header>`;
+  return `<header class="site-header"><a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/logo.png" alt="Tobacco Road Games logo"><div class="brand__copy"><span class="brand__name">Tobacco Road Games</span></div></a><nav class="site-nav" aria-label="Primary"><a href="/store/catalog/" aria-current="page">Explore</a><a href="/support.html">Support</a><a href="/account.html">Login/Signup</a><a href="/store/cart/">Cart <span class="cart-count-badge" data-cart-count>0</span></a></nav></header>`;
 }
 
 function renderFooter() {
