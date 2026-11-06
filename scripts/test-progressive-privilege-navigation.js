@@ -127,9 +127,7 @@ function assertHomepageIntegration() {
   assert.match(build, /data-progressive-navigation/);
   assert.match(build, /data-personal-library/);
   assert.match(redirects, /^\/ \/guest\/ 200\s*$/m, "The polished Guest homepage remains the root document.");
-  assert.match(guestHomepage, /data-progressive-navigation/);
-  assert.match(guestHomepage, /data-homepage-library/);
-  assert.match(guestHomepage, /progressive-navigation\.js/);
+  assert.doesNotMatch(guestHomepage, /data-progressive-navigation|data-homepage-library|progressive-navigation\.js/);
   const account = read("account.html");
   assert.match(account, /data-progressive-navigation/);
   assert.match(account, /progressive-navigation\.js/);

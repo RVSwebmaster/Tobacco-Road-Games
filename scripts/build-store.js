@@ -1161,8 +1161,9 @@ function buildGuestLandingPage(products) {
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
     .replace('<link rel="canonical" href="https://tobaccoroadgames.com/">', '<link rel="canonical" href="https://tobaccoroadgames.com/guest/">')
     .replace("</head>", `${guestStylesheet}</head>`)
-    .replace(navPattern, `${renderSharedPublicNav("", "Primary", GUEST_NAV_ITEMS)}\n    `)
+    .replace(navPattern, `${renderSharedPublicNav("", "Primary", GUEST_NAV_ITEMS, false)}\n    `)
     .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`)
+    .replace(/^\s*<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\r?\n/m, "")
     .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_FEATURE_CACHE_BUST}" defer></script>\n</body>`);
 
   writeFile("guest/index.html", next.replace(/^[ \t]+$/gm, ""));
@@ -1208,7 +1209,7 @@ function renderGuestLandingShopWallMain(products) {
 
 function renderGuestLibraryBay() {
   return `
-        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading" data-homepage-library>
+        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading">
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
           <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty Guest personal library shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
@@ -2356,13 +2357,13 @@ function renderCreatorProfileAlias(creator) {
   });
 }
 
-function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEMS) {
+function renderSharedPublicNav(currentNav, ariaLabel, navItems = PUBLIC_NAV_ITEMS, progressiveNavigation = navItems === HOMEPAGE_NAV_ITEMS || navItems === GUEST_NAV_ITEMS) {
   const normalizedCurrent = ["authors", "author"].includes(currentNav)
     ? "creators"
     : ["store", "catalog", "sales", "product", "collection"].includes(currentNav)
       ? "explore"
       : currentNav;
-  const progressiveAttribute = navItems === HOMEPAGE_NAV_ITEMS || navItems === GUEST_NAV_ITEMS ? " data-progressive-navigation" : "";
+  const progressiveAttribute = progressiveNavigation ? " data-progressive-navigation" : "";
   return `
     <nav class="site-nav" aria-label="${escapeAttribute(ariaLabel)}"${progressiveAttribute}>
       ${navItems.map((item) => `<a href="${item.href}"${normalizedCurrent === item.key ? ' aria-current="page"' : ""}>${item.label}</a>`).join("")}
