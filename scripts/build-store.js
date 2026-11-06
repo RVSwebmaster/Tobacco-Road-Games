@@ -1166,7 +1166,9 @@ function buildGuestLandingPage(products) {
     .replace(/^\s*<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\r?\n/m, "")
     .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_FEATURE_CACHE_BUST}" defer></script>\n</body>`);
 
-  writeFile("guest/index.html", next.replace(/^[ \t]+$/gm, ""));
+  const guestLandingPage = next.replace(/^[ \t]+$/gm, "");
+  writeFile("guest/index.html", guestLandingPage);
+  writeFile("customer.html", guestLandingPage);
 }
 
 function renderGuestLandingShopWallMain(products) {

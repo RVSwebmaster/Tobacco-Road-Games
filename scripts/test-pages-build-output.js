@@ -27,6 +27,8 @@ async function main() {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `non-public path was copied: ${relativePath}`);
     }
     const generatedGuest = fs.readFileSync(path.join(outputDirectory, "guest", "index.html"), "utf8");
+    const generatedCustomer = fs.readFileSync(path.join(outputDirectory, "customer.html"), "utf8");
+    assert.equal(generatedCustomer, generatedGuest, "Pages output must include the identical Customer baseline.");
     assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261026-homepage-shelves1/);
     assert.match(generatedGuest, /guest-landing\.css\?v=20261026-homepage-shelves1/);
     assert.match(generatedGuest, /guest-product-preview\.js\?v=20261026-homepage-shelves1/);
