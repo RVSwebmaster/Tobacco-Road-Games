@@ -22,6 +22,7 @@ async function main() {
   await testInputLimits(auth);
   await testResendConfigurationContract(auth);
   await testRegistrationLoginSessionLogout(auth);
+  await testAccessOwnerBridge(auth);
   await testEmailVerification(auth);
   await testPasswordReset(auth);
   await testTokenReplayRaces(auth);
@@ -32,6 +33,45 @@ async function main() {
   assertAccountPageAndRoutes();
   assertNoAuthBoundaryChanges();
   console.log("Shared account auth tests passed.");
+}
+
+async function testAccessOwnerBridge(auth) {
+  const raw = new DatabaseSync(":memory:");
+  raw.exec(MIGRATION);
+  raw.exec(`
+    CREATE TABLE marketplace_creators (id TEXT PRIMARY KEY);
+    CREATE TABLE creator_memberships (
+      user_id TEXT NOT NULL,
+      creator_id TEXT NOT NULL,
+      permission TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, creator_id)
+    );
+    CREATE TABLE creator_identity_ownership (
+      creator_id TEXT PRIMARY KEY,
+      owner_user_id TEXT NOT NULL,
+      identity_type TEXT NOT NULL,
+      account_status TEXT NOT NULL,
+      billing_status TEXT NOT NULL,
+      entitlement_source TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO marketplace_creators(id) VALUES('creator-rv-sawyer');
+  `);
+  const env = { TRG_ORDERS: d1(raw) };
+  const first = await auth.establishAccessOwnerSession(env, "owner@example.com", TEST_OPTIONS);
+  assert.equal(first.user.role, "owner");
+  assert.equal(raw.prepare("SELECT COUNT(*) count FROM creator_memberships").get().count, 1);
+  const ownership = raw.prepare("SELECT * FROM creator_identity_ownership").get();
+  assert.equal(ownership.owner_user_id, first.user.id);
+  assert.equal(ownership.identity_type, "primary");
+  assert.equal(ownership.account_status, "active");
+  assert.equal(ownership.entitlement_source, "legacy_grandfathered");
+
+  await auth.establishAccessOwnerSession(env, "owner@example.com", TEST_OPTIONS);
+  assert.equal(raw.prepare("SELECT COUNT(*) count FROM creator_memberships").get().count, 1);
+  assert.equal(raw.prepare("SELECT COUNT(*) count FROM creator_identity_ownership").get().count, 1);
 }
 
 async function testPasswordHashing(auth) {

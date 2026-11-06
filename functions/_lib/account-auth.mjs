@@ -512,6 +512,12 @@ export async function establishAccessOwnerSession(env, email, options = {}) {
     SELECT ?, 'creator-rv-sawyer', 'manager', ?
     WHERE EXISTS (SELECT 1 FROM marketplace_creators WHERE id='creator-rv-sawyer')
   `).bind(user.id, now).run();
+  await db.prepare(`
+    INSERT OR IGNORE INTO creator_identity_ownership
+      (creator_id, owner_user_id, identity_type, account_status, billing_status, entitlement_source, created_at, updated_at)
+    SELECT 'creator-rv-sawyer', ?, 'primary', 'active', 'legacy_grandfathered', 'legacy_grandfathered', ?, ?
+    WHERE EXISTS (SELECT 1 FROM marketplace_creators WHERE id='creator-rv-sawyer')
+  `).bind(user.id, now, now).run();
   user = await getUserById(db, user.id);
   const session = await createSession(db, user, options);
   return {
