@@ -132,6 +132,10 @@ function assertHomepageIntegration() {
   assert.match(guestHomepage, /data-progressive-navigation/);
   assert.match(guestHomepage, /data-homepage-library/);
   assert.match(guestHomepage, /progressive-navigation\.js/);
+  const account = read("account.html");
+  assert.match(account, /data-progressive-navigation/);
+  assert.match(account, /progressive-navigation\.js/);
+  assert.doesNotMatch(account, /Creator Login \/ Sign Up/);
   assert.ok(routes.include.includes("/api/navigation"), "Pages Functions must route the navigation endpoint.");
   assert.match(client, /prepareAuthenticatedGuestLibrary/);
   assert.match(styles, /\.homepage-library-book[\s\S]*?pointer-events:\s*auto;/);
