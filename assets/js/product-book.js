@@ -1,6 +1,16 @@
 "use strict";
 
 (function () {
+  // Pixel depth at a 340px book height: 100 pages = 24px.
+  function depthForPages(rawPageCount) {
+    const pages = Number(rawPageCount);
+    if (!Number.isInteger(pages) || pages < 1) return 24;
+    return Math.min(60, Math.max(16, Math.round(24 + (pages - 100) * 0.1)));
+  }
+
+  if (typeof module === "object" && module.exports) module.exports = { depthForPages };
+  if (typeof document === "undefined") return;
+
   function face(className, child) {
     const element = document.createElement("div");
     element.className = `product-book__face ${className}`;
@@ -24,6 +34,24 @@
     return image;
   }
 
+  function generatedSpine(title, credit) {
+    const panel = document.createElement("div");
+    panel.className = "product-book__spine-art";
+    const titleLine = document.createElement("strong");
+    titleLine.className = "product-book__spine-title";
+    titleLine.textContent = title;
+    titleLine.title = title;
+    panel.append(titleLine);
+    if (credit) {
+      const creditLine = document.createElement("span");
+      creditLine.className = "product-book__spine-credit";
+      creditLine.textContent = credit;
+      creditLine.title = credit;
+      panel.append(creditLine);
+    }
+    return panel;
+  }
+
   function viewLabel(degrees) {
     if (degrees < 45 || degrees >= 315) return "Front cover";
     if (degrees < 135) return "Spine";
@@ -43,7 +71,7 @@
     book.setAttribute("aria-hidden", "true");
     const front = face("product-book__front", cover);
     const back = face("product-book__back", artwork(media.dataset.backCover, fallback("Back cover artwork not available")));
-    const spine = face("product-book__spine", artwork(media.dataset.spineArt, fallback(title)));
+    const spine = face("product-book__spine", artwork(media.dataset.spineArt, generatedSpine(title, media.dataset.spineCredit || "")));
     const pages = face("product-book__pages");
     book.append(front, back, spine, pages);
     stage.append(book);
@@ -76,12 +104,6 @@
     slider.addEventListener("input", rotate);
     rotate();
 
-    const pageCount = Number(media.dataset.pageCount);
-    const depth = Number.isFinite(pageCount) && pageCount > 0
-      ? Math.min(36, Math.max(8, Math.round(8 + pageCount * 0.07)))
-      : 18;
-    book.style.setProperty("--book-depth", `${depth}px`);
-
     function size() {
       const ratio = cover.naturalWidth && cover.naturalHeight ? cover.naturalWidth / cover.naturalHeight : 0.75;
       const style = getComputedStyle(stage);
@@ -91,6 +113,7 @@
       const bookHeight = Math.max(1, Math.min(target, height, width / ratio));
       book.style.setProperty("--book-height", `${bookHeight}px`);
       book.style.setProperty("--book-width", `${bookHeight * ratio}px`);
+      book.style.setProperty("--book-depth", `${Math.max(12, Math.round(depthForPages(media.dataset.pageCount) * bookHeight / 340))}px`);
     }
 
     media.classList.add("is-book-display");

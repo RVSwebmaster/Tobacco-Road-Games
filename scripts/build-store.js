@@ -618,6 +618,8 @@ function renderCatalogPage(products, indexes) {
 
 function renderProductPage(product, products, authorLookup) {
   const relatedProducts = resolveRelatedProducts(product, products);
+  const creatorSlug = String(product.creatorSlug || product.publishingIdentitySlug || "").trim().toLowerCase();
+  const spineCredit = authorLookup.get(creatorSlug)?.name || product.publisher || product.authors[0] || "";
   const buyUi = renderBuyUi(product);
   const previewSection = renderPreviewSection(product);
   const authorByline = renderAuthorByline(product);
@@ -724,7 +726,7 @@ function renderProductPage(product, products, authorLookup) {
           ${renderCreatorIdentityPanel(product, products, authorLookup)}
           <div class="product-identity__product store-section" aria-label="Product Identity">
         <section class="product-hero" aria-labelledby="product-title">
-          <div class="product-hero__media" data-product-book data-page-count="${Number(product.pageCount) || 0}"${product.assetSet.backCover ? ` data-back-cover="${escapeAttribute(product.assetSet.backCover)}"` : ""}${product.assetSet.spine ? ` data-spine-art="${escapeAttribute(product.assetSet.spine)}"` : ""}>
+          <div class="product-hero__media" data-product-book data-page-count="${Number(product.pageCount) || 0}" data-spine-credit="${escapeAttribute(spineCredit)}"${product.assetSet.backCover ? ` data-back-cover="${escapeAttribute(product.assetSet.backCover)}"` : ""}${product.assetSet.spine ? ` data-spine-art="${escapeAttribute(product.assetSet.spine)}"` : ""}>
             <img class="product-cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} front cover">
           </div>
           <div class="product-hero__copy">

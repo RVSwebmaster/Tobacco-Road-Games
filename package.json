@@ -32,6 +32,7 @@
     "test:public-product-catalog": "node scripts/test-public-product-catalog.js",
     "test:public-product-assets": "node scripts/test-public-product-assets.js",
     "test:d1-public-storefront": "node scripts/test-d1-public-storefront.js",
+    "test:product-book": "node scripts/test-product-book-thickness.js",
     "test:d1-cart-pricing": "node scripts/test-d1-cart-pricing.js",
     "test:owner-pricing-d1": "node scripts/test-owner-pricing-d1.js",
     "test:owner-homepage-d1": "node scripts/test-owner-homepage-d1.js && node scripts/test-owner-homepage-editor.js",

@@ -134,7 +134,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
         </aside>
         <div class="product-identity__product store-section" aria-label="Product Identity">
       <section class="product-hero" aria-labelledby="product-title">
-        <div class="product-hero__media" data-product-book data-page-count="${pageCount}"><img class="product-cover" src="${escapeAttribute(cover)}" alt="${escapeAttribute(title)} front cover"></div>
+        <div class="product-hero__media" data-product-book data-page-count="${pageCount}" data-spine-credit="${escapeAttribute(creatorName || product.publisher)}"><img class="product-cover" src="${escapeAttribute(cover)}" alt="${escapeAttribute(title)} front cover"></div>
         <div class="product-hero__copy">
           <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(statusLabel)}</span>
           <p class="section-heading__kicker">${escapeHtml(product.gameSystem || "Tabletop Roleplaying")}</p>
