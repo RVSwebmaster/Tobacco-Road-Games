@@ -2,6 +2,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
+const { DatabaseSync } = require("node:sqlite");
+const { applyMigrations, createD1 } = require("./test-creator-product-withdrawal.js");
 
 const ROOT = path.resolve(__dirname, "..");
 
@@ -10,6 +12,7 @@ async function main() {
   const checkout = await importModule("functions/_lib/cart-checkout.mjs");
   const maintenancePages = await importModule("functions/_lib/store-maintenance.mjs");
   const ownerApi = await importModule("functions/_lib/owner-store-status.mjs");
+  const accountAuth = await importModule("functions/_lib/account-auth.mjs");
 
   const migration = fs.readFileSync(path.join(ROOT, "migrations", "015_store_state.sql"), "utf8");
   assert.match(migration, /VALUES\s*\(\s*'store_state'\s*,\s*'OPEN'/i, "The initial deployed store state must be OPEN.");
@@ -38,12 +41,52 @@ async function main() {
   assert.equal(maintenance.status, 503, "Maintenance store pages should return the maintenance display.");
   assert.match(await maintenance.text(), /Store Maintenance/i, "Maintenance should replace the public catalog with a clear display.");
 
-  const unauthorized = await ownerApi.handleOwnerStoreStatusPost(new Request("https://example.com/owner/api/store-status", {
-      body: JSON.stringify({ state: "OPEN" }),
-      headers: { "content-type": "application/json", origin: "https://example.com" },
+  const raw = new DatabaseSync(":memory:");
+  try {
+    applyMigrations(raw);
+    raw.prepare("UPDATE runtime_settings SET setting_value='CLOSED' WHERE setting_key='store_state'").run();
+    const now = new Date().toISOString();
+    const expires = new Date(Date.now() + 86400000).toISOString();
+    for (const role of ["owner", "user"]) {
+      raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?,?,1,'active',?,?,?)")
+        .run(role, `${role}@example.invalid`, role, now, now);
+      raw.prepare("INSERT INTO sessions(id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?,?)")
+        .run(`${role}-session`, role, await accountAuth.hashToken(`${role}-token`), await accountAuth.hashToken(`${role}-csrf`), now, expires, now);
+    }
+    const environment = { TRG_ORDERS: createD1(raw) };
+    const post = (role, options = {}) => new Request("https://example.com/owner/api/store-status", {
+      body: JSON.stringify({ state: "CLOSED" }),
+      headers: {
+        "content-type": "application/json",
+        origin: options.origin || "https://example.com",
+        ...(role ? { cookie: `__Host-trg_session=${role}-token; trg_account_csrf=${role}-csrf` } : {}),
+        ...(options.csrf ? { "x-csrf-token": options.csrf } : {})
+      },
       method: "POST"
-    }), { TRG_ORDERS: stateDatabase("CLOSED") });
-  assert.equal(unauthorized.status, 401, "Unauthenticated users must not alter store status.");
+    });
+    let response = await ownerApi.handleOwnerStoreStatusPost(post(null), environment);
+    assert.equal(response.status, 401, "Unauthenticated users must not alter store status.");
+    response = await ownerApi.handleOwnerStoreStatusPost(post("user", { csrf: "user-csrf" }), environment);
+    assert.equal(response.status, 403, "A non-Owner must not alter store status.");
+    response = await ownerApi.handleOwnerStoreStatusPost(post("owner"), environment);
+    assert.equal(response.status, 403, "Owner changes require a CSRF token.");
+    response = await ownerApi.handleOwnerStoreStatusPost(post("owner", { csrf: "wrong-csrf" }), environment);
+    assert.equal(response.status, 403, "Incorrect CSRF tokens must be rejected.");
+    response = await ownerApi.handleOwnerStoreStatusPost(post("owner", { csrf: "owner-csrf", origin: "https://evil.example" }), environment);
+    assert.equal(response.status, 403, "Cross-origin Owner changes must be rejected.");
+    assert.equal(raw.prepare("SELECT setting_value FROM runtime_settings WHERE setting_key='store_state'").get().setting_value, "CLOSED");
+    response = await ownerApi.handleOwnerStoreStatusPost(post("owner", { csrf: "owner-csrf" }), environment);
+    assert.equal(response.status, 200, "An authenticated Owner can save store status.");
+    assert.deepEqual({ ...(await response.json()) }, { available: true, state: "CLOSED", updatedAt: raw.prepare("SELECT updated_at FROM runtime_settings WHERE setting_key='store_state'").get().updated_at, updatedBy: "owner" });
+    assert.equal(raw.prepare("SELECT setting_value FROM runtime_settings WHERE setting_key='store_state'").get().setting_value, "CLOSED");
+  } finally { raw.close(); }
+
+  const ownerHtml = fs.readFileSync(path.join(ROOT, "owner", "store-status.html"), "utf8");
+  const ownerScript = ownerHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(ownerScript, "The Owner status page must have its control script.");
+  new Function(ownerScript);
+  assert.match(ownerScript, /fetch\('\/api\/account\/me'/, "The Owner page must load the signed-in account.");
+  assert.match(ownerScript, /'x-csrf-token': csrfToken/, "The Owner page must submit its session CSRF token.");
 
   const generatedCatalog = fs.readFileSync(path.join(ROOT, "store", "catalog", "index.html"), "utf8");
   const statusScript = fs.readFileSync(path.join(ROOT, "assets", "js", "store-status.js"), "utf8");

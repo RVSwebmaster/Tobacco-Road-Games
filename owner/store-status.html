@@ -15,7 +15,15 @@
       const stateNode = document.querySelector('[data-store-admin-state]');
       const messageNode = document.querySelector('[data-store-admin-message]');
       const buttons = [...document.querySelectorAll('[data-state]')];
+      let csrfToken = '';
       async function load() {
+        const accountResponse = await fetch('/api/account/me', { credentials: 'same-origin', cache: 'no-store' });
+        const account = await accountResponse.json();
+        if (!accountResponse.ok || !account.authenticated || !['owner', 'admin'].includes(account.user?.role)) {
+          buttons.forEach(item => item.disabled = true);
+          throw new Error('Sign in as an Owner to change store status.');
+        }
+        csrfToken = account.csrfToken || '';
         const response = await fetch('/owner/api/store-status', { headers: { accept: 'application/json' }, cache: 'no-store' });
         const payload = await response.json();
         stateNode.textContent = payload.state || 'CLOSED';
@@ -25,7 +33,7 @@
         buttons.forEach(item => item.disabled = true);
         messageNode.textContent = 'Saving…';
         try {
-          const response = await fetch('/owner/api/store-status', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ state: button.dataset.state }) });
+          const response = await fetch('/owner/api/store-status', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken }, body: JSON.stringify({ state: button.dataset.state }) });
           const payload = await response.json();
           if (!response.ok) throw new Error(payload.error || 'Status change failed.');
           stateNode.textContent = payload.state;
@@ -39,7 +47,7 @@
         if (!requestedButton) return;
         history.replaceState({}, '', location.pathname);
         if (confirm(`Change the live store state to ${requestedState}?`)) requestedButton.click();
-      }).catch(() => { stateNode.textContent = 'CLOSED'; messageNode.textContent = 'Status unavailable; checkout is safely closed.'; });
+      }).catch(error => { stateNode.textContent = 'Unavailable'; messageNode.textContent = error.message || 'Status unavailable; checkout is safely closed.'; });
     })();
   </script>
 </body>

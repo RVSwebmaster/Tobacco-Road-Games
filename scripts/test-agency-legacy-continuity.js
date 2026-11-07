@@ -16,7 +16,6 @@ const HISTORICAL_SLUGS = ["circle-of-cinder", "janni", "ringbound", "tablecraft-
 
 async function main() {
   const orders = await importModule("functions/_lib/orders-d1.mjs");
-  const catalog = await importModule("functions/_lib/product-catalog-d1.mjs");
   const authorization = await importModule("functions/_lib/download-authorization.mjs");
   const download = await importModule("functions/_lib/download-route.mjs");
   const fulfillment = await importModule("functions/_lib/order-fulfillment.mjs");
@@ -42,7 +41,7 @@ async function main() {
   assert.equal(count(fixture.raw, "marketplace_products", "slug='agency'"), 1, "Recovery retry must not duplicate Agency.");
 
   await verifySecureContinuity(fixture, authorization, download, fulfillment);
-  await verifyCollisionFailsClosed(catalog);
+  await verifyCollisionFailsClosed();
 
   console.log("Agency native D1/R2 continuity tests passed.");
   console.log("Historical orders preserved: 6; active paid entitlements preserved: 2.");
@@ -187,22 +186,15 @@ async function verifySecureContinuity(fixture, authorization, download, fulfillm
   assert.equal(response.status, 403, "Another historical slug must not inherit Agency continuity.");
 }
 
-async function verifyCollisionFailsClosed(catalog) {
+async function verifyCollisionFailsClosed() {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
   for (const file of migrationFiles().filter((name) => name.localeCompare(CONTINUITY_MIGRATION) < 0)) applyMigration(raw, file);
-  const d1 = d1Adapter(raw);
-  await catalog.createProduct(d1, {
-    buyMode: "retired",
-    creatorId: "creator-rv-sawyer",
-    id: "conflicting-agency",
-    priceCents: 0,
-    pricingModel: "free",
-    publicationState: "retired",
-    slug: "agency",
-    status: "retired",
-    title: "Conflicting Agency"
-  }, { nowMs: NOW });
+  // This fixture stops before migration 068, so insert with that historical schema.
+  raw.prepare(`INSERT INTO marketplace_products
+    (id,slug,creator_id,publication_state,title,status,buy_mode,pricing_model,price_cents,created_at,updated_at)
+    VALUES ('conflicting-agency','agency','creator-rv-sawyer','retired','Conflicting Agency','retired','retired','free',0,?,?)`)
+    .run(new Date(NOW).toISOString(), new Date(NOW).toISOString());
   assert.throws(
     () => applyMigration(raw, CONTINUITY_MIGRATION),
     /CHECK constraint failed|constraint failed/i,
