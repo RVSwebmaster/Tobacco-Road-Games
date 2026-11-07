@@ -125,7 +125,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
             ? `<img src="${escapeAttribute(creatorImage)}" alt="${escapeAttribute(creatorName)} ${product.creatorLogo ? "logo" : "photograph"}">`
             : `<span>Creator image not available</span>`}</div>
           ${product.creatorShortBio ? `<p class="product-identity__bio">${escapeHtml(product.creatorShortBio)}</p>` : `<p class="product-identity__empty">Biography not available yet.</p>`}
-          ${product.creatorSlug ? `<a class="author-link" href="/authors/${encodeURIComponent(product.creatorSlug)}/">View creator profile</a>` : `<p class="product-identity__empty">Public profile not available yet.</p>`}
+          ${product.creatorProfileUrl ? `<a class="author-link" href="${escapeAttribute(product.creatorProfileUrl)}">View creator profile</a>` : `<p class="product-identity__empty">Public profile not available yet.</p>`}
           <div class="product-identity__more">
             <h3>More from this creator</h3>
             ${otherCreatorProducts.length ? `<ul>${otherCreatorProducts.map(item => `<li><a href="${escapeAttribute(item.detailUrl)}">${escapeHtml(item.title)}</a></li>`).join("")}</ul>` : `<p class="product-identity__empty">No other products listed yet.</p>`}

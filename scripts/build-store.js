@@ -809,12 +809,15 @@ function renderProductPage(product, products, authorLookup) {
 }
 
 function renderCreatorIdentityPanel(product, products, authorLookup) {
-  const slug = product.authorSlugs[0] || "";
+  const slug = String(product.creatorSlug || product.publishingIdentitySlug || "").trim().toLowerCase();
   const creator = authorLookup.get(slug);
-  const name = creator?.name || product.authors[0] || "";
+  const name = creator?.name || product.publisher || "";
   const image = creator?.logo || creator?.profileImage || "";
   const otherProducts = slug
-    ? products.filter((item) => item.slug !== product.slug && item.authorSlugs.includes(slug)).slice(0, 4)
+    ? products.filter((item) => item.slug !== product.slug
+      && String(item.creatorSlug || item.publishingIdentitySlug || "").trim().toLowerCase() === slug
+      && ["available-direct", "pay-what-you-want", "free-download"].includes(item.status)
+      && (!item.publicationState || item.publicationState === "published")).slice(0, 4)
     : [];
 
   return `<aside class="product-identity__creator store-section" aria-labelledby="creator-identity-heading">
@@ -3598,4 +3601,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup };
+module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel };

@@ -12,6 +12,12 @@ const LISTED_STATUSES = new Set([
   "available-direct", "coming-soon", "free-download", "legacy-edition",
   "pay-what-you-want", "preview-available", "preview-only", "revised-edition-pending"
 ]);
+// The current catalog has no separate Shelved state. These are the statuses
+// eligible for a live storefront shelf; drafts and catalog-only previews stay out.
+const SHELVED_STATUSES = ["available-direct", "pay-what-you-want", "free-download"];
+const EXISTING_CREATOR_PROFILES = new Map([
+  ["rv-sawyer", "/authors/rv-sawyer/"]
+]);
 
 export async function handlePublicCatalogRequest(request, env) {
   if (request.method !== "GET") return jsonResponse({ error: "Use GET for the catalog." }, 405);
@@ -75,11 +81,16 @@ export async function getApprovedPublicProductById(database, id) {
 export async function getOtherApprovedPublicProductsByCreator(database, creatorId, currentSlug) {
   const creator = await getApprovedCreator(database, creatorId);
   if (!creator) return [];
-  const products = await listProducts(database, { creatorId, publicationState: "published", limit: 200 });
-  return products.map(product => publicProduct(product, creator))
-    .filter(product => product.slug !== currentSlug && product.storefrontVisibility === "listed")
-    .slice(0, 4)
-    .map(product => ({ title: product.title, detailUrl: product.detailUrl }));
+  const result = await database.prepare(`SELECT slug,title FROM marketplace_products
+    WHERE creator_id=? AND publication_state='published'
+      AND status IN (${SHELVED_STATUSES.map(() => "?").join(",")})
+      AND buy_mode<>'retired' AND slug<>?
+    ORDER BY slug LIMIT 4`)
+    .bind(creatorId, ...SHELVED_STATUSES, currentSlug).all();
+  return (result.results || []).map(product => ({
+    title: product.title,
+    detailUrl: `/store/products/${encodeURIComponent(product.slug)}/`
+  }));
 }
 
 export function publicProduct(product, creator = {}) {
@@ -93,6 +104,7 @@ export function publicProduct(product, creator = {}) {
     creatorId: product.creatorId,
     creatorName: String(creator.display_name || creator.displayName || product.publisher || "Tobacco Road Games"),
     creatorSlug: String(creator.slug || ""),
+    creatorProfileUrl: EXISTING_CREATOR_PROFILES.get(String(creator.slug || "")) || "",
     creatorLogo: String(creator.logo || ""),
     creatorProfileImage: String(creator.profile_image || ""),
     creatorShortBio: String(creator.short_bio || ""),
