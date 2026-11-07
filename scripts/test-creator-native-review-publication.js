@@ -156,6 +156,29 @@ async function main() {
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products WHERE id='listing-task2ob-missing'").get().n, 0);
 
   assert.equal(bucket.getPublicCalls, 2, "Only the public cover and its owning Creator's private cover were retrieved from R2.");
+  seedListing(raw, bucket, "listing-task3b-generated", "creator-pdf-back-cover", "fixed", 800, null, null);
+  raw.prepare("DELETE FROM creator_listing_files WHERE id=?").run("listing-task3b-generated-cover");
+  const generatedFileId = "listing-task3b-generated-product";
+  const generatedPrefix = `creator-quarantine/${CREATOR.id}/listing-task3b-generated`;
+  const generatedCoverKey = `${generatedPrefix}/generated-cover.webp`;
+  const generatedBackKey = `${generatedPrefix}/generated-back-cover.webp`;
+  raw.prepare("UPDATE creator_listing_files SET generated_cover_key=?,generated_back_cover_key=?,pdf_page_count=122 WHERE id=?")
+    .run(generatedCoverKey, generatedBackKey, generatedFileId);
+  for (const [key, purpose] of [[generatedCoverKey, "generated-cover"], [generatedBackKey, "generated-back-cover"]]) {
+    bucket.seed(key, Buffer.from("RIFF0000WEBP", "ascii"), { contentType: "image/webp" },
+      { listingId: "listing-task3b-generated", purpose, uploadAttemptId: generatedFileId });
+  }
+  response = await publication.handleCreatorPublicationRequest(ownerPost({ action: "accept_file", fileId: generatedFileId, expectedRevision: 1 }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200);
+  response = await review.handleCreatorReviewRequest(ownerPost({ listingId: "listing-task3b-generated", expectedRevision: 2, action: "approve" }), env, { database: db, nowMs: NOW_MS });
+  assert.equal(response.status, 200);
+  const generatedProduct = raw.prepare("SELECT cover_r2_key,back_cover_r2_key,metadata_json FROM marketplace_products WHERE id='listing-task3b-generated'").get();
+  assert.equal(generatedProduct.cover_r2_key, generatedCoverKey);
+  assert.equal(generatedProduct.back_cover_r2_key, generatedBackKey);
+  assert.equal(JSON.parse(generatedProduct.metadata_json).pageCount, 122);
+  response = await publicAssets.handlePublicProductAssetRequest({ params: { slug: "creator-pdf-back-cover", asset: "back-cover.webp" }, env });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/webp");
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM orders").get().n, 0);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM download_entitlements").get().n, 0);
   raw.close();

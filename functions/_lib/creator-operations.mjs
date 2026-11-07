@@ -483,7 +483,9 @@ async function listings(db, creator) {
           mp.updated_at catalog_updated_at,
           EXISTS(SELECT 1 FROM creator_listing_files cf
             WHERE cf.listing_id=cl.id AND cf.creator_id=cl.creator_id
-              AND cf.purpose='cover' AND cf.validation_state<>'superseded') has_cover_file
+              AND ((cf.purpose='cover' AND cf.content_type='image/webp')
+                OR (cf.purpose='product' AND cf.generated_cover_key IS NOT NULL))
+              AND cf.validation_state<>'superseded') has_cover_file
          FROM creator_listings cl
          LEFT JOIN marketplace_products mp ON mp.creator_listing_id=cl.id
          WHERE cl.creator_id=? ORDER BY cl.updated_at DESC,cl.title`,
@@ -1235,11 +1237,12 @@ async function assertCreatorSubmissionReady(db, listing) {
   const files = await all(
     db
       .prepare(
-        "SELECT purpose,content_type FROM creator_listing_files WHERE listing_id=? AND creator_id=? AND validation_state IN ('uploaded','validating','accepted')",
+        "SELECT purpose,content_type,generated_cover_key FROM creator_listing_files WHERE listing_id=? AND creator_id=? AND validation_state IN ('uploaded','validating','accepted')",
       )
       .bind(listing.id, listing.creator_id),
   );
-  if (!files.some((file) => file.purpose === "cover" && file.content_type === "image/webp"))
+  if (!files.some((file) => (file.purpose === "cover" && file.content_type === "image/webp") ||
+      (file.purpose === "product" && file.content_type === "application/pdf" && file.generated_cover_key)))
     errors.push("a private WebP cover upload");
   if (
     ["digital", "hybrid"].includes(listing.media_type) &&

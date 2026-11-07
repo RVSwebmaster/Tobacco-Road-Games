@@ -19,6 +19,7 @@ async function main() {
     pricingModel: "pwyw", priceCents: 500, suggestedPriceCents: 500, minimumPriceCents: 0 };
   await catalog.createProduct(db, { ...base, id: "public-item", slug: "public-item", title: "Public Item",
     publicationState: "published", coverR2Key: "catalog-publications/one/cover.webp",
+    backCoverR2Key: "catalog-publications/one/back-cover.webp",
     deliveryR2Key: "catalog-publications/one/delivery.pdf", deliveryFilename: "secret.pdf",
     deliveryContentType: "application/pdf", metadata: { authors: ["RV Sawyer"],
       tags: ["Game"], privateNote: "do not expose" } });
@@ -34,6 +35,8 @@ async function main() {
   assert.equal(publicItem.creatorSlug, "rv-sawyer");
   assert.equal(publicItem.hasCover, true);
   assert.equal(publicItem.coverUrl, "/product-assets/public-item/cover.webp");
+  assert.equal(publicItem.backCoverUrl, "/product-assets/public-item/back-cover.webp");
+  assert.equal(publicItem.backCoverR2Key, undefined);
   assert.equal(publicItem.detailUrl, "/store/products/public-item/");
   assert.equal(publicItem.storefrontVisibility, "listed");
   assert.equal(publicItem.purchaseAvailability, "cart-quote-only");

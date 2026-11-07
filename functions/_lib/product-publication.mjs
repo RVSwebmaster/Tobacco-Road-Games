@@ -42,7 +42,7 @@ export async function handleOwnerCatalogPublicationRequest(request, env) {
     try { metadata = JSON.parse(raw); }
     catch { throw new ProductPublicationError("invalid_metadata", "Product metadata must be valid JSON.", 400); }
     const product = await publishProduct(env.TRG_ORDERS, env.TRG_PRODUCTS, {
-      metadata, coverFile: form.get("cover"), pdfFile: form.get("pdf")
+      metadata, coverFile: form.get("cover"), backCoverFile: form.get("backCover"), pdfFile: form.get("pdf")
     });
     return jsonResponse({
       ok: true,
@@ -57,7 +57,7 @@ export async function handleOwnerCatalogPublicationRequest(request, env) {
   }
 }
 
-export async function publishProduct(database, bucket, { metadata, coverFile, pdfFile }, options = {}) {
+export async function publishProduct(database, bucket, { metadata, coverFile, backCoverFile, pdfFile }, options = {}) {
   if (!database?.prepare || !bucket?.head || !bucket?.put || !bucket?.get || !bucket?.delete) {
     throw new ProductPublicationError("bindings_unavailable", "Product publication bindings are unavailable.");
   }
@@ -66,20 +66,23 @@ export async function publishProduct(database, bucket, { metadata, coverFile, pd
     throw new ProductPublicationError("invalid_attempt", "Publication attempt ID is invalid.", 400);
   }
   let cover;
+  let backCover;
   let pdf;
   try {
     cover = await prepareCreatorListingFile(coverFile, "cover");
+    if (backCoverFile != null) backCover = await prepareCreatorListingFile(backCoverFile, "cover");
     pdf = await prepareCreatorListingFile(pdfFile, "product");
   } catch (error) {
     throw new ProductPublicationError("invalid_file", error.message, error.status || 400);
   }
   const coverKey = `catalog-publications/${attemptId}/cover.webp`;
+  const backCoverKey = backCover ? `catalog-publications/${attemptId}/back-cover.webp` : null;
   const deliveryKey = `catalog-publications/${attemptId}/delivery.pdf`;
   let candidate;
   try {
     candidate = validateProductInput({ ...metadata, publicationState: "published",
       publishedAt: new Date(options.nowMs ?? Date.now()).toISOString(),
-      coverR2Key: coverKey, deliveryR2Key: deliveryKey,
+      coverR2Key: coverKey, backCoverR2Key: backCoverKey, deliveryR2Key: deliveryKey,
       deliveryFilename: pdf.normalizedFilename, deliveryContentType: pdf.contentType });
   } catch (error) {
     throw new ProductPublicationError("invalid_metadata", error.message, 400);
@@ -92,7 +95,7 @@ export async function publishProduct(database, bucket, { metadata, coverFile, pd
   if (await getProductById(database, candidate.id) || await getProductBySlug(database, candidate.slug)) {
     throw new ProductPublicationError("product_exists", "Product ID or slug already exists.", 409);
   }
-  if (await bucket.head(coverKey) || await bucket.head(deliveryKey)) {
+  if (await bucket.head(coverKey) || (backCoverKey && await bucket.head(backCoverKey)) || await bucket.head(deliveryKey)) {
     throw new ProductPublicationError("asset_exists", "Publication asset key already exists.", 409);
   }
 
@@ -104,6 +107,13 @@ export async function publishProduct(database, bucket, { metadata, coverFile, pd
       customMetadata: { publicationAttemptId: attemptId, productId: candidate.id } });
     if (!coverWrite) throw new ProductPublicationError("asset_exists", "Publication asset key already exists.", 409);
     await verifyObject(bucket, coverKey, cover.bytes, cover.contentType, attemptId);
+    if (backCoverKey) {
+      const backCoverWrite = await bucket.put(backCoverKey, backCover.bytes, { onlyIf: new Headers({ "if-none-match": "*" }),
+        httpMetadata: { contentType: backCover.contentType },
+        customMetadata: { publicationAttemptId: attemptId, productId: candidate.id } });
+      if (!backCoverWrite) throw new ProductPublicationError("asset_exists", "Publication asset key already exists.", 409);
+      await verifyObject(bucket, backCoverKey, backCover.bytes, backCover.contentType, attemptId);
+    }
     const deliveryWrite = await bucket.put(deliveryKey, pdf.bytes, { onlyIf: new Headers({ "if-none-match": "*" }),
       httpMetadata: { contentType: pdf.contentType },
       customMetadata: { publicationAttemptId: attemptId, productId: candidate.id } });
@@ -111,7 +121,7 @@ export async function publishProduct(database, bucket, { metadata, coverFile, pd
     await verifyObject(bucket, deliveryKey, pdf.bytes, pdf.contentType, attemptId);
     insertAttempted = true;
     const product = await createProduct(database, candidate, { nowMs: options.nowMs });
-    if (!matchesAttempt(product, coverKey, deliveryKey)) {
+    if (!matchesAttempt(product, coverKey, backCoverKey, deliveryKey)) {
       throw new ProductPublicationError("commit_unverified", "Published product record could not be verified.");
     }
     return product;
@@ -120,14 +130,14 @@ export async function publishProduct(database, bucket, { metadata, coverFile, pd
       let record;
       try { record = await getProductById(database, candidate.id); }
       catch { throw new ProductPublicationError("commit_unverified", "Database commit could not be verified; publication assets were retained.", 503, { attemptId }); }
-      if (matchesAttempt(record, coverKey, deliveryKey)) return record;
-      if (record?.coverR2Key === coverKey || record?.deliveryR2Key === deliveryKey) {
+      if (matchesAttempt(record, coverKey, backCoverKey, deliveryKey)) return record;
+      if (record?.coverR2Key === coverKey || (backCoverKey && record?.backCoverR2Key === backCoverKey) || record?.deliveryR2Key === deliveryKey) {
         throw new ProductPublicationError("commit_unverified", "Published product references publication assets; assets were retained.", 503, { attemptId });
       }
     }
     try {
       const ownedKeys = [];
-      for (const key of [coverKey, deliveryKey]) {
+      for (const key of [coverKey, backCoverKey, deliveryKey].filter(Boolean)) {
         const object = await bucket.head(key);
         if (object?.customMetadata?.publicationAttemptId === attemptId &&
             object.customMetadata.productId === candidate.id) ownedKeys.push(key);
@@ -159,7 +169,7 @@ async function digest(bytes) {
   return Array.from(hash, byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function matchesAttempt(product, coverKey, deliveryKey) {
+function matchesAttempt(product, coverKey, backCoverKey, deliveryKey) {
   return product?.publicationState === "published" &&
-    product.coverR2Key === coverKey && product.deliveryR2Key === deliveryKey;
+    product.coverR2Key === coverKey && product.backCoverR2Key === backCoverKey && product.deliveryR2Key === deliveryKey;
 }

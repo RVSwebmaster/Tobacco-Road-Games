@@ -37,6 +37,7 @@ async function main() {
     minimumPriceCents: 200,
     suggestedPriceCents: 700,
     coverR2Key: "catalog-publications/storefront-native-item/cover.webp",
+    backCoverR2Key: "catalog-publications/storefront-native-item/back-cover.webp",
     previewR2Key: "catalog-publications/storefront-native-item/preview.webp",
     deliveryR2Key: "catalog-publications/storefront-native-item/delivery.pdf",
     deliveryFilename: "road-test.pdf",
@@ -62,7 +63,7 @@ async function main() {
   assert.match(html, /Publisher \/ Imprint: Tobacco Road Games/);
   assert.match(html, /Pay What You Want — \$2\.00 minimum; \$7\.00 suggested/);
   assert.match(html, /\/product-assets\/storefront-native-item\/cover\.webp/);
-  assert.match(html, /class="product-hero__media" data-product-book data-page-count="12" data-spine-credit="RV Sawyer"/);
+  assert.match(html, /class="product-hero__media" data-product-book data-page-count="12" data-spine-credit="RV Sawyer" data-back-cover="\/product-assets\/storefront-native-item\/back-cover\.webp"/);
   assert.match(html, /<script src="\/assets\/js\/product-book\.js" defer><\/script>/);
   assert.match(html, /Open Preview/);
   assert.match(html, /Add to Cart/);

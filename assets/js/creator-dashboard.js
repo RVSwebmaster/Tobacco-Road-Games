@@ -722,6 +722,14 @@
         data = new FormData(form),
         listingId = data.get("listingId");
       try {
+        if (data.get("purpose") === "product") {
+          document.querySelector("#creator-file-status").textContent = "Generating front and back covers from the PDF...";
+          const { renderDefaultPdfCoverFiles } = await import("/assets/js/product-pdf-images.mjs?v=20261107b");
+          const generated = await renderDefaultPdfCoverFiles(data.get("file"));
+          data.set("generatedFront", generated.frontFile);
+          if (generated.backFile) data.set("generatedBack", generated.backFile);
+          data.set("pdfPageCount", String(generated.pageCount));
+        }
         const response = await fetch(
             `/api/creator/listings/${encodeURIComponent(listingId)}/files`,
             {
@@ -737,7 +745,9 @@
             payload?.error?.message || payload?.error || "Upload failed.",
           );
         document.querySelector("#creator-file-status").textContent =
-          "File uploaded privately and queued for validation.";
+          data.get("purpose") === "product"
+            ? "PDF and its generated cover images uploaded privately. The PDF is queued for validation."
+            : "File uploaded privately and queued for validation.";
         form.elements.file.value = "";
         await load();
       } catch (error) {

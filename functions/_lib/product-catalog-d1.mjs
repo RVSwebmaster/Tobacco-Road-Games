@@ -24,6 +24,7 @@ const FIELDS = Object.freeze([
   ["saleStart", "sale_start"],
   ["saleEnd", "sale_end"],
   ["coverR2Key", "cover_r2_key"],
+  ["backCoverR2Key", "back_cover_r2_key"],
   ["previewR2Key", "preview_r2_key"],
   ["thumbnailR2Key", "thumbnail_r2_key"],
   ["deliveryR2Key", "delivery_r2_key"],
@@ -64,6 +65,7 @@ const DEFAULTS = Object.freeze({
   saleStart: null,
   saleEnd: null,
   coverR2Key: null,
+  backCoverR2Key: null,
   previewR2Key: null,
   thumbnailR2Key: null,
   deliveryR2Key: null,
@@ -250,7 +252,7 @@ function normalize(value) {
   for (const key of ["subtitle", "shortDescription", "longDescription", "publisher", "gameSystem", "productLine", "genre", "buyUrl"]) {
     product[key] = optionalText(product[key]) || "";
   }
-  for (const key of ["coverR2Key", "previewR2Key", "thumbnailR2Key", "deliveryR2Key"]) {
+  for (const key of ["coverR2Key", "backCoverR2Key", "previewR2Key", "thumbnailR2Key", "deliveryR2Key"]) {
     product[key] = r2Key(product[key], key);
   }
   product.deliveryFilename = optionalText(product.deliveryFilename);

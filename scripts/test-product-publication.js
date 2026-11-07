@@ -36,17 +36,25 @@ async function main() {
   assert.equal(published.deliveryR2Key, "catalog-publications/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/delivery.pdf");
   assert.equal((await catalog.getProductBySlug(db, published.slug)).id, published.id);
   assert.equal(bucket.objects.size, 2);
+  const withBack = input("publication-with-back");
+  withBack.backCoverFile = new File([WEBP], "back-cover.webp", { type: "image/webp" });
+  const backed = await publication.publishProduct(db, bucket, withBack, {
+    attemptId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", nowMs: NOW_MS
+  });
+  assert.equal(backed.backCoverR2Key, "catalog-publications/eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee/back-cover.webp");
+  assert.deepEqual(bucket.objects.get(backed.backCoverR2Key).bytes, WEBP);
+  assert.equal(bucket.objects.size, 5);
   const preservedCover = Uint8Array.from(bucket.objects.get(published.coverR2Key).bytes);
   await assert.rejects(publication.publishProduct(db, bucket, input("publication-key-collision"), {
     attemptId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", nowMs: NOW_MS
   }), error => error.code === "asset_exists");
   assert.deepEqual(bucket.objects.get(published.coverR2Key).bytes, preservedCover);
-  assert.equal(bucket.objects.size, 2);
+  assert.equal(bucket.objects.size, 5);
 
   await assert.rejects(publication.publishProduct(db, bucket, input("publication-success"), {
     attemptId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", nowMs: NOW_MS
   }), error => error.code === "product_exists");
-  assert.equal(bucket.objects.size, 2);
+  assert.equal(bucket.objects.size, 5);
   assert.equal((await catalog.getProductById(db, published.id)).deliveryR2Key, published.deliveryR2Key);
 
   bucket.failAfterPut = 2;
@@ -54,19 +62,19 @@ async function main() {
     attemptId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", nowMs: NOW_MS
   }), error => error.code === "publication_failed");
   assert.equal(await catalog.getProductBySlug(db, "publication-r2-failure"), null);
-  assert.equal(bucket.objects.size, 2);
+  assert.equal(bucket.objects.size, 5);
 
   await assert.rejects(publication.publishProduct(db, bucket,
     input("publication-d1-failure", { creatorListingId: "missing-listing" }), {
       attemptId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", nowMs: NOW_MS
     }), error => error.code === "publication_failed");
   assert.equal(await catalog.getProductBySlug(db, "publication-d1-failure"), null);
-  assert.equal(bucket.objects.size, 2);
+  assert.equal(bucket.objects.size, 5);
 
   const invalid = input("publication-invalid");
   invalid.coverFile = new File([PDF], "cover.webp", { type: "image/webp" });
   await assert.rejects(publication.publishProduct(db, bucket, invalid), error => error.code === "invalid_file");
-  assert.equal(bucket.objects.size, 2);
+  assert.equal(bucket.objects.size, 5);
   assert.equal(await catalog.getProductBySlug(db, "publication-invalid"), null);
 
   const unauthenticated = await publication.handleOwnerCatalogPublicationRequest(
@@ -103,7 +111,7 @@ async function main() {
       "x-csrf-token": "wrong" }, body: new FormData()
   });
   assert.equal((await publication.handleOwnerCatalogPublicationRequest(badCsrf, { TRG_ORDERS: db, TRG_PRODUCTS: bucket })).status, 403);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 3);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 4);
   assert.deepEqual(raw.prepare("PRAGMA foreign_key_check").all(), []);
   raw.close();
   console.log("Native product publication unit tests passed.");

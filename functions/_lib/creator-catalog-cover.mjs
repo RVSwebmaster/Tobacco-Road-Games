@@ -12,16 +12,17 @@ export async function handleCreatorCatalogCover(request, env = {}, listingId, op
     return response("Creator session unavailable.", 503);
   }
   if (!session.valid) return response("Not found.", 404);
-  const file = await database.prepare(`SELECT f.quarantine_key,f.content_type
+  const file = await database.prepare(`SELECT COALESCE(f.generated_cover_key,f.quarantine_key) object_key
     FROM creator_listing_files f
     JOIN creator_listings l ON l.id=f.listing_id AND l.creator_id=f.creator_id
     JOIN creator_memberships m ON m.creator_id=l.creator_id AND m.user_id=?
-    WHERE l.id=? AND f.purpose='cover' AND f.content_type='image/webp'
-      AND f.validation_state<>'superseded'
-    ORDER BY f.uploaded_at DESC LIMIT 1`).bind(session.user.id, String(listingId || "")).first();
+    WHERE l.id=? AND f.validation_state<>'superseded'
+      AND ((f.purpose='product' AND f.generated_cover_key IS NOT NULL)
+        OR (f.purpose='cover' AND f.content_type='image/webp'))
+    ORDER BY CASE WHEN f.generated_cover_key IS NOT NULL THEN 0 ELSE 1 END, f.uploaded_at DESC LIMIT 1`).bind(session.user.id, String(listingId || "")).first();
   if (!file) return response("Not found.", 404);
   let object;
-  try { object = await bucket.get(file.quarantine_key); }
+  try { object = await bucket.get(file.object_key); }
   catch { return response("Creator cover unavailable.", 503); }
   if (!object?.body) return response("Not found.", 404);
   return new Response(object.body, {

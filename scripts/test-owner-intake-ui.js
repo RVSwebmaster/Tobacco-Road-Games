@@ -60,6 +60,12 @@ async function testNativePublicationControlsAndMappings() {
   const fixed = createHarness();
   await fixed.flush();
   prepareValidNewListing(fixed, { status: "available-direct", buyMode: "cart", price: "7.25" });
+  fixed.fields.coverFile.files = [];
+  fixed.api.setAutomaticPdfProcessorsForTests({ publicationCovers: async () => ({
+    frontFile: new File([Buffer.from("RIFFxxxxWEBPVP8 ")], "cover.webp", { type: "image/webp" }),
+    backFile: new File([Buffer.from("RIFFxxxxWEBPVP8 ")], "back-cover.webp", { type: "image/webp" }),
+    pageCount: 122
+  }) });
   fixed.buttons.analyze.click();
   assert.match(fixed.outputs.feedbackHeading.textContent, /Validation passed/);
   await fixed.buttons.publish.click();
@@ -67,6 +73,7 @@ async function testNativePublicationControlsAndMappings() {
   assert.equal(fixed.publishRequestCount, 1);
   assert.equal(fixed.lastPublishHeaders["x-csrf-token"], "owner-intake-csrf");
   assert.equal(fixed.lastPublishFormData.get("cover").name, "cover.webp");
+  assert.equal(fixed.lastPublishFormData.get("backCover").name, "back-cover.webp");
   assert.equal(fixed.lastPublishFormData.get("pdf").name, "product.pdf");
   assert.equal(fixed.lastPublishFormData.get("coverFile"), null);
   assert.equal(fixed.lastPublishFormData.get("productFile"), null);
@@ -79,6 +86,18 @@ async function testNativePublicationControlsAndMappings() {
   assert.equal(fixedMetadata.mediaType, "digital");
   assert.match(fixed.outputs.status.textContent, /Storefront URL: \/store\/products\/native-intake-product\//);
   assert.equal(fixed.buttons.publish.disabled, true, "A successful submission must not be accidentally submitted twice.");
+
+  const onePage = createHarness();
+  await onePage.flush();
+  prepareValidNewListing(onePage, { status: "available-direct", buyMode: "cart", price: "7.25" });
+  onePage.api.setAutomaticPdfProcessorsForTests({ publicationCovers: async () => ({
+    frontFile: new File([Buffer.from("RIFFxxxxWEBPVP8 ")], "cover.webp", { type: "image/webp" }),
+    backFile: null, pageCount: 1
+  }) });
+  await onePage.buttons.publish.click();
+  await onePage.flush();
+  assert.equal(onePage.publishRequestCount, 1);
+  assert.equal(onePage.lastPublishFormData.get("backCover"), null, "A one-page PDF keeps the renderer fallback.");
 
   const free = createHarness();
   await free.flush();
@@ -252,7 +271,7 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
   assert.match(html, /id="pdf-front-accept"[^>]*>Accept as cover\.webp</);
   assert.match(html, /id="pdf-back-accept"[^>]*>Mark Back Cover Reviewed</);
   assert.doesNotMatch(html, /id="pdf-preview-(?:page|image|replace|download|accept)"/, "Automatic cover extraction must not include an interior preview candidate.");
-  assert.match(html, /back cover remains a separate review asset and is never added to the publishing payload/i);
+  assert.match(html, /back cover from the final page/i);
   assert.match(html, /id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">/, "The PDF Cover Review must not be hidden while a listing workspace is open.");
   assert.ok(html.indexOf('id="pdf-image-extraction-panel"') < html.indexOf('id="pdf-review-status"'), "The permanent cover review must appear immediately beneath the PDF actions.");
   assert.match(html, /id="pdf-front-placeholder"[^>]*>No front cover extracted</);
@@ -334,7 +353,7 @@ async function testVisibleValidationAndReviewFeedback() {
   assert.equal(harness.outputs.jsonPanel.hidden, false, "Review must automatically expose the exact JSON payload.");
   assert.equal(harness.outputs.checklistPanel.hidden, false, "Review must automatically expose the asset checklist.");
   assert.ok(harness.outputs.reviewSummary.children.length >= 6, "Review must summarize metadata and all required file assignments.");
-  assert.match(harness.outputs.reviewSummary.children.map((item) => item.textContent).join(" "), /Back-cover review image: never included/, "Review must make the back-cover exclusion explicit.");
+  assert.match(harness.outputs.reviewSummary.children.map((item) => item.textContent).join(" "), /Back cover: preserve current asset/, "Review must explain how an existing back cover is handled.");
 }
 
 async function testPdfSelectionAutomaticallyProcessesMetadataAndCovers() {

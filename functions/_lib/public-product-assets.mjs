@@ -4,6 +4,7 @@ import { isPublicProductAsset } from "./product-asset-policy.mjs";
 const DEFAULT_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 const ASSET_FIELDS = Object.freeze({
   "cover.webp": "coverR2Key",
+  "back-cover.webp": "backCoverR2Key",
   "preview.webp": "previewR2Key"
 });
 

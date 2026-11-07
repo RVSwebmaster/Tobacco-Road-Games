@@ -346,6 +346,29 @@ async function main() {
       0
     );
 
+    const generatedForm = new FormData();
+    generatedForm.set("purpose", "product");
+    generatedForm.set("file", new File([PDF_BYTES], "generated.pdf", { type: "application/pdf" }));
+    generatedForm.set("generatedFront", new File([COVER_BYTES], "cover.webp", { type: "image/webp" }));
+    generatedForm.set("generatedBack", new File([COVER_BYTES], "back-cover.webp", { type: "image/webp" }));
+    generatedForm.set("pdfPageCount", "122");
+    response = await creatorFiles.handleCreatorFileUpload(
+      formRequest(`listings/${freeId}/files`, generatedForm), environment, freeId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 201);
+    const generatedFileId = (await response.json()).file.id;
+    const generatedRow = database.prepare("SELECT * FROM creator_listing_files WHERE id=?").get(generatedFileId);
+    assert.equal(generatedRow.pdf_page_count, 122);
+    assert.deepEqual(bucket.read(generatedRow.generated_cover_key), COVER_BYTES);
+    assert.deepEqual(bucket.read(generatedRow.generated_back_cover_key), COVER_BYTES);
+    response = await creatorOperations.handleCreatorRequest(
+      jsonRequest(`listings/${freeId}/submit`, {
+        rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true
+      }), environment, { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 200, "A generated PDF cover removes the need for a separate cover upload.");
+
     response = await creatorOperations.handleCreatorRequest(
       jsonRequest("listings", {
         title: "Mock PWYW Product Task 2",
@@ -372,6 +395,22 @@ async function main() {
     assert.equal(pwywListing.listed_price_cents, 500);
     assert.equal(pwywListing.minimum_price_cents, 0);
     assert.equal(pwywListing.suggested_price_cents, 500);
+
+    const onePageForm = new FormData();
+    onePageForm.set("purpose", "product");
+    onePageForm.set("file", new File([PDF_BYTES], "one-page.pdf", { type: "application/pdf" }));
+    onePageForm.set("generatedFront", new File([COVER_BYTES], "cover.webp", { type: "image/webp" }));
+    onePageForm.set("pdfPageCount", "1");
+    response = await creatorFiles.handleCreatorFileUpload(
+      formRequest(`listings/${pwywId}/files`, onePageForm), environment, pwywId,
+      { database: d1, nowMs: NOW_MS }
+    );
+    assert.equal(response.status, 201);
+    const onePageRow = database.prepare("SELECT generated_cover_key,generated_back_cover_key,pdf_page_count FROM creator_listing_files WHERE id=?")
+      .get((await response.json()).file.id);
+    assert.ok(onePageRow.generated_cover_key);
+    assert.equal(onePageRow.generated_back_cover_key, null);
+    assert.equal(onePageRow.pdf_page_count, 1);
 
     response = await creatorOperations.handleCreatorRequest(
       jsonRequest("listings", {

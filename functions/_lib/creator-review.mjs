@@ -84,7 +84,14 @@ export async function publishApprovedCreatorListing(database, bucket, input) {
   const fileRows = await database.prepare("SELECT * FROM creator_listing_files WHERE listing_id=? AND validation_state<>'superseded' ORDER BY uploaded_at DESC").bind(listing.id).all();
   const mapped = mapApprovedListingToPublishPayload(listing, creator, fileRows.results || [], { nowMs: input.nowMs });
   if (!mapped.valid) throw new CreatorReviewError("publication_invalid", "Listing is not safe to publish.", 409, { validationErrors: mapped.errors });
-  await verifyAcceptedObject(bucket, mapped.files.cover, "cover");
+  if (mapped.files.product.generated_cover_key) {
+    await verifyGeneratedObject(bucket, mapped.files.product, "generated_cover_key", "generated-cover");
+    if (mapped.files.product.generated_back_cover_key) {
+      await verifyGeneratedObject(bucket, mapped.files.product, "generated_back_cover_key", "generated-back-cover");
+    }
+  } else {
+    await verifyAcceptedObject(bucket, mapped.files.cover, "cover");
+  }
   await verifyAcceptedObject(bucket, mapped.files.product, "product");
 
   const publishedAt = new Date(input.nowMs).toISOString(), metadata = mapped.metadata;
@@ -98,11 +105,14 @@ export async function publishApprovedCreatorListing(database, bucket, input) {
     suggestedPriceCents: metadata.suggestedPriceCents, minimumPriceCents: metadata.minimumPriceCents,
     saleEnabled: metadata.saleEnabled, salePriceCents: metadata.salePriceCents,
     saleStart: metadata.saleStart || null, saleEnd: metadata.saleEnd || null,
-    coverR2Key: mapped.files.cover.quarantine_key, deliveryR2Key: mapped.files.product.quarantine_key,
+    coverR2Key: mapped.files.product.generated_cover_key || mapped.files.cover.quarantine_key,
+    backCoverR2Key: mapped.files.product.generated_back_cover_key || null,
+    deliveryR2Key: mapped.files.product.quarantine_key,
     deliveryFilename: mapped.files.product.normalized_filename, deliveryContentType: mapped.files.product.content_type,
     metadata: {
       authors: metadata.authors, authorSlugs: metadata.authorSlugs, format: metadata.format,
       version: metadata.version, creationMethod: metadata.creationMethod,
+      ...(mapped.files.product.pdf_page_count ? { pageCount: Number(mapped.files.product.pdf_page_count) } : {}),
       creatorReviewRevision: input.expectedRevision + 1,
       ...Object.fromEntries(DISCOVERY_FIELDS.filter(key => metadata[key] !== undefined).map(key => [key, metadata[key]]))
     }, publishedAt
@@ -155,6 +165,14 @@ async function reviewQueue(database, csrfToken) {
 async function verifyAcceptedObject(bucket, file, purpose) {
   const object = await bucket.head(file.quarantine_key), size = Number(object?.size ?? object?.objectSize ?? -1);
   if (!object || size !== Number(file.size_bytes) || object.httpMetadata?.contentType !== file.content_type || object.customMetadata?.listingId !== file.listing_id || object.customMetadata?.purpose !== purpose) throw new CreatorReviewError("asset_verification_failed", `The accepted ${purpose} file could not be verified in private storage.`, 409);
+}
+async function verifyGeneratedObject(bucket, file, field, purpose) {
+  const object = await bucket.head(file[field]);
+  if (!object || object.httpMetadata?.contentType !== "image/webp" ||
+      object.customMetadata?.listingId !== file.listing_id || object.customMetadata?.purpose !== purpose ||
+      object.customMetadata?.uploadAttemptId !== file.id) {
+    throw new CreatorReviewError("asset_verification_failed", `The PDF-generated ${purpose} file could not be verified in private storage.`, 409);
+  }
 }
 async function revisionConflict(database, listingId) {
   const listing = await database.prepare("SELECT revision,lifecycle_state,publication_state FROM creator_listings WHERE id=?").bind(listingId).first();

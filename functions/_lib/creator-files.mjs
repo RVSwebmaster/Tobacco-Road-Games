@@ -140,43 +140,51 @@ export async function handleCreatorFileUpload(
   }
   const file = form.get("file"), purpose = String(form.get("purpose") || "");
   let prepared;
+  let generatedFront = null, generatedBack = null, pageCount = null;
   try {
     prepared = await prepareCreatorListingFile(file, purpose);
+    if (purpose === "product" && form.get("generatedFront") != null) {
+      pageCount = Number(form.get("pdfPageCount"));
+      if (!Number.isInteger(pageCount) || pageCount < 1 || pageCount > 100000 ||
+          (pageCount > 1) !== (form.get("generatedBack") != null)) {
+        throw fileError(400, "invalid_creator_file", "Generated PDF cover pages are incomplete.");
+      }
+      generatedFront = await prepareCreatorListingFile(form.get("generatedFront"), "cover");
+      if (pageCount > 1) generatedBack = await prepareCreatorListingFile(form.get("generatedBack"), "cover");
+    } else if (form.get("generatedBack") != null || form.get("pdfPageCount") != null) {
+      throw fileError(400, "invalid_creator_file", "Generated cover pages require a product PDF.");
+    }
   } catch (error) {
     return json(
       { error: { code: error.code || "invalid_creator_file", message: error.message } },
       error.status || 400,
     );
   }
-  const { bytes, contentType: detected, normalizedFilename: name } = prepared;
+  const { contentType: detected, normalizedFilename: name } = prepared;
   const id = crypto.randomUUID(),
     key = `creator-quarantine/${listing.creator_id}/${listing.id}/${id}/${name}`,
+    generatedCoverKey = generatedFront ? `creator-quarantine/${listing.creator_id}/${listing.id}/${id}/generated-cover.webp` : null,
+    generatedBackCoverKey = generatedBack ? `creator-quarantine/${listing.creator_id}/${listing.id}/${id}/generated-back-cover.webp` : null,
     now = new Date(
       Number.isFinite(options.nowMs) ? options.nowMs : Date.now(),
     ).toISOString();
-  let writeCompleted = false;
+  const attemptedKeys = [];
   try {
-    const write = await env.TRG_PRODUCTS.put(key, bytes, {
-      onlyIf: new Headers({ "if-none-match": "*" }),
-      httpMetadata: { contentType: detected },
-      customMetadata: {
-        listingId: listing.id,
-        purpose,
-        scanState: "pending",
-        uploadAttemptId: id,
-      },
-    });
-    if (write === null)
-      return json(
-        {
-          error: {
-            code: "creator_file_conflict",
-            message: "The private upload key is already reserved. Try the upload again.",
-          },
-        },
-        409,
-      );
-    writeCompleted = true;
+    for (const [objectKey, payload, objectPurpose] of [
+      [key, prepared, purpose],
+      [generatedCoverKey, generatedFront, "generated-cover"],
+      [generatedBackCoverKey, generatedBack, "generated-back-cover"]
+    ]) {
+      if (!objectKey) continue;
+      attemptedKeys.push(objectKey);
+      const write = await env.TRG_PRODUCTS.put(objectKey, payload.bytes, {
+        onlyIf: new Headers({ "if-none-match": "*" }),
+        httpMetadata: { contentType: payload.contentType },
+        customMetadata: { listingId: listing.id, purpose: objectPurpose,
+          scanState: "pending", uploadAttemptId: id }
+      });
+      if (write === null) throw fileError(409, "creator_file_conflict", "The private upload key is already reserved. Try the upload again.");
+    }
     await db.batch([
       db
         .prepare(
@@ -185,7 +193,7 @@ export async function handleCreatorFileUpload(
         .bind(now, listing.id, purpose),
       db
         .prepare(
-          "INSERT INTO creator_listing_files(id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,validation_state,uploaded_at) VALUES(?,?,?,?,?,?,?,?,?,'uploaded',?)",
+          "INSERT INTO creator_listing_files(id,listing_id,creator_id,purpose,original_filename,normalized_filename,content_type,size_bytes,quarantine_key,generated_cover_key,generated_back_cover_key,pdf_page_count,validation_state,uploaded_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'uploaded',?)",
         )
         .bind(
           id,
@@ -197,6 +205,9 @@ export async function handleCreatorFileUpload(
           detected,
           file.size,
           key,
+          generatedCoverKey,
+          generatedBackCoverKey,
+          pageCount,
           now,
         ),
       db
@@ -217,16 +228,14 @@ export async function handleCreatorFileUpload(
         ),
     ]);
   } catch (error) {
-    let cleaned = !writeCompleted;
+    let cleaned = true;
     try {
-      const stored = env.TRG_PRODUCTS.head
-        ? await env.TRG_PRODUCTS.head(key)
-        : writeCompleted
-          ? { customMetadata: { uploadAttemptId: id } }
-          : null;
-      if (stored?.customMetadata?.uploadAttemptId === id && env.TRG_PRODUCTS.delete) {
-        await env.TRG_PRODUCTS.delete(key);
-        cleaned = true;
+      for (const attemptedKey of attemptedKeys) {
+        const stored = env.TRG_PRODUCTS.head ? await env.TRG_PRODUCTS.head(attemptedKey) : null;
+        if (stored?.customMetadata?.uploadAttemptId !== id) continue;
+        if (!env.TRG_PRODUCTS.delete) { cleaned = false; continue; }
+        await env.TRG_PRODUCTS.delete(attemptedKey);
+        if (env.TRG_PRODUCTS.head && await env.TRG_PRODUCTS.head(attemptedKey)) cleaned = false;
       }
     } catch {
       cleaned = false;
@@ -244,14 +253,14 @@ export async function handleCreatorFileUpload(
       {
         error: {
           code: cleaned
-            ? "creator_file_staging_failed"
+            ? (error.code || "creator_file_staging_failed")
             : "creator_file_cleanup_failed",
           message: cleaned
-            ? "The private file could not be recorded. Nothing was submitted."
+            ? (error.status === 409 ? error.message : "The private file could not be recorded. Nothing was submitted.")
             : "The private file could not be recorded or safely cleaned up. Owner attention is required.",
         },
       },
-      503,
+      cleaned && error.status === 409 ? 409 : 503,
     );
   }
   return json(

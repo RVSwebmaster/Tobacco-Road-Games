@@ -71,3 +71,18 @@ export async function openPdfImageExtraction(file, options = {}) {
     }
   };
 }
+
+export async function renderDefaultPdfCoverFiles(file) {
+  const session = await openPdfImageExtraction(file);
+  try {
+    const front = await session.renderPage(session.defaults.frontPage);
+    const back = session.pageCount > 1 ? await session.renderPage(session.defaults.backPage) : null;
+    return {
+      frontFile: new File([front.blob], 'cover.webp', { type: 'image/webp' }),
+      backFile: back ? new File([back.blob], 'back-cover.webp', { type: 'image/webp' }) : null,
+      pageCount: session.pageCount
+    };
+  } finally {
+    await session.destroy();
+  }
+}

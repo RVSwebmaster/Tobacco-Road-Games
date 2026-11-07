@@ -822,7 +822,7 @@
             <section id="pdf-image-extraction-panel" class="pdf-image-extraction" aria-labelledby="pdf-image-extraction-heading">
               <div>
                 <h3 id="pdf-image-extraction-heading">PDF Cover Review</h3>
-                <p class="intake-help">Generated locally in this browser from page 1 and the final page. Nothing is uploaded or published. The front cover enters cover.webp only when you explicitly accept it; the back cover remains a separate review asset and is never added to the publishing payload.</p>
+                <p class="intake-help">Preview PDF pages locally before publication. Publishing a new PDF automatically generates its front cover from page 1 and its back cover from the final page. A one-page PDF uses the standard back-cover fallback.</p>
               </div>
               <p id="pdf-image-extraction-status" class="intake-help" role="status" aria-live="polite">Select a PDF to process its front and back covers automatically.</p>
               <div class="pdf-image-extraction__grid">
@@ -1149,7 +1149,7 @@
               </div>
 
               <div class="intake-field intake-field--full">
-                <label for="product-cover-file">Cover File</label>
+                <label for="product-cover-file">Cover File (optional for PDF publication)</label>
                 <input id="product-cover-file" class="dock-input" type="file" accept="image/webp,.webp">
               </div>
 
@@ -1324,6 +1324,6 @@
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=sha256-689dd6d724167c01"></script>
+  <script src="../assets/js/product-intake.js?v=sha256-ff4067d072daf4ae"></script>
 </body>
 </html>

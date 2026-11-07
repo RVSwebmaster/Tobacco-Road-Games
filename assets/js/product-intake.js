@@ -478,7 +478,7 @@
       buttons.pdfBackAccept.setAttribute?.("aria-pressed", "true");
       buttons.pdfBackAccept.disabled = true;
       outputs.pdfBackDetails.textContent = `Back cover from PDF page ${candidate.pageNumber} marked reviewed. It remains separate from cover.webp.`;
-      outputs.pdfImageStatus.textContent = "Back cover marked reviewed. It was not assigned to cover.webp and was not added to the publishing payload.";
+      outputs.pdfImageStatus.textContent = "Back cover marked reviewed. Publication will generate the final PDF page automatically.";
       return true;
     }
     const field = fields.coverFile;
@@ -1770,7 +1770,7 @@
       "",
       requiresFiles ? "Required uploaded files:" : "Optional replacement files:",
       requiresFiles
-        ? "- One WebP cover image"
+        ? "- Cover images generated automatically from the product PDF"
         : "- Cover WebP only if you want to replace the current live cover",
       requiresFiles
         ? "- One PDF product file"
@@ -1781,12 +1781,14 @@
       "",
       "Private Cloudflare storage after publish:",
       "- Unique create-only cover.webp key assigned by the publication service",
+      "- Unique create-only back-cover.webp key for PDFs with more than one page",
       "- Unique create-only delivery.pdf key assigned by the publication service",
       "",
       "Published public asset paths:",
       `/product-assets/${payload.slug}/cover.webp`,
+      `/product-assets/${payload.slug}/back-cover.webp (multi-page PDFs)`,
       "",
-      "Publication commits only after both private R2 objects are verified and the D1 product record succeeds."
+      "Publication commits only after the private R2 objects are verified and the D1 product record succeeds."
     ].join("\n");
   }
 
@@ -1803,8 +1805,8 @@
       ...(payload.pricingModel === "pwyw" ? [`PWYW pricing: suggested $${payload.suggestedPrice || payload.price || "0.00"}; minimum $${payload.minimumPrice || "0.00"}.`] : []),
       `Storage label: ${payload.folder}.`,
       `Product PDF: ${selectedPdf || (existingMode ? `preserve ${currentPdf}` : "not selected")}.`,
-      `cover.webp: ${fields.coverFile.files[0]?.name || (existingMode ? "preserve current cover" : "not selected")}.`,
-      "Back-cover review image: never included in the publishing payload.",
+      existingMode ? `cover.webp: ${fields.coverFile.files[0]?.name || "preserve current cover"}.` : "cover.webp: generated from PDF page 1 at publication.",
+      existingMode ? "Back cover: preserve current asset." : "back-cover.webp: generated from the final PDF page when it has more than one page.",
       `Tags: ${payload.tags.length ? payload.tags.join(", ") : "none selected"}.`
     ];
   }
@@ -1813,8 +1815,10 @@
     const items = [
       ...payload.fileList,
       "Private R2 cover key assigned at publish time",
+      "Private R2 back-cover key assigned for multi-page PDFs at publish time",
       "Private R2 delivery key assigned at publish time",
-      `/product-assets/${payload.slug}/cover.webp`
+      `/product-assets/${payload.slug}/cover.webp`,
+      `/product-assets/${payload.slug}/back-cover.webp (multi-page PDFs)`
     ];
 
     outputs.assetFileList.replaceChildren(
@@ -1927,8 +1931,19 @@
       const csrfToken = await loadOwnerPublicationAuth();
       const formData = new FormData();
       formData.set("metadata", JSON.stringify(metadata));
-      formData.set("cover", fields.coverFile.files[0]);
-      formData.set("pdf", fields.pdfFile.files[0]);
+      const pdfFile = fields.pdfFile.files[0];
+      const coverProcessor = automaticPdfProcessorsForTests?.publicationCovers || (async (file) => {
+        const module = await import("/assets/js/product-pdf-images.mjs?v=20261107b");
+        return module.renderDefaultPdfCoverFiles(file);
+      });
+      const generated = await coverProcessor(pdfFile);
+      if (!generated?.frontFile || !Number.isInteger(generated.pageCount) || generated.pageCount < 1 ||
+          (generated.pageCount > 1 && !generated.backFile)) {
+        throw new Error("PDF cover extraction did not produce the required first and final pages.");
+      }
+      formData.set("cover", generated.frontFile);
+      if (generated.backFile) formData.set("backCover", generated.backFile);
+      formData.set("pdf", pdfFile);
 
       const response = await fetch(NATIVE_PUBLICATION_ENDPOINT, {
         method: "POST",
@@ -1971,8 +1986,8 @@
     } catch (error) {
       showActionFeedback({
         kind: "error",
-        heading: "Publish request could not reach the server",
-        message: `The browser did not receive a server response: ${error?.message || "network request failed"}. No success was reported. Review the current listing and try again.`
+        heading: "Publication could not complete",
+        message: `${error?.message || "The browser did not receive a server response."} No success was reported. Review the current listing and try again.`
       });
     } finally {
       setPublishBusyState(false);
@@ -2065,7 +2080,9 @@
       }
     };
 
-    validateSelectedFile(fields.coverFile, "Cover image", "image/webp", ".webp");
+    if (fields.coverFile.files.length || !fields.pdfFile.files.length) {
+      validateSelectedFile(fields.coverFile, "Cover image", "image/webp", ".webp");
+    }
     validateSelectedFile(fields.pdfFile, "Product PDF", "application/pdf", ".pdf");
 
     const pwyw = fields.status.value === "pay-what-you-want" && fields.buyMode.value === CART_BUY_MODE;

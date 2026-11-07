@@ -20,6 +20,7 @@ async function main() {
     pricingModel: "fixed", priceCents: 500 };
   await catalog.createProduct(database, { ...base, id: "public-cover", slug: "public-cover",
     title: "Public cover", publicationState: "published", coverR2Key: "catalog/public-cover.webp",
+    backCoverR2Key: "catalog/public-back.webp",
     previewR2Key: "catalog/missing-preview.webp", deliveryR2Key: "catalog/private.pdf",
     deliveryFilename: "private.pdf", deliveryContentType: "application/pdf" });
   await catalog.createProduct(database, { ...base, id: "draft-cover", slug: "draft-cover",
@@ -33,6 +34,7 @@ async function main() {
 
   const bucket = r2(new Map([
     ["catalog/public-cover.webp", object(COVER, "image/webp")],
+    ["catalog/public-back.webp", object(COVER, "image/webp")],
     ["catalog/private.pdf", object(Uint8Array.from([37, 80, 68, 70]), "application/pdf")],
     ["catalog/draft.webp", object(COVER, "image/webp")],
     ["catalog/wrong-type.webp", object(Uint8Array.from([37, 80, 68, 70]), "application/pdf")]
@@ -49,6 +51,9 @@ async function main() {
   assert.match(cover.headers.get("cache-control"), /^public,/);
   assert.equal(cover.headers.get("x-content-type-options"), "nosniff");
   assert.deepEqual(bucket.getKeys, ["catalog/public-cover.webp"]);
+  const back = await request("public-cover", "back-cover.webp");
+  assert.equal(back.status, 200);
+  assert.deepEqual(new Uint8Array(await back.arrayBuffer()), COVER);
 
   const head = await request("public-cover", "cover.webp", { headOnly: true });
   assert.equal(head.status, 200);
