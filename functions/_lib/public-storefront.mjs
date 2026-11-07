@@ -31,7 +31,8 @@ export async function handlePublicProductPage(context) {
   }
 
   const otherCreatorProducts = await getOtherApprovedPublicProductsByCreator(context.env.TRG_ORDERS, product.creatorId, product.slug);
-  const html = renderPublicProductPage(product, new URL(request.url), otherCreatorProducts);
+  const autoRotate = await isAutoRotationEligible(context.env.TRG_ORDERS, product.creatorId);
+  const html = renderPublicProductPage({ ...product, autoRotate }, new URL(request.url), otherCreatorProducts);
   return new Response(request.method === "HEAD" ? null : html, {
     status: 200,
     headers: {
@@ -40,6 +41,25 @@ export async function handlePublicProductPage(context) {
       "x-content-type-options": "nosniff"
     }
   });
+}
+
+export async function isAutoRotationEligible(database, creatorId) {
+  try {
+    const row = await database.prepare(`SELECT
+      CASE WHEN u.role IN ('owner','admin') OR EXISTS (
+        SELECT 1 FROM creator_badge_awards a
+        WHERE a.creator_id=o.creator_id AND a.badge_id='founding-creator'
+          AND a.state='active' AND (a.expires_at IS NULL OR datetime(a.expires_at) > CURRENT_TIMESTAMP)
+      ) THEN 1 ELSE 0 END AS eligible
+      FROM creator_identity_ownership o
+      JOIN users u ON u.id=o.owner_user_id AND u.status='active'
+      WHERE o.creator_id=? AND o.account_status='active' LIMIT 1`)
+      .bind(creatorId).first();
+    return Number(row?.eligible) === 1;
+  } catch (error) {
+    console.error(JSON.stringify({ event: "product_book_eligibility_failed", message: String(error?.message || error) }));
+    return false;
+  }
 }
 
 export function renderPublicProductPage(product, requestUrl = new URL("https://tobaccoroadgames.com/"), otherCreatorProducts = []) {
@@ -134,7 +154,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
         </aside>
         <div class="product-identity__product store-section" aria-label="Product Identity">
       <section class="product-hero" aria-labelledby="product-title">
-        <div class="product-hero__media" data-product-book data-page-count="${pageCount}" data-spine-credit="${escapeAttribute(creatorName || product.publisher)}"${product.backCoverUrl ? ` data-back-cover="${escapeAttribute(product.backCoverUrl)}"` : ""}><img class="product-cover" src="${escapeAttribute(cover)}" alt="${escapeAttribute(title)} front cover"></div>
+        <div class="product-hero__media" data-product-book${product.autoRotate ? ' data-auto-rotate="true"' : ""} data-page-count="${pageCount}" data-spine-credit="${escapeAttribute(creatorName || product.publisher)}"${product.backCoverUrl ? ` data-back-cover="${escapeAttribute(product.backCoverUrl)}"` : ""}><img class="product-cover" src="${escapeAttribute(cover)}" alt="${escapeAttribute(title)} front cover"></div>
         <div class="product-hero__copy">
           <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(statusLabel)}</span>
           <p class="section-heading__kicker">${escapeHtml(product.gameSystem || "Tabletop Roleplaying")}</p>

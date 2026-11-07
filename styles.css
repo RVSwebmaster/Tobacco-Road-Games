@@ -1157,6 +1157,10 @@ h4 {
   transition: transform 80ms linear;
 }
 
+.product-book.is-auto-rotating {
+  transition: none;
+}
+
 .product-book__face {
   position: absolute;
   top: 0;
@@ -1297,6 +1301,18 @@ h4 {
   margin: 0;
   accent-color: var(--accent-strong);
   cursor: pointer;
+}
+
+.product-book__auto-toggle {
+  justify-self: start;
+  min-height: 44px;
+  margin-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-book {
+    transition: none;
+  }
 }
 
 .product-identity__product .identity-strip {

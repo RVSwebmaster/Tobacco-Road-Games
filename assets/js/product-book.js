@@ -1,6 +1,7 @@
 "use strict";
 
 (function () {
+  const REVOLUTION_MS = 30000;
   // Pixel depth at a 340px book height: 100 pages = 24px.
   function depthForPages(rawPageCount) {
     const pages = Number(rawPageCount);
@@ -8,7 +9,7 @@
     return Math.min(60, Math.max(16, Math.round(24 + (pages - 100) * 0.1)));
   }
 
-  if (typeof module === "object" && module.exports) module.exports = { depthForPages };
+  if (typeof module === "object" && module.exports) module.exports = { depthForPages, REVOLUTION_MS };
   if (typeof document === "undefined") return;
 
   function face(className, child) {
@@ -96,13 +97,72 @@
     line.append(label, output);
     control.append(line, slider);
 
-    function rotate() {
-      const degrees = Number(slider.value);
-      book.style.setProperty("--book-angle", `${degrees}deg`);
-      output.value = `${viewLabel(degrees)} · ${degrees}°`;
+    let angle = 0;
+    let automatic = false;
+    let frame = 0;
+    let lastFrame = null;
+    const eligible = media.dataset.autoRotate === "true";
+    const reducedMotion = eligible && window.matchMedia("(prefers-reduced-motion: reduce)");
+    const toggle = eligible ? document.createElement("button") : null;
+    if (toggle) {
+      toggle.type = "button";
+      toggle.className = "button button--secondary product-book__auto-toggle";
+      control.append(toggle);
     }
-    slider.addEventListener("input", rotate);
+
+    function rotate() {
+      const degrees = ((angle % 360) + 360) % 360;
+      book.style.setProperty("--book-angle", `${degrees}deg`);
+      if (automatic) slider.value = String(Math.round(degrees) % 360);
+      const displayed = !automatic && angle === 360 ? 360 : Math.round(degrees) % 360;
+      output.value = `${viewLabel(degrees)} · ${displayed}°`;
+    }
+    function updateToggle() {
+      if (!toggle) return;
+      toggle.textContent = automatic ? "Pause rotation" : "Resume rotation";
+      toggle.setAttribute("aria-label", `${automatic ? "Pause" : "Resume"} automatic rotation of ${title}`);
+      book.classList.toggle("is-auto-rotating", automatic);
+    }
+    function advance(now) {
+      if (lastFrame !== null) angle = (angle + Math.min(100, Math.max(0, now - lastFrame)) * 360 / REVOLUTION_MS) % 360;
+      lastFrame = now;
+      rotate();
+    }
+    function tick(now) {
+      if (!automatic) return;
+      advance(now);
+      frame = window.requestAnimationFrame(tick);
+    }
+    function pause() {
+      if (!automatic) return;
+      advance(window.performance.now());
+      automatic = false;
+      window.cancelAnimationFrame(frame);
+      frame = 0;
+      lastFrame = null;
+      updateToggle();
+    }
+    function resume() {
+      if (!eligible || automatic || document.hidden) return;
+      automatic = true;
+      lastFrame = null;
+      updateToggle();
+      frame = window.requestAnimationFrame(tick);
+    }
+    slider.addEventListener("pointerdown", pause);
+    slider.addEventListener("keydown", pause);
+    slider.addEventListener("input", () => {
+      pause();
+      angle = Number(slider.value);
+      rotate();
+    });
+    if (toggle) {
+      toggle.addEventListener("click", () => automatic ? pause() : resume());
+      reducedMotion.addEventListener("change", () => { if (reducedMotion.matches) pause(); });
+      document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); });
+    }
     rotate();
+    updateToggle();
 
     function size() {
       const ratio = cover.naturalWidth && cover.naturalHeight ? cover.naturalWidth / cover.naturalHeight : 0.75;
@@ -122,6 +182,7 @@
     size();
     if (typeof ResizeObserver === "function") new ResizeObserver(size).observe(stage);
     else window.addEventListener("resize", size);
+    if (eligible && !reducedMotion.matches && !document.hidden) resume();
   }
 
   function init() {
