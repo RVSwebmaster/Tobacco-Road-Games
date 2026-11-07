@@ -1,4 +1,4 @@
-import { getApprovedPublicProductBySlug } from "./public-product-catalog.mjs";
+import { getApprovedPublicProductBySlug, getOtherApprovedPublicProductsByCreator } from "./public-product-catalog.mjs";
 
 const ACTIVE_STATUS_LABELS = Object.freeze({
   "available-direct": "Available Direct",
@@ -30,7 +30,8 @@ export async function handlePublicProductPage(context) {
     return textPage("Product not found", 404);
   }
 
-  const html = renderPublicProductPage(product, new URL(request.url));
+  const otherCreatorProducts = await getOtherApprovedPublicProductsByCreator(context.env.TRG_ORDERS, product.creatorId, product.slug);
+  const html = renderPublicProductPage(product, new URL(request.url), otherCreatorProducts);
   return new Response(request.method === "HEAD" ? null : html, {
     status: 200,
     headers: {
@@ -41,16 +42,15 @@ export async function handlePublicProductPage(context) {
   });
 }
 
-export function renderPublicProductPage(product, requestUrl = new URL("https://tobaccoroadgames.com/")) {
+export function renderPublicProductPage(product, requestUrl = new URL("https://tobaccoroadgames.com/"), otherCreatorProducts = []) {
   const title = text(product.title, "Untitled Product");
   const subtitle = text(product.subtitle);
   const shortDescription = text(product.shortDescription, "Product details are available from Tobacco Road Games.");
   const longDescription = text(product.longDescription, shortDescription);
   const statusLabel = statusLabelFor(product.status);
   const creatorName = text(product.creatorName, product.publisher || "Tobacco Road Games");
-  const creatorLink = product.creatorSlug
-    ? `<a class="author-link" href="/authors/${encodeURIComponent(product.creatorSlug)}/">${escapeHtml(creatorName)}</a>`
-    : escapeHtml(creatorName);
+  const creatorImage = text(product.creatorLogo, product.creatorProfileImage);
+  const authors = list(product.metadata?.authors);
   const canonical = new URL(product.detailUrl, requestUrl.origin).href;
   const cover = product.coverUrl || "/assets/logo.png";
   const formats = list(product.metadata?.format);
@@ -117,14 +117,30 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
       <nav class="breadcrumbs" aria-label="Breadcrumb">
         <a href="/store/">Store</a><span class="breadcrumbs__sep">/</span><a href="/store/catalog/">Catalog</a><span class="breadcrumbs__sep">/</span><span aria-current="page">${escapeHtml(title)}</span>
       </nav>
-      <section class="product-hero store-section" aria-labelledby="product-title">
+      <div class="product-identity-layout">
+        <aside class="product-identity__creator store-section" aria-labelledby="creator-identity-heading">
+          <p class="section-heading__kicker">Creator Identity</p>
+          <h2 id="creator-identity-heading">${escapeHtml(creatorName)}</h2>
+          <div class="product-identity__portrait">${creatorImage
+            ? `<img src="${escapeAttribute(creatorImage)}" alt="${escapeAttribute(creatorName)} ${product.creatorLogo ? "logo" : "photograph"}">`
+            : `<span>Creator image not available</span>`}</div>
+          ${product.creatorShortBio ? `<p class="product-identity__bio">${escapeHtml(product.creatorShortBio)}</p>` : `<p class="product-identity__empty">Biography not available yet.</p>`}
+          ${product.creatorSlug ? `<a class="author-link" href="/authors/${encodeURIComponent(product.creatorSlug)}/">View creator profile</a>` : `<p class="product-identity__empty">Public profile not available yet.</p>`}
+          <div class="product-identity__more">
+            <h3>More from this creator</h3>
+            ${otherCreatorProducts.length ? `<ul>${otherCreatorProducts.map(item => `<li><a href="${escapeAttribute(item.detailUrl)}">${escapeHtml(item.title)}</a></li>`).join("")}</ul>` : `<p class="product-identity__empty">No other products listed yet.</p>`}
+          </div>
+        </aside>
+        <div class="product-identity__product store-section" aria-label="Product Identity">
+      <section class="product-hero" aria-labelledby="product-title">
         <div class="product-hero__media"><img class="product-cover" src="${escapeAttribute(cover)}" alt="${escapeAttribute(title)} front cover"></div>
         <div class="product-hero__copy">
           <span class="status-badge status-badge--${escapeAttribute(product.status)}">${escapeHtml(statusLabel)}</span>
           <p class="section-heading__kicker">${escapeHtml(product.gameSystem || "Tabletop Roleplaying")}</p>
           <h1 id="product-title">${escapeHtml(title)}</h1>
           ${subtitle ? `<p class="product-subtitle">${escapeHtml(subtitle)}</p>` : ""}
-          <p class="product-byline">By ${creatorLink}</p>
+          <p class="product-byline">${authors.length ? `By ${authors.map(escapeHtml).join(", ")}` : "Author not listed"}</p>
+          ${product.publisher ? `<p class="product-byline">Publisher / Imprint: ${escapeHtml(product.publisher)}</p>` : ""}
           <div class="product-hero__meta">
             <span>${escapeHtml(price)}</span>
             <span>${escapeHtml(formats.join(", ") || "Digital")}</span>
@@ -155,6 +171,8 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
       </section>
       ${features.length ? `<section class="store-section" aria-labelledby="contents-heading"><div class="section-heading"><p class="section-heading__kicker">What's Inside</p><h2 id="contents-heading">What's Inside</h2></div><ul class="feature-list">${features.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}</ul></section>` : ""}
       ${product.previewUrl ? `<section class="store-section" aria-labelledby="preview-heading"><div class="section-heading"><p class="section-heading__kicker">Preview</p><h2 id="preview-heading">Preview</h2></div><div class="preview-panel"><figure class="preview-feature"><img src="${escapeAttribute(product.previewUrl)}" alt="${escapeAttribute(title)} preview image"></figure></div></section>` : ""}
+        </div>
+      </div>
     </main>
     ${renderFooter()}
   </div>

@@ -52,12 +52,28 @@ async function main() {
   const html = await response.text();
   assert.match(html, /Native Catalog Road Test/);
   assert.match(html, /RV Sawyer/);
+  assert.ok(html.indexOf('class="product-identity__creator') < html.indexOf('class="product-identity__product'), "Creator panel must precede Product panel.");
+  assert.match(html, /RV Sawyer is the founder of Tobacco Road Games/);
+  assert.match(html, /Creator image not available/);
+  assert.match(html, /href="\/authors\/rv-sawyer\/">View creator profile/);
+  assert.match(html, /No other products listed yet/);
+  assert.match(html, /By RV Sawyer/);
+  assert.match(html, /Publisher \/ Imprint: Tobacco Road Games/);
   assert.match(html, /Pay What You Want — \$2\.00 minimum; \$7\.00 suggested/);
   assert.match(html, /\/product-assets\/storefront-native-item\/cover\.webp/);
+  assert.match(html, /Open Preview/);
   assert.match(html, /Add to Cart/);
   assert.match(html, /data-cart-add="storefront-native-item"/);
   assert.match(html, /Payment and acquisition.*are not active yet/);
   assert.doesNotMatch(html, /delivery\.pdf|road-test\.pdf|catalog-publications/);
+
+  await catalog.createProduct(db, {
+    id: "storefront-same-creator", slug: "storefront-same-creator", creatorId: "creator-rv-sawyer",
+    publicationState: "published", title: "Another Published Title", status: "preview-only",
+    buyMode: "preview-only", pricingModel: "fixed", priceCents: 0
+  });
+  const withCreatorCatalog = await (await storefront.handlePublicProductPage(context(db, created.slug))).text();
+  assert.match(withCreatorCatalog, /href="\/store\/products\/storefront-same-creator\/">Another Published Title/);
 
   await catalog.updateProduct(db, created.id, { subtitle: "Updated without deployment", suggestedPriceCents: 900 }, {
     expectedRevision: created.revision
@@ -77,6 +93,7 @@ async function main() {
   });
   assert.equal(draftResponse.status, 404);
   assert.equal(fellThrough, true, "Unpublished D1 records must not render as public product pages.");
+  assert.doesNotMatch(await (await storefront.handlePublicProductPage(context(db, created.slug))).text(), /Hidden Draft/);
 
   const unknown = await storefront.handlePublicProductPage(context(db, "not-a-product"));
   assert.equal(unknown.status, 404);

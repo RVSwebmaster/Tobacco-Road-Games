@@ -127,7 +127,7 @@ function main() {
   writeFile("ai-policy.html", renderAiPolicyPage());
 
   for (const product of products) {
-    writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, publicCatalogProducts));
+    writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, publicCatalogProducts, authorLookup));
   }
 
   buildHomepage(publicCatalogProducts, indexes, bundleRules);
@@ -616,7 +616,7 @@ function renderCatalogPage(products, indexes) {
   });
 }
 
-function renderProductPage(product, products) {
+function renderProductPage(product, products, authorLookup) {
   const relatedProducts = resolveRelatedProducts(product, products);
   const buyUi = renderBuyUi(product);
   const previewSection = renderPreviewSection(product);
@@ -720,7 +720,10 @@ function renderProductPage(product, products) {
           { label: product.title }
         ])}
 
-        <section class="product-hero store-section" aria-labelledby="product-title">
+        <div class="product-identity-layout">
+          ${renderCreatorIdentityPanel(product, products, authorLookup)}
+          <div class="product-identity__product store-section" aria-label="Product Identity">
+        <section class="product-hero" aria-labelledby="product-title">
           <div class="product-hero__media">
             <img class="product-cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} front cover">
           </div>
@@ -798,9 +801,35 @@ function renderProductPage(product, products) {
           </div>
           ${renderRelatedProducts(relatedProducts)}
         </section>
+          </div>
+        </div>
       </main>
     `
   });
+}
+
+function renderCreatorIdentityPanel(product, products, authorLookup) {
+  const slug = product.authorSlugs[0] || "";
+  const creator = authorLookup.get(slug);
+  const name = creator?.name || product.authors[0] || "";
+  const image = creator?.logo || creator?.profileImage || "";
+  const otherProducts = slug
+    ? products.filter((item) => item.slug !== product.slug && item.authorSlugs.includes(slug)).slice(0, 4)
+    : [];
+
+  return `<aside class="product-identity__creator store-section" aria-labelledby="creator-identity-heading">
+    <p class="section-heading__kicker">Creator Identity</p>
+    <h2 id="creator-identity-heading">${escapeHtml(name || "Creator details")}</h2>
+    <div class="product-identity__portrait">${image
+      ? `<img src="${escapeAttribute(image)}" alt="${escapeAttribute(name)} ${creator?.logo ? "logo" : "photograph"}">`
+      : `<span>Creator image not available</span>`}</div>
+    ${creator?.shortBio ? `<p class="product-identity__bio">${escapeHtml(creator.shortBio)}</p>` : `<p class="product-identity__empty">Biography not available yet.</p>`}
+    ${creator?.url ? `<a class="author-link" href="${escapeAttribute(creator.url)}">View creator profile</a>` : `<p class="product-identity__empty">Public profile not available yet.</p>`}
+    <div class="product-identity__more">
+      <h3>More from this creator</h3>
+      ${otherProducts.length ? `<ul>${otherProducts.map((item) => `<li><a href="${escapeAttribute(item.url)}">${escapeHtml(item.title)}</a></li>`).join("")}</ul>` : `<p class="product-identity__empty">No other products listed yet.</p>`}
+    </div>
+  </aside>`;
 }
 
 function renderCollectionPage({ title, kicker, description, canonicalPath, breadcrumbs, cards }) {
