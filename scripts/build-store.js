@@ -703,7 +703,7 @@ function renderProductPage(product, products, authorLookup) {
     canonicalPath: product.url,
     ogImage: product.assetSet.cover,
     currentNav: "store",
-    extraScripts: ["/assets/js/discovery-labels.js"],
+    extraScripts: ["/assets/js/discovery-labels.js", "/assets/js/product-book.js"],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Store", href: "/store/" },
@@ -724,7 +724,7 @@ function renderProductPage(product, products, authorLookup) {
           ${renderCreatorIdentityPanel(product, products, authorLookup)}
           <div class="product-identity__product store-section" aria-label="Product Identity">
         <section class="product-hero" aria-labelledby="product-title">
-          <div class="product-hero__media">
+          <div class="product-hero__media" data-product-book data-page-count="${Number(product.pageCount) || 0}"${product.assetSet.backCover ? ` data-back-cover="${escapeAttribute(product.assetSet.backCover)}"` : ""}${product.assetSet.spine ? ` data-spine-art="${escapeAttribute(product.assetSet.spine)}"` : ""}>
             <img class="product-cover" src="${escapeAttribute(product.assetSet.cover)}" alt="${escapeAttribute(product.title)} front cover">
           </div>
           <div class="product-hero__copy">
@@ -2839,6 +2839,8 @@ function resolveProductAssets(product) {
 
   return {
     cover: coverSource || "/assets/logo.png",
+    backCover: pickUsable(product.backCoverImage),
+    spine: pickUsable(product.spineImage),
     thumb: thumbSource || coverSource || "/assets/logo.png",
     previewFeature: previewFeature || "",
     previewImages,

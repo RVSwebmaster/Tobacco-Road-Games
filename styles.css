@@ -1128,6 +1128,146 @@ h4 {
   object-fit: contain;
 }
 
+.product-identity__product .product-hero__media.is-book-display {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.product-book__stage {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 400px;
+  padding: 24px 80px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.035);
+  perspective: 1100px;
+}
+
+.product-book {
+  position: relative;
+  width: var(--book-width, 255px);
+  height: var(--book-height, 340px);
+  transform-style: preserve-3d;
+  transform: rotateY(var(--book-angle, 0deg));
+  transition: transform 80ms linear;
+}
+
+.product-book__face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  border: 1px solid rgba(242, 216, 170, 0.28);
+  background: #1c120d;
+  box-shadow: 0 18px 32px rgba(0, 0, 0, 0.3);
+}
+
+.product-book__front {
+  border-radius: 4px 9px 9px 4px;
+  transform: translateZ(calc(var(--book-depth, 18px) / 2));
+}
+
+.product-book__back {
+  display: grid;
+  place-items: center;
+  border-radius: 9px 4px 4px 9px;
+  transform: rotateY(180deg) translateZ(calc(var(--book-depth, 18px) / 2));
+}
+
+.product-book__front .product-cover,
+.product-book__back img,
+.product-book__spine img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.product-book__fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  color: var(--muted);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.product-book__spine,
+.product-book__pages {
+  left: 50%;
+  width: var(--book-depth, 18px);
+  margin-left: calc(var(--book-depth, 18px) / -2);
+  border-radius: 2px;
+}
+
+.product-book__spine {
+  display: grid;
+  place-items: center;
+  transform: rotateY(-90deg) translateZ(calc(var(--book-width, 255px) / 2));
+  background: linear-gradient(90deg, #160d09, #42291b 50%, #160d09);
+}
+
+.product-book__spine .product-book__fallback {
+  overflow: hidden;
+  padding: 10px 2px;
+  color: var(--accent-strong);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  writing-mode: vertical-rl;
+  text-overflow: ellipsis;
+}
+
+.product-book__pages {
+  transform: rotateY(90deg) translateZ(calc(var(--book-width, 255px) / 2));
+  background: repeating-linear-gradient(90deg, #d6c8a9 0 1px, #b9a989 1px 2px, #e5d9bc 2px 3px);
+}
+
+.product-book__control {
+  display: grid;
+  gap: 2px;
+  width: min(100%, 480px);
+  margin: 12px auto 0;
+  color: var(--text);
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
+.product-book__control-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.product-book__control output {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.product-book__control input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: var(--accent-strong);
+  cursor: pointer;
+}
+
 .product-identity__product .identity-strip {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -2958,6 +3098,15 @@ body.view-section .site-footer {
 
   .product-identity__product .product-cover {
     height: min(310px, 74vw);
+  }
+
+  .product-book__stage {
+    height: min(346px, calc(74vw + 36px));
+    padding: 18px;
+  }
+
+  .product-book__front .product-cover {
+    height: 100%;
   }
 }
 

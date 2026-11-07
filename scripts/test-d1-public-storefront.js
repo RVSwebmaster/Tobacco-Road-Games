@@ -62,6 +62,8 @@ async function main() {
   assert.match(html, /Publisher \/ Imprint: Tobacco Road Games/);
   assert.match(html, /Pay What You Want — \$2\.00 minimum; \$7\.00 suggested/);
   assert.match(html, /\/product-assets\/storefront-native-item\/cover\.webp/);
+  assert.match(html, /class="product-hero__media" data-product-book data-page-count="12"/);
+  assert.match(html, /<script src="\/assets\/js\/product-book\.js" defer><\/script>/);
   assert.match(html, /Open Preview/);
   assert.match(html, /Add to Cart/);
   assert.match(html, /data-cart-add="storefront-native-item"/);
