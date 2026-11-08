@@ -120,6 +120,7 @@ export function ownerIntakeProduct(product) {
     releaseDate: String(product.metadata?.releaseDate || ""),
     series: String(product.metadata?.series || ""),
     seriesSlug: String(product.metadata?.seriesSlug || ""),
+    volume: String(product.metadata?.volume || ""),
     tags: Array.isArray(product.metadata?.tags) ? product.metadata.tags : [],
     version: String(product.metadata?.version || "")
   };

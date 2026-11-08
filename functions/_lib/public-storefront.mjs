@@ -85,6 +85,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
   const version = text(product.metadata?.version);
   const releaseDate = text(product.metadata?.releaseDate);
   const series = text(product.metadata?.series);
+  const volume = text(product.metadata?.volume);
   const price = formatPublicPrice(product);
   const priceDetails = formatPublicPriceDetails(product);
   const details = [
@@ -93,6 +94,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
     ["Game System", product.gameSystem],
     ["Product Line", product.productLine],
     ["Series", series],
+    ["Volume", volume],
     ["Format", formats.join(", ") || "Digital"],
     ["Pages", pageCount ? String(pageCount) : "TBD"],
     ["Status", statusLabel],

@@ -51,6 +51,7 @@
     system: Object.freeze({ field: "system", label: "Game system" }),
     line: Object.freeze({ field: "line", label: "Product line" }),
     series: Object.freeze({ field: "series", label: "Series" }),
+    volume: Object.freeze({ field: "volume", label: "Volume" }),
     version: Object.freeze({ field: "version", label: "Version" }),
     language: Object.freeze({ field: "language", label: "Language" }),
     releaseDate: Object.freeze({ field: "releaseDate", label: "Publication date" }),
@@ -97,6 +98,7 @@
     contentDescriptors: document.getElementById("product-content-descriptors"),
     line: document.getElementById("product-line"),
     series: document.getElementById("product-series"),
+    volume: document.getElementById("product-volume"),
     productLineManagerInput: document.getElementById("product-line-manager-input"),
     tagManagerGroupInput: document.getElementById("tag-manager-group-input"),
     tagManagerGroupSelect: document.getElementById("tag-manager-group-select"),
@@ -956,6 +958,7 @@
         salePrice: fields.salePrice.value,
         selectedRelatedProducts: [...selectedRelatedProducts],
         series: fields.series.value,
+        volume: fields.volume.value,
         shortDescription: fields.shortDescription.value,
         slug: fields.slug.value,
         slugTouched,
@@ -1139,6 +1142,7 @@
     openRulesEligible: fields.openRulesEligible.checked,
     salePrice: fields.salePrice.value,
     series: fields.series.value,
+    volume: fields.volume.value,
     shortDescription: fields.shortDescription.value,
     slug: fields.slug.value,
     status: fields.status.value,
@@ -1217,6 +1221,7 @@
       previewImages: loadedProductRecord?.previewImages || [],
       productLine: payload.productLine,
       series: payload.series,
+      volume: payload.volume,
       short_description: payload.shortDescription,
       slug: payload.slug,
       subtitle: payload.subtitle,
@@ -1546,6 +1551,7 @@
               salePrice: String(product.salePrice || "").trim(),
               series: String(product.series || "").trim(),
               seriesSlug: String(product.seriesSlug || "").trim(),
+              volume: String(product.volume || "").trim(),
               shortDescription: String(product.shortDescription || "").trim(),
               slug,
               status: String(product.status || "").trim(),
@@ -1598,6 +1604,7 @@
           salePrice: cents(product.salePriceCents),
           series: String(product.series || ""),
           seriesSlug: String(product.seriesSlug || ""),
+          volume: String(product.volume || ""),
           shortDescription: String(product.shortDescription || ""),
           slug,
           status: String(product.status || ""),
@@ -1636,6 +1643,7 @@
     const gameSystem = fields.system.value.trim();
     const productLine = fields.line.value.trim();
     const series = fields.series.value.trim();
+    const volume = fields.volume.value.trim();
     const existingGameSystem = String(loadedProductRecord?.gameSystem || "").trim();
     const existingGameSystemSlug = String(loadedProductRecord?.gameSystemSlug || "").trim();
     const existingProductLine = String(loadedProductRecord?.productLine || "").trim();
@@ -1711,6 +1719,7 @@
       seriesSlug: isEditingLoadedListing() && series === existingSeries
         ? (existingSeriesSlug || (series ? slugify(series) : ""))
         : slugify(series),
+      volume,
       publisher: "Tobacco Road Games",
       relatedProducts: [...selectedRelatedProducts],
       releaseDate: fields.releaseDate.value,
@@ -1729,6 +1738,9 @@
     }
     if (!payload.seriesSlug) {
       delete payload.seriesSlug;
+    }
+    if (!volume) {
+      delete payload.volume;
     }
     for (const field of ["genre", "gmMode", "prepBurden", "playDuration", "playMode", "rulesComplexity", "mediaType", "language"]) {
       if (!payload[field]) delete payload[field];
@@ -1759,6 +1771,7 @@
       releaseDate: payload.releaseDate,
       series: payload.series || "",
       seriesSlug: payload.seriesSlug || "",
+      volume: payload.volume || "",
       storageLabel: payload.folder,
       tags: payload.tags,
       teaserVideo: payload.teaserVideo,
@@ -2326,6 +2339,7 @@
     if (fields.contentDescriptors) fields.contentDescriptors.value = Array.isArray(product.contentDescriptors) ? product.contentDescriptors.join(", ") : "";
     fields.line.value = product.productLine || "";
     fields.series.value = product.series || "";
+    fields.volume.value = product.volume || "";
     fields.format.value = formatListValue(product.format) || "PDF";
     fields.pageCount.value = product.pageCount ?? "";
     fields.price.value = product.price || "";
@@ -2407,6 +2421,7 @@
     fields.system.value = draft.gameSystem ?? product.gameSystem ?? "";
     fields.line.value = draft.line ?? product.productLine ?? "";
     fields.series.value = draft.series ?? product.series ?? "";
+    fields.volume.value = draft.volume ?? product.volume ?? "";
     fields.format.value = draft.format ?? formatListValue(product.format) ?? "PDF";
     fields.pageCount.value = draft.pageCount ?? (product.pageCount ?? "");
     fields.price.value = draft.price ?? product.price ?? "";
@@ -2675,6 +2690,7 @@
     if (fields.contentDescriptors) fields.contentDescriptors.value = "";
     fields.line.value = "Fifth Edition Fantasy Roleplaying";
     fields.series.value = "";
+    fields.volume.value = "";
     fields.format.value = "PDF";
     fields.pageCount.value = "";
     fields.price.value = "";

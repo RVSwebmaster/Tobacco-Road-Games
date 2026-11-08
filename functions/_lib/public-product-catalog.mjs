@@ -4,7 +4,7 @@ import { jsonResponse } from "./owner-runtime.mjs";
 const PUBLIC_METADATA = [
   "authors", "authorSlugs", "format", "tags", "features", "version", "pageCount",
   "releaseDate", "language", "contentDescriptors", "openRulesEligible", "featured",
-  "series", "seriesSlug", "playerCountMin", "playerCountMax", "gmMode", "prepBurden",
+  "series", "seriesSlug", "volume", "playerCountMin", "playerCountMax", "gmMode", "prepBurden",
   "playMode", "rulesComplexity"
 ];
 

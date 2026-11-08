@@ -158,6 +158,7 @@ async function testProductLineTerminologyAndManagerLabels() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
   assert.match(html, /<label for="product-line">Product Line<\/label>/, "The productLine field should be labeled Product Line again.");
   assert.match(html, /<label for="product-series">Series<\/label>/, "The series field should be labeled Series again.");
+  assert.match(html, /<label for="product-volume">Volume<\/label>/, "The intake should preserve volume independently of Series and Version.");
   assert.match(html, />Manage Product Lines</, "The owner intake should expose a Manage Product Lines control.");
   assert.match(html, />Product Line Fit</, "Advisor copy should use Product Line terminology in the owner intake.");
   assert.doesNotMatch(html, /<label for="product-line">Store Line<\/label>/, "The old Store Line label should be removed.");
@@ -941,6 +942,7 @@ function createHarness(options = {}) {
     contentDescriptors: register("product-content-descriptors", createInput("")),
     line: register("product-line", createElement("select")),
     series: register("product-series", createInput("")),
+    volume: register("product-volume", createInput("")),
     productLineManagerInput: register("product-line-manager-input", createInput("")),
     tagManagerGroupInput: register("tag-manager-group-input", createInput("")),
     tagManagerGroupSelect: register("tag-manager-group-select", createElement("select")),

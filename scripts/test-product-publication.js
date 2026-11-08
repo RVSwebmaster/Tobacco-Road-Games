@@ -138,7 +138,7 @@ async function main() {
     status: "preview-only",
     buyMode: "preview-only",
     priceCents: 0,
-    metadata: { authors: ["RV Sawyer"], pageCount: 122 }
+    metadata: { authors: ["RV Sawyer"], pageCount: 122, series: "5e Reference Library", volume: "One" }
   });
   const adminForm = new FormData();
   adminForm.set("metadata", JSON.stringify(adminInput.metadata));
@@ -188,6 +188,7 @@ async function main() {
   const intakeProducts = (await listResponse.json()).products;
   assert.equal(intakeProducts.find(product => product.slug === adminProduct.slug).managedByUserId, "test-admin");
   assert.deepEqual(intakeProducts.find(product => product.slug === adminProduct.slug).authors, ["RV Sawyer"]);
+  assert.equal(intakeProducts.find(product => product.slug === adminProduct.slug).volume, "One");
   const badCsrf = new Request("https://example.test/owner/api/catalog-publication", {
     method: "POST", headers: { origin: "https://example.test",
       cookie: `${auth.ACCOUNT_SESSION_COOKIE}=${sessionToken}; ${auth.ACCOUNT_CSRF_COOKIE}=${csrfToken}`,
