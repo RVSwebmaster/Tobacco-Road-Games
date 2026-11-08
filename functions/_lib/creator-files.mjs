@@ -268,14 +268,18 @@ export async function handleCreatorFileUpload(
     201,
   );
 }
-export async function prepareCreatorListingFile(file, purpose) {
+export async function prepareCreatorListingFile(file, purpose, options = {}) {
   if (!(file instanceof File) || !CREATOR_FILE_TYPES[purpose])
     throw fileError(400, "invalid_creator_file", "Choose a file and its purpose.");
-  if (file.size < 1 || file.size > CREATOR_FILE_LIMITS[purpose])
+  const defaultLimit = CREATOR_FILE_LIMITS[purpose];
+  const limit = Number.isSafeInteger(options.maxBytes) && options.maxBytes > 0
+    ? options.maxBytes
+    : defaultLimit;
+  if (file.size < 1 || file.size > limit)
     throw fileError(
       400,
       "invalid_creator_file",
-      `File must be smaller than ${Math.floor(CREATOR_FILE_LIMITS[purpose] / 1024 / 1024)} MB.`,
+      `File must be smaller than ${Math.floor(limit / 1024 / 1024)} MB.`,
     );
   const bytes = new Uint8Array(await file.arrayBuffer()), contentType = detectType(bytes);
   if (!contentType || !CREATOR_FILE_TYPES[purpose].includes(contentType) || !CREATOR_FILE_TYPES[purpose].includes(file.type))

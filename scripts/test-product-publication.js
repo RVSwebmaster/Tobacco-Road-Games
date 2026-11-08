@@ -20,6 +20,7 @@ async function main() {
   }
   const db = d1(raw);
   const bucket = r2();
+  assert.equal(publication.ADMIN_PRODUCT_PDF_LIMIT_BYTES, 90 * 1024 * 1024);
   const input = (slug, overrides = {}) => ({
     metadata: { id: `product-${slug}`, slug, creatorId: "creator-rv-sawyer",
       title: `Product ${slug}`, status: "available-direct", buyMode: "cart",

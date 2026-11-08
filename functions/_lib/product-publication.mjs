@@ -19,6 +19,7 @@ const MUTABLE_PRODUCT_FIELDS = Object.freeze([
   "thumbnailR2Key", "deliveryR2Key", "deliveryFilename", "deliveryContentType", "metadata", "publishedAt"
 ]);
 const OFFICIAL_TRG_CREATOR_ID = "creator-rv-sawyer";
+export const ADMIN_PRODUCT_PDF_LIMIT_BYTES = 90 * 1024 * 1024;
 
 export class ProductPublicationError extends Error {
   constructor(code, message, status = 503, details = {}) {
@@ -140,7 +141,7 @@ export async function publishProduct(database, bucket, { metadata, coverFile, ba
   try {
     cover = await prepareCreatorListingFile(coverFile, "cover");
     if (backCoverFile != null) backCover = await prepareCreatorListingFile(backCoverFile, "cover");
-    pdf = await prepareCreatorListingFile(pdfFile, "product");
+    pdf = await prepareCreatorListingFile(pdfFile, "product", { maxBytes: ADMIN_PRODUCT_PDF_LIMIT_BYTES });
   } catch (error) {
     throw new ProductPublicationError("invalid_file", error.message, error.status || 400);
   }
@@ -275,7 +276,7 @@ export async function updatePublishedProduct(
   try {
     if (hasCover) cover = await prepareCreatorListingFile(coverFile, "cover");
     if (hasBackCover) backCover = await prepareCreatorListingFile(backCoverFile, "cover");
-    if (hasPdf) pdf = await prepareCreatorListingFile(pdfFile, "product");
+    if (hasPdf) pdf = await prepareCreatorListingFile(pdfFile, "product", { maxBytes: ADMIN_PRODUCT_PDF_LIMIT_BYTES });
   } catch (error) {
     throw new ProductPublicationError("invalid_file", error.message, error.status || 400);
   }

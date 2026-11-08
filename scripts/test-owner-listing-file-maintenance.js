@@ -49,7 +49,12 @@ async function main() {
   response = await maintenance.handleOwnerListingFiles(request("/owner/api/listing-files", { method: "POST", body: invalid }), env, { nowMs: NOW }); assert.equal(response.status, 415);
   const cross = new FormData(); cross.set("listingId", "listing-two"); cross.set("fileId", current.id); cross.set("file", new File(["%PDF-1.7 cross"], "cross.pdf", { type: "application/pdf" }));
   response = await maintenance.handleOwnerListingFiles(request("/owner/api/listing-files", { method: "POST", body: cross }), env, { nowMs: NOW }); assert.equal(response.status, 409); assert.equal(snapshot(raw).auditRows, auditRowsBeforeRejectedReplacement);
-  await assert.rejects(() => creatorFiles.prepareCreatorListingFile(new File([new Uint8Array(creatorFiles.CREATOR_FILE_LIMITS.product + 1)], "huge.pdf", { type: "application/pdf" }), "product"), /smaller than 50 MB/);
+  const aboveCreatorBytes = new Uint8Array(creatorFiles.CREATOR_FILE_LIMITS.product + 1);
+  aboveCreatorBytes.set(Buffer.from("%PDF-"));
+  const aboveCreatorLimit = new File([aboveCreatorBytes], "huge.pdf", { type: "application/pdf" });
+  await assert.rejects(() => creatorFiles.prepareCreatorListingFile(aboveCreatorLimit, "product"), /smaller than 50 MB/);
+  const adminPrepared = await creatorFiles.prepareCreatorListingFile(aboveCreatorLimit, "product", { maxBytes: 90 * 1024 * 1024 });
+  assert.equal(adminPrepared.bytes.byteLength, creatorFiles.CREATOR_FILE_LIMITS.product + 1);
 
   const source = read("functions/_lib/owner-listing-files.mjs"), page = read("owner/listing-files.html"), route = read("functions/owner/api/listing-files.js"), dashboard = read("owner/index.html"), holdMigration = read("migrations/051_creator_listing_review_hold.sql"), storefront = read("assets/js/storefront.js");
   assert.doesNotMatch(source, /verifyAuthenticatedOwner/); assert.match(source, /prepareCreatorListingFile/); assert.doesNotMatch(source, /\.delete\(/); assert.match(route, /handleOwnerListingFiles/); assert.match(page, /Listing File Maintenance/); assert.match(dashboard, /Maintain Listing Files/);
