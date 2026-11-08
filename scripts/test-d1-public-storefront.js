@@ -76,6 +76,11 @@ async function main() {
     publicationState: "published", title: "Cataloged Preview", status: "preview-only",
     buyMode: "preview-only", pricingModel: "fixed", priceCents: 0
   });
+  const previewHtml = await (await storefront.handlePublicProductPage(context(db, "storefront-cataloged-preview"))).text();
+  assert.match(previewHtml, />Preview only<\/button>/);
+  assert.match(previewHtml, /Not for sale/);
+  assert.match(previewHtml, /not currently available for purchase/i);
+  assert.doesNotMatch(previewHtml, /data-cart-add|Add to Cart/i);
   await catalog.createProduct(db, {
     id: "draft-storefront-item", slug: "draft-storefront-item", creatorId: "creator-rv-sawyer",
     publicationState: "draft", title: "Hidden Draft", status: "coming-soon", buyMode: "coming-soon",

@@ -88,6 +88,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
   const volume = text(product.metadata?.volume);
   const price = formatPublicPrice(product);
   const priceDetails = formatPublicPriceDetails(product);
+  const purchaseEligible = isNativePurchaseEligible(product);
   const details = [
     ["Creator", creatorName],
     ["Publisher / Imprint", product.publisher],
@@ -113,7 +114,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
     category: text(product.productLine, product.genre),
     url: canonical
   }).replace(/</g, "\\u003c");
-  const purchaseMessage = product.storefrontVisibility === "listed"
+  const purchaseMessage = purchaseEligible
     ? "Add this product to the cart for a server-verified quote. Payment and acquisition for Cloudflare-native products are not active yet."
     : "This catalog record is not currently available for purchase.";
 
@@ -210,6 +211,7 @@ export function renderPublicProductPage(product, requestUrl = new URL("https://t
 }
 
 export function formatPublicPrice(product) {
+  if (product.buyMode === "preview-only") return "Not for sale";
   if (product.pricingModel === "free") return "Free Download";
   if (product.pricingModel === "pwyw") return `Pay What You Want — ${money(product.suggestedPriceCents, product.currency)} suggested`;
   const cents = activeSalePrice(product) ?? product.priceCents;
@@ -217,6 +219,7 @@ export function formatPublicPrice(product) {
 }
 
 export function formatPublicPriceDetails(product) {
+  if (product.buyMode === "preview-only") return "Not for sale";
   if (product.pricingModel === "free") return "Free Download";
   if (product.pricingModel === "pwyw") {
     return `Pay What You Want — ${money(product.minimumPriceCents, product.currency)} minimum; ${money(product.suggestedPriceCents, product.currency)} suggested`;
@@ -226,8 +229,9 @@ export function formatPublicPriceDetails(product) {
 }
 
 function renderNativeCartControl(product) {
-  if (product.storefrontVisibility !== "listed") {
-    return `<button type="button" class="button button--primary" disabled>Currently unavailable</button>`;
+  if (!isNativePurchaseEligible(product)) {
+    const label = product.buyMode === "preview-only" ? "Preview only" : "Currently unavailable";
+    return `<button type="button" class="button button--primary" disabled>${label}</button>`;
   }
   if (product.pricingModel === "pwyw") {
     const minimum = (Number(product.minimumPriceCents || 0) / 100).toFixed(2);
@@ -235,6 +239,10 @@ function renderNativeCartControl(product) {
     return `<div class="pwyw-purchase"><label for="pwyw-${escapeAttribute(product.slug)}">Choose your price</label><input id="pwyw-${escapeAttribute(product.slug)}" class="dock-input" type="number" inputmode="decimal" min="${minimum}" step="0.01" value="${suggested}" data-pwyw-amount-for="${escapeAttribute(product.slug)}"><span>${escapeHtml(formatPublicPriceDetails(product))}</span><button type="button" class="button button--primary" data-cart-add="${escapeAttribute(product.slug)}" data-pwyw-minimum-cents="${Number(product.minimumPriceCents || 0)}" data-pwyw-suggested-cents="${Number(product.suggestedPriceCents || 0)}">Add to Cart</button></div>`;
   }
   return `<button type="button" class="button button--primary" data-cart-add="${escapeAttribute(product.slug)}">${product.pricingModel === "free" ? "Add Free Product to Cart" : "Add to Cart"}</button>`;
+}
+
+function isNativePurchaseEligible(product) {
+  return product.storefrontVisibility === "listed" && ["cart", "free-download"].includes(product.buyMode);
 }
 
 function activeSalePrice(product, nowMs = Date.now()) {

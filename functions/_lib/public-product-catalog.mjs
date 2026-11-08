@@ -10,8 +10,9 @@ const PUBLIC_METADATA = [
 
 const LISTED_STATUSES = new Set([
   "available-direct", "coming-soon", "free-download", "legacy-edition",
-  "pay-what-you-want", "preview-available", "preview-only", "revised-edition-pending"
+  "pay-what-you-want", "preview-available", "revised-edition-pending"
 ]);
+const PURCHASE_BUY_MODES = new Set(["cart", "free-download"]);
 // The current catalog has no separate Shelved state. These are the statuses
 // eligible for a live storefront shelf; drafts and catalog-only previews stay out.
 const SHELVED_STATUSES = ["available-direct", "pay-what-you-want", "free-download"];
@@ -137,7 +138,9 @@ export function publicProduct(product, creator = {}) {
     previewUrl: product.previewR2Key ? `/product-assets/${encodeURIComponent(product.slug)}/preview.webp` : "",
     detailUrl: `/store/products/${encodeURIComponent(product.slug)}/`,
     storefrontVisibility: LISTED_STATUSES.has(product.status) ? "listed" : "unlisted",
-    purchaseAvailability: "cart-quote-only",
+    purchaseAvailability: LISTED_STATUSES.has(product.status) && PURCHASE_BUY_MODES.has(product.buyMode)
+      ? "cart-quote-only"
+      : "unavailable",
     metadata,
     publishedAt: product.publishedAt,
     updatedAt: product.updatedAt
