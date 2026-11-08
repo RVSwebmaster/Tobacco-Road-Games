@@ -17,6 +17,8 @@ async function main() {
   }
   const db = d1(raw);
   const creatorId = "creator-rv-sawyer";
+  raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?,?,1,'active','admin',?,?)")
+    .run("catalog-admin-manager", "catalog-admin-manager@example.invalid", NOW, NOW);
   raw.prepare("INSERT INTO creator_listings(id,creator_id,slug,title,created_at,updated_at) VALUES(?,?,?,?,?,?)")
     .run("listing-tablecraft", creatorId, "tablecraft", "Tablecraft", NOW, NOW);
 
@@ -25,6 +27,7 @@ async function main() {
     id: "listing-tablecraft", // Existing product identity may be retained during migration.
     slug: "tablecraft",
     creatorId,
+    managedByUserId: "catalog-admin-manager",
     creatorListingId: "listing-tablecraft",
     publicationState: "draft",
     title: "Tablecraft",
@@ -57,6 +60,7 @@ async function main() {
   assert.equal(created.id, input.id);
   assert.equal(created.slug, input.slug);
   assert.equal(created.creatorListingId, input.creatorListingId);
+  assert.equal(created.managedByUserId, "catalog-admin-manager");
   assert.equal(created.coverR2Key, input.coverR2Key);
   assert.equal(created.deliveryR2Key, input.deliveryR2Key);
   assert.deepEqual(created.metadata, input.metadata);
@@ -91,6 +95,7 @@ async function main() {
   assert.equal(updated.saleEnabled, true);
   assert.equal(updated.metadata.version, "2.0");
   assert.equal(updated.deliveryR2Key, "tablecraft/revised.pdf");
+  assert.equal(updated.managedByUserId, "catalog-admin-manager");
   assert.equal(updated.createdAt, NOW);
   assert.equal(updated.updatedAt, new Date(NOW_MS + 1000).toISOString());
   assert.equal((await catalog.getProductBySlug(db, "tablecraft")).id, created.id);

@@ -31,7 +31,7 @@ export async function handlePublicProductPage(context) {
   }
 
   const otherCreatorProducts = await getOtherApprovedPublicProductsByCreator(context.env.TRG_ORDERS, product.creatorId, product.slug);
-  const autoRotate = await isAutoRotationEligible(context.env.TRG_ORDERS, product.creatorId);
+  const autoRotate = await isAutoRotationEligible(context.env.TRG_ORDERS, product.creatorId, product.id);
   const html = renderPublicProductPage({ ...product, autoRotate }, new URL(request.url), otherCreatorProducts);
   return new Response(request.method === "HEAD" ? null : html, {
     status: 200,
@@ -43,18 +43,24 @@ export async function handlePublicProductPage(context) {
   });
 }
 
-export async function isAutoRotationEligible(database, creatorId) {
+export async function isAutoRotationEligible(database, creatorId, productId = "") {
   try {
     const row = await database.prepare(`SELECT
-      CASE WHEN u.role IN ('owner','admin') OR EXISTS (
+      CASE WHEN EXISTS (
+        SELECT 1 FROM marketplace_products p
+        JOIN users manager ON manager.id=p.managed_by_user_id
+        WHERE p.id=? AND manager.status='active' AND manager.role IN ('owner','admin')
+      ) OR EXISTS (
+        SELECT 1 FROM creator_identity_ownership o
+        JOIN users u ON u.id=o.owner_user_id
+        WHERE o.creator_id=? AND o.account_status='active'
+          AND u.status='active' AND u.role IN ('owner','admin')
+      ) OR EXISTS (
         SELECT 1 FROM creator_badge_awards a
-        WHERE a.creator_id=o.creator_id AND a.badge_id='founding-creator'
+        WHERE a.creator_id=? AND a.badge_id='founding-creator'
           AND a.state='active' AND (a.expires_at IS NULL OR datetime(a.expires_at) > CURRENT_TIMESTAMP)
       ) THEN 1 ELSE 0 END AS eligible
-      FROM creator_identity_ownership o
-      JOIN users u ON u.id=o.owner_user_id AND u.status='active'
-      WHERE o.creator_id=? AND o.account_status='active' LIMIT 1`)
-      .bind(creatorId).first();
+    `).bind(productId, creatorId, creatorId).first();
     return Number(row?.eligible) === 1;
   } catch (error) {
     console.error(JSON.stringify({ event: "product_book_eligibility_failed", message: String(error?.message || error) }));

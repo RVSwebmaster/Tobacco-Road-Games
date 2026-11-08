@@ -52,7 +52,8 @@ async function testNativePublicationControlsAndMappings() {
   const html = fs.readFileSync(path.join(ROOT, "owner", "product-intake.html"), "utf8");
   const script = fs.readFileSync(path.join(ROOT, "assets", "js", "product-intake.js"), "utf8");
   assert.doesNotMatch(html, /id="publish-button"[^>]*disabled/);
-  assert.match(html, /Publishes directly to the native Cloudflare D1 catalog and private R2 product storage/);
+  assert.match(html, /Publishes directly to native Cloudflare D1 and private R2 storage/);
+  assert.match(html, /default to unlisted, non-purchasable Preview Only inventory/);
   assert.match(script, /NATIVE_PUBLICATION_ENDPOINT = "\/owner\/api\/catalog-publication"/);
   assert.match(script, /"x-csrf-token": csrfToken/);
   assert.doesNotMatch(script, /Repo publish path after upload|Commit and push to main|GitHub rebuild workflow/);
@@ -60,6 +61,7 @@ async function testNativePublicationControlsAndMappings() {
   const fixed = createHarness();
   await fixed.flush();
   prepareValidNewListing(fixed, { status: "available-direct", buyMode: "cart", price: "7.25" });
+  fixed.fields.authors.value = "Independent Author, RV Sawyer";
   fixed.fields.coverFile.files = [];
   fixed.api.setAutomaticPdfProcessorsForTests({ publicationCovers: async () => ({
     frontFile: new File([Buffer.from("RIFFxxxxWEBPVP8 ")], "cover.webp", { type: "image/webp" }),
@@ -79,6 +81,8 @@ async function testNativePublicationControlsAndMappings() {
   assert.equal(fixed.lastPublishFormData.get("productFile"), null);
   const fixedMetadata = JSON.parse(fixed.lastPublishFormData.get("metadata"));
   assert.equal(fixedMetadata.id, "native-intake-product");
+  assert.deepEqual([...fixedMetadata.metadata.authors], ["Independent Author", "RV Sawyer"]);
+  assert.deepEqual([...fixedMetadata.metadata.authorSlugs], ["independent-author", "rv-sawyer"]);
   assert.equal(fixedMetadata.slug, "native-intake-product");
   assert.equal(fixedMetadata.creatorId, "creator-rv-sawyer");
   assert.equal(fixedMetadata.pricingModel, "fixed");
@@ -126,8 +130,8 @@ async function testNativePublicationControlsAndMappings() {
   await existing.flush();
   existing.fields.existingSelect.value = "fixture-alpha";
   existing.buttons.loadExisting.click();
-  assert.equal(existing.buttons.publish.disabled, true);
-  assert.equal(existing.buttons.publish.textContent, "Existing Listing Updates Unavailable");
+  assert.equal(existing.buttons.publish.disabled, false);
+  assert.equal(existing.buttons.publish.textContent, "Update Existing Listing");
 }
 
 async function testIntakeLabelsAndHelperText() {
@@ -260,8 +264,10 @@ async function testLocalPdfReviewSelectionStaysOutOfPublishPayload() {
 
   await harness.buttons.publish.click();
   await harness.flush();
-  assert.equal(harness.publishRequestCount, 0, "Existing-listing review files must never be sent to the create-only native publication endpoint.");
-  assert.match(harness.outputs.status.textContent, /No request was sent/);
+  assert.equal(harness.publishRequestCount, 1, "Existing-listing metadata updates should use the native publication endpoint.");
+  assert.equal(harness.lastPublishFormData.get("action"), "update");
+  assert.equal(harness.lastPublishFormData.get("pdf"), null, "A local review PDF must never become a replacement product PDF.");
+  assert.equal(harness.lastPublishFormData.get("cover"), null, "A local review PDF must never generate a replacement cover.");
 }
 
 async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
@@ -321,8 +327,9 @@ async function testPdfWebpAssignmentsAreExplicitAndReviewPdfStaysSeparate() {
 
   await harness.buttons.publish.click();
   await harness.flush();
-  assert.equal(harness.publishRequestCount, 0, "Existing-listing cover review must remain local while native updates are unavailable.");
-  assert.match(harness.outputs.status.textContent, /No request was sent/);
+  assert.equal(harness.publishRequestCount, 1, "An explicitly assigned replacement cover should be submitted for native maintenance.");
+  assert.equal(harness.lastPublishFormData.get("cover"), existingCover);
+  assert.equal(harness.lastPublishFormData.get("pdf"), null, "The review-only PDF must remain outside the maintenance payload.");
 }
 
 async function testVisibleValidationAndReviewFeedback() {
@@ -616,8 +623,8 @@ async function testIntakeModeSpecificLabels() {
   assert.match(harness.outputs.outputHeading.textContent, /Review Listing Changes/, "Existing-listing mode should use a review heading for updates.");
   assert.equal(harness.buttons.analyze.textContent, "Check Existing Listing", "Existing-listing mode should relabel the check action.");
   assert.equal(harness.buttons.review.textContent, "Review Listing Changes", "Existing-listing mode should relabel the review action.");
-  assert.equal(harness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Existing-listing mode should show the create-only boundary.");
-  assert.equal(harness.buttons.publish.disabled, true);
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Existing-listing mode should expose native maintenance.");
+  assert.equal(harness.buttons.publish.disabled, false);
   assert.equal(harness.buttons.reset.textContent, "Discard Listing Changes", "Existing-listing mode should relabel the discard action.");
   assert.match(harness.outputs.editMode.textContent, /Editing existing listing: Fixture Alpha/i, "Existing-listing mode should explain that the owner is updating a current listing.");
 }
@@ -694,11 +701,11 @@ async function testExistingListingDraftRestoresAfterReload() {
   harness.fields.pageCount.value = "12";
   harness.fields.pageCount.dispatch("input");
   harness.buttons.analyze.click();
-  assert.equal(harness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Checking an existing listing must not fall back to the new-product publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Checking an existing listing must preserve the maintenance action.");
   assert.equal(harness.fields.slug.value, "fixture-gamma", "Checking an existing listing must preserve the loaded slug.");
   const generatedBeforeReload = JSON.parse(harness.outputs.json.value);
   assert.equal(harness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Editing Fixture Gamma should stay in existing-listing mode before reload.");
-  assert.equal(harness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Editing Fixture Gamma should not offer a new-product publish action.");
+  assert.equal(harness.buttons.publish.textContent, "Update Existing Listing", "Editing Fixture Gamma should offer the native maintenance action.");
   assert.equal(generatedBeforeReload.productLineSlug, "other-games-and-experiments", "Editing an existing listing should preserve the original product-line slug when the visible label is unchanged.");
   assert.equal(generatedBeforeReload.priceCents, null, "Editing an existing listing should not convert an empty regular price into zero cents.");
   assert.equal(generatedBeforeReload.salePriceCents, null, "Editing an existing listing should not convert an empty sale price into zero cents.");
@@ -713,7 +720,7 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   assert.equal(reloadedHarness.outputs.modeIndicatorTitle.textContent, "Editing Existing Listing: Fixture Gamma", "Reloading should restore the loaded Fixture Gamma listing.");
   assert.equal(reloadedHarness.outputs.listingDetails.hidden, false, "Reloading a persisted existing-listing draft should reveal the listing details workspace.");
-  assert.equal(reloadedHarness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "A restored existing listing must not show the new-product publish action.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "A restored existing listing must show the maintenance action.");
   assert.equal(reloadedHarness.buttons.reset.textContent, "Discard Listing Changes", "A restored existing listing must keep the existing-listing discard action.");
   assert.equal(reloadedHarness.fields.title.value, "Fixture Gamma", "Reloading should preserve the loaded title.");
   assert.equal(reloadedHarness.fields.slug.value, "fixture-gamma", "Reloading should preserve the loaded slug.");
@@ -730,7 +737,7 @@ async function testExistingListingDraftRestoresAfterReload() {
 
   reloadedHarness.buttons.review.click();
   assert.match(reloadedHarness.outputs.status.textContent, /Review ready\./, "Reviewing the restored Fixture Gamma draft should still work.");
-  assert.equal(reloadedHarness.buttons.publish.textContent, "Existing Listing Updates Unavailable", "Reviewing the restored draft must not relabel the publish action.");
+  assert.equal(reloadedHarness.buttons.publish.textContent, "Update Existing Listing", "Reviewing the restored draft must preserve the maintenance action.");
 }
 
 async function testExistingListingReopenRestoresSavedTagCheckboxes() {
@@ -748,10 +755,10 @@ async function testExistingListingReopenRestoresSavedTagCheckboxes() {
 
   await harness.buttons.publish.click();
   await harness.flush();
-  assert.equal(harness.publishRequestCount, 0, "Existing-listing changes must not be sent to the native create-only endpoint.");
+  assert.equal(harness.publishRequestCount, 1, "Existing-listing changes must use the native maintenance endpoint.");
   assert.equal(findTagCheckbox(harness, "Fantasy")?.checked, false, "Reopened listings should clear tags that were unchecked in the saved update.");
   assert.equal(findTagCheckbox(harness, "Historical")?.checked, true, "Reopened listings should restore tags that were checked in the saved update.");
-  assert.match(harness.outputs.status.textContent, /No request was sent/, "The UI must accurately report the create-only update boundary.");
+  assert.match(harness.outputs.status.textContent, /updated in the native D1 catalog/i, "The UI must accurately report the completed native update.");
 }
 
 function prepareValidNewListing(harness, overrides = {}) {
@@ -1269,6 +1276,9 @@ function createHarness(options = {}) {
         });
       }
       if (String(url).includes("/owner/api/catalog-publication")) {
+        if (String(options.method || "GET").toUpperCase() === "GET") {
+          return createJsonResponse({ products: [] });
+        }
         harness.publishRequestCount += 1;
         harness.lastPublishFormData = options.body || null;
         harness.lastPublishHeaders = options.headers || null;
@@ -1288,7 +1298,8 @@ function createHarness(options = {}) {
             id: metadata.id,
             slug: metadata.slug,
             title: metadata.title,
-            publicationState: "published"
+            publicationState: "published",
+            revision: Number(harness.lastPublishFormData?.get("expectedRevision") || 1) + 1
           },
           storefrontUrl: `/store/products/${metadata.slug}/`
         }, 201);

@@ -34,7 +34,7 @@ const FIELDS = Object.freeze([
   ["publishedAt", "published_at"]
 ]);
 const FIELD_NAMES = new Set(FIELDS.map(([name]) => name));
-const CREATE_NAMES = new Set(["id", "slug", "creatorId", ...FIELD_NAMES]);
+const CREATE_NAMES = new Set(["id", "slug", "creatorId", "managedByUserId", ...FIELD_NAMES]);
 const STATUSES = [
   "available-direct", "coming-soon", "free-download", "legacy-edition",
   "legacy-not-for-sale", "pay-what-you-want", "preview-available",
@@ -74,7 +74,7 @@ const DEFAULTS = Object.freeze({
   metadata: {},
   publishedAt: null
 });
-const COLUMNS = ["id", "slug", "creator_id", ...FIELDS.map(([, column]) => column), "created_at", "updated_at", "revision"];
+const COLUMNS = ["id", "slug", "creator_id", "managed_by_user_id", ...FIELDS.map(([, column]) => column), "created_at", "updated_at", "revision"];
 
 export class ProductCatalogError extends Error {
   constructor(code, message) {
@@ -124,9 +124,9 @@ export async function createProduct(database, input, { nowMs = Date.now() } = {}
 // transition related D1 records atomically can include it in a D1 batch.
 export function prepareCreateProduct(database, input, { nowMs = Date.now() } = {}) {
   const product = validateProductInput(input);
-  const { id, slug, creatorId } = product;
+  const { id, slug, creatorId, managedByUserId } = product;
   const now = timestamp(nowMs);
-  const values = [id, slug, creatorId, ...FIELDS.map(([name]) => toDatabase(name, product[name])), now, now, 1];
+  const values = [id, slug, creatorId, managedByUserId, ...FIELDS.map(([name]) => toDatabase(name, product[name])), now, now, 1];
   return {
     product,
     statement: database.prepare(`INSERT INTO marketplace_products(${COLUMNS.join(",")}) VALUES(${COLUMNS.map(() => "?").join(",")})`)
@@ -139,7 +139,8 @@ export function validateProductInput(input) {
   const id = input.id === undefined ? crypto.randomUUID() : requiredText(input.id, "id");
   const slug = requiredSlug(input.slug);
   const creatorId = requiredText(input.creatorId, "creatorId");
-  return normalize({ ...DEFAULTS, ...input, id, slug, creatorId });
+  const managedByUserId = optionalText(input.managedByUserId);
+  return normalize({ ...DEFAULTS, ...input, id, slug, creatorId, managedByUserId });
 }
 
 export async function updateProduct(database, id, patch, { expectedRevision, nowMs = Date.now() } = {}) {
@@ -276,7 +277,12 @@ function normalize(value) {
 
 function fromRow(row) {
   if (!row) return null;
-  const product = { id: row.id, slug: row.slug, creatorId: row.creator_id };
+  const product = {
+    id: row.id,
+    slug: row.slug,
+    creatorId: row.creator_id,
+    managedByUserId: row.managed_by_user_id || null
+  };
   for (const [name, column] of FIELDS) product[name] = row[column];
   product.saleEnabled = Boolean(row.sale_enabled);
   product.metadata = JSON.parse(row.metadata_json);

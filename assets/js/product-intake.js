@@ -7,7 +7,7 @@
       panel.hidden = false;
       panel.dataset.kind = "error";
     }
-    if (heading) heading.textContent = "Owner Intake failed to start";
+    if (heading) heading.textContent = "Admin / Owner Intake failed to start";
     if (message) {
       message.textContent = `Reload this page. If the problem continues, report this initialization error: ${error?.message || String(error)}`;
     }
@@ -1024,9 +1024,9 @@
       modeTitle: `Editing Existing Listing: ${loadedProductRecord?.title || loadedProductSlug}`,
       outputCopy: "Check for missing or invalid information, then review the generated catalog entry and update plan before publishing changes.",
       outputHeading: "Review Listing Changes",
-      publishButton: "Existing Listing Updates Unavailable",
-      publishHelp: "Native publication is create-only. Existing listing updates remain unavailable in this task.",
-      publishLabel: "Existing Listing Updates Unavailable",
+      publishButton: "Update Existing Listing",
+      publishHelp: "Updates this native D1 product. Replacement PDF and cover files are optional unless you select a new PDF.",
+      publishLabel: "Update Existing Listing",
       resetButton: "Discard Listing Changes",
       resetHelp: "Discards unsaved edits for the loaded listing. Published data is not affected.",
       resetLabel: "Discard Listing Changes",
@@ -1098,7 +1098,7 @@
     }
     if (buttons.publish) {
       buttons.publish.textContent = labels.publishButton;
-      buttons.publish.disabled = publishBusy || isEditingLoadedListing() || Boolean(publishedProductSlug);
+      buttons.publish.disabled = publishBusy || Boolean(publishedProductSlug);
     }
     if (buttons.reset) {
       buttons.reset.textContent = labels.resetButton;
@@ -1115,6 +1115,7 @@
   };
 
   const captureDraftState = () => JSON.stringify({
+    authors: fields.authors.value,
     buyMode: fields.buyMode.value,
     buyUrl: fields.buyUrl.value,
     coverFileName: fields.coverFile.files[0]?.name || "",
@@ -1481,7 +1482,7 @@
 
   async function loadAvailableProducts() {
     try {
-      const [productsResponse, intakeResponse] = await Promise.all([
+      const [productsResponse, intakeResponse, nativeResponse] = await Promise.all([
         fetch("/data/products.json", {
           cache: "no-store",
           credentials: "same-origin"
@@ -1489,7 +1490,12 @@
         fetch("/data/product-intake-map.json", {
           cache: "no-store",
           credentials: "same-origin"
-        })
+        }),
+        fetch(NATIVE_PUBLICATION_ENDPOINT, {
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: { accept: "application/json" }
+        }).catch(() => null)
       ]);
 
       if (!productsResponse.ok || !intakeResponse.ok) {
@@ -1498,12 +1504,13 @@
 
       const productsPayload = await productsResponse.json();
       const intakePayload = await intakeResponse.json();
+      const nativePayload = nativeResponse?.ok ? await nativeResponse.json() : { products: [] };
       const intakeProducts = Array.isArray(intakePayload?.products) ? intakePayload.products : [];
       const intakeBySlug = new Map(
         intakeProducts.map((product) => [String(product.slug || "").trim(), product])
       );
 
-      availableProducts = Array.isArray(productsPayload)
+      const staticProducts = Array.isArray(productsPayload)
         ? productsPayload
           .map((product) => {
             const slug = String(product.slug || "").trim();
@@ -1549,8 +1556,61 @@
             };
           })
           .filter((product) => product.slug && product.title)
-          .sort((left, right) => left.title.localeCompare(right.title))
         : [];
+      const productBySlug = new Map(staticProducts.map(product => [product.slug, product]));
+      for (const product of Array.isArray(nativePayload?.products) ? nativePayload.products : []) {
+        const slug = String(product.slug || "").trim();
+        if (!slug) continue;
+        const cents = value => Number.isSafeInteger(value) ? (value / 100).toFixed(2) : "";
+        productBySlug.set(slug, {
+          ...(productBySlug.get(slug) || {}),
+          authors: Array.isArray(product.authors) ? [...product.authors] : [],
+          buyMode: String(product.buyMode || ""),
+          buyUrl: String(product.buyUrl || ""),
+          contentDescriptors: Array.isArray(product.contentDescriptors) ? [...product.contentDescriptors] : [],
+          creatorId: String(product.creatorId || ""),
+          currency: String(product.currency || "USD"),
+          features: Array.isArray(product.features) ? [...product.features] : [],
+          fileList: Array.isArray(product.fileList) ? [...product.fileList] : [],
+          folder: String(product.folder || slug),
+          format: Array.isArray(product.format) ? [...product.format] : [],
+          fulfillmentNote: String(product.fulfillmentNote || ""),
+          gameSystem: String(product.gameSystem || ""),
+          gameSystemSlug: String(product.gameSystemSlug || ""),
+          genre: String(product.genre || ""),
+          id: String(product.id || slug),
+          lastUpdated: String(product.lastUpdated || ""),
+          legalNote: String(product.legalNote || ""),
+          longDescription: String(product.longDescription || ""),
+          managedByUserId: String(product.managedByUserId || ""),
+          mediaType: String(product.mediaType || "digital"),
+          minimumPrice: cents(product.minimumPriceCents),
+          openRulesEligible: Boolean(product.openRulesEligible),
+          pageCount: product.pageCount ?? null,
+          price: cents(product.priceCents),
+          pricingModel: String(product.pricingModel || "fixed"),
+          productLine: String(product.productLine || ""),
+          publicationState: String(product.publicationState || ""),
+          relatedProducts: Array.isArray(product.relatedProducts) ? [...product.relatedProducts] : [],
+          releaseDate: String(product.releaseDate || ""),
+          revision: Number(product.revision || 0),
+          saleEnabled: Boolean(product.saleEnabled),
+          salePrice: cents(product.salePriceCents),
+          series: String(product.series || ""),
+          seriesSlug: String(product.seriesSlug || ""),
+          shortDescription: String(product.shortDescription || ""),
+          slug,
+          status: String(product.status || ""),
+          subtitle: String(product.subtitle || ""),
+          suggestedPrice: cents(product.suggestedPriceCents),
+          tags: Array.isArray(product.tags) ? [...product.tags] : [],
+          title: String(product.title || slug),
+          version: String(product.version || "")
+        });
+      }
+      availableProducts = [...productBySlug.values()]
+        .filter(product => product.slug && product.title)
+        .sort((left, right) => left.title.localeCompare(right.title));
     } catch {
       availableProducts = [];
     }
@@ -1600,9 +1660,10 @@
         ? [...loadedProductRecord.fileList]
         : [`${title || "Untitled Product"}.pdf`]);
 
+    const authors = parseList(fields.authors.value);
     const payload = {
-      authorSlugs: ["rv-sawyer"],
-      authors: ["RV Sawyer"],
+      authorSlugs: authors.map(slugify).filter(Boolean),
+      authors,
       buyMode: fields.buyMode.value,
       buyUrl: fields.buyMode.value === CART_BUY_MODE ? "" : fields.buyUrl.value.trim(),
       currency: fields.currency.value.trim() || "USD",
@@ -1707,9 +1768,9 @@
       if (Object.prototype.hasOwnProperty.call(payload, key)) metadata[key] = payload[key];
     }
     return {
-      id: payload.slug,
+      id: isEditingLoadedListing() ? (loadedProductRecord?.id || payload.slug) : payload.slug,
       slug: payload.slug,
-      creatorId: OWNER_CREATOR_ID,
+      creatorId: isEditingLoadedListing() ? (loadedProductRecord?.creatorId || OWNER_CREATOR_ID) : OWNER_CREATOR_ID,
       title: payload.title,
       subtitle: payload.subtitle,
       shortDescription: payload.shortDescription,
@@ -1739,9 +1800,9 @@
     const response = await fetch("/api/account/me", { credentials: "same-origin", headers: { accept: "application/json" } });
     const account = await response.json();
     if (!response.ok || !account.authenticated || !["owner", "admin"].includes(account.user?.role)) {
-      throw new Error("Sign in with an Owner account before publishing.");
+      throw new Error("Sign in with an Admin or Owner account before publishing.");
     }
-    if (!account.csrfToken) throw new Error("The Owner session did not provide a publication security token.");
+    if (!account.csrfToken) throw new Error("The Admin or Owner session did not provide a publication security token.");
     return account.csrfToken;
   };
 
@@ -1878,13 +1939,19 @@
       asset_verification_failed: "R2 verification failed",
       cleanup_incomplete: "Publication cleanup needs attention",
       commit_unverified: "D1 publication could not be verified",
+      immutable_identity: "Product identity cannot be changed",
+      manager_required: "Managing Admin account required",
+      manager_unavailable: "Managing account unavailable",
+      product_not_editable: "Product cannot be maintained here",
+      product_not_found: "Product not found",
+      revision_conflict: "Product changed after loading",
       unexpected: "Publishing failed"
     })[stage] || "Publishing failed";
   }
 
   function setPublishBusyState(busy) {
     publishBusy = busy;
-    buttons.publish.disabled = busy || isEditingLoadedListing() || Boolean(publishedProductSlug);
+    buttons.publish.disabled = busy || Boolean(publishedProductSlug);
     for (const button of [buttons.analyze, buttons.review, buttons.reset]) {
       if (button) button.disabled = busy;
     }
@@ -1895,15 +1962,6 @@
     if (publishBusy) {
       return;
     }
-    if (isEditingLoadedListing()) {
-      showActionFeedback({
-        kind: "error",
-        heading: "Existing listing update unavailable",
-        message: "Native publication is create-only. No request was sent and the existing product was not changed."
-      });
-      return;
-    }
-
     const validationIssues = validateListingIssues();
     if (validationIssues.length) {
       showActionFeedback({
@@ -1932,18 +1990,27 @@
       const formData = new FormData();
       formData.set("metadata", JSON.stringify(metadata));
       const pdfFile = fields.pdfFile.files[0];
-      const coverProcessor = automaticPdfProcessorsForTests?.publicationCovers || (async (file) => {
-        const module = await import("/assets/js/product-pdf-images.mjs?v=20261107b");
-        return module.renderDefaultPdfCoverFiles(file);
-      });
-      const generated = await coverProcessor(pdfFile);
-      if (!generated?.frontFile || !Number.isInteger(generated.pageCount) || generated.pageCount < 1 ||
-          (generated.pageCount > 1 && !generated.backFile)) {
-        throw new Error("PDF cover extraction did not produce the required first and final pages.");
+      if (isEditingLoadedListing()) {
+        formData.set("action", "update");
+        formData.set("slug", loadedProductSlug);
+        formData.set("expectedRevision", String(loadedProductRecord?.revision || 0));
       }
-      formData.set("cover", generated.frontFile);
-      if (generated.backFile) formData.set("backCover", generated.backFile);
-      formData.set("pdf", pdfFile);
+      if (pdfFile) {
+        const coverProcessor = automaticPdfProcessorsForTests?.publicationCovers || (async (file) => {
+          const module = await import("/assets/js/product-pdf-images.mjs?v=20261107b");
+          return module.renderDefaultPdfCoverFiles(file);
+        });
+        const generated = await coverProcessor(pdfFile);
+        if (!generated?.frontFile || !Number.isInteger(generated.pageCount) || generated.pageCount < 1 ||
+            (generated.pageCount > 1 && !generated.backFile)) {
+          throw new Error("PDF cover extraction did not produce the required first and final pages.");
+        }
+        formData.set("cover", generated.frontFile);
+        if (generated.backFile) formData.set("backCover", generated.backFile);
+        formData.set("pdf", pdfFile);
+      } else if (fields.coverFile.files[0]) {
+        formData.set("cover", fields.coverFile.files[0]);
+      }
 
       const response = await fetch(NATIVE_PUBLICATION_ENDPOINT, {
         method: "POST",
@@ -1969,18 +2036,25 @@
       if (!product?.id || !product?.slug || product.publicationState !== "published") {
         throw new Error("The server response did not contain a verified published product identity.");
       }
-      publishedProductSlug = product.slug;
+      const updatedExisting = isEditingLoadedListing();
+      if (!updatedExisting) publishedProductSlug = product.slug;
 
       showActionFeedback({
         kind: "success",
-        heading: "Product published successfully",
-        message: formatPublishSuccessMessage(product),
+        heading: updatedExisting ? "Product updated successfully" : "Product published successfully",
+        message: updatedExisting
+          ? `${product.title} was updated in the native D1 catalog at revision ${product.revision}.`
+          : formatPublishSuccessMessage(product),
         reviewItems: [
           `Product ID: ${product.id}`,
           `Slug: ${product.slug}`,
           `Storefront URL: /store/products/${encodeURIComponent(product.slug)}/`
         ]
       });
+      if (updatedExisting) {
+        await loadAvailableProducts();
+        loadedProductRecord = findAvailableProduct(product.slug) || loadedProductRecord;
+      }
       markDraftBaseline();
       persistExistingListingDraft();
     } catch (error) {
@@ -2004,6 +2078,7 @@
       [fields.slug, "Slug"],
       [fields.folder, "Storage label"],
       [fields.subtitle, "Subtitle"],
+      [fields.authors, "Authors / adapters / designers"],
       [fields.system, "Game system"],
       [fields.line, "Product line"],
       [fields.shortDescription, "Short description"],
@@ -2235,7 +2310,7 @@
     fields.slug.value = product.slug || "";
     fields.folder.value = product.folder || product.slug || "";
     fields.subtitle.value = product.subtitle || "";
-    fields.authors.value = "RV Sawyer";
+    fields.authors.value = Array.isArray(product.authors) && product.authors.length ? product.authors.join(", ") : "RV Sawyer";
     fields.publisher.value = "Tobacco Road Games";
     fields.system.value = product.gameSystem || "";
     if (fields.genre) fields.genre.value = product.genre || "";
@@ -2327,7 +2402,7 @@
     fields.slug.value = draft.slug ?? product.slug ?? "";
     fields.folder.value = draft.folder ?? product.folder ?? product.slug ?? "";
     fields.subtitle.value = draft.subtitle ?? product.subtitle ?? "";
-    fields.authors.value = "RV Sawyer";
+    fields.authors.value = draft.authors ?? (Array.isArray(product.authors) && product.authors.length ? product.authors.join(", ") : "RV Sawyer");
     fields.publisher.value = "Tobacco Road Games";
     fields.system.value = draft.gameSystem ?? product.gameSystem ?? "";
     fields.line.value = draft.line ?? product.productLine ?? "";
@@ -2609,8 +2684,8 @@
     fields.currency.value = "USD";
     fields.saleEnabled.checked = false;
     fields.openRulesEligible.checked = false;
-    fields.status.value = "coming-soon";
-    fields.buyMode.value = "coming-soon";
+    fields.status.value = "preview-only";
+    fields.buyMode.value = "preview-only";
     fields.buyUrl.value = "";
     syncBuyModeUi();
     fields.shortDescription.value = "";

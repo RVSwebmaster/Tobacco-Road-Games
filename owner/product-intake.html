@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tobacco Road Games Product Intake</title>
+  <title>Tobacco Road Games Admin and Owner Product Intake</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" href="../assets/logo.png?v=20260604e">
   <link rel="stylesheet" href="../styles.css?v=20260604e">
@@ -736,11 +736,11 @@
         <img class="brand__logo" src="../assets/logo.png?v=20260604e" alt="Tobacco Road Games logo">
         <div class="brand__copy">
           <span class="brand__name">Tobacco Road Games</span>
-          <span class="brand__tag">Owner intake bench for storefront product pages</span>
+          <span class="brand__tag">Admin and Owner intake bench for native D1/R2 publications</span>
         </div>
       </a>
 
-      <nav class="site-nav" aria-label="Owner navigation">
+      <nav class="site-nav" aria-label="Admin and Owner navigation">
         <a href="/owner/">Dashboard</a>
         <a href="../index.html">Home</a>
         <a href="../store/">Store</a>
@@ -754,9 +754,9 @@
     <main id="top">
       <section class="store-section" aria-labelledby="intake-heading">
         <div class="section-heading">
-          <p class="section-heading__kicker">Owner Tool</p>
+          <p class="section-heading__kicker">Admin / Owner Tool</p>
           <h1 id="intake-heading">Product Intake Bench</h1>
-          <p>Use this Owner workbench to prepare, validate, and publish new products directly to the native Cloudflare catalog.</p>
+          <p>Use this workbench to prepare, validate, and publish official products directly to the native Cloudflare D1 catalog and R2 storage.</p>
           <p>Required files: one cover WebP and one product PDF. Publication assigns unique private R2 object keys, verifies both uploads, and commits the D1 product record before success is reported. The cover becomes public through <code>/product-assets/</code>. The PDF stays private.</p>
         </div>
 
@@ -908,8 +908,9 @@
               </div>
 
               <div class="intake-field">
-                <label for="product-authors">Authors</label>
-                <input id="product-authors" class="dock-input" type="text" value="RV Sawyer" readonly>
+                <label for="product-authors">Authors / Adapters / Designers</label>
+                <input id="product-authors" class="dock-input" type="text" value="RV Sawyer" placeholder="Comma-separated credits">
+                <p class="intake-help">Publication credits are independent of the Admin or Owner account managing this product.</p>
               </div>
 
               <div class="intake-field">
@@ -1023,7 +1024,7 @@
                   <option value="coming-soon">Coming Soon</option>
                   <option value="available-direct">Available Direct</option>
                   <option value="preview-available">Preview Available</option>
-                  <option value="preview-only">Preview Only</option>
+                  <option value="preview-only" selected>Preview Only</option>
                   <option value="revised-edition-pending">Revised Edition Pending</option>
                   <option value="legacy-edition">Legacy Edition</option>
                   <option value="legacy-not-for-sale">Legacy Not For Sale</option>
@@ -1040,7 +1041,7 @@
                   <option value="cart">cart</option>
                   <option value="fixed-price">fixed-price</option>
                   <option value="manual-invoice">manual-invoice</option>
-                  <option value="preview-only">preview-only</option>
+                  <option value="preview-only" selected>preview-only</option>
                   <option value="free-download">free-download</option>
                   <option value="pay-what-you-want">pay-what-you-want</option>
                   <option value="retired">retired</option>
@@ -1226,7 +1227,7 @@
           <div class="intake-action-card">
             <strong id="intake-publish-label">Publish New Product</strong>
             <button id="publish-button" class="button button--primary" type="button" aria-describedby="intake-publish-help">Publish New Product</button>
-            <p id="intake-publish-help">Publishes directly to the native Cloudflare D1 catalog and private R2 product storage.</p>
+            <p id="intake-publish-help">Publishes directly to native Cloudflare D1 and private R2 storage. New forms default to unlisted, non-purchasable Preview Only inventory.</p>
           </div>
           <div class="intake-action-card">
             <strong id="intake-reset-label">Clear New Product Form</strong>
@@ -1319,11 +1320,11 @@
 
     <footer class="site-footer">
       <p>&copy; 2026 Tobacco Road Games.</p>
-      <p>Owner staging tool for catalog work in progress.</p>
+      <p>Admin and Owner staging tool for native catalog work in progress.</p>
     </footer>
   </div>
 
   <script src="../shared/product-advisor.js?v=20260624a"></script>
-  <script src="../assets/js/product-intake.js?v=sha256-ff4067d072daf4ae"></script>
+  <script src="../assets/js/product-intake.js?v=sha256-5247dbb079c05407"></script>
 </body>
 </html>

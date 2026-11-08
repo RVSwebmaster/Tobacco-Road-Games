@@ -45,7 +45,7 @@ async function main() {
         status: "free-download", buyMode: "free-download", pricingModel: "free", priceCents: 0,
         publisher: "Owner Publishing", metadata: { authors: ["Owner Author"], pageCount: 122 }
       });
-      assert.equal(await storefront.isAutoRotationEligible(database, creatorId), item.eligible, item.slug);
+      assert.equal(await storefront.isAutoRotationEligible(database, creatorId, item.slug), item.eligible, item.slug);
       const response = await storefront.handlePublicProductPage({
         request: new Request(`https://example.com/store/products/${item.slug}/`),
         params: { slug: item.slug }, env: { TRG_ORDERS: database }
@@ -58,15 +58,40 @@ async function main() {
     }
     const ordinary = cases[3];
     raw.prepare("UPDATE users SET role='admin' WHERE id=?").run(`user-${ordinary.slug}`);
-    assert.equal(await storefront.isAutoRotationEligible(database, `creator-${ordinary.slug}`), true,
+    assert.equal(await storefront.isAutoRotationEligible(database, `creator-${ordinary.slug}`, ordinary.slug), true,
       "An authoritative account role change changes eligibility.");
     raw.prepare("UPDATE users SET role='user' WHERE id=?").run(`user-${ordinary.slug}`);
     raw.prepare("UPDATE creator_badge_awards SET state='revoked' WHERE creator_id=?").run(`creator-${cases[2].slug}`);
-    assert.equal(await storefront.isAutoRotationEligible(database, `creator-${cases[2].slug}`), false,
+    assert.equal(await storefront.isAutoRotationEligible(database, `creator-${cases[2].slug}`, cases[2].slug), false,
       "A revoked Founding Creator badge does not qualify.");
     raw.prepare("UPDATE users SET status='disabled' WHERE id=?").run(`user-${cases[0].slug}`);
-    assert.equal(await storefront.isAutoRotationEligible(database, `creator-${cases[0].slug}`), false,
+    assert.equal(await storefront.isAutoRotationEligible(database, `creator-${cases[0].slug}`, cases[0].slug), false,
       "An inactive management account does not qualify.");
+
+    raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?,?,1,'active','admin',?,?)")
+      .run("admin-intake-manager", "admin-intake-manager@example.invalid", date, date);
+    await catalog.createProduct(database, {
+      id: "admin-managed-official-book",
+      slug: "admin-managed-official-book",
+      creatorId: `creator-${ordinary.slug}`,
+      managedByUserId: "admin-intake-manager",
+      publicationState: "published",
+      title: "Admin Managed Official Book",
+      status: "preview-only",
+      buyMode: "preview-only",
+      pricingModel: "fixed",
+      priceCents: 0,
+      publisher: "Tobacco Road Games",
+      metadata: { authors: ["Independent Author"], pageCount: 122 }
+    });
+    assert.equal(await storefront.isAutoRotationEligible(database,
+      `creator-${ordinary.slug}`, "admin-managed-official-book"), true,
+    "The product's authoritative active Admin manager qualifies independently of author and publishing identity text.");
+    const adminManagedResponse = await storefront.handlePublicProductPage({
+      request: new Request("https://example.com/store/products/admin-managed-official-book/"),
+      params: { slug: "admin-managed-official-book" }, env: { TRG_ORDERS: database }
+    });
+    assert.match(await adminManagedResponse.text(), /data-auto-rotate="true"/);
     testMotionControls();
     console.log("Product book D1 eligibility tests passed.");
   } finally { raw.close(); }

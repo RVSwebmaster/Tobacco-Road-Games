@@ -104,14 +104,97 @@ async function main() {
   const ownerPayload = await ownerResponse.json();
   assert.equal(ownerPayload.product.slug, "publication-owner-route");
   assert.equal(ownerPayload.storefrontUrl, "/store/products/publication-owner-route/");
-  assert.equal((await catalog.getProductBySlug(db, "publication-owner-route")).publicationState, "published");
+  const ownerProduct = await catalog.getProductBySlug(db, "publication-owner-route");
+  assert.equal(ownerProduct.publicationState, "published");
+  assert.equal(ownerProduct.managedByUserId, "test-owner");
+
+  const updatedOwnerProduct = await publication.updatePublishedProduct(db, bucket, {
+    slug: ownerProduct.slug,
+    expectedRevision: ownerProduct.revision,
+    metadata: { ...viaRoute.metadata, title: "Product publication-owner-route revised" }
+  }, { managingRole: "owner", managingUserId: "test-owner", nowMs: NOW_MS + 1000 });
+  assert.equal(updatedOwnerProduct.title, "Product publication-owner-route revised");
+  assert.equal(updatedOwnerProduct.revision, 2);
+  assert.equal(updatedOwnerProduct.coverR2Key, ownerProduct.coverR2Key);
+  assert.equal(updatedOwnerProduct.deliveryR2Key, ownerProduct.deliveryR2Key);
+
+  raw.prepare("INSERT INTO users(id,email_normalized,role,status,created_at,updated_at) VALUES(?,?,?,?,?,?)")
+    .run("test-admin", "admin@example.invalid", "admin", "active", now, now);
+  raw.prepare("INSERT INTO users(id,email_normalized,role,status,created_at,updated_at) VALUES(?,?,?,?,?,?)")
+    .run("test-creator-user", "creator@example.invalid", "user", "active", now, now);
+  const adminSessionToken = "admin-test-session", adminCsrfToken = "admin-test-csrf";
+  const creatorSessionToken = "creator-test-session", creatorCsrfToken = "creator-test-csrf";
+  for (const [id, userId, token, csrf] of [
+    ["admin-session", "test-admin", adminSessionToken, adminCsrfToken],
+    ["creator-session", "test-creator-user", creatorSessionToken, creatorCsrfToken]
+  ]) {
+    raw.prepare("INSERT INTO sessions(id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?,?)")
+      .run(id, userId, await auth.hashToken(token), await auth.hashToken(csrf),
+        now, new Date(Date.now() + 60_000).toISOString(), now);
+  }
+
+  const adminInput = input("publication-admin-private", {
+    publisher: "Tobacco Road Games",
+    status: "preview-only",
+    buyMode: "preview-only",
+    priceCents: 0,
+    metadata: { authors: ["RV Sawyer"], pageCount: 122 }
+  });
+  const adminForm = new FormData();
+  adminForm.set("metadata", JSON.stringify(adminInput.metadata));
+  adminForm.set("cover", adminInput.coverFile);
+  adminForm.set("pdf", adminInput.pdfFile);
+  const adminResponse = await publication.handleOwnerCatalogPublicationRequest(new Request(
+    "https://example.test/owner/api/catalog-publication", {
+      method: "POST",
+      headers: {
+        origin: "https://example.test",
+        cookie: `${auth.ACCOUNT_SESSION_COOKIE}=${adminSessionToken}; ${auth.ACCOUNT_CSRF_COOKIE}=${adminCsrfToken}`,
+        "x-csrf-token": adminCsrfToken
+      },
+      body: adminForm
+    }
+  ), { TRG_ORDERS: db, TRG_PRODUCTS: bucket });
+  assert.equal(adminResponse.status, 201);
+  const adminProduct = await catalog.getProductBySlug(db, "publication-admin-private");
+  assert.equal(adminProduct.managedByUserId, "test-admin");
+  assert.equal(adminProduct.publisher, "Tobacco Road Games");
+  assert.deepEqual(adminProduct.metadata.authors, ["RV Sawyer"]);
+  assert.equal(adminProduct.status, "preview-only");
+  assert.equal(adminProduct.buyMode, "preview-only");
+  assert.equal(adminProduct.priceCents, 0);
+
+  const creatorForm = new FormData();
+  creatorForm.set("metadata", "{}");
+  const creatorResponse = await publication.handleOwnerCatalogPublicationRequest(new Request(
+    "https://example.test/owner/api/catalog-publication", {
+      method: "POST",
+      headers: {
+        origin: "https://example.test",
+        cookie: `${auth.ACCOUNT_SESSION_COOKIE}=${creatorSessionToken}; ${auth.ACCOUNT_CSRF_COOKIE}=${creatorCsrfToken}`,
+        "x-csrf-token": creatorCsrfToken
+      },
+      body: creatorForm
+    }
+  ), { TRG_ORDERS: db, TRG_PRODUCTS: bucket });
+  assert.equal(creatorResponse.status, 403);
+
+  const listResponse = await publication.handleOwnerCatalogPublicationRequest(new Request(
+    "https://example.test/owner/api/catalog-publication", {
+      headers: { cookie: `${auth.ACCOUNT_SESSION_COOKIE}=${adminSessionToken}` }
+    }
+  ), { TRG_ORDERS: db, TRG_PRODUCTS: bucket });
+  assert.equal(listResponse.status, 200);
+  const intakeProducts = (await listResponse.json()).products;
+  assert.equal(intakeProducts.find(product => product.slug === adminProduct.slug).managedByUserId, "test-admin");
+  assert.deepEqual(intakeProducts.find(product => product.slug === adminProduct.slug).authors, ["RV Sawyer"]);
   const badCsrf = new Request("https://example.test/owner/api/catalog-publication", {
     method: "POST", headers: { origin: "https://example.test",
       cookie: `${auth.ACCOUNT_SESSION_COOKIE}=${sessionToken}; ${auth.ACCOUNT_CSRF_COOKIE}=${csrfToken}`,
       "x-csrf-token": "wrong" }, body: new FormData()
   });
   assert.equal((await publication.handleOwnerCatalogPublicationRequest(badCsrf, { TRG_ORDERS: db, TRG_PRODUCTS: bucket })).status, 403);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 4);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM marketplace_products").get().n, 5);
   assert.deepEqual(raw.prepare("PRAGMA foreign_key_check").all(), []);
   raw.close();
   console.log("Native product publication unit tests passed.");
