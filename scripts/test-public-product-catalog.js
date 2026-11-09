@@ -25,6 +25,10 @@ async function main() {
       tags: ["Game"], privateNote: "do not expose" } });
   await catalog.createProduct(db, { ...base, id: "draft-item", slug: "draft-item", title: "Draft Item",
     publicationState: "draft", metadata: { privateNote: "hidden" } });
+  await catalog.createProduct(db, { ...base, id: "preview-open-rules", slug: "preview-open-rules", title: "Preview Open Rules",
+    publicationState: "published", status: "preview-only", buyMode: "preview-only", priceCents: 0,
+    coverR2Key: "catalog-publications/preview-open-rules/cover.webp",
+    metadata: { openRulesEligible: true, pageCount: 122 } });
   const get = url => route.handlePublicCatalogRequest(new Request(url), { TRG_ORDERS: db });
 
   const lookup = await get("https://example.test/api/catalog?slug=public-item");
@@ -46,6 +50,10 @@ async function main() {
   assert.equal(publicItem.deliveryR2Key, undefined);
   assert.equal(publicItem.deliveryFilename, undefined);
   assert.equal((await get("https://example.test/api/catalog?slug=draft-item")).status, 404);
+  const previewOpenRules = (await (await get("https://example.test/api/catalog?slug=preview-open-rules")).json()).product;
+  assert.equal(previewOpenRules.storefrontVisibility, "unlisted");
+  assert.equal(previewOpenRules.purchaseAvailability, "unavailable");
+  assert.equal(previewOpenRules.metadata.openRulesEligible, true);
 
   const listing = await get("https://example.test/api/catalog?creatorId=creator-rv-sawyer&status=pay-what-you-want&limit=1&offset=0");
   assert.equal(listing.status, 200);

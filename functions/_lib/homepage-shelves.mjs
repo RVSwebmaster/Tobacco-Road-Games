@@ -6,6 +6,7 @@ import {
 } from "./homepage-config-d1.mjs";
 import {
   getApprovedPublicProductById,
+  getApprovedPublicProductsByIds,
   getApprovedPublicProductBySlug
 } from "./public-product-catalog.mjs";
 import { getProductById, listProducts } from "./product-catalog-d1.mjs";
@@ -13,6 +14,20 @@ import { getProductById, listProducts } from "./product-catalog-d1.mjs";
 export const HOMEPAGE_BEST_SELLER_WINDOW_DAYS = 30;
 export const HOMEPAGE_BEST_SELLER_LIMIT = 43;
 export const HOMEPAGE_NEW_RELEASE_WINDOW_DAYS = 7;
+export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([
+  "5e-players-manual",
+  "5e-spellbook",
+  "5e-bard-spellbook",
+  "5e-cleric-spellbook",
+  "5e-druid-spellbook",
+  "5e-paladin-spellbook",
+  "5e-ranger-spellbook",
+  "5e-sorcerer-spellbook",
+  "5e-warlock-spellbook",
+  "5e-wizard-spellbook",
+  "5e-relics-and-wonders",
+  "5e-dungeon-masters-handbook"
+]);
 
 const BEST_SELLER_SQL = `
 SELECT
@@ -50,6 +65,7 @@ export async function getHomepageShelves(database, options = {}) {
     nowMs,
     windowDays
   });
+  const openRulesLibrary = await getOpenRulesLibraryProducts(database, options.catalog);
 
   const featuredConfig = configuration.shelves.featuredCreator;
   const featuredPool = featuredConfig.creatorId
@@ -66,7 +82,13 @@ export async function getHomepageShelves(database, options = {}) {
     bestSellers: publicShelf(configuration.shelves.bestSellers,
       selectShelfProducts(configuration.shelves.bestSellers, candidates.bestSellers), suppressed.bestSellers),
     freePwyw: publicShelf(configuration.shelves.freePwyw,
-      selectShelfProducts(configuration.shelves.freePwyw, candidates.freePwyw), suppressed.freePwyw)
+      selectShelfProducts(configuration.shelves.freePwyw, candidates.freePwyw), suppressed.freePwyw),
+    openRulesLibrary: {
+      managed: true,
+      products: openRulesLibrary,
+      suppressedSlugs: [],
+      visible: true
+    }
   };
 
   return {
@@ -75,6 +97,32 @@ export async function getHomepageShelves(database, options = {}) {
     shelves,
     windowDays
   };
+}
+
+export async function getOpenRulesLibraryProducts(database, compatibilityCatalog = null) {
+  if (Array.isArray(compatibilityCatalog)) {
+    return selectOpenRulesLibraryProducts(compatibilityCatalog);
+  }
+  return selectOpenRulesLibraryProducts(
+    await getApprovedPublicProductsByIds(database, OPEN_RULES_LIBRARY_PRODUCT_IDS)
+  );
+}
+
+export function selectOpenRulesLibraryProducts(products) {
+  const byId = new Map(products.map((product) => [String(product.id || product.slug || ""), product]));
+  return OPEN_RULES_LIBRARY_PRODUCT_IDS
+    .map((id) => byId.get(id))
+    .filter(isOpenRulesLibraryProduct)
+    .map(toHomepageProduct);
+}
+
+function isOpenRulesLibraryProduct(product) {
+  return Boolean(
+    product
+      && product.metadata?.openRulesEligible === true
+      && String(product.status || "") !== "retired"
+      && String(product.buyMode || "") !== "retired"
+  );
 }
 
 export async function getHomepageCandidateSets(database, options = {}) {
@@ -221,6 +269,7 @@ function releaseTimestamp(product) {
   return NaN;
 }
 function publicPriceLabel(product) {
+  if (product.buyMode === "preview-only" || product.status === "preview-only") return "Preview Only";
   if (product.pricingModel === "free") return "Free Download";
   if (product.pricingModel === "pwyw") return `Pay What You Want — ${money(product.suggestedPriceCents, product.currency)} suggested`;
   if (Number.isSafeInteger(product.priceCents)) return money(product.priceCents, product.currency);

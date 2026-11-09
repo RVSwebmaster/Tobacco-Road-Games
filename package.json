@@ -67,7 +67,8 @@
     "test:office": "node scripts/test-office.js",
     "test:store-kill-switch": "node scripts/test-store-kill-switch.js",
     "test:free-download": "node scripts/test-free-download.js",
-    "test:homepage-shelves": "node scripts/test-homepage-shelves.js"
+    "test:homepage-shelves": "node scripts/test-homepage-shelves.js",
+    "test:open-rules-production-promotion": "node scripts/test-open-rules-production-promotion.js"
   },
   "repository": {
     "type": "git",

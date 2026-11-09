@@ -5424,6 +5424,107 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   outline-offset: 2px;
 }
 
+.shop-wall-library-books > .homepage-open-rules-book {
+  position: relative;
+  isolation: isolate;
+  flex: 0 0 var(--open-rules-spine-width, 12px);
+  width: var(--open-rules-spine-width, 12px);
+  min-width: var(--open-rules-spine-width, 12px);
+  padding: 0;
+  overflow: hidden;
+  writing-mode: horizontal-tb;
+  border-color: rgba(30, 15, 7, 0.92);
+  box-shadow:
+    inset 1px 0 rgba(255, 234, 178, 0.32),
+    inset -2px 0 rgba(16, 7, 3, 0.48),
+    1px 0 1px rgba(15, 7, 3, 0.48);
+}
+
+.homepage-open-rules-book__title,
+.homepage-open-rules-book__publisher {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  max-height: calc(100% - 14px);
+  overflow: hidden;
+  color: #f4dda0;
+  font-family: Georgia, "Times New Roman", serif;
+  text-shadow: 0 1px 1px #160a04, 0 0 2px #160a04;
+  transform: translateX(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.homepage-open-rules-book__title {
+  top: 7px;
+  font-size: clamp(7px, calc(var(--open-rules-spine-width) * 0.58), 10px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.homepage-open-rules-book__publisher {
+  bottom: 7px;
+  max-height: 46px;
+  color: #d9bb72;
+  font: 600 6px/1 "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
+.guest-landing-page .guest-open-rules-mock-book.guest-open-rules-real-book {
+  flex-basis: calc(var(--guest-library-book-width) * var(--open-rules-spine-ratio, 1));
+  width: calc(var(--guest-library-book-width) * var(--open-rules-spine-ratio, 1));
+  max-width: calc(var(--guest-library-book-width) * var(--open-rules-spine-ratio, 1));
+  background: #1a110b;
+  pointer-events: auto;
+}
+
+.guest-open-rules-real-book__link {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+.guest-open-rules-real-book__cover {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(100% * 887 / 203);
+  max-width: none;
+  height: 100%;
+  object-fit: fill;
+  transform: translateX(-50%);
+}
+
+.guest-open-rules-real-book__title,
+.guest-open-rules-real-book__publisher {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  overflow: hidden;
+  color: #f4dda0;
+  text-shadow: 0 1px 1px #160a04, 0 0 2px #160a04;
+  transform: translateX(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.guest-open-rules-real-book__title {
+  top: 7%;
+  max-height: 74%;
+  font: 700 clamp(5px, .42vw, 9px)/1 Georgia, "Times New Roman", serif;
+}
+
+.guest-open-rules-real-book__publisher {
+  bottom: 7%;
+  max-height: 34%;
+  color: #d9bb72;
+  font: 600 clamp(4px, .31vw, 6px)/1 "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
 /* Dressing occupies only the existing inner-edge niches, outside book flow.
    Pot contact points are within the supplied trailing-vine bitmaps. */
 .shop-wall-top-dressing {

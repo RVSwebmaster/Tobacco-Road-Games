@@ -79,6 +79,21 @@ export async function getApprovedPublicProductById(database, id) {
   return creator ? publicProduct(product, creator) : null;
 }
 
+export async function getApprovedPublicProductsByIds(database, ids) {
+  const products = (await Promise.all(ids.map((id) => getProductById(database, id))))
+    .filter((product) => product?.publicationState === "published");
+  const creators = new Map();
+  for (const creatorId of new Set(products.map((product) => product.creatorId))) {
+    creators.set(creatorId, await getApprovedCreator(database, creatorId));
+  }
+  return products
+    .map((product) => {
+      const creator = creators.get(product.creatorId);
+      return creator ? publicProduct(product, creator) : null;
+    })
+    .filter(Boolean);
+}
+
 export async function getOtherApprovedPublicProductsByCreator(database, creatorId, currentSlug) {
   const creator = await getApprovedCreator(database, creatorId);
   if (!creator) return [];

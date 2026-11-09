@@ -115,6 +115,25 @@ async function testBestSellerService() {
   assert.match(capturedSql, /payment_status = 'paid'/);
   assert.match(capturedSql, /NOT LIKE '%test%'/);
   assert.equal(capturedBindings[1], 43, "Best Sellers query must cap the homepage shelf at 43 products.");
+
+  const openRulesCatalog = service.OPEN_RULES_LIBRARY_PRODUCT_IDS.map((id, index) => runtimeProduct(id, 0, {
+    id,
+    buyMode: "preview-only",
+    priceLabel: "",
+    status: "preview-only",
+    metadata: { openRulesEligible: true, pageCount: 20 + index * 10 }
+  }));
+  openRulesCatalog.push(runtimeProduct("staging-open-rules-fixture", 0, {
+    id: "staging-open-rules-fixture",
+    buyMode: "preview-only",
+    status: "preview-only",
+    metadata: { openRulesEligible: true, pageCount: 12 }
+  }));
+  const selected = service.selectOpenRulesLibraryProducts(openRulesCatalog);
+  assert.deepEqual(selected.map((product) => product.id), service.OPEN_RULES_LIBRARY_PRODUCT_IDS,
+    "The Open Rules shelf must use only the twelve approved D1 identities in their editorial order.");
+  assert.ok(selected.every((product) => product.priceLabel === "Preview Only"));
+  assert.ok(selected.every((product) => product.cover.endsWith("/cover.webp")));
 }
 
 function runtimeProduct(slug, cents, overrides = {}) {
@@ -143,6 +162,16 @@ function testClientWiring() {
   assert.match(client, /dataset\.guestProductPreview/);
   assert.match(client, /readExistingProducts/);
   assert.match(client, /suppressedSlugs/);
+  assert.match(client, /openRulesLibrary:\s*"open-rules-library-heading"/);
+  assert.match(client, /homepage-open-rules-book/);
+  assert.match(client, /products\.slice\(index \* 6, index \* 6 \+ 6\)/);
+  assert.match(client, /depthForPages\(pageCount\) \* 188 \/ 340/);
+  assert.match(client, /guest-open-rules-real-book/);
+  assert.match(client, /removeAttribute\("data-mock-open-rule"\)/);
+  assert.match(client, /--open-rules-spine-ratio/);
+  assert.match(client, /guest-open-rules-real-book__link/);
+  const styles = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
+  assert.match(styles, /\.shop-wall-library-books > \.homepage-open-rules-book[\s\S]*?--open-rules-spine-width/);
   assert.match(preview, /guestPreviewBound/);
   assert.match(preview, /realProductLink/);
   assert.match(preview, /trg:homepage-shelves-updated/);
