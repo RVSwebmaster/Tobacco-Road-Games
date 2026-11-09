@@ -29,6 +29,7 @@
     "test:pages-environment-isolation": "node scripts/test-pages-environment-isolation.js",
     "test:product-catalog-d1": "node scripts/test-product-catalog-d1.js",
     "test:product-publication": "node scripts/test-product-publication.js",
+    "test:admin-publication-import": "node scripts/test-admin-publication-import.js",
     "test:public-product-catalog": "node scripts/test-public-product-catalog.js",
     "test:public-product-assets": "node scripts/test-public-product-assets.js",
     "test:d1-public-storefront": "node scripts/test-d1-public-storefront.js",
