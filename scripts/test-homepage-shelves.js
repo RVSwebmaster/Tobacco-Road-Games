@@ -184,6 +184,13 @@ function testClientWiring() {
   assert.match(client, /removeAttribute\("data-mock-open-rule"\)/);
   assert.match(client, /--open-rules-spine-ratio/);
   assert.match(client, /guest-open-rules-real-book__link/);
+  assert.match(client, /function createRotationSpine\(product\)/);
+  assert.match(client, /function createRotationBook\(product\)/);
+  assert.match(client, /homepage-open-rules-book__rotation/);
+  assert.match(client, /--book-angle/, "Shelf books must use the rendered rotation angle.");
+  assert.match(client, /panel\.className = "product-book__spine-art"/);
+  assert.match(client, /title\.className = "product-book__spine-title"/);
+  assert.match(client, /credit\.className = "product-book__spine-credit"/);
   const styles = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
   assert.match(styles, /\.shop-wall-library-books > \.homepage-open-rules-book[\s\S]*?--open-rules-spine-width/);
   assert.match(preview, /guestPreviewBound/);

@@ -86,6 +86,52 @@
     return stock;
   }
 
+  function createRotationSpine(product) {
+    const panel = document.createElement("span");
+    panel.className = "product-book__spine-art";
+    const title = document.createElement("strong");
+    title.className = "product-book__spine-title";
+    title.textContent = product.title;
+    title.title = product.title;
+    const credit = document.createElement("span");
+    credit.className = "product-book__spine-credit";
+    credit.textContent = product.creator || "Tobacco Road Games";
+    credit.title = credit.textContent;
+    panel.append(title, credit);
+    return panel;
+  }
+
+  function createRotationBook(product) {
+    const stage = document.createElement("span");
+    stage.className = "homepage-open-rules-book__rotation";
+    stage.setAttribute("aria-hidden", "true");
+
+    const book = document.createElement("span");
+    book.className = "product-book homepage-open-rules-book__product";
+    book.style.setProperty("--book-angle", "-88deg");
+
+    const front = document.createElement("span");
+    front.className = "product-book__face product-book__front";
+    const cover = document.createElement("img");
+    cover.className = "product-cover";
+    cover.src = product.cover || "/assets/tobacco-road-games-logo.png";
+    cover.alt = "";
+    cover.loading = "lazy";
+    cover.decoding = "async";
+    front.append(cover);
+
+    const spine = document.createElement("span");
+    spine.className = "product-book__face product-book__spine";
+    spine.append(createRotationSpine(product));
+
+    const pages = document.createElement("span");
+    pages.className = "product-book__face product-book__pages";
+
+    book.append(front, spine, pages);
+    stage.append(book);
+    return stage;
+  }
+
   function createOpenRulesSpine(product) {
     const link = document.createElement("a");
     const pageCount = Number(product.metadata?.pageCount);
@@ -101,23 +147,7 @@
     link.setAttribute("aria-label", `Open ${product.title} product page`);
     link.title = `${product.title} — ${product.creator}`;
 
-    const cover = document.createElement("img");
-    cover.src = product.cover || "/assets/tobacco-road-games-logo.png";
-    cover.alt = "";
-    cover.loading = "lazy";
-    cover.decoding = "async";
-    cover.setAttribute("aria-hidden", "true");
-
-    const title = document.createElement("span");
-    title.className = "homepage-open-rules-book__title";
-    title.textContent = product.title;
-    title.setAttribute("aria-hidden", "true");
-
-    const publisher = document.createElement("span");
-    publisher.className = "homepage-open-rules-book__publisher";
-    publisher.textContent = product.creator;
-    publisher.setAttribute("aria-hidden", "true");
-    link.append(cover, title, publisher);
+    link.append(createRotationBook(product));
     return link;
   }
 
@@ -144,24 +174,7 @@
       link.setAttribute("aria-label", `Open ${product.title} product page`);
       link.title = `${product.title} — ${product.creator}`;
 
-      const cover = document.createElement("img");
-      cover.className = "guest-open-rules-real-book__cover";
-      cover.src = product.cover || "/assets/tobacco-road-games-logo.png";
-      cover.alt = "";
-      cover.loading = "lazy";
-      cover.decoding = "async";
-      cover.setAttribute("aria-hidden", "true");
-
-      const title = document.createElement("span");
-      title.className = "guest-open-rules-real-book__title";
-      title.textContent = product.title;
-      title.setAttribute("aria-hidden", "true");
-
-      const publisher = document.createElement("span");
-      publisher.className = "guest-open-rules-real-book__publisher";
-      publisher.textContent = product.creator;
-      publisher.setAttribute("aria-hidden", "true");
-      link.append(cover, title, publisher);
+      link.append(createRotationBook(product));
       book.replaceChildren(link);
     });
     return true;
