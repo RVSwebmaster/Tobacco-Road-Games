@@ -5,6 +5,15 @@
   let dialog;
   let activeBook;
   let restoreFocus;
+  const COVER_ONLY_CLASS = "guest-product-preview--cover-only";
+
+  function revealDetails() {
+    if (!dialog?.classList.contains(COVER_ONLY_CLASS)) return;
+    const summary = dialog.querySelector("[data-guest-preview-summary]");
+    dialog.classList.remove(COVER_ONLY_CLASS);
+    summary.setAttribute("aria-expanded", "true");
+    summary.setAttribute("aria-label", `Open ${dialog.querySelector("[data-guest-preview-title]").textContent} full product profile`);
+  }
 
   function createDialog() {
     dialog = document.createElement("dialog");
@@ -14,6 +23,17 @@
     dialog.innerHTML = `<div class="guest-product-preview__panel"><button class="guest-product-preview__close" type="button" data-guest-preview-close aria-label="Close product preview">×</button><a class="guest-product-preview__summary" data-guest-preview-summary><img class="guest-product-preview__cover" data-guest-preview-cover alt=""><div class="guest-product-preview__copy"><p class="guest-product-preview__kicker">Product preview</p><h2 id="guest-product-preview-title" data-guest-preview-title></h2><p class="guest-product-preview__creator" data-guest-preview-creator></p><p class="guest-product-preview__price" data-guest-preview-price></p><p id="guest-product-preview-description" data-guest-preview-description></p><span class="button button--primary">Open full product profile</span></div></a></div>`;
     document.body.append(dialog);
     dialog.querySelector("[data-guest-preview-close]").addEventListener("click", close);
+    const summary = dialog.querySelector("[data-guest-preview-summary]");
+    summary.addEventListener("click", (event) => {
+      if (!dialog.classList.contains(COVER_ONLY_CLASS)) return;
+      event.preventDefault();
+      revealDetails();
+    });
+    summary.addEventListener("keydown", (event) => {
+      if (event.key !== " " || !dialog.classList.contains(COVER_ONLY_CLASS)) return;
+      event.preventDefault();
+      revealDetails();
+    });
     dialog.addEventListener("cancel", (event) => { event.preventDefault(); close(); });
     dialog.addEventListener("click", (event) => { if (event.target === dialog) close(); });
     document.addEventListener("keydown", (event) => {
@@ -33,9 +53,13 @@
     dialog.querySelector("[data-guest-preview-creator]").textContent = `By ${product.creator}`;
     dialog.querySelector("[data-guest-preview-price]").textContent = product.priceLabel;
     dialog.querySelector("[data-guest-preview-description]").textContent = product.description;
-    dialog.querySelector("[data-guest-preview-summary]").href = product.fullUrl;
+    const summary = dialog.querySelector("[data-guest-preview-summary]");
+    summary.href = product.fullUrl;
+    summary.setAttribute("aria-expanded", "false");
+    summary.setAttribute("aria-label", `Show information for ${product.title}`);
+    dialog.classList.add(COVER_ONLY_CLASS);
     dialog.showModal();
-    dialog.querySelector("[data-guest-preview-close]").focus();
+    summary.focus();
   }
 
   function close() {
@@ -63,7 +87,7 @@
 
   document.addEventListener("trg:homepage-shelves-updated", bindBooks);
 
-  fetch("/data/guest-preview-products.json?v=20261026-homepage-shelves1", { cache: "no-store" })
+  fetch("/data/guest-preview-products.json?v=20261112-cover-first-preview1", { cache: "no-store" })
     .then((response) => response.ok ? response.json() : [])
     .then((products) => {
       const shelfByCollection = {

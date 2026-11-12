@@ -163,6 +163,13 @@
 .guest-product-preview__price { color: #e9c875; font-weight: 700; }
 .guest-product-preview__copy > p:last-of-type { color: #e4dac1; line-height: 1.55; }
 .guest-product-preview__summary .button { justify-self: start; margin-top: 6px; }
+.guest-product-preview--cover-only { width: min(420px, calc(100vw - 32px)); border-color: transparent; background: transparent; box-shadow: none; overflow: visible; }
+.guest-product-preview--cover-only .guest-product-preview__panel { display: grid; place-items: center; padding: 44px 32px 24px; }
+.guest-product-preview--cover-only .guest-product-preview__close { top: 2px; right: 2px; background: rgba(27,24,17,.94); }
+.guest-product-preview--cover-only .guest-product-preview__summary { grid-template-columns: 1fr; justify-items: center; gap: 12px; width: 100%; }
+.guest-product-preview--cover-only .guest-product-preview__cover { width: auto; max-width: min(340px, calc(100vw - 80px)); height: min(68vh, 460px); aspect-ratio: auto; object-fit: contain; border-color: rgba(225,188,95,.72); background: #2a2419; box-shadow: 0 24px 56px rgba(0,0,0,.68); }
+.guest-product-preview--cover-only .guest-product-preview__copy { display: none; }
+.guest-product-preview--cover-only .guest-product-preview__summary::after { color: #f0d795; content: "Select the cover to view product information"; font: 700 .74rem/1.3 "Trebuchet MS", sans-serif; letter-spacing: .05em; text-align: center; text-shadow: 0 2px 5px #000; }
 @media (max-width:560px) { .guest-product-preview__summary { grid-template-columns: 1fr; } .guest-product-preview__cover { max-width: 170px; } }
 
 @media (min-width: 1024px) {

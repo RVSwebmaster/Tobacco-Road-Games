@@ -29,9 +29,9 @@ async function main() {
     const generatedGuest = fs.readFileSync(path.join(outputDirectory, "guest", "index.html"), "utf8");
     const generatedCustomer = fs.readFileSync(path.join(outputDirectory, "customer.html"), "utf8");
     assert.equal(generatedCustomer, generatedGuest, "Pages output must include the identical Customer baseline.");
-    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261026-homepage-shelves1/);
-    assert.match(generatedGuest, /guest-landing\.css\?v=20261026-homepage-shelves1/);
-    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261026-homepage-shelves1/);
+    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261112-cover-first-preview1/);
+    assert.match(generatedGuest, /guest-landing\.css\?v=20261112-cover-first-preview1/);
+    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261112-cover-first-preview1/);
     assert.doesNotMatch(generatedGuest, /data-magical-bookshelf-replay/);
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "guest-product-preview.js")), "Guest preview runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "homepage-shelves.js")), "Homepage shelf runtime is missing from Pages output");
