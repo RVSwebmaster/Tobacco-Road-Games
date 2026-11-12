@@ -156,17 +156,16 @@
 
   function hydrateGuestOpenRulesShelf(row, products) {
     const shelfProducts = products.slice(0, 18);
-    const books = Array.from(row.querySelectorAll("[data-magical-book]")).slice(0, 18);
-    books.forEach((book, index) => {
-      const product = shelfProducts[index];
-      if (!product) return;
-      const pageCount = Number(product.metadata?.pageCount);
-      const depth = depthForPages(pageCount);
-      book.classList.add("guest-open-rules-real-book");
-      book.removeAttribute("aria-hidden");
-      book.removeAttribute("data-mock-open-rule");
+    const baseWidth = Number.parseFloat(getComputedStyle(row).getPropertyValue("--guest-library-book-width")) || 12;
+    row.style.setProperty("--shelf-items", "18");
+    row.replaceChildren(...shelfProducts.map((product, index) => {
+      const book = document.createElement("span");
+      book.className = "guest-open-rules-real-book";
+      book.dataset.magicalBook = "true";
       book.dataset.productId = product.id || product.slug;
       book.dataset.slug = product.slug;
+      const pageCount = Number(product.metadata?.pageCount);
+      const depth = depthForPages(pageCount);
       book.dataset.pageCount = Number.isInteger(pageCount) && pageCount > 0 ? String(pageCount) : "";
       book.style.setProperty("--open-rules-spine-ratio", String(depth / 24));
 
@@ -177,11 +176,10 @@
       link.setAttribute("aria-label", `Open ${product.title} product page`);
       link.title = `${product.title} — ${product.creator}`;
 
-      const baseWidth = Number.parseFloat(getComputedStyle(book).getPropertyValue("--guest-library-book-width")) || 12;
       link.append(createRotationBook(product, baseWidth * depth / 24));
       book.replaceChildren(link);
-    });
-    books.slice(shelfProducts.length).forEach((book) => book.remove());
+      return book;
+    }).filter(Boolean));
     return true;
   }
 
