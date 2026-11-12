@@ -16,7 +16,10 @@ import {
   creatorBusinessReportCsv,
   resolveReportPeriod,
 } from "./creator-business-report.mjs";
-import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
+import {
+  getCreatorOperationalEligibility,
+  getCreatorPublicationEligibility,
+} from "./creator-registration.mjs";
 import {
   listOperations,
   requestPayout,
@@ -107,6 +110,19 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       nowMs: options.nowMs,
     },
   );
+  const publicationReadiness = await getCreatorPublicationEligibility(
+    database,
+    creator.id,
+    { markInitialCompletion: false, nowMs: options.nowMs },
+  );
+  if (
+    requiresPublicationEligibility(request.method, route) &&
+    !publicationReadiness.publicationEligible
+  )
+    return registrationRequired({
+      ...publicationReadiness,
+      reasonCodes: publicationReadiness.publicationReasonCodes,
+    });
   if (requiresCurrentEligibility(request.method, route) && !readiness.eligible)
     return registrationRequired(readiness);
   if (request.method !== "GET") {
@@ -1128,6 +1144,11 @@ function publicListing(row) {
     discoveryMetadataComplete: Boolean(row.genre && (row.media_type || row.catalog_media_type)),
   };
 }
+export function requiresPublicationEligibility(method, route) {
+  if (method === "GET") return false;
+  if (/^listings\/[^/]+\/pause$/.test(route)) return false;
+  return route === "listings" || route.startsWith("listings/");
+}
 export function requiresCurrentEligibility(method, route) {
   if (method === "GET") return false;
   if (
@@ -1137,13 +1158,7 @@ export function requiresCurrentEligibility(method, route) {
     /^listings\/[^/]+\/pause$/.test(route)
   )
     return false;
-  return (
-    route === "listings" ||
-    route.startsWith("listings/") ||
-    route === "bundles" ||
-    route === "preferred" ||
-    route === "payout-request"
-  );
+  return route === "bundles" || route === "preferred" || route === "payout-request";
 }
 function registrationRequired(readiness) {
   const missing = readiness.reasonCodes || [];

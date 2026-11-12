@@ -3,7 +3,7 @@ import {
   validateSameOriginRequest,
   validateSessionCsrf,
 } from "./account-auth.mjs";
-import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
+import { getCreatorPublicationEligibility } from "./creator-registration.mjs";
 export const CREATOR_FILE_LIMITS = Object.freeze({
   product: 50 * 1024 * 1024,
   cover: 10 * 1024 * 1024,
@@ -101,7 +101,7 @@ export async function handleCreatorFileUpload(
       },
       409,
     );
-  const readiness = await getCreatorOperationalEligibility(
+  const readiness = await getCreatorPublicationEligibility(
     db,
     listing.creator_id,
     {
@@ -109,7 +109,7 @@ export async function handleCreatorFileUpload(
       nowMs: options.nowMs,
     },
   );
-  if (!readiness.eligible)
+  if (!readiness.publicationEligible)
     return json(
       {
         error: {

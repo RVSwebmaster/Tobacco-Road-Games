@@ -28,14 +28,17 @@ async function main() {
     "listings/item",
     "listings/item/submit",
     "listings/item/reactivate",
-    "bundles",
-    "preferred",
-    "payout-request",
   ])
+    assert.equal(
+      operations.requiresPublicationEligibility("POST", route),
+      true,
+      `${route} must require publication eligibility.`,
+    );
+  for (const route of ["bundles", "preferred", "payout-request"])
     assert.equal(
       operations.requiresCurrentEligibility("POST", route),
       true,
-      `${route} must require current eligibility.`,
+      `${route} must retain current commercial eligibility gating.`,
     );
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
@@ -366,14 +369,15 @@ async function main() {
     path.join(ROOT, "functions/_lib/publication-readiness.mjs"),
     "utf8",
   );
-  for (const source of [advertisingSource, balanceSource, publicationSource])
+  for (const source of [advertisingSource, balanceSource])
     assert.match(source, /getCreatorOperationalEligibility/);
+  assert.match(publicationSource, /getCreatorPublicationEligibility/);
   assert.match(advertisingSource, /request\.method !== "GET" && !readiness\.eligible/);
   assert.match(balanceSource, /request\.method !== "GET" && !ready\.eligible/);
-  assert.doesNotMatch(
+  assert.match(
     publicationSource,
-    /if \(!listingCanCharge\(listing\)\) return/,
-    "Free publication must not bypass current eligibility.",
+    /if \(listingCanCharge\(listing\)\)/,
+    "Commercial readiness must be required only when a listing can charge.",
   );
   console.log("Registration hard-gate tests passed.");
 }
@@ -505,27 +509,10 @@ function d1(raw) {
   };
 }
 function migrations() {
-  return [
-    "001_direct_storefront.sql",
-    "003_checkout_attempt_idempotency.sql",
-    "004_verified_stripe_webhooks.sql",
-    "005_secure_download_entitlements.sql",
-    "006_customer_delivery_owner_controls.sql",
-    "007_shared_accounts.sql",
-    "016_order_account_ownership.sql",
-    "017_historical_order_claims.sql",
-    "018_creator_operations.sql",
-    "019_creator_publication_pipeline.sql",
-    "020_creator_financial_accounting.sql",
-    "021_provider_finance_and_payout_readiness.sql",
-    "022_connect_sandbox_and_payout_batches.sql",
-    "023_marketplace_policy_alignment.sql",
-    "024_product_inactivity_lifecycle.sql",
-    "025_creator_advertising.sql",
-    "026_account_creator_registration.sql",
-    "027_creator_audits_reporting.sql",
-    "028_creator_intake_registration_gate.sql",
-  ];
+  return fs
+    .readdirSync(path.join(ROOT, "migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
 }
 main().catch((error) => {
   console.error(error);

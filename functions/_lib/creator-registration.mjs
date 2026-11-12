@@ -413,6 +413,62 @@ export async function getCreatorOperationalEligibility(
     ).toISOString(),
   };
 }
+
+// Publication authority belongs to an approved, active Creator identity. It
+// is intentionally narrower than current commercial readiness: payout setup,
+// payment method readiness, and the current marketplace agreement govern
+// selling and financial operations, not the ability to prepare or publish a
+// preview-only catalog record.
+export async function getCreatorPublicationEligibility(
+  db,
+  creatorId,
+  options = {},
+) {
+  const readiness = await getCreatorAccountReadiness(db, creatorId, options),
+    owner = readiness.owner,
+    creator = readiness.creator,
+    account = owner
+      ? await db
+          .prepare(
+            "SELECT status,email_verified,email_normalized FROM users WHERE id=?",
+          )
+          .bind(owner.owner_user_id)
+          .first()
+      : null,
+    checks = {
+      accountActiveAndVerified: Boolean(
+        account?.status === "active" &&
+          Number(account?.email_verified) === 1 &&
+          /^\S+@\S+\.\S+$/.test(account?.email_normalized || ""),
+      ),
+      creatorApprovedAndActive: Boolean(
+        creator?.marketplace_status === "approved" &&
+          creator?.registration_status === "active" &&
+          creator?.closure_state !== "closed" &&
+          creator?.slug &&
+          creator?.display_name &&
+          creator?.short_bio,
+      ),
+      identityActiveAndEntitled: Boolean(
+        owner?.account_status === "active" && readiness.identityEntitled,
+      ),
+      accountOperational: Boolean(
+        !["restricted", "suspended"].includes(creator?.registration_status),
+      ),
+      auditOperational: readiness.checks.auditOperational,
+    },
+    eligible = Object.values(checks).every(Boolean);
+  return {
+    ...readiness,
+    eligible,
+    publicationEligible: eligible,
+    publicationChecks: checks,
+    publicationReasonCodes: publicationReasonCodes(checks),
+    currentEligibilityEvaluatedAt: new Date(
+      options.nowMs || Date.now(),
+    ).toISOString(),
+  };
+}
 function eligibilityReasonCodes(checks) {
   const names = {
     customerAccountComplete: "account_or_email_required",
@@ -452,6 +508,18 @@ function eligibilityRemediation(checks) {
       href: "/creator/#creator-remediations",
     });
   return links;
+}
+function publicationReasonCodes(checks) {
+  const names = {
+    accountActiveAndVerified: "account_or_email_required",
+    creatorApprovedAndActive: "creator_approval_required",
+    identityActiveAndEntitled: "creator_identity_inactive",
+    accountOperational: "creator_account_restricted",
+    auditOperational: "account_remediation_required",
+  };
+  return Object.entries(checks)
+    .filter(([, ok]) => !ok)
+    .map(([key]) => names[key] || "creator_publication_required");
 }
 async function optionalFirst(db, sql, values) {
   try {

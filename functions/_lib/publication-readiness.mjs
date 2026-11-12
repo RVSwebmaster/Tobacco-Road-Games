@@ -1,4 +1,7 @@
-import { getCreatorOperationalEligibility } from "./creator-registration.mjs";
+import {
+  getCreatorOperationalEligibility,
+  getCreatorPublicationEligibility,
+} from "./creator-registration.mjs";
 
 export function listingCanCharge(listing) {
   return listing.pricing_model === "pwyw"
@@ -47,23 +50,40 @@ export async function assertCreatorPublicationReadiness(database, listing) {
     )
       throw error;
   }
+  const publicationState = await getCreatorPublicationEligibility(
+    database,
+    listing.creator_id,
+  );
+  if (!publicationState.publicationEligible)
+    throw new Error(
+      "The Creator identity must be approved and active before publication.",
+    );
   const state = await getCreatorOperationalEligibility(
     database,
     listing.creator_id,
   ),
     missing = [];
-  if (!state.eligible)
-    missing.push("Current Creator eligibility requirements are not satisfied.");
-  if (!state.agreementCurrent)
-    missing.push("The current Creator Agreement must be accepted.");
-  if (!state.payoutReady)
-    missing.push("Stripe Connect payout setup is incomplete.");
-  if (!state.paymentMethodReady)
-    missing.push("A valid creator payment method is required.");
-  if (!state.identityEntitled)
-    missing.push("Creator identity billing or entitlement is inactive.");
+  if (listingCanCharge(listing)) {
+    if (!state.eligible)
+      missing.push(
+        "Commercial readiness is required before a product can be sold.",
+      );
+    if (!state.agreementCurrent)
+      missing.push("The current Creator Agreement must be accepted before sale.");
+    if (!state.payoutReady)
+      missing.push("Stripe Connect payout setup is incomplete.");
+    if (!state.paymentMethodReady)
+      missing.push("A valid creator payment method is required.");
+  }
   if (missing.length) throw new Error(missing.join(" "));
-  return { ...state, freeOnly: !listingCanCharge(listing) };
+  return {
+    ...publicationState,
+    ...state,
+    eligible: true,
+    commercialEligible: state.eligible,
+    publicationEligible: true,
+    freeOnly: !listingCanCharge(listing),
+  };
 }
 export async function recordListingDeclaration(
   database,
