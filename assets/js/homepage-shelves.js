@@ -101,14 +101,17 @@
     return panel;
   }
 
-  function createRotationBook(product) {
+  function createRotationBook(product, spineWidth) {
     const stage = document.createElement("span");
     stage.className = "homepage-open-rules-book__rotation";
     stage.setAttribute("aria-hidden", "true");
 
     const book = document.createElement("span");
     book.className = "product-book homepage-open-rules-book__product";
-    book.style.setProperty("--book-angle", "-88deg");
+    book.style.setProperty("--book-angle", "88deg");
+    const depth = Math.max(10, Number(spineWidth) || 12);
+    book.style.setProperty("--book-depth", `${depth}px`);
+    book.style.setProperty("--book-width", `${Math.max(80, depth * 8)}px`);
 
     const front = document.createElement("span");
     front.className = "product-book__face product-book__front";
@@ -147,7 +150,7 @@
     link.setAttribute("aria-label", `Open ${product.title} product page`);
     link.title = `${product.title} — ${product.creator}`;
 
-    link.append(createRotationBook(product));
+    link.append(createRotationBook(product, shelfWidth));
     return link;
   }
 
@@ -174,7 +177,8 @@
       link.setAttribute("aria-label", `Open ${product.title} product page`);
       link.title = `${product.title} — ${product.creator}`;
 
-      link.append(createRotationBook(product));
+      const baseWidth = Number.parseFloat(getComputedStyle(book).getPropertyValue("--guest-library-book-width")) || 12;
+      link.append(createRotationBook(product, baseWidth * depth / 24));
       book.replaceChildren(link);
     });
     return true;

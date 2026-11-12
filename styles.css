@@ -5451,9 +5451,9 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .homepage-open-rules-book__product {
-  --book-width: calc(100% * 8);
+  --book-width: 96px;
   --book-height: 100%;
-  --book-depth: 100%;
+  --book-depth: 12px;
   position: absolute;
   top: 0;
   left: 50%;
