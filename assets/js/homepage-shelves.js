@@ -1,6 +1,5 @@
 (() => {
   const SHELVES = Object.freeze({
-    openRulesLibrary: "open-rules-library-heading",
     featuredCreator: "featured-creator-wall-heading",
     newThisWeek: "new-this-week-wall-heading",
     bestSellers: "best-sellers-wall-heading",
@@ -122,71 +121,77 @@
     return link;
   }
 
-  function hydrateGuestOpenRulesLibrary(rows, products) {
-    rows.forEach((row, rowIndex) => {
-      const shelfProducts = products.slice(rowIndex * 6, rowIndex * 6 + 6);
-      const books = Array.from(row.querySelectorAll("[data-magical-book]")).slice(0, 6);
-      books.forEach((book, index) => {
-        const product = shelfProducts[index];
-        if (!product) return;
-        const pageCount = Number(product.metadata?.pageCount);
-        const depth = depthForPages(pageCount);
-        book.classList.add("guest-open-rules-real-book");
-        book.removeAttribute("aria-hidden");
-        book.removeAttribute("data-mock-open-rule");
-        book.dataset.productId = product.id || product.slug;
-        book.dataset.slug = product.slug;
-        book.dataset.pageCount = Number.isInteger(pageCount) && pageCount > 0 ? String(pageCount) : "";
-        book.style.setProperty("--open-rules-spine-ratio", String(depth / 24));
+  function hydrateGuestOpenRulesShelf(row, products) {
+    const shelfProducts = products.slice(0, 18);
+    const books = Array.from(row.querySelectorAll("[data-magical-book]")).slice(0, 18);
+    books.forEach((book, index) => {
+      const product = shelfProducts[index];
+      if (!product) return;
+      const pageCount = Number(product.metadata?.pageCount);
+      const depth = depthForPages(pageCount);
+      book.classList.add("guest-open-rules-real-book");
+      book.removeAttribute("aria-hidden");
+      book.removeAttribute("data-mock-open-rule");
+      book.dataset.productId = product.id || product.slug;
+      book.dataset.slug = product.slug;
+      book.dataset.pageCount = Number.isInteger(pageCount) && pageCount > 0 ? String(pageCount) : "";
+      book.style.setProperty("--open-rules-spine-ratio", String(depth / 24));
 
-        const link = document.createElement("a");
-        link.className = "guest-open-rules-real-book__link";
-        link.href = product.fullUrl;
-        link.dataset.guestProductPreview = previewPayload(product);
-        link.setAttribute("aria-label", `Open ${product.title} product page`);
-        link.title = `${product.title} — ${product.creator}`;
+      const link = document.createElement("a");
+      link.className = "guest-open-rules-real-book__link";
+      link.href = product.fullUrl;
+      link.dataset.guestProductPreview = previewPayload(product);
+      link.setAttribute("aria-label", `Open ${product.title} product page`);
+      link.title = `${product.title} — ${product.creator}`;
 
-        const cover = document.createElement("img");
-        cover.className = "guest-open-rules-real-book__cover";
-        cover.src = product.cover || "/assets/tobacco-road-games-logo.png";
-        cover.alt = "";
-        cover.loading = "lazy";
-        cover.decoding = "async";
-        cover.setAttribute("aria-hidden", "true");
+      const cover = document.createElement("img");
+      cover.className = "guest-open-rules-real-book__cover";
+      cover.src = product.cover || "/assets/tobacco-road-games-logo.png";
+      cover.alt = "";
+      cover.loading = "lazy";
+      cover.decoding = "async";
+      cover.setAttribute("aria-hidden", "true");
 
-        const title = document.createElement("span");
-        title.className = "guest-open-rules-real-book__title";
-        title.textContent = product.title;
-        title.setAttribute("aria-hidden", "true");
+      const title = document.createElement("span");
+      title.className = "guest-open-rules-real-book__title";
+      title.textContent = product.title;
+      title.setAttribute("aria-hidden", "true");
 
-        const publisher = document.createElement("span");
-        publisher.className = "guest-open-rules-real-book__publisher";
-        publisher.textContent = product.creator;
-        publisher.setAttribute("aria-hidden", "true");
-        link.append(cover, title, publisher);
-        book.replaceChildren(link);
-      });
+      const publisher = document.createElement("span");
+      publisher.className = "guest-open-rules-real-book__publisher";
+      publisher.textContent = product.creator;
+      publisher.setAttribute("aria-hidden", "true");
+      link.append(cover, title, publisher);
+      book.replaceChildren(link);
     });
     return true;
   }
 
-  function hydrateOpenRulesLibrary(bay, payload = {}) {
-    const products = Array.isArray(payload.products) ? payload.products.slice(0, 12) : [];
+  function hydrateOpenRulesLibrary(upperPayload = {}, lowerPayload = {}) {
+    const bay = document.querySelector('[aria-labelledby="open-rules-library-heading"]');
+    if (!bay) return false;
+    const upperProducts = Array.isArray(upperPayload.products) ? upperPayload.products.slice(0, 18) : [];
+    const lowerProducts = Array.isArray(lowerPayload.products) ? lowerPayload.products.slice(0, 18) : [];
+    const visible = upperPayload.visible !== false || lowerPayload.visible !== false;
+    bay.hidden = !visible;
+    if (!visible) return true;
     const guestRows = Array.from(bay.querySelectorAll(".guest-open-rules-books"));
-    if (guestRows.length === 2) hydrateGuestOpenRulesLibrary(guestRows, products);
+    if (guestRows.length === 2) {
+      if (upperPayload.managed) hydrateGuestOpenRulesShelf(guestRows[0], upperProducts);
+      if (lowerPayload.managed) hydrateGuestOpenRulesShelf(guestRows[1], lowerProducts);
+    }
     const rows = Array.from(bay.querySelectorAll("[data-fill-library]"));
     if (guestRows.length !== 2 && rows.length !== 2) return false;
-    rows.forEach((row, index) => {
-      const render = () => row.replaceChildren(
-        ...products.slice(index * 6, index * 6 + 6).map(createOpenRulesSpine)
-      );
+    [[rows[0], upperPayload, upperProducts], [rows[1], lowerPayload, lowerProducts]].forEach(([row, payload, products]) => {
+      if (!row || !payload.managed) return;
+      const render = () => row.replaceChildren(...products.map(createOpenRulesSpine));
       render();
       if (typeof ResizeObserver === "function") new ResizeObserver(render).observe(row.parentElement);
       else window.addEventListener("resize", render);
     });
-    document.dispatchEvent(new CustomEvent("trg:homepage-shelves-updated", {
-      detail: { shelf: "openRulesLibrary", count: products.length }
-    }));
+    for (const [shelf, products] of [["openRulesLibraryUpper", upperProducts], ["openRulesLibraryLower", lowerProducts]]) {
+      document.dispatchEvent(new CustomEvent("trg:homepage-shelves-updated", { detail: { shelf, count: products.length } }));
+    }
     return true;
   }
 
@@ -196,8 +201,6 @@
     if (!bay) return false;
     bay.hidden = payload.visible === false;
     if (payload.visible === false || !payload.managed) return true;
-    if (key === "openRulesLibrary") return hydrateOpenRulesLibrary(bay, payload);
-
     const row = bay.querySelector(".shop-wall-product-row--hero");
     const heroBay = row?.querySelector(".shop-wall-hero-bay");
     const leftRun = row?.querySelector('[data-spine-run="left"]');
@@ -254,13 +257,14 @@
 
   function hydratePayload(payload) {
     if (payload?.shelves) {
+      hydrateOpenRulesLibrary(payload.shelves.openRulesLibraryUpper, payload.shelves.openRulesLibraryLower);
       for (const key of Object.keys(SHELVES)) hydrateShelf(key, payload.shelves[key]);
       return;
     }
     hydrateBestSellers(payload?.bestSellers || []);
   }
 
-  window.TRGHomepageShelves = Object.freeze({ hydrateBestSellers, hydratePayload, hydrateShelf });
+  window.TRGHomepageShelves = Object.freeze({ hydrateBestSellers, hydrateOpenRulesLibrary, hydratePayload, hydrateShelf });
   fetch("/api/homepage-shelves", { cache: "no-store", credentials: "same-origin" })
     .then((response) => response.ok ? response.json() : { bestSellers: [] })
     .then(hydratePayload)

@@ -134,6 +134,18 @@ async function testBestSellerService() {
     "The Open Rules shelf must use only the twelve approved D1 identities in their editorial order.");
   assert.ok(selected.every((product) => product.priceLabel === "Preview Only"));
   assert.ok(selected.every((product) => product.cover.endsWith("/cover.webp")));
+  const separateShelves = await service.getOpenRulesLibraryShelves(database, openRulesCatalog);
+  assert.deepEqual(separateShelves.upper.map((product) => product.id), service.OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
+    "All current Open Rules publications should occupy the independent upper shelf.");
+  assert.deepEqual(separateShelves.lower, [],
+    "The independent lower shelf should remain available for future publications.");
+  assert.equal(service.OPEN_RULES_LIBRARY_SHELF_CAPACITY, 18);
+  assert.ok(service.OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS.length <= service.OPEN_RULES_LIBRARY_SHELF_CAPACITY);
+  assert.ok(service.OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS.length <= service.OPEN_RULES_LIBRARY_SHELF_CAPACITY);
+  const openRulesResult = await service.getHomepageShelves(database, { catalog: openRulesCatalog });
+  assert.deepEqual(openRulesResult.shelves.openRulesLibraryUpper.products.map((product) => product.id),
+    service.OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS);
+  assert.deepEqual(openRulesResult.shelves.openRulesLibraryLower.products, []);
 }
 
 function runtimeProduct(slug, cents, overrides = {}) {
@@ -162,9 +174,11 @@ function testClientWiring() {
   assert.match(client, /dataset\.guestProductPreview/);
   assert.match(client, /readExistingProducts/);
   assert.match(client, /suppressedSlugs/);
-  assert.match(client, /openRulesLibrary:\s*"open-rules-library-heading"/);
+  assert.match(client, /openRulesLibraryUpper/);
+  assert.match(client, /openRulesLibraryLower/);
   assert.match(client, /homepage-open-rules-book/);
-  assert.match(client, /products\.slice\(index \* 6, index \* 6 \+ 6\)/);
+  assert.match(client, /products\.slice\(0, 18\)/);
+  assert.match(client, /hydrateGuestOpenRulesShelf/);
   assert.match(client, /depthForPages\(pageCount\) \* 188 \/ 340/);
   assert.match(client, /guest-open-rules-real-book/);
   assert.match(client, /removeAttribute\("data-mock-open-rule"\)/);

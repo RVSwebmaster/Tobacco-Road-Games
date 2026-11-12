@@ -14,7 +14,8 @@ import { getProductById, listProducts } from "./product-catalog-d1.mjs";
 export const HOMEPAGE_BEST_SELLER_WINDOW_DAYS = 30;
 export const HOMEPAGE_BEST_SELLER_LIMIT = 43;
 export const HOMEPAGE_NEW_RELEASE_WINDOW_DAYS = 7;
-export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([
+export const OPEN_RULES_LIBRARY_SHELF_CAPACITY = 18;
+export const OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze([
   "5e-players-manual",
   "5e-spellbook",
   "5e-bard-spellbook",
@@ -27,6 +28,11 @@ export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([
   "5e-wizard-spellbook",
   "5e-relics-and-wonders",
   "5e-dungeon-masters-handbook"
+]);
+export const OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS = Object.freeze([]);
+export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([
+  ...OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
+  ...OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS
 ]);
 
 const BEST_SELLER_SQL = `
@@ -65,7 +71,7 @@ export async function getHomepageShelves(database, options = {}) {
     nowMs,
     windowDays
   });
-  const openRulesLibrary = await getOpenRulesLibraryProducts(database, options.catalog);
+  const openRulesLibrary = await getOpenRulesLibraryShelves(database, options.catalog);
 
   const featuredConfig = configuration.shelves.featuredCreator;
   const featuredPool = featuredConfig.creatorId
@@ -83,9 +89,19 @@ export async function getHomepageShelves(database, options = {}) {
       selectShelfProducts(configuration.shelves.bestSellers, candidates.bestSellers), suppressed.bestSellers),
     freePwyw: publicShelf(configuration.shelves.freePwyw,
       selectShelfProducts(configuration.shelves.freePwyw, candidates.freePwyw), suppressed.freePwyw),
-    openRulesLibrary: {
+    openRulesLibraryUpper: {
       managed: true,
-      products: openRulesLibrary,
+      capacity: OPEN_RULES_LIBRARY_SHELF_CAPACITY,
+      physicalShelf: "upper",
+      products: openRulesLibrary.upper,
+      suppressedSlugs: [],
+      visible: true
+    },
+    openRulesLibraryLower: {
+      managed: true,
+      capacity: OPEN_RULES_LIBRARY_SHELF_CAPACITY,
+      physicalShelf: "lower",
+      products: openRulesLibrary.lower,
       suppressedSlugs: [],
       visible: true
     }
@@ -100,17 +116,23 @@ export async function getHomepageShelves(database, options = {}) {
 }
 
 export async function getOpenRulesLibraryProducts(database, compatibilityCatalog = null) {
-  if (Array.isArray(compatibilityCatalog)) {
-    return selectOpenRulesLibraryProducts(compatibilityCatalog);
-  }
-  return selectOpenRulesLibraryProducts(
-    await getApprovedPublicProductsByIds(database, OPEN_RULES_LIBRARY_PRODUCT_IDS)
-  );
+  const shelves = await getOpenRulesLibraryShelves(database, compatibilityCatalog);
+  return [...shelves.upper, ...shelves.lower];
 }
 
-export function selectOpenRulesLibraryProducts(products) {
+export async function getOpenRulesLibraryShelves(database, compatibilityCatalog = null) {
+  const products = Array.isArray(compatibilityCatalog)
+    ? compatibilityCatalog
+    : await getApprovedPublicProductsByIds(database, OPEN_RULES_LIBRARY_PRODUCT_IDS);
+  return {
+    upper: selectOpenRulesLibraryProducts(products, OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS),
+    lower: selectOpenRulesLibraryProducts(products, OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS)
+  };
+}
+
+export function selectOpenRulesLibraryProducts(products, productIds = OPEN_RULES_LIBRARY_PRODUCT_IDS) {
   const byId = new Map(products.map((product) => [String(product.id || product.slug || ""), product]));
-  return OPEN_RULES_LIBRARY_PRODUCT_IDS
+  return productIds.slice(0, OPEN_RULES_LIBRARY_SHELF_CAPACITY)
     .map((id) => byId.get(id))
     .filter(isOpenRulesLibraryProduct)
     .map(toHomepageProduct);
