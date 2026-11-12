@@ -179,7 +179,7 @@ function testClientWiring() {
   assert.match(client, /homepage-open-rules-book/);
   assert.match(client, /products\.slice\(0, 18\)/);
   assert.match(client, /hydrateGuestOpenRulesShelf/);
-  assert.match(client, /depthForPages\(pageCount\) \* 188 \/ 340/);
+  assert.match(client, /depthForPages\(pageCount\) \* 220 \/ 340/);
   assert.match(client, /guest-open-rules-real-book/);
   assert.match(client, /removeAttribute\("data-mock-open-rule"\)/);
   assert.match(client, /--open-rules-spine-ratio/);

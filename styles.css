@@ -5512,7 +5512,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .homepage-open-rules-book__product .product-book__spine-title {
   align-self: center;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(5px, calc(var(--open-rules-spine-width, 12px) * 0.58), 10px);
+  font-size: clamp(7px, calc(var(--open-rules-spine-width, 12px) * 0.72), 12px);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -5520,7 +5520,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 .homepage-open-rules-book__product .product-book__spine-credit {
   color: #e6cfaa;
   font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
-  font-size: clamp(4px, calc(var(--open-rules-spine-width, 12px) * 0.3), 6px);
+  font-size: clamp(5px, calc(var(--open-rules-spine-width, 12px) * 0.38), 7px);
   letter-spacing: 0.06em;
 }
 
