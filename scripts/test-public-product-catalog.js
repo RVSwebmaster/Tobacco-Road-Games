@@ -27,8 +27,11 @@ async function main() {
     publicationState: "draft", metadata: { privateNote: "hidden" } });
   await catalog.createProduct(db, { ...base, id: "preview-open-rules", slug: "preview-open-rules", title: "Preview Open Rules",
     publicationState: "published", status: "preview-only", buyMode: "preview-only", priceCents: 0,
+    listingVisibility: "listed",
     coverR2Key: "catalog-publications/preview-open-rules/cover.webp",
     metadata: { openRulesEligible: true, pageCount: 122 } });
+  await catalog.createProduct(db, { ...base, id: "z-private-item", slug: "z-private-item", title: "Private Item",
+    publicationState: "published", listingVisibility: "unlisted", metadata: {} });
   const get = url => route.handlePublicCatalogRequest(new Request(url), { TRG_ORDERS: db });
 
   const lookup = await get("https://example.test/api/catalog?slug=public-item");
@@ -51,9 +54,15 @@ async function main() {
   assert.equal(publicItem.deliveryFilename, undefined);
   assert.equal((await get("https://example.test/api/catalog?slug=draft-item")).status, 404);
   const previewOpenRules = (await (await get("https://example.test/api/catalog?slug=preview-open-rules")).json()).product;
-  assert.equal(previewOpenRules.storefrontVisibility, "unlisted");
+  assert.equal(previewOpenRules.storefrontVisibility, "listed");
   assert.equal(previewOpenRules.purchaseAvailability, "unavailable");
   assert.equal(previewOpenRules.metadata.openRulesEligible, true);
+  const privateItem = (await (await get("https://example.test/api/catalog?slug=z-private-item")).json()).product;
+  assert.equal(privateItem.storefrontVisibility, "unlisted");
+  assert.equal(privateItem.purchaseAvailability, "unavailable");
+  const related = await route.getOtherApprovedPublicProductsByCreator(db, "creator-rv-sawyer", "public-item");
+  assert.ok(related.some(item => item.detailUrl === "/store/products/preview-open-rules/"));
+  assert.ok(!related.some(item => item.detailUrl === "/store/products/z-private-item/"));
 
   const listing = await get("https://example.test/api/catalog?creatorId=creator-rv-sawyer&status=pay-what-you-want&limit=1&offset=0");
   assert.equal(listing.status, 200);

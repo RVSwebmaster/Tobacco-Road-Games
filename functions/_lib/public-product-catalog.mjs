@@ -13,8 +13,8 @@ const LISTED_STATUSES = new Set([
   "pay-what-you-want", "preview-available", "revised-edition-pending"
 ]);
 const PURCHASE_BUY_MODES = new Set(["cart", "free-download"]);
-// The current catalog has no separate Shelved state. These are the statuses
-// eligible for a live storefront shelf; drafts and catalog-only previews stay out.
+// Automatic visibility preserves the legacy status-derived shelf behavior.
+// Explicit listing can shelve a preview-only product without making it purchasable.
 const SHELVED_STATUSES = ["available-direct", "pay-what-you-want", "free-download"];
 const EXISTING_CREATOR_PROFILES = new Map([
   ["rv-sawyer", "/authors/rv-sawyer/"]
@@ -99,7 +99,8 @@ export async function getOtherApprovedPublicProductsByCreator(database, creatorI
   if (!creator) return [];
   const result = await database.prepare(`SELECT slug,title FROM marketplace_products
     WHERE creator_id=? AND publication_state='published'
-      AND status IN (${SHELVED_STATUSES.map(() => "?").join(",")})
+      AND (storefront_visibility='listed'
+        OR (storefront_visibility='automatic' AND status IN (${SHELVED_STATUSES.map(() => "?").join(",")})))
       AND buy_mode<>'retired' AND slug<>?
     ORDER BY slug LIMIT 4`)
     .bind(creatorId, ...SHELVED_STATUSES, currentSlug).all();
@@ -114,6 +115,7 @@ export function publicProduct(product, creator = {}) {
   for (const key of PUBLIC_METADATA) {
     if (Object.hasOwn(product.metadata, key)) metadata[key] = product.metadata[key];
   }
+  const storefrontVisibility = resolveStorefrontVisibility(product);
   return {
     id: product.id,
     slug: product.slug,
@@ -152,14 +154,22 @@ export function publicProduct(product, creator = {}) {
     backCoverUrl: product.backCoverR2Key ? `/product-assets/${encodeURIComponent(product.slug)}/back-cover.webp` : "",
     previewUrl: product.previewR2Key ? `/product-assets/${encodeURIComponent(product.slug)}/preview.webp` : "",
     detailUrl: `/store/products/${encodeURIComponent(product.slug)}/`,
-    storefrontVisibility: LISTED_STATUSES.has(product.status) ? "listed" : "unlisted",
-    purchaseAvailability: LISTED_STATUSES.has(product.status) && PURCHASE_BUY_MODES.has(product.buyMode)
+    storefrontVisibility,
+    purchaseAvailability: storefrontVisibility === "listed"
+      && LISTED_STATUSES.has(product.status) && PURCHASE_BUY_MODES.has(product.buyMode)
       ? "cart-quote-only"
       : "unavailable",
     metadata,
     publishedAt: product.publishedAt,
     updatedAt: product.updatedAt
   };
+}
+
+function resolveStorefrontVisibility(product) {
+  if (product.status === "retired" || product.buyMode === "retired") return "unlisted";
+  if (product.listingVisibility === "listed") return "listed";
+  if (product.listingVisibility === "unlisted") return "unlisted";
+  return LISTED_STATUSES.has(product.status) ? "listed" : "unlisted";
 }
 
 async function getApprovedCreator(database, creatorId) {

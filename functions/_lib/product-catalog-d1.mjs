@@ -12,6 +12,7 @@ const FIELDS = Object.freeze([
   ["genre", "genre"],
   ["mediaType", "media_type"],
   ["status", "status"],
+  ["listingVisibility", "storefront_visibility"],
   ["buyMode", "buy_mode"],
   ["buyUrl", "buy_url"],
   ["currency", "currency"],
@@ -55,6 +56,7 @@ const DEFAULTS = Object.freeze({
   productLine: "",
   genre: "",
   mediaType: "digital",
+  listingVisibility: "automatic",
   buyUrl: "",
   currency: "USD",
   pricingModel: "fixed",
@@ -221,6 +223,7 @@ function normalize(value) {
   product.title = requiredText(product.title, "title");
   if (product.title.length > 240) invalid("title is too long.");
   product.status = oneOf(requiredText(product.status, "status"), STATUSES, "status");
+  product.listingVisibility = oneOf(product.listingVisibility, ["automatic", "listed", "unlisted"], "listingVisibility");
   product.buyMode = oneOf(requiredText(product.buyMode, "buyMode"), BUY_MODES, "buyMode");
   product.publicationState = oneOf(product.publicationState, ["draft", "published", "paused", "retired"], "publicationState");
   product.mediaType = oneOf(product.mediaType, ["digital", "physical", "hybrid"], "mediaType");

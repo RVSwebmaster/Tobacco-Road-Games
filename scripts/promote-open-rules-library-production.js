@@ -42,7 +42,7 @@ const PRODUCT_COLUMNS = Object.freeze([
   "suggested_price_cents", "minimum_price_cents", "sale_enabled", "sale_price_cents", "sale_start",
   "sale_end", "cover_r2_key", "preview_r2_key", "thumbnail_r2_key", "delivery_r2_key",
   "delivery_filename", "delivery_content_type", "metadata_json", "created_at", "updated_at",
-  "published_at", "revision", "back_cover_r2_key", "managed_by_user_id"
+  "published_at", "revision", "back_cover_r2_key", "managed_by_user_id", "storefront_visibility"
 ]);
 const REQUIRED_ASSET_FIELDS = Object.freeze([
   ["cover_r2_key", "image/webp"],
@@ -113,6 +113,7 @@ function validateSourceRows(rows) {
     assert.equal(row.publication_state, "published", `${id}: publication is not published for browsing.`);
     assert.equal(row.publisher, "Tobacco Road Games", `${id}: unexpected publisher.`);
     assert.equal(row.status, "preview-only", `${id}: status could enable sale visibility.`);
+    assert.equal(row.storefront_visibility, "listed", `${id}: publication is not listed for browsing.`);
     assert.equal(row.buy_mode, "preview-only", `${id}: buy mode could enable purchase.`);
     assert.equal(Number(row.sale_enabled), 0, `${id}: sale must remain disabled.`);
     assert.equal(Number(row.price_cents), 0, `${id}: no invented price is allowed.`);

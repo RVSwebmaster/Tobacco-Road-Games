@@ -16,6 +16,7 @@ function fixture(id, index) {
     title: `Book ${index + 1}`,
     publisher: "Tobacco Road Games",
     status: "preview-only",
+    storefront_visibility: "listed",
     buy_mode: "preview-only",
     sale_enabled: 0,
     price_cents: 0,
