@@ -181,6 +181,7 @@
       link.append(createRotationBook(product, baseWidth * depth / 24));
       book.replaceChildren(link);
     });
+    books.slice(shelfProducts.length).forEach((book) => book.remove());
     return true;
   }
 
