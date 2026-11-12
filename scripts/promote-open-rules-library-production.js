@@ -50,6 +50,8 @@ const REQUIRED_ASSET_FIELDS = Object.freeze([
   ["back_cover_r2_key", "image/webp"],
   ["delivery_r2_key", "application/pdf"]
 ]);
+const PRESERVED_PRODUCT_COLUMNS = Object.freeze(PRODUCT_COLUMNS.filter((column) =>
+  !["managed_by_user_id", "created_at", "updated_at"].includes(column)));
 
 function cli(target, ...args) {
   const environment = target.env ? ["--env", target.env] : [];
@@ -126,6 +128,18 @@ function validateSourceRows(rows) {
   });
 }
 
+function validateExistingRows(sourceRows, existingRows) {
+  const sourceById = new Map(sourceRows.map((row) => [row.id, row]));
+  for (const existing of existingRows) {
+    const source = sourceById.get(existing.id);
+    assert.ok(source, `${existing.id}: production contains an ID outside the approved source set.`);
+    for (const column of PRESERVED_PRODUCT_COLUMNS) {
+      assert.equal(existing[column], source[column], `${existing.id}: production ${column} differs from staging.`);
+    }
+  }
+  return sourceRows.filter((row) => !existingRows.some((existing) => existing.id === row.id));
+}
+
 function productInsert(rows, managerId) {
   const values = rows.map((row) => {
     const promoted = { ...row, managed_by_user_id: managerId };
@@ -155,8 +169,8 @@ function main() {
   const sourceRows = validateSourceRows(query(STAGING,
     `SELECT ${PRODUCT_COLUMNS.join(",")} FROM marketplace_products WHERE id IN (${inList(PRODUCT_IDS)})`));
   const existing = query(PRODUCTION,
-    `SELECT id FROM marketplace_products WHERE id IN (${inList(PRODUCT_IDS)}) ORDER BY id`);
-  assert.equal(existing.length, 0, "Production already contains one or more allowlisted IDs; refusing to overwrite or duplicate them.");
+    `SELECT ${PRODUCT_COLUMNS.join(",")} FROM marketplace_products WHERE id IN (${inList(PRODUCT_IDS)}) ORDER BY id`);
+  const missingRows = validateExistingRows(sourceRows, existing);
 
   const creators = query(PRODUCTION, `SELECT id FROM marketplace_creators WHERE id='creator-rv-sawyer'
     AND marketplace_status='approved' AND registration_status='active' AND closure_state='active'`);
@@ -191,13 +205,16 @@ function main() {
       }
     }
 
-    const sqlFile = path.join(temporaryDirectory, "insert-open-rules-publications.sql");
-    fs.writeFileSync(sqlFile, productInsert(sourceRows, managerId));
-    executeFile(PRODUCTION, sqlFile);
+    if (missingRows.length) {
+      const sqlFile = path.join(temporaryDirectory, "insert-open-rules-publications.sql");
+      fs.writeFileSync(sqlFile, productInsert(missingRows, managerId));
+      executeFile(PRODUCTION, sqlFile);
+    }
 
     const promoted = validateSourceRows(query(PRODUCTION,
       `SELECT ${PRODUCT_COLUMNS.join(",")} FROM marketplace_products WHERE id IN (${inList(PRODUCT_IDS)})`));
-    assert.ok(promoted.every((row) => row.managed_by_user_id === managerId), "Production manager assignment is incorrect.");
+    assert.ok(promoted.filter((row) => missingRows.some((missing) => missing.id === row.id))
+      .every((row) => row.managed_by_user_id === managerId), "Production manager assignment is incorrect.");
     verifyClosed(PRODUCTION);
 
     const report = {
@@ -212,6 +229,8 @@ function main() {
         deliveryR2Key: row.delivery_r2_key
       })),
       assets: assetReport,
+      existingProducts: existing.length,
+      insertedProducts: missingRows.length,
       storeState: "CLOSED"
     };
     const reportPath = path.join(ROOT, "tmp", "open-rules-production-promotion.json");
@@ -231,4 +250,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { PRODUCT_COLUMNS, PRODUCT_IDS, productInsert, sql, validateSourceRows };
+module.exports = { PRODUCT_COLUMNS, PRODUCT_IDS, productInsert, sql, validateExistingRows, validateSourceRows };
