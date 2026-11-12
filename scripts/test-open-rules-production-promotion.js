@@ -29,11 +29,14 @@ function fixture(id, index) {
 
 const rows = PRODUCT_IDS.map(fixture);
 assert.deepEqual(validateSourceRows(rows).map((row) => row.id), PRODUCT_IDS);
-assert.throws(() => validateSourceRows(rows.slice(1)), /exactly the twelve/);
+assert.equal(validateSourceRows(rows.map((row, index) => index === PRODUCT_IDS.length - 1
+  ? { ...row, storefront_visibility: "automatic" }
+  : row)).at(-1).id, "5e-monster-guide");
+assert.throws(() => validateSourceRows(rows.slice(1)), /exactly the thirteen/);
 assert.throws(() => validateSourceRows(rows.map((row, index) => index ? row : { ...row, buy_mode: "cart" })), /buy mode/);
 const statement = productInsert(rows, "production-owner");
 assert.match(statement, /^INSERT INTO marketplace_products/);
-assert.equal((statement.match(/production-owner/g) || []).length, 12);
+assert.equal((statement.match(/production-owner/g) || []).length, 13);
 assert.doesNotMatch(statement, /staging-admin-open-rules/);
 
 console.log("Open Rules production promotion safeguards passed.");

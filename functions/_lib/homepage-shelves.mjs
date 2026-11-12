@@ -27,7 +27,8 @@ export const OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze([
   "5e-warlock-spellbook",
   "5e-wizard-spellbook",
   "5e-relics-and-wonders",
-  "5e-dungeon-masters-handbook"
+  "5e-dungeon-masters-handbook",
+  "5e-monster-guide"
 ]);
 export const OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS = Object.freeze([]);
 export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([

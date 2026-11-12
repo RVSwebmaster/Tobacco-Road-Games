@@ -1,4 +1,4 @@
-// Explicit, idempotent promotion for the twelve approved Open Rules Library
+// Explicit, idempotent promotion for the thirteen approved Open Rules Library
 // publications. It never changes store state, pricing, or purchase availability.
 const assert = require("node:assert/strict");
 const childProcess = require("node:child_process");
@@ -33,7 +33,8 @@ const PRODUCT_IDS = Object.freeze([
   "5e-warlock-spellbook",
   "5e-wizard-spellbook",
   "5e-relics-and-wonders",
-  "5e-dungeon-masters-handbook"
+  "5e-dungeon-masters-handbook",
+  "5e-monster-guide"
 ]);
 const PRODUCT_COLUMNS = Object.freeze([
   "id", "slug", "creator_id", "creator_listing_id", "publication_state", "title", "subtitle",
@@ -103,7 +104,7 @@ function inList(values) {
 }
 
 function validateSourceRows(rows) {
-  assert.equal(rows.length, PRODUCT_IDS.length, "Staging must contain exactly the twelve approved publication records.");
+  assert.equal(rows.length, PRODUCT_IDS.length, "Staging must contain exactly the thirteen approved publication records.");
   const byId = new Map(rows.map((row) => [row.id, row]));
   assert.deepEqual([...byId.keys()].sort(), [...PRODUCT_IDS].sort(), "Staging publication identities do not match the allowlist.");
   return PRODUCT_IDS.map((id) => {
@@ -113,7 +114,7 @@ function validateSourceRows(rows) {
     assert.equal(row.publication_state, "published", `${id}: publication is not published for browsing.`);
     assert.equal(row.publisher, "Tobacco Road Games", `${id}: unexpected publisher.`);
     assert.equal(row.status, "preview-only", `${id}: status could enable sale visibility.`);
-    assert.equal(row.storefront_visibility, "listed", `${id}: publication is not listed for browsing.`);
+    assert.ok(["listed", "automatic"].includes(row.storefront_visibility), `${id}: publication is not available for browsing.`);
     assert.equal(row.buy_mode, "preview-only", `${id}: buy mode could enable purchase.`);
     assert.equal(Number(row.sale_enabled), 0, `${id}: sale must remain disabled.`);
     assert.equal(Number(row.price_cents), 0, `${id}: no invented price is allowed.`);
