@@ -233,6 +233,7 @@
   let folderTouched = false;
   let publishBusy = false;
   let publishedProductSlug = "";
+  let publicationAttemptId = "";
   let availableProducts = [];
   let selectedRelatedProducts = [];
   let loadedProductSlug = "";
@@ -974,6 +975,7 @@
       loadedProductFolder,
       loadedProductRecord,
       loadedProductSlug,
+      publicationAttemptId,
       savedAt: new Date().toISOString(),
       version: 1
     };
@@ -1491,11 +1493,11 @@
         fetch("/data/products.json", {
           cache: "no-store",
           credentials: "same-origin"
-        }),
+        }).catch(() => null),
         fetch("/data/product-intake-map.json", {
           cache: "no-store",
           credentials: "same-origin"
-        }),
+        }).catch(() => null),
         fetch(NATIVE_PUBLICATION_ENDPOINT, {
           cache: "no-store",
           credentials: "same-origin",
@@ -1503,13 +1505,14 @@
         }).catch(() => null)
       ]);
 
-      if (!productsResponse.ok || !intakeResponse.ok) {
-        throw new Error("Product intake sources failed to load.");
+      if (!nativeResponse?.ok) {
+        throw new Error("The native D1 product catalog failed to load.");
       }
 
-      const productsPayload = await productsResponse.json();
-      const intakePayload = await intakeResponse.json();
-      const nativePayload = nativeResponse?.ok ? await nativeResponse.json() : { products: [] };
+      const productsPayload = productsResponse?.ok ? await productsResponse.json() : [];
+      const intakePayload = intakeResponse?.ok ? await intakeResponse.json() : {};
+      const nativePayload = await nativeResponse.json();
+      const nativeProducts = Array.isArray(nativePayload?.products) ? nativePayload.products : [];
       const intakeProducts = Array.isArray(intakePayload?.products) ? intakePayload.products : [];
       const intakeBySlug = new Map(
         intakeProducts.map((product) => [String(product.slug || "").trim(), product])
@@ -1563,8 +1566,8 @@
           })
           .filter((product) => product.slug && product.title)
         : [];
-      const productBySlug = new Map(staticProducts.map(product => [product.slug, product]));
-      for (const product of Array.isArray(nativePayload?.products) ? nativePayload.products : []) {
+      const productBySlug = new Map((nativeProducts.length ? [] : staticProducts).map(product => [product.slug, product]));
+      for (const product of nativeProducts) {
         const slug = String(product.slug || "").trim();
         if (!slug) continue;
         const cents = value => Number.isSafeInteger(value) ? (value / 100).toFixed(2) : "";
@@ -2001,6 +2004,8 @@
       const metadata = buildNativePublicationMetadata(payload);
       const csrfToken = await loadOwnerPublicationAuth();
       const formData = new FormData();
+      publicationAttemptId = publicationAttemptId || createPublicationAttemptId();
+      formData.set("attemptId", publicationAttemptId);
       formData.set("metadata", JSON.stringify(metadata));
       const pdfFile = fields.pdfFile.files[0];
       if (isEditingLoadedListing()) {
@@ -2071,10 +2076,33 @@
       markDraftBaseline();
       persistExistingListingDraft();
     } catch (error) {
+      try {
+        const reconciliation = await fetch(`${NATIVE_PUBLICATION_ENDPOINT}?attemptId=${encodeURIComponent(publicationAttemptId)}`, {
+          credentials: "same-origin", headers: { accept: "application/json" }, cache: "no-store"
+        });
+        const recovered = await reconciliation.json();
+        if (reconciliation.ok && recovered.state === "published" && recovered.product?.slug) {
+          publishedProductSlug = recovered.product.slug;
+          showActionFeedback({
+            kind: "success",
+            heading: "Publication recovered",
+            message: `${recovered.product.title} was published successfully; the browser lost the original response.`,
+            reviewItems: [`Product ID: ${recovered.product.id}`, `Slug: ${recovered.product.slug}`]
+          });
+          markDraftBaseline();
+          persistExistingListingDraft();
+          return;
+        }
+        if (reconciliation.ok && recovered.state === "incomplete") {
+          throw new Error(`The publication is incomplete (${recovered.assetCount} uploaded asset${recovered.assetCount === 1 ? "" : "s"} found). Retry with this page open so the attempt can be recovered.`);
+        }
+      } catch (reconciliationError) {
+        error = reconciliationError;
+      }
       showActionFeedback({
         kind: "error",
         heading: "Publication could not complete",
-        message: `${error?.message || "The browser did not receive a server response."} No success was reported. Review the current listing and try again.`
+        message: `${error?.message || "The browser did not receive a server response."} Attempt ${publicationAttemptId} is recorded for recovery. Review the current listing and try again.`
       });
     } finally {
       setPublishBusyState(false);
@@ -2229,6 +2257,12 @@
     return issues;
   }
 
+  function createPublicationAttemptId() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    const hex = `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`.padEnd(32, "0").slice(0, 32);
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+  }
+
   function validateRequiredFields() {
     return validateListingIssues().map((issue) => issue.message);
   }
@@ -2315,6 +2349,7 @@
     }
 
     publishedProductSlug = "";
+    publicationAttemptId = "";
     loadedProductSlug = product.slug;
     loadedProductFolder = product.folder || product.slug;
     loadedProductRecord = product;
@@ -2409,6 +2444,7 @@
 
     const draft = persisted.draft || {};
     loadedProductSlug = String(persisted.loadedProductSlug || product.slug || "").trim();
+    publicationAttemptId = String(persisted.publicationAttemptId || "").trim();
     loadedProductFolder = String(persisted.loadedProductFolder || product.folder || loadedProductSlug).trim() || loadedProductSlug;
     loadedProductRecord = product;
 
@@ -2661,6 +2697,7 @@
 
   const resetFormToDefaults = ({ hideDetails = true } = {}) => {
     publishedProductSlug = "";
+    publicationAttemptId = "";
     clearActionFeedback();
     document.querySelectorAll("input, textarea, select").forEach((field) => {
       if (field.type === "file") {

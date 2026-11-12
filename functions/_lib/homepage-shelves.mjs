@@ -2,6 +2,8 @@ import {
   defaultHomepageConfiguration,
   getHomepageConfiguration,
   HOMEPAGE_SHELF_CAPACITY,
+  OPEN_RULES_LIBRARY_SHELF_CAPACITY,
+  INITIAL_OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
   validateHomepageConfiguration
 } from "./homepage-config-d1.mjs";
 import {
@@ -14,23 +16,11 @@ import { getProductById, listProducts } from "./product-catalog-d1.mjs";
 export const HOMEPAGE_BEST_SELLER_WINDOW_DAYS = 30;
 export const HOMEPAGE_BEST_SELLER_LIMIT = 43;
 export const HOMEPAGE_NEW_RELEASE_WINDOW_DAYS = 7;
-export const OPEN_RULES_LIBRARY_SHELF_CAPACITY = 18;
-export const OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze([
-  "5e-players-manual",
-  "5e-spellbook",
-  "5e-bard-spellbook",
-  "5e-cleric-spellbook",
-  "5e-druid-spellbook",
-  "5e-paladin-spellbook",
-  "5e-ranger-spellbook",
-  "5e-sorcerer-spellbook",
-  "5e-warlock-spellbook",
-  "5e-wizard-spellbook",
-  "5e-relics-and-wonders",
-  "5e-dungeon-masters-handbook",
-  "5e-monster-guide"
-]);
-export const OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS = Object.freeze([]);
+// Compatibility exports for older build/test consumers. Runtime shelf membership
+// comes from the validated D1 homepage configuration below.
+export const OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze(INITIAL_OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS);
+export const OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS = Object.freeze(defaultHomepageConfiguration().shelves.openRulesLibraryLower.productIds);
+export { OPEN_RULES_LIBRARY_SHELF_CAPACITY };
 export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([
   ...OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
   ...OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS
@@ -72,7 +62,14 @@ export async function getHomepageShelves(database, options = {}) {
     nowMs,
     windowDays
   });
-  const openRulesLibrary = await getOpenRulesLibraryShelves(database, options.catalog);
+  const configuredOpenRules = {
+    upper: configuration.shelves.openRulesLibraryUpper.productIds,
+    lower: configuration.shelves.openRulesLibraryLower.productIds
+  };
+  const openRulesIds = Array.isArray(options.catalog) && !configuredOpenRules.upper.length && !configuredOpenRules.lower.length
+    ? { upper: OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS, lower: OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS }
+    : configuredOpenRules;
+  const openRulesLibrary = await getOpenRulesLibraryShelves(database, options.catalog, openRulesIds);
 
   const featuredConfig = configuration.shelves.featuredCreator;
   const featuredPool = featuredConfig.creatorId
@@ -90,22 +87,8 @@ export async function getHomepageShelves(database, options = {}) {
       selectShelfProducts(configuration.shelves.bestSellers, candidates.bestSellers), suppressed.bestSellers),
     freePwyw: publicShelf(configuration.shelves.freePwyw,
       selectShelfProducts(configuration.shelves.freePwyw, candidates.freePwyw), suppressed.freePwyw),
-    openRulesLibraryUpper: {
-      managed: true,
-      capacity: OPEN_RULES_LIBRARY_SHELF_CAPACITY,
-      physicalShelf: "upper",
-      products: openRulesLibrary.upper,
-      suppressedSlugs: [],
-      visible: true
-    },
-    openRulesLibraryLower: {
-      managed: true,
-      capacity: OPEN_RULES_LIBRARY_SHELF_CAPACITY,
-      physicalShelf: "lower",
-      products: openRulesLibrary.lower,
-      suppressedSlugs: [],
-      visible: true
-    }
+    openRulesLibraryUpper: openRulesShelf(configuration.shelves.openRulesLibraryUpper, openRulesLibrary.upper, "upper"),
+    openRulesLibraryLower: openRulesShelf(configuration.shelves.openRulesLibraryLower, openRulesLibrary.lower, "lower")
   };
 
   return {
@@ -121,13 +104,15 @@ export async function getOpenRulesLibraryProducts(database, compatibilityCatalog
   return [...shelves.upper, ...shelves.lower];
 }
 
-export async function getOpenRulesLibraryShelves(database, compatibilityCatalog = null) {
+export async function getOpenRulesLibraryShelves(database, compatibilityCatalog = null, configured = null) {
+  const upperIds = configured?.upper || OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS;
+  const lowerIds = configured?.lower || OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS;
   const products = Array.isArray(compatibilityCatalog)
     ? compatibilityCatalog
-    : await getApprovedPublicProductsByIds(database, OPEN_RULES_LIBRARY_PRODUCT_IDS);
+    : await getApprovedPublicProductsByIds(database, [...upperIds, ...lowerIds]);
   return {
-    upper: selectOpenRulesLibraryProducts(products, OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS),
-    lower: selectOpenRulesLibraryProducts(products, OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS)
+    upper: selectOpenRulesLibraryProducts(products, upperIds),
+    lower: selectOpenRulesLibraryProducts(products, lowerIds)
   };
 }
 
@@ -169,12 +154,29 @@ export async function getHomepageCandidateSets(database, options = {}) {
     return Number.isFinite(stamp) && stamp >= releaseCutoff && stamp <= nowMs;
   }).sort((a, b) => releaseTimestamp(b) - releaseTimestamp(a) || a.slug.localeCompare(b.slug));
   const freePwyw = all.filter((product) => ["free", "pwyw"].includes(product.pricingModel));
+  const openRulesLibrary = compatibilityCatalog
+    ? all.filter((product) => product.metadata?.openRulesEligible === true)
+    : await listApprovedOpenRulesProducts(database);
   return {
     all: all.slice(0, 1000),
     bestSellers: bestSellers.slice(0, limit),
     freePwyw: freePwyw.slice(0, HOMEPAGE_SHELF_CAPACITY),
+    openRulesLibrary: openRulesLibrary.slice(0, 1000),
     newThisWeek: newThisWeek.slice(0, HOMEPAGE_SHELF_CAPACITY)
   };
+}
+
+async function listApprovedOpenRulesProducts(database) {
+  const products = [];
+  for (let offset = 0; offset < 10000; offset += 200) {
+    const page = await listProducts(database, { publicationState: "published", limit: 200, offset });
+    for (const product of page) {
+      const approved = await getApprovedPublicProductById(database, product.id);
+      if (isOpenRulesLibraryProduct(approved)) products.push(toHomepageProduct(approved));
+    }
+    if (page.length < 200) break;
+  }
+  return products;
 }
 
 async function listApprovedHomepageProducts(database) {
@@ -239,6 +241,18 @@ function publicShelf(config, products, suppressedSlugs, explicitlyManaged = fals
     managed: config.managed || explicitlyManaged || config.visible === false || selected.length > 0,
     products: config.visible ? selected : [],
     suppressedSlugs,
+    visible: config.visible
+  };
+}
+
+function openRulesShelf(config, products, physicalShelf) {
+  const selected = products.slice(0, OPEN_RULES_LIBRARY_SHELF_CAPACITY);
+  return {
+    managed: true,
+    capacity: OPEN_RULES_LIBRARY_SHELF_CAPACITY,
+    physicalShelf,
+    products: config.visible ? selected : [],
+    suppressedSlugs: [],
     visible: config.visible
   };
 }

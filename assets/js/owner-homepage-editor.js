@@ -4,7 +4,9 @@
     { key: "featuredCreator", title: "Featured Creator", help: "Choose one eligible Creator, then pin their products in shelf order." },
     { key: "newThisWeek", title: "New This Week", help: "Pin eligible recent releases. The first title becomes the hero book." },
     { key: "bestSellers", title: "Best Sellers", help: "Pin products currently eligible from authoritative paid-order rankings." },
-    { key: "freePwyw", title: "Free & PWYW", help: "Pin eligible free and pay-what-you-want products." }
+    { key: "freePwyw", title: "Free & PWYW", help: "Pin eligible free and pay-what-you-want products." },
+    { key: "openRulesLibraryUpper", title: "Open Rules Library — Upper Shelf", help: "Shelve eligible Open Rules publications in their existing upper-shelf order." },
+    { key: "openRulesLibraryLower", title: "Open Rules Library — Lower Shelf", help: "Shelve eligible Open Rules publications in their lower-shelf order." }
   ]);
   const elements = {
     revision: document.getElementById("homepage-revision"),
@@ -243,7 +245,8 @@
       const shelf = configuration.shelves[definition.key];
       const eligibleIds = new Set(Array.isArray(eligibility[definition.key]) ? eligibility[definition.key] : []);
       if (shelf.productIds.some((id) => !eligibleIds.has(id))) return `${definition.title} contains a product that is no longer eligible.`;
-      if (shelf.productIds.length > 43) return `${definition.title} exceeds its 43-product capacity.`;
+      const capacity = definition.key.startsWith("openRulesLibrary") ? 18 : 43;
+      if (shelf.productIds.length > capacity) return `${definition.title} exceeds its ${capacity}-product capacity.`;
     }
     return "";
   }

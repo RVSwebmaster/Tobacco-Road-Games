@@ -119,7 +119,9 @@ export async function loadOwnerHomepageState(database, options = {}) {
       featuredCreator: eligible.all,
       newThisWeek: eligible.newThisWeek,
       bestSellers: eligible.bestSellers,
-      freePwyw: eligible.freePwyw
+      freePwyw: eligible.freePwyw,
+      openRulesLibraryUpper: eligible.openRulesLibrary,
+      openRulesLibraryLower: eligible.openRulesLibrary
     },
     legacyCompatibility: {
       message: "Legacy-only homepage products remain in the pre-rendered fallback until their shelf is managed by native D1 configuration.",
@@ -140,7 +142,9 @@ export async function validateHomepageReferences(database, configuration, option
     featuredCreator: new Map(candidates.all.map((product) => [product.id, product])),
     newThisWeek: new Map(candidates.newThisWeek.map((product) => [product.id, product])),
     bestSellers: new Map(candidates.bestSellers.map((product) => [product.id, product])),
-    freePwyw: new Map(candidates.freePwyw.map((product) => [product.id, product]))
+    freePwyw: new Map(candidates.freePwyw.map((product) => [product.id, product])),
+    openRulesLibraryUpper: new Map(candidates.openRulesLibrary.map((product) => [product.id, product])),
+    openRulesLibraryLower: new Map(candidates.openRulesLibrary.map((product) => [product.id, product]))
   };
   const featured = configuration.shelves.featuredCreator;
   if (featured.creatorId) {

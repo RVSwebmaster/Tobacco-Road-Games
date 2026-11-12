@@ -1,8 +1,16 @@
 export const HOMEPAGE_CONFIGURATION_ID = "storefront";
 export const HOMEPAGE_SHELF_KEYS = Object.freeze([
-  "featuredCreator", "newThisWeek", "bestSellers", "freePwyw"
+  "featuredCreator", "newThisWeek", "bestSellers", "freePwyw",
+  "openRulesLibraryUpper", "openRulesLibraryLower"
 ]);
 export const HOMEPAGE_SHELF_CAPACITY = 43;
+export const OPEN_RULES_LIBRARY_SHELF_CAPACITY = 18;
+export const INITIAL_OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze([
+  "5e-players-manual", "5e-spellbook", "5e-bard-spellbook", "5e-cleric-spellbook",
+  "5e-druid-spellbook", "5e-paladin-spellbook", "5e-ranger-spellbook",
+  "5e-sorcerer-spellbook", "5e-warlock-spellbook", "5e-wizard-spellbook",
+  "5e-relics-and-wonders", "5e-dungeon-masters-handbook", "5e-monster-guide"
+]);
 
 const PRODUCT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const CREATOR_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
@@ -22,7 +30,9 @@ export function defaultHomepageConfiguration() {
       featuredCreator: { visible: true, managed: false, creatorId: null, productIds: [] },
       newThisWeek: { visible: true, managed: false, productIds: [] },
       bestSellers: { visible: true, managed: false, productIds: [] },
-      freePwyw: { visible: true, managed: false, productIds: [] }
+      freePwyw: { visible: true, managed: false, productIds: [] },
+      openRulesLibraryUpper: { visible: true, managed: true, productIds: [] },
+      openRulesLibraryLower: { visible: true, managed: true, productIds: [] }
     },
     promotions: []
   };
@@ -70,7 +80,8 @@ export function validateHomepageConfiguration(value) {
     if (!HOMEPAGE_SHELF_KEYS.includes(key)) invalid(`Unsupported homepage shelf: ${key}.`);
   }
   const shelves = {};
-  for (const key of HOMEPAGE_SHELF_KEYS) shelves[key] = validateShelf(key, value.shelves[key]);
+  const defaults = defaultHomepageConfiguration().shelves;
+  for (const key of HOMEPAGE_SHELF_KEYS) shelves[key] = validateShelf(key, value.shelves[key] || defaults[key]);
   const promotions = validatePromotions(value.promotions);
   return { version: 1, shelves, promotions };
 }
@@ -82,7 +93,8 @@ function validateShelf(key, value) {
   if (typeof value.visible !== "boolean") invalid(`Homepage shelf ${key} visibility must be true or false.`);
   if (typeof value.managed !== "boolean") invalid(`Homepage shelf ${key} managed state must be true or false.`);
   if (!Array.isArray(value.productIds)) invalid(`Homepage shelf ${key} products must be an array.`);
-  if (value.productIds.length > HOMEPAGE_SHELF_CAPACITY) invalid(`Homepage shelf ${key} exceeds its ${HOMEPAGE_SHELF_CAPACITY}-product capacity.`);
+  const capacity = key.startsWith("openRulesLibrary") ? OPEN_RULES_LIBRARY_SHELF_CAPACITY : HOMEPAGE_SHELF_CAPACITY;
+  if (value.productIds.length > capacity) invalid(`Homepage shelf ${key} exceeds its ${capacity}-product capacity.`);
   const productIds = value.productIds.map((id) => identifier(id, "product"));
   if (new Set(productIds).size !== productIds.length) invalid(`Homepage shelf ${key} cannot contain duplicate products.`);
   if (!value.managed && productIds.length) invalid(`Homepage shelf ${key} cannot store manual products while automatic ordering is enabled.`);

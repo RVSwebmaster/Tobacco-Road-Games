@@ -37,6 +37,13 @@ async function main() {
   assert.equal(published.deliveryR2Key, "catalog-publications/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/delivery.pdf");
   assert.equal((await catalog.getProductBySlug(db, published.slug)).id, published.id);
   assert.equal(bucket.objects.size, 2);
+  const retried = await publication.publishProduct(db, bucket, input("publication-success"), {
+    attemptId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", nowMs: NOW_MS
+  });
+  assert.equal(retried.id, published.id, "Retrying a completed attempt must return the existing native product.");
+  assert.deepEqual(await publication.reconcilePublicationAttempt(db, bucket, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"), {
+    ok: true, state: "published", product: retried, storefrontUrl: "/store/products/publication-success/"
+  });
   const withBack = input("publication-with-back");
   withBack.backCoverFile = new File([WEBP], "back-cover.webp", { type: "image/webp" });
   const backed = await publication.publishProduct(db, bucket, withBack, {

@@ -47,6 +47,8 @@ export async function handleOwnerCatalogPublicationRequest(request, env) {
   }
   if (method === "GET") {
     try {
+      const attemptId = new URL(request.url).searchParams.get("attemptId");
+      if (attemptId) return jsonResponse(await reconcilePublicationAttempt(env.TRG_ORDERS, env.TRG_PRODUCTS, attemptId));
       const products = [];
       for (let offset = 0; offset < 10_000; offset += 200) {
         const page = await listProducts(env.TRG_ORDERS, { limit: 200, offset });
@@ -80,7 +82,8 @@ export async function handleOwnerCatalogPublicationRequest(request, env) {
     };
     const publicationOptions = {
       managingRole: session.user.role,
-      managingUserId: session.user.id
+      managingUserId: session.user.id,
+      attemptId: String(form.get("attemptId") || "") || undefined
     };
     const product = action === "update"
       ? await updatePublishedProduct(env.TRG_ORDERS, env.TRG_PRODUCTS, {
@@ -150,7 +153,7 @@ export async function publishProduct(database, bucket, { metadata, coverFile, ba
   const deliveryKey = `catalog-publications/${attemptId}/delivery.pdf`;
   let candidate;
   try {
-    candidate = validateProductInput({ ...metadata, managedByUserId: options.managingUserId || null, publicationState: "published",
+    candidate = validateProductInput({ ...metadata, metadata: { ...(metadata.metadata || {}), publicationAttemptId: attemptId }, managedByUserId: options.managingUserId || null, publicationState: "published",
       publishedAt: new Date(options.nowMs ?? Date.now()).toISOString(),
       coverR2Key: coverKey, backCoverR2Key: backCoverKey, deliveryR2Key: deliveryKey,
       deliveryFilename: pdf.normalizedFilename, deliveryContentType: pdf.contentType });
@@ -176,9 +179,13 @@ export async function publishProduct(database, bucket, { metadata, coverFile, ba
     throw new ProductPublicationError("creator_unavailable", "Product Creator is not approved and active.", 409);
   }
   if (await getProductById(database, candidate.id) || await getProductBySlug(database, candidate.slug)) {
+    const completed = await getProductByPublicationAttempt(database, attemptId);
+    if (completed?.id === candidate.id && completed?.slug === candidate.slug && matchesAttempt(completed, coverKey, backCoverKey, deliveryKey)) return completed;
     throw new ProductPublicationError("product_exists", "Product ID or slug already exists.", 409);
   }
   if (await bucket.head(coverKey) || (backCoverKey && await bucket.head(backCoverKey)) || await bucket.head(deliveryKey)) {
+    const completed = await getProductByPublicationAttempt(database, attemptId);
+    if (completed?.id === candidate.id && completed?.slug === candidate.slug && matchesAttempt(completed, coverKey, backCoverKey, deliveryKey)) return completed;
     throw new ProductPublicationError("asset_exists", "Publication asset key already exists.", 409);
   }
 
@@ -290,6 +297,7 @@ export async function updatePublishedProduct(
   try {
     candidate = validateProductInput({
       ...metadata,
+      metadata: { ...(metadata.metadata || {}), publicationAttemptId: attemptId },
       id: current.id,
       slug: current.slug,
       creatorId: current.creatorId,
@@ -308,6 +316,8 @@ export async function updatePublishedProduct(
   } catch (error) {
     throw new ProductPublicationError("invalid_metadata", error.message, 400);
   }
+
+  if (current.metadata?.publicationAttemptId === attemptId) return current;
   if (options.managingRole === "admin" &&
       (candidate.publisher !== "Tobacco Road Games" || candidate.creatorId !== OFFICIAL_TRG_CREATOR_ID)) {
     throw new ProductPublicationError("invalid_metadata",
@@ -388,6 +398,27 @@ async function verifyObject(bucket, key, expectedBytes, contentType, attemptId) 
 async function digest(bytes) {
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(hash, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function reconcilePublicationAttempt(database, bucket, attemptId) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(attemptId || ""))) {
+    return { ok: false, state: "invalid", error: "Publication attempt ID is invalid." };
+  }
+  const product = await getProductByPublicationAttempt(database, attemptId);
+  if (product) return { ok: true, state: "published", product, storefrontUrl: `/store/products/${encodeURIComponent(product.slug)}/` };
+  let assetCount = 0;
+  if (bucket?.list) {
+    const listed = await bucket.list({ prefix: `catalog-publications/${attemptId}/`, limit: 10 });
+    assetCount = Array.isArray(listed?.objects) ? listed.objects.length : 0;
+  }
+  return { ok: true, state: assetCount ? "incomplete" : "not_found", attemptId, assetCount };
+}
+
+async function getProductByPublicationAttempt(database, attemptId) {
+  const row = await database.prepare("SELECT * FROM marketplace_products WHERE json_extract(metadata_json,'$.publicationAttemptId')=? LIMIT 1")
+    .bind(String(attemptId)).first();
+  if (!row) return null;
+  return getProductById(database, row.id);
 }
 
 function matchesAttempt(product, coverKey, backCoverKey, deliveryKey) {
