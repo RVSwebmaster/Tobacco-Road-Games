@@ -387,7 +387,7 @@
           body.append(link);
         }
         if (
-          ["draft", "needs_changes", "paused"].includes(item.lifecycleState) &&
+          (["draft", "needs_changes", "paused"].includes(item.lifecycleState) || (item.lifecycleState === "active" && item.publicationState === "published")) &&
           item.inactivityState !== "inactive" &&
           !item.ownerReviewHold
         ) {
@@ -398,12 +398,25 @@
           body.append(edit);
           const button = document.createElement("button");
           button.className = "button button--secondary";
-          button.textContent = "Submit for Review";
+          button.textContent = item.lifecycleState === "active" ? "Publish Updates" : "Publish";
           button.onclick = async () => {
-            await api(`listings/${item.id}/submit`, { expectedRevision: item.revision });
+            const rightsConfirmed = confirm("Confirm that you have sufficient rights to sell this material, the listing accurately represents what customers receive, and required licenses and attributions are your responsibility.");
+            if (!rightsConfirmed) return;
+            await api(`listings/${item.id}/publish`, { expectedRevision: item.revision, rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true });
             await load();
           };
           body.append(button);
+        }
+        if (item.lifecycleState === "active" && item.publicationState === "published" && !item.ownerReviewHold) {
+          const shelf = document.createElement("button");
+          shelf.className = "button button--secondary";
+          shelf.textContent = item.listingVisibility === "listed" ? "Unshelve" : "Shelve";
+          shelf.onclick = async () => {
+            const action = item.listingVisibility === "listed" ? "unshelve" : "shelve";
+            await api(`listings/${item.id}/${action}`, { expectedRevision: item.revision, expectedProductRevision: item.productRevision });
+            await load();
+          };
+          body.append(shelf);
         }
         if (
           item.lifecycleState === "active" &&

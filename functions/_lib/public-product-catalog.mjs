@@ -44,7 +44,7 @@ export async function handlePublicCatalogRequest(request, env) {
     const status = params.get("status") || undefined;
     if (creatorId?.length > 160 || status?.length > 80) return jsonResponse({ error: "Catalog filter is invalid." }, 400);
     const products = await listProducts(env.TRG_ORDERS, {
-      creatorId, status, publicationState: "published", limit, offset
+      creatorId, status, publicationState: "published", listingVisibility: "listed", limit, offset
     });
     const publicProducts = [];
     const creators = new Map();

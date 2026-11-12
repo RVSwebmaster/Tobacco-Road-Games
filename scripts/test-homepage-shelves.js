@@ -181,7 +181,7 @@ function testClientWiring() {
   assert.match(client, /hydrateGuestOpenRulesShelf/);
   assert.match(client, /depthForPages\(pageCount\) \* 220 \/ 340/);
   assert.match(client, /guest-open-rules-real-book/);
-  assert.match(client, /removeAttribute\("data-mock-open-rule"\)/);
+  assert.match(client, /row\.replaceChildren\(\.\.\.shelfProducts\.map/);
   assert.match(client, /--open-rules-spine-ratio/);
   assert.match(client, /guest-open-rules-real-book__link/);
   assert.match(client, /function createRotationSpine\(product\)/);

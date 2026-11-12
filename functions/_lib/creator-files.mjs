@@ -89,7 +89,7 @@ export async function handleCreatorFileUpload(
     );
   if (
     !["draft", "needs_changes", "paused"].includes(listing.lifecycle_state) &&
-    !(listing.lifecycle_state === "active" && listing.publication_state !== "published") &&
+    !(listing.lifecycle_state === "active" && ["published", "publishing", "failed"].includes(listing.publication_state)) &&
     Number(listing.owner_review_hold) !== 1
   )
     return json(

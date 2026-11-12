@@ -96,7 +96,7 @@ export async function getProductBySlug(database, slug) {
   return fromRow(row);
 }
 
-export async function listProducts(database, { creatorId, publicationState, status, limit = 50, offset = 0 } = {}) {
+export async function listProducts(database, { creatorId, publicationState, status, listingVisibility, limit = 50, offset = 0 } = {}) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 200) invalid("limit must be an integer from 1 to 200.");
   if (!Number.isInteger(offset) || offset < 0) invalid("offset must be a nonnegative integer.");
   const clauses = [];
@@ -104,7 +104,8 @@ export async function listProducts(database, { creatorId, publicationState, stat
   for (const [value, column, label] of [
     [creatorId, "creator_id", "creatorId"],
     [publicationState, "publication_state", "publicationState"],
-    [status, "status", "status"]
+    [status, "status", "status"],
+    [listingVisibility, "storefront_visibility", "listingVisibility"]
   ]) {
     if (value === undefined) continue;
     clauses.push(`${column}=?`);

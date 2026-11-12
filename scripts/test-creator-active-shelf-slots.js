@@ -10,8 +10,8 @@ const ROOT = path.resolve(__dirname, "..");
 const { createOwnerWorkbenchFixture } = require("./test-support/owner-workbench-fixture.js");
 const NOW_MS = Date.parse("2026-10-18T22:00:00.000Z");
 const NOW = new Date(NOW_MS).toISOString();
-const STANDARD_CAP = 20;
-const PREFERRED_CAP = 22;
+const STANDARD_CAP = 12;
+const PREFERRED_CAP = 24;
 const STANDARD_CREATOR = "creator-mock-shelf-standard";
 const STANDARD_USER = "user-mock-shelf-standard";
 const PREFERRED_CREATOR = "creator-mock-shelf-preferred";
@@ -76,17 +76,19 @@ async function main() {
       {
         activeListingCap: standardCapacity.activeListingCap,
         ownerCatalogOverride: standardCapacity.ownerCatalogOverride,
-        preferred: standardCapacity.preferred
+        preferred: standardCapacity.preferred,
+        shelfCap: standardCapacity.shelfCap
       },
-      { activeListingCap: STANDARD_CAP, ownerCatalogOverride: false, preferred: false }
+      { activeListingCap: STANDARD_CAP, ownerCatalogOverride: false, preferred: false, shelfCap: 6 }
     );
     assert.deepEqual(
       {
         activeListingCap: preferredCapacity.activeListingCap,
         ownerCatalogOverride: preferredCapacity.ownerCatalogOverride,
-        preferred: preferredCapacity.preferred
+        preferred: preferredCapacity.preferred,
+        shelfCap: preferredCapacity.shelfCap
       },
-      { activeListingCap: PREFERRED_CAP, ownerCatalogOverride: false, preferred: true }
+      { activeListingCap: PREFERRED_CAP, ownerCatalogOverride: false, preferred: true, shelfCap: 12 }
     );
 
     const standardListings = await seedApprovedListings(

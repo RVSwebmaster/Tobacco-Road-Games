@@ -15,7 +15,7 @@ const STAGING_TESTS = [
   "scripts/test-creator-owner-review-access-sandbox.js",
   "scripts/test-creator-owner-review-decisions-sandbox.js",
   "scripts/test-creator-product-publication-sandbox.js",
-  "scripts/test-creator-active-shelf-slots.js",
+  "scripts/test-creator-native-direct-publication.js",
   "scripts/test-creator-product-withdrawal.js",
   "scripts/test-creator-publishing-end-to-end.js",
   "scripts/test-product-inactivity-shelf-expiration.js",

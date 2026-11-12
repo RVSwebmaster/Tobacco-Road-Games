@@ -190,7 +190,9 @@ async function main() {
   const creatorHtml = fs.readFileSync(path.join(ROOT, "creator", "index.html"), "utf8");
   const creatorScript = fs.readFileSync(path.join(ROOT, "assets", "js", "creator-dashboard.js"), "utf8");
   assert.match(creatorHtml, /id="creator-edit-form"/);
-  assert.match(creatorHtml, /Changes to a paused product remain private/);
+  assert.match(creatorHtml, /Save changes privately, then publish them when ready/);
+  assert.match(creatorScript, /listings\/\$\{item.id\}\/publish/);
+  assert.match(creatorScript, /Shelve/);
   assert.match(creatorScript, /expectedProductRevision/);
   assert.match(creatorScript, /Pause Sales/);
   assert.match(creatorScript, /Edit Listing/);

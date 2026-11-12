@@ -6,8 +6,11 @@ import {
 import { getCreatorFinance, statementCsv } from "./creator-finance.mjs";
 import { getCreatorPayoutStatus } from "./creator-payout-readiness.mjs";
 import { reactivateListing } from "./product-inactivity.mjs";
-import { recordListingDeclaration } from "./publication-readiness.mjs";
 import { pauseListingPublication } from "./creator-publication.mjs";
+import { publishCreatorListing } from "./creator-review.mjs";
+import { assertCreatorPublicationReadiness, recordListingDeclaration } from "./publication-readiness.mjs";
+import { assertPublicationCapacity, assertShelfCapacity } from "./marketplace-policy.mjs";
+import { prepareUpdateProduct } from "./product-catalog-d1.mjs";
 import {
   getCreatorBusinessReport,
   creatorBusinessReportCsv,
@@ -177,6 +180,12 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
       route.split("/")[1],
       "submitted",
     );
+  if (request.method === "POST" && /^listings\/[^/]+\/publish$/.test(route))
+    return publishOwnListing(request, database, creator, route.split("/")[1], env, options);
+  if (request.method === "POST" && /^listings\/[^/]+\/shelve$/.test(route))
+    return changeListingShelf(request, database, creator, route.split("/")[1], true, options);
+  if (request.method === "POST" && /^listings\/[^/]+\/unshelve$/.test(route))
+    return changeListingShelf(request, database, creator, route.split("/")[1], false, options);
   if (request.method === "POST" && /^listings\/[^/]+\/withdraw$/.test(route))
     return changeListingState(
       request,
@@ -480,7 +489,7 @@ async function listings(db, creator) {
           mp.price_cents catalog_price_cents,mp.minimum_price_cents catalog_minimum_price_cents,
           mp.suggested_price_cents catalog_suggested_price_cents,mp.media_type catalog_media_type,
           mp.cover_r2_key catalog_cover_r2_key,mp.revision catalog_revision,
-          mp.updated_at catalog_updated_at,
+          mp.updated_at catalog_updated_at,mp.storefront_visibility catalog_listing_visibility,
           EXISTS(SELECT 1 FROM creator_listing_files cf
             WHERE cf.listing_id=cl.id AND cf.creator_id=cl.creator_id
               AND ((cf.purpose='cover' AND cf.content_type='image/webp')
@@ -610,7 +619,7 @@ async function updateListing(request, db, creator, id) {
     .bind(id, creator.id)
     .first();
   if (!current) return notFound();
-  if (!EDITABLE_STATES.has(current.lifecycle_state) && Number(current.owner_review_hold) !== 1)
+  if (!(EDITABLE_STATES.has(current.lifecycle_state) || (current.lifecycle_state === "active" && current.publication_state === "published")) && Number(current.owner_review_hold) !== 1)
     return invalid(
       "Only drafts, paused listings, or listings needing changes can be edited.",
     );
@@ -681,7 +690,48 @@ async function updateListing(request, db, creator, id) {
     const latest = await db.prepare("SELECT revision,lifecycle_state,publication_state FROM creator_listings WHERE id=?").bind(id).first();
     return listingRevisionConflict(latest);
   }
-  return json({ ok: true, message: "Listing changes saved for Owner review.", revision: expectedRevision + 1 });
+  return json({ ok: true, message: "Listing changes saved. Publish when you are ready.", revision: expectedRevision + 1 });
+}
+
+async function publishOwnListing(request, db, creator, id, env, options) {
+  if (!["manager", "editor"].includes(creator.permission)) return forbidden();
+  const listing = await db.prepare("SELECT * FROM creator_listings WHERE id=? AND creator_id=?").bind(id, creator.id).first();
+  if (!listing) return notFound();
+  if (Number(listing.owner_review_hold) === 1) return invalid("Tobacco Road Games has placed this listing on Owner Review Hold.");
+  const body = await bodyJson(request), expectedRevision = body.expectedRevision === undefined ? Number(listing.revision) : Number(body.expectedRevision);
+  if (!Number.isInteger(expectedRevision) || expectedRevision !== Number(listing.revision)) return listingRevisionConflict(listing);
+  try {
+    await assertCreatorSubmissionReady(db, listing);
+    if (!listing.publication_state || listing.publication_state !== "published") await assertPublicationCapacity(db, listing, options.nowMs);
+    if (body.rightsConfirmed !== true || body.representationConfirmed !== true || body.licensesConfirmed !== true) return invalid("All product declarations are required.");
+    await recordListingDeclaration(db, { listingId: id, creatorId: creator.id, userId: creator.user_id, rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true, nowMs: options.nowMs });
+    await assertCreatorPublicationReadiness(db, listing);
+    const result = await publishCreatorListing(db, env.TRG_PRODUCTS, { listingId: id, expectedRevision, actorId: creator.user_id, actorType: "creator", note: "Creator self-published.", requireSubmitted: false, nowMs: options.nowMs });
+    return json({ ok: true, state: "published", product: result });
+  } catch (error) {
+    return invalid(error.message || "The Creator publication could not be completed.");
+  }
+}
+
+async function changeListingShelf(request, db, creator, id, shelve, options) {
+  if (!["manager", "editor"].includes(creator.permission)) return forbidden();
+  const listing = await db.prepare("SELECT cl.*,mp.id product_id,mp.revision product_revision,mp.publication_state product_publication_state,mp.storefront_visibility FROM creator_listings cl JOIN marketplace_products mp ON mp.creator_listing_id=cl.id WHERE cl.id=? AND cl.creator_id=?").bind(id, creator.id).first();
+  if (!listing) return notFound();
+  if (Number(listing.owner_review_hold) === 1) return invalid("Tobacco Road Games has placed this listing on Owner Review Hold.");
+  if (listing.product_publication_state !== "published" || listing.lifecycle_state !== "active") return invalid("Only a published listing can be shelved.");
+  const body = await bodyJson(request), expectedRevision = body.expectedRevision === undefined ? Number(listing.revision) : Number(body.expectedRevision), expectedProductRevision = body.expectedProductRevision === undefined ? Number(listing.product_revision) : Number(body.expectedProductRevision);
+  if (expectedRevision !== Number(listing.revision) || expectedProductRevision !== Number(listing.product_revision)) return listingRevisionConflict(listing);
+  try {
+    if (shelve) await assertShelfCapacity(db, listing, options.nowMs);
+    const prepared = await prepareUpdateProduct(db, listing.product_id, { listingVisibility: shelve ? "listed" : "unlisted" }, { expectedRevision: expectedProductRevision, nowMs: options.nowMs });
+    const now = new Date(Number.isFinite(options.nowMs) ? options.nowMs : Date.now()).toISOString();
+    await db.batch([
+      prepared.statement,
+      db.prepare("UPDATE creator_listings SET updated_at=?,revision=revision+1 WHERE id=? AND creator_id=? AND revision=?").bind(now, id, creator.id, expectedRevision),
+      db.prepare("INSERT INTO creator_publication_audit(listing_id,creator_id,actor_type,actor_id,action,context_json,created_at) VALUES(?,?,\'creator\',?,?,?,?)").bind(id, creator.id, creator.user_id, shelve ? "shelved" : "unshelved", JSON.stringify({ productId: listing.product_id, productRevision: prepared.expectedNextRevision }), now)
+    ]);
+    return json({ ok: true, state: shelve ? "shelved" : "unshelved", revision: expectedRevision + 1, productRevision: prepared.expectedNextRevision });
+  } catch (error) { return invalid(error.message || "The shelf change could not be completed."); }
 }
 async function changeListingState(request, db, creator, id, state) {
   if (!["manager", "editor"].includes(creator.permission)) return forbidden();
@@ -1035,6 +1085,7 @@ function publicListing(row) {
     title: row.title,
     lifecycleState: row.lifecycle_state,
     publicationState: row.publication_state || "not_approved",
+    listingVisibility: row.catalog_listing_visibility || "unlisted",
     publicationErrors: JSON.parse(row.publication_errors_json || "[]"),
     reviewNote: row.review_note || "",
     reviewedAt: row.reviewed_at || null,
