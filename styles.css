@@ -2846,6 +2846,7 @@ h4 {
 .creator-agreement { padding: 12px; border: 1px solid rgba(242, 216, 170, 0.14); border-radius: 10px; background: rgba(12, 8, 6, 0.25); }
 .creator-agreement summary { cursor: pointer; font-weight: 700; }
 .creator-status-list { display: grid; gap: 8px; padding: 0; list-style: none; }
+#creator-pdf-review img { display: block; width: auto; max-width: min(100%, 320px); max-height: 420px; object-fit: contain; background: #fff; border: 1px solid rgba(255,255,255,.22); }
 .creator-status-item { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 18px; padding: 11px 13px; border: 1px solid rgba(242, 216, 170, 0.15); border-radius: 10px; }
 .creator-status-item--complete span { color: #a8d79b; }
 .creator-status-item--attention span { color: var(--accent-strong); }

@@ -5,7 +5,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/assets/vendor/pdfjs/pdf.worker.mjs";
 
 const METADATA_KEYS = Object.freeze([
   "dc:title",
+  "dc:creator",
   "dc:description",
+  "dc:publisher",
   "dc:language",
   "pdf:keywords",
   "xmp:CreatorTool"

@@ -574,9 +574,11 @@ async function createDraft(request, db, creator) {
   if (!["manager", "editor"].includes(creator.permission)) return forbidden();
   const body = await bodyJson(request),
     title = bounded(body.title, 160),
-    slug = slugify(body.slug || title),
     mediaType = String(body.mediaType || "");
-  if (!title || !slug || !MEDIA_TYPES.has(mediaType))
+  const now = new Date().toISOString(),
+    id = crypto.randomUUID(),
+    slug = slugify(body.slug || title) || (body.pdfAssisted === true ? `pdf-draft-${id.slice(0, 8)}` : "");
+  if ((!title && body.pdfAssisted !== true) || !slug || !MEDIA_TYPES.has(mediaType))
     return invalid("Title, slug, or media type is invalid.");
   let pricing;
   try {
@@ -584,8 +586,6 @@ async function createDraft(request, db, creator) {
   } catch (error) {
     return invalid(error.message);
   }
-  const now = new Date().toISOString(),
-    id = crypto.randomUUID();
   try {
     await db
       .prepare(
@@ -692,7 +692,10 @@ async function updateListing(request, db, creator, id) {
       body.genre === undefined ? current.genre : bounded(body.genre, 80),
       body.discovery === undefined
         ? current.discovery_json
-        : JSON.stringify(safeDiscovery(body.discovery)),
+        : JSON.stringify(safeDiscovery({
+            ...parseDiscovery(current.discovery_json),
+            ...body.discovery,
+          })),
       body.coverImage === undefined
         ? current.cover_image
         : safeUrl(body.coverImage) || "",
@@ -1095,6 +1098,7 @@ function publicCreator(row) {
 }
 function publicListing(row) {
   const publicSlug = row.catalog_slug || row.public_product_slug || "";
+  const discovery = parseDiscovery(row.discovery_json);
   return {
     id: row.id,
     slug: row.slug,
@@ -1118,6 +1122,12 @@ function publicListing(row) {
     formats: JSON.parse(row.format_json || "[]"),
     gameSystem: row.game_system || "",
     genre: row.genre || "",
+    subtitle: discovery.subtitle || "",
+    authorCredit: discovery.authorCredit || "",
+    publisher: discovery.publisher || "",
+    version: discovery.version || "",
+    language: discovery.language || "",
+    previewOnly: discovery.previewOnly === true,
     salePriceCents: row.sale_price_cents,
     saleStart: row.sale_start,
     saleEnd: row.sale_end,
@@ -1208,12 +1218,34 @@ function safeDiscovery(value) {
     "rulesComplexity",
     "language",
     "contentDescriptors",
+    "subtitle",
+    "authorCredit",
+    "publisher",
+    "version",
+    "releaseDate",
   ];
-  return Object.fromEntries(
-    allowed
-      .filter((key) => value[key] !== undefined)
-      .map((key) => [key, value[key]]),
+  const result = Object.fromEntries(
+    allowed.filter((key) => value[key] !== undefined).map((key) => [
+      key,
+      ["playerCountMin", "playerCountMax"].includes(key)
+        ? Number.isFinite(Number(value[key])) ? Math.max(0, Math.min(100, Math.floor(Number(value[key])))) : null
+        : bounded(value[key], key === "subtitle" ? 180 : key === "authorCredit" || key === "publisher" ? 240 : key === "releaseDate" ? 40 : 120),
+    ]),
   );
+  if (value.language !== undefined) result.language = bounded(value.language, 80);
+  if (value.previewOnly !== undefined) result.previewOnly = value.previewOnly === true;
+  if (value.contentDescriptors !== undefined) result.contentDescriptors = Array.isArray(value.contentDescriptors)
+    ? value.contentDescriptors.map((item) => bounded(item, 120)).filter(Boolean).slice(0, 12)
+    : bounded(value.contentDescriptors, 500);
+  return result;
+}
+function parseDiscovery(value) {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 function normalizeListingPricing(body, current = null) {
   const previousModel = current?.pricing_model || "fixed";

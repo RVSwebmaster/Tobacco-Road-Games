@@ -15,10 +15,30 @@ async function main() {
   const db = createD1(raw), bucket = memoryBucket(), env = { TRG_ORDERS: db, TRG_PRODUCTS: bucket }, options = { database: db, nowMs: NOW_MS };
   try {
     let response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, "listings", {
-      slug: "direct-creator-publication", title: "Direct Creator Publication", shortDescription: "Disposable direct publication.", longDescription: "This listing is published by its validated Creator.", priceCents: 800, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "test"
+      slug: "direct-creator-publication", title: "Direct Creator Publication", shortDescription: "Disposable direct publication.", longDescription: "This listing is published by its validated Creator.", priceCents: 800, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "test",
+      discovery: { subtitle: "A reviewable subtitle", authorCredit: "Confirmed Test Author", publisher: "Test Press", version: "2.4", language: "English" }
     }), env, options);
     assert.equal(response.status, 201);
     const listingId = (await response.json()).listing.id;
+    let storedCredits = JSON.parse(raw.prepare("SELECT discovery_json FROM creator_listings WHERE id=?").get(listingId).discovery_json);
+    assert.equal(storedCredits.subtitle, "A reviewable subtitle");
+    assert.equal(storedCredits.authorCredit, "Confirmed Test Author");
+    assert.equal(storedCredits.publisher, "Test Press");
+    assert.equal(storedCredits.version, "2.4");
+    assert.equal(storedCredits.language, "English");
+
+    response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, "listings", {
+      pdfAssisted: true, title: "", mediaType: "digital", format: ["PDF"], pricingModel: "free"
+    }), env, options);
+    assert.equal(response.status, 201, "PDF-assisted draft creation can preserve an unknown title as blank.");
+    const untitled = (await response.json()).listing;
+    assert.equal(untitled.title, "");
+    assert.match(untitled.slug, /^pdf-draft-/);
+    response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, "listings", {
+      title: "", mediaType: "digital", format: ["PDF"], pricingModel: "free"
+    }), env, options);
+    assert.equal(response.status, 400, "Manual drafts must continue requiring a title.");
+
     const form = new FormData();
     form.set("purpose", "product");
     form.set("file", new File([PDF_BYTES], "direct.pdf", { type: "application/pdf" }));
@@ -46,9 +66,13 @@ async function main() {
     listing = raw.prepare("SELECT * FROM creator_listings WHERE id=?").get(listingId);
     shelved = raw.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").get(listingId);
     assert.equal(shelved.storefront_visibility, "unlisted");
-    response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, `listings/${listingId}`, { expectedRevision: listing.revision, title: "Direct Creator Publication Revised", shortDescription: "Revised direct publication.", longDescription: "The same native product identity was retained.", priceCents: 900, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "test" }), env, options);
+    response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, `listings/${listingId}`, { expectedRevision: listing.revision, title: "Direct Creator Publication Revised", shortDescription: "Revised direct publication.", longDescription: "The same native product identity was retained.", priceCents: 900, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "test", discovery: { subtitle: "Edited subtitle", authorCredit: "Edited Test Author", publisher: "Revised Test Press", version: "2.5", language: "English" } }), env, options);
     assert.equal(response.status, 200, await response.text());
     listing = raw.prepare("SELECT * FROM creator_listings WHERE id=?").get(listingId);
+    storedCredits = JSON.parse(listing.discovery_json);
+    assert.equal(storedCredits.publisher, "Revised Test Press");
+    assert.equal(storedCredits.authorCredit, "Edited Test Author");
+    assert.equal(storedCredits.version, "2.5");
     response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, `listings/${listingId}/publish`, { expectedRevision: listing.revision, rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true }), env, options);
     assert.equal(response.status, 200, await response.text());
     const revised = raw.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").get(listingId);
@@ -56,6 +80,10 @@ async function main() {
     assert.equal(revised.slug, identity.slug);
     assert.equal(revised.creator_id, identity.creator_id);
     assert.equal(revised.price_cents, 900);
+    assert.equal(revised.publisher, "Revised Test Press");
+    assert.equal(revised.subtitle, "Edited subtitle");
+    assert.deepEqual(JSON.parse(revised.metadata_json).authors, ["Edited Test Author"]);
+    assert.equal(JSON.parse(revised.metadata_json).version, "2.5");
     response = await catalog.handlePublicCatalogRequest(new Request("https://example.com/api/catalog?limit=100"), env);
     assert.equal(response.status, 200);
     assert.ok(!(await response.json()).products.some(product => product.slug === "direct-creator-publication"), "Unshelved publication is absent from public catalog browsing.");

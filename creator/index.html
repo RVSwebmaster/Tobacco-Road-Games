@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>Creator Dashboard | Tobacco Road Games</title>
     <link rel="stylesheet" href="/styles.css" />
-    <script src="/assets/js/creator-dashboard.js?v=20261107-task3b" defer></script>
+    <script src="/assets/js/creator-dashboard.js?v=20261113-pdf-intake" defer></script>
   </head>
   <body class="view-section">
     <div class="page-shell">
@@ -210,11 +210,71 @@
         <section class="account-card" id="creator-listings" hidden>
           <h2>My Listings</h2>
           <div id="creator-listing-list" class="product-card-grid"></div>
+          <details id="creator-pdf-intake" open>
+            <summary>Start with a PDF</summary>
+            <p>Select a product PDF. TRG reads its embedded details and opening pages in this browser, then prepares first-page and final-page WebP covers. Nothing is uploaded or published until you save the reviewed draft.</p>
+            <label>Product PDF <input id="creator-pdf-file" type="file" accept="application/pdf,.pdf" /></label>
+            <button class="button button--secondary" id="creator-pdf-analyze" type="button" disabled>Analyze PDF again</button>
+            <p id="creator-pdf-status" role="status" aria-live="polite">Choose a PDF to begin.</p>
+            <div id="creator-pdf-review" hidden>
+              <h3>Review the prepared listing</h3>
+              <p>Extracted values show their source. Medium-confidence values are suggestions. Conflicting credits stay blank until you decide. Reanalyzing never replaces text you have already entered.</p>
+              <ul id="creator-pdf-extraction-report" class="creator-status-list"></ul>
+              <ul id="creator-pdf-warnings" class="creator-status-list"></ul>
+              <form id="creator-pdf-draft-form" class="account-form">
+                <label>Title <input name="title" maxlength="160" /></label>
+                <label>Subtitle <input name="subtitle" maxlength="180" /></label>
+                <label>Author credit <input name="authorCredit" maxlength="240" /></label>
+                <label>Publisher credit <input name="publisher" maxlength="240" /></label>
+                <label>Short description <textarea name="shortDescription" maxlength="500"></textarea></label>
+                <label>Full description <textarea name="longDescription" maxlength="10000"></textarea></label>
+                <label>Game system <input name="gameSystem" maxlength="120" /></label>
+                <label>Genre <input name="genre" maxlength="80" /></label>
+                <label>Version <input name="version" maxlength="120" /></label>
+                <label>Language <input name="language" maxlength="80" /></label>
+                <label>Pricing
+                  <select name="pricingModel">
+                    <option value="fixed">Fixed price</option>
+                    <option value="free">Free</option>
+                    <option value="pwyw">Pay What You Want</option>
+                    <option value="preview-only">Preview only · not for sale</option>
+                  </select>
+                </label>
+                <label data-pdf-fixed-price>Price in cents <input name="priceCents" type="number" min="1" step="1" /></label>
+                <label data-pdf-pwyw-price hidden>PWYW minimum in cents <input name="minimumPriceCents" type="number" min="0" step="1" /></label>
+                <label data-pdf-pwyw-price hidden>PWYW suggested price in cents <input name="suggestedPriceCents" type="number" min="0" step="1" /></label>
+                <label>Media type
+                  <select name="mediaType"><option value="digital">Digital</option><option value="physical">Physical</option><option value="hybrid">Hybrid</option></select>
+                </label>
+                <label>Format <input name="format" value="PDF" maxlength="120" /></label>
+                <p id="creator-pdf-page-count"></p>
+                <div class="account-grid">
+                  <article class="account-card">
+                    <h4>Front cover · PDF page 1</h4>
+                    <img id="creator-pdf-front-preview" alt="Generated front cover preview" hidden />
+                    <label>Replace front cover <input id="creator-pdf-front-replacement" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+                  </article>
+                  <article class="account-card">
+                    <h4>Back cover · final PDF page</h4>
+                    <img id="creator-pdf-back-preview" alt="Generated back cover preview" hidden />
+                    <label>Replace back cover <input id="creator-pdf-back-replacement" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+                  </article>
+                </div>
+                <div>
+                  <button class="button button--primary" id="creator-pdf-save-draft" type="button">Save Draft</button>
+                  <button class="button button--secondary" id="creator-pdf-save-continue" type="button">Save Draft &amp; Continue Editing</button>
+                </div>
+              </form>
+            </div>
+          </details>
           <details>
-            <summary>New Draft Listing</summary>
+            <summary>Manual listing entry</summary>
             <form id="creator-draft-form" class="account-form">
               <label
                 >Title <input name="title" required maxlength="160" /></label
+              ><label>Subtitle <input name="subtitle" maxlength="180" /></label
+              ><label>Author credit <input name="authorCredit" maxlength="240" /></label
+              ><label>Publisher credit <input name="publisher" maxlength="240" /></label
               ><label
                 >Short description
                 <textarea
@@ -235,6 +295,7 @@
                   <option value="fixed">Fixed price</option>
                   <option value="free">Free</option>
                   <option value="pwyw">Pay What You Want</option>
+                  <option value="preview-only">Preview only · not for sale</option>
                 </select></label
               ><label
                 data-fixed-price
@@ -256,6 +317,8 @@
               ><label>Format <input name="format" placeholder="PDF" value="PDF" required /></label
               ><label>Game system <input name="gameSystem" required /></label
               ><label>Genre <input name="genre" required /></label
+              ><label>Version <input name="version" maxlength="120" /></label
+              ><label>Language <input name="language" maxlength="80" /></label
               ><button class="button button--primary">Save Draft</button>
             </form>
             <p id="creator-draft-status" role="status"></p>
@@ -266,6 +329,9 @@
               <input name="listingId" type="hidden" />
               <input name="expectedRevision" type="hidden" />
               <label>Title <input name="title" required maxlength="160" /></label>
+              <label>Subtitle <input name="subtitle" maxlength="180" /></label>
+              <label>Author credit <input name="authorCredit" maxlength="240" /></label>
+              <label>Publisher credit <input name="publisher" maxlength="240" /></label>
               <label>Short description <textarea name="shortDescription" maxlength="500" required></textarea></label>
               <label>Full description <textarea name="longDescription" maxlength="10000" required></textarea></label>
               <label>Pricing
@@ -273,6 +339,7 @@
                   <option value="fixed">Fixed price</option>
                   <option value="free">Free</option>
                   <option value="pwyw">Pay What You Want</option>
+                  <option value="preview-only">Preview only · not for sale</option>
                 </select>
               </label>
               <label data-edit-fixed-price>Price in cents <input name="priceCents" type="number" min="1" step="1" /></label>
@@ -288,6 +355,8 @@
               <label>Format <input name="format" required /></label>
               <label>Game system <input name="gameSystem" required /></label>
               <label>Genre <input name="genre" required /></label>
+              <label>Version <input name="version" maxlength="120" /></label>
+              <label>Language <input name="language" maxlength="80" /></label>
               <button class="button button--primary">Save Changes</button>
               <button class="button button--secondary" id="creator-edit-cancel" type="button">Cancel</button>
             </form>

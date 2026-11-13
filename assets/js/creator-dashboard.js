@@ -2,11 +2,20 @@
   const status = document.querySelector("#creator-status"),
     overview = document.querySelector("#creator-overview"),
     listingsPanel = document.querySelector("#creator-listings"),
-    profilePanel = document.querySelector("#creator-profile");
+    profilePanel = document.querySelector("#creator-profile"),
+    creatorPdfInput = document.querySelector("#creator-pdf-file"),
+    creatorPdfReview = document.querySelector("#creator-pdf-review"),
+    creatorPdfStatus = document.querySelector("#creator-pdf-status");
   let csrf = "";
   let currentCreatorId = "";
   let ownerAdjustmentKey = "";
   let ownerFinancialSnapshot = null;
+  let creatorPdf = null;
+  let creatorPdfRun = 0;
+  let creatorPdfFrontUrl = "";
+  let creatorPdfBackUrl = "";
+  let pendingPdfDraftId = "";
+  let pendingPdfDraftRevision = 1;
   function creatorApiUrl(path) {
     const url = new URL(`/api/creator/${path}`, location.origin);
     if (currentCreatorId) url.searchParams.set("creator", currentCreatorId);
@@ -158,6 +167,7 @@
         ...listingData.listings.map((item) => new Option(item.title, item.id)),
       );
     document.querySelector("#creator-advertising").hidden = false;
+    return listingData;
   }
   function readSelectedCreator() {
     try {
@@ -335,7 +345,7 @@
         const body = document.createElement("div");
         body.className = "product-card__body";
         const title = document.createElement("h3");
-        title.textContent = item.title;
+        title.textContent = item.title || "Untitled PDF draft · title needed";
         if (item.coverImage) {
           const cover = document.createElement("img");
           cover.src = item.coverImage;
@@ -344,7 +354,9 @@
           body.append(cover);
         }
         const meta = document.createElement("p");
-        const price = item.pricingModel === "free"
+        const price = item.previewOnly
+          ? "preview only · not for sale"
+          : item.pricingModel === "free"
           ? "free"
           : item.pricingModel === "pwyw"
             ? `PWYW · minimum $${((item.minimumPriceCents || 0) / 100).toFixed(2)} · suggested ${item.suggestedPriceCents == null ? "unset" : `$${(item.suggestedPriceCents / 100).toFixed(2)}`}`
@@ -464,9 +476,12 @@
     form.listingId.value = item.id;
     form.expectedRevision.value = item.revision;
     form.title.value = item.title || "";
+    form.subtitle.value = item.subtitle || "";
+    form.authorCredit.value = item.authorCredit || "";
+    form.publisher.value = item.publisher || "";
     form.shortDescription.value = item.shortDescription || "";
     form.longDescription.value = item.longDescription || "";
-    form.pricingModel.value = item.pricingModel || "fixed";
+    form.pricingModel.value = item.previewOnly ? "preview-only" : (item.pricingModel || "fixed");
     form.priceCents.value = item.priceCents ?? "";
     form.minimumPriceCents.value = item.minimumPriceCents ?? "";
     form.suggestedPriceCents.value = item.suggestedPriceCents ?? "";
@@ -474,6 +489,8 @@
     form.format.value = (item.formats || []).join(", ");
     form.gameSystem.value = item.gameSystem || "";
     form.genre.value = item.genre || "";
+    form.version.value = item.version || "";
+    form.language.value = item.language || "";
     form.pricingModel.dispatchEvent(new Event("change"));
     document.querySelector("#creator-edit-status").textContent = "";
     details.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -586,6 +603,256 @@
       if (form.elements[field])
         form.elements[field].value = creator[field] || "";
   }
+  function revokeCreatorPdfPreview(which) {
+    const url = which === "front" ? creatorPdfFrontUrl : creatorPdfBackUrl;
+    if (url) URL.revokeObjectURL(url);
+    if (which === "front") creatorPdfFrontUrl = "";
+    else creatorPdfBackUrl = "";
+  }
+  function showCreatorPdfPreview(which, file) {
+    revokeCreatorPdfPreview(which);
+    const image = document.querySelector(which === "front" ? "#creator-pdf-front-preview" : "#creator-pdf-back-preview");
+    if (!file) {
+      image.hidden = true;
+      image.removeAttribute("src");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    if (which === "front") creatorPdfFrontUrl = url;
+    else creatorPdfBackUrl = url;
+    image.src = url;
+    image.hidden = false;
+  }
+  function reportCreatorPdfPreparation(result) {
+    const form = document.querySelector("#creator-pdf-draft-form"),
+      targets = {
+        title: "title", subtitle: "subtitle", author: "authorCredit", publisher: "publisher",
+        shortDescription: "shortDescription", longDescription: "longDescription",
+        system: "gameSystem", genre: "genre", version: "version", language: "language", format: "format",
+      },
+      report = document.querySelector("#creator-pdf-extraction-report"),
+      warnings = document.querySelector("#creator-pdf-warnings"),
+      rows = [];
+    for (const [key, field] of Object.entries(result.fields || {})) {
+      if (key === "pageCount") continue;
+      const target = targets[key];
+      const existingValue = target ? String(form.elements[target].value || "").trim() : "";
+      if (target && !existingValue) {
+        form.elements[target].value = Array.isArray(field.value) ? field.value.join(", ") : field.value;
+      }
+      const row = document.createElement("li");
+      row.textContent = `${key}: ${Array.isArray(field.value) ? field.value.join(", ") : field.value} — ${field.source} (${field.confidence} confidence)${existingValue ? " · your existing entry was kept" : ""}`;
+      rows.push(row);
+    }
+    for (const [key, candidates] of Object.entries(result.uncertain || {})) {
+      const row = document.createElement("li");
+      row.textContent = `${key}: conflicting PDF candidates — ${candidates.join(" / ")}. No value was selected; enter the credit you want to use.`;
+      rows.push(row);
+    }
+    if (!rows.length) {
+      const row = document.createElement("li");
+      row.textContent = "No reliable listing details were found. Fill in the fields you can confirm.";
+      rows.push(row);
+    }
+    report.replaceChildren(...rows);
+    const warningRows = [...(result.warnings || [])];
+    for (const [field, label] of [["title", "Title"], ["author", "Author credit"], ["publisher", "Publisher credit"], ["shortDescription", "Short description"], ["longDescription", "Full description"], ["system", "Game system"], ["genre", "Genre"]]) {
+      if (!result.fields?.[field]?.value && !result.uncertain?.[field]) warningRows.push(`${label} was not established from this PDF; please enter it if applicable.`);
+    }
+    warnings.replaceChildren(...warningRows.map((message) => {
+      const row = document.createElement("li");
+      row.textContent = message;
+      return row;
+    }));
+  }
+  async function processCreatorPdf(file) {
+    const run = ++creatorPdfRun;
+    if (pendingPdfDraftId && creatorPdf?.file !== file) {
+      creatorPdfStatus.textContent = "Finish or retry the saved draft's PDF upload before starting another PDF.";
+      creatorPdfInput.value = "";
+      return;
+    }
+    creatorPdf = null;
+    creatorPdfReview.hidden = true;
+    document.querySelector("#creator-pdf-analyze").disabled = !file;
+    if (!file) {
+      creatorPdfStatus.textContent = "Choose a PDF to begin.";
+      return;
+    }
+    creatorPdfStatus.textContent = "Reading PDF metadata and opening pages locally…";
+    showCreatorPdfPreview("front", null);
+    showCreatorPdfPreview("back", null);
+    try {
+      const [{ readProductPdf }, { renderDefaultPdfCoverFiles }] = await Promise.all([
+        import("/assets/js/product-pdf-autofill.mjs"),
+        import("/assets/js/product-pdf-images.mjs"),
+      ]);
+      const [details, covers] = await Promise.all([
+        readProductPdf(file),
+        renderDefaultPdfCoverFiles(file),
+      ]);
+      if (run !== creatorPdfRun || creatorPdfInput.files[0] !== file) return;
+      creatorPdf = { file, frontFile: covers.frontFile, backFile: covers.backFile, pageCount: covers.pageCount, details };
+      document.querySelector("#creator-pdf-page-count").textContent =
+        `${covers.pageCount} PDF page${covers.pageCount === 1 ? "" : "s"} · front cover from page 1${covers.backFile ? ` · back cover from page ${covers.pageCount}` : " · one-page PDF has no separate back cover"}`;
+      document.querySelector("#creator-pdf-back-replacement").disabled = !covers.backFile;
+      showCreatorPdfPreview("front", covers.frontFile);
+      showCreatorPdfPreview("back", covers.backFile);
+      reportCreatorPdfPreparation(details);
+      creatorPdfReview.hidden = false;
+      creatorPdfStatus.textContent = `Prepared ${file.name} locally. Review and edit the suggestions and both cover images; the PDF has not been uploaded.`;
+    } catch (error) {
+      if (run !== creatorPdfRun) return;
+      creatorPdfStatus.textContent = `Could not prepare this PDF: ${error.message || "Check that it is a readable, unprotected PDF."}`;
+      document.querySelector("#creator-pdf-analyze").disabled = false;
+    }
+  }
+  async function replacementAsWebp(file, name) {
+    if (!file) return null;
+    const bitmap = await createImageBitmap(file);
+    try {
+      const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height), Math.sqrt(8_000_000 / (bitmap.width * bitmap.height))),
+        canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error("The browser could not prepare the replacement cover.");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve, reject) => canvas.toBlob((value) =>
+        value?.type === "image/webp" ? resolve(value) : reject(new Error("The browser could not make a WebP cover.")), "image/webp", 0.9));
+      return new File([blob], name, { type: "image/webp" });
+    } finally {
+      bitmap.close?.();
+    }
+  }
+  creatorPdfInput.addEventListener("change", () => processCreatorPdf(creatorPdfInput.files[0] || null));
+  document.querySelector("#creator-pdf-analyze").addEventListener("click", () => processCreatorPdf(creatorPdfInput.files[0] || null));
+  document.querySelector("#creator-pdf-front-replacement").addEventListener("change", async (event) => {
+    if (!creatorPdf || !event.currentTarget.files[0]) return;
+    try {
+      creatorPdf.frontFile = await replacementAsWebp(event.currentTarget.files[0], "front-cover.webp");
+      showCreatorPdfPreview("front", creatorPdf.frontFile);
+      creatorPdfStatus.textContent = "Replacement front cover is ready as WebP. Review it before saving the draft.";
+    } catch (error) { creatorPdfStatus.textContent = error.message; }
+  });
+  document.querySelector("#creator-pdf-back-replacement").addEventListener("change", async (event) => {
+    if (!creatorPdf?.backFile || !event.currentTarget.files[0]) return;
+    try {
+      creatorPdf.backFile = await replacementAsWebp(event.currentTarget.files[0], "back-cover.webp");
+      showCreatorPdfPreview("back", creatorPdf.backFile);
+      creatorPdfStatus.textContent = "Replacement back cover is ready as WebP. Review it before saving the draft.";
+    } catch (error) { creatorPdfStatus.textContent = error.message; }
+  });
+  const creatorPdfForm = document.querySelector("#creator-pdf-draft-form");
+  creatorPdfForm.pricingModel.addEventListener("change", () => {
+    const model = creatorPdfForm.pricingModel.value;
+    for (const label of creatorPdfForm.querySelectorAll("[data-pdf-fixed-price]")) label.hidden = model !== "fixed";
+    for (const label of creatorPdfForm.querySelectorAll("[data-pdf-pwyw-price]")) label.hidden = model !== "pwyw";
+  });
+  creatorPdfForm.pricingModel.dispatchEvent(new Event("change"));
+  async function saveCreatorPdfDraft(continueEditing) {
+    const buttons = [
+      document.querySelector("#creator-pdf-save-draft"),
+      document.querySelector("#creator-pdf-save-continue"),
+    ];
+    if (!creatorPdf?.file) {
+      creatorPdfStatus.textContent = "Choose and prepare a product PDF first.";
+      return;
+    }
+    buttons.forEach((button) => { button.disabled = true; });
+    try {
+      const form = creatorPdfForm,
+        pricingModel = form.pricingModel.value,
+        body = {
+          pdfAssisted: true,
+          title: form.title.value.trim(),
+          mediaType: form.mediaType.value,
+          format: form.format.value.split(",").map((value) => value.trim()).filter(Boolean),
+          shortDescription: form.shortDescription.value,
+          longDescription: form.longDescription.value,
+          gameSystem: form.gameSystem.value,
+          genre: form.genre.value,
+          pricingModel: pricingModel === "preview-only" ? "free" : pricingModel,
+          priceCents: pricingModel === "fixed" && form.priceCents.value ? Number(form.priceCents.value) : undefined,
+          minimumPriceCents: pricingModel === "pwyw" && form.minimumPriceCents.value ? Number(form.minimumPriceCents.value) : undefined,
+          suggestedPriceCents: pricingModel === "pwyw" && form.suggestedPriceCents.value ? Number(form.suggestedPriceCents.value) : undefined,
+          discovery: {
+            subtitle: form.subtitle.value,
+            authorCredit: form.authorCredit.value,
+            publisher: form.publisher.value,
+            version: form.version.value,
+            language: form.language.value,
+            previewOnly: pricingModel === "preview-only",
+          },
+        };
+      let uploadAlreadyRecorded = false;
+      if (!pendingPdfDraftId) {
+        const created = await api("listings", body);
+        pendingPdfDraftId = created.listing.id;
+        pendingPdfDraftRevision = Number(created.listing.revision || 1);
+      } else if (body.title.trim()) {
+        const updated = await api(`listings/${encodeURIComponent(pendingPdfDraftId)}`, {
+          ...body,
+          expectedRevision: pendingPdfDraftRevision,
+        });
+        pendingPdfDraftRevision = Number(updated.revision || pendingPdfDraftRevision + 1);
+      } else {
+        const existing = await api("listings");
+        uploadAlreadyRecorded = (existing.files || []).some((file) =>
+          file.listing_id === pendingPdfDraftId && file.purpose === "product" && file.validation_state !== "superseded");
+        if (!uploadAlreadyRecorded)
+          throw new Error("This draft is saved. Add a title before retrying the PDF upload so your latest edits can be saved too.");
+      }
+      creatorPdfStatus.textContent = "Draft saved. Uploading the PDF and reviewed WebP covers privately…";
+      if (!uploadAlreadyRecorded) {
+        const currentFiles = await api("listings");
+        uploadAlreadyRecorded = (currentFiles.files || []).some((file) =>
+          file.listing_id === pendingPdfDraftId && file.purpose === "product" && file.validation_state !== "superseded");
+      }
+      if (!uploadAlreadyRecorded) {
+        const data = new FormData();
+        data.set("listingId", pendingPdfDraftId);
+        data.set("purpose", "product");
+        data.set("file", creatorPdf.file);
+        data.set("generatedFront", creatorPdf.frontFile);
+        if (creatorPdf.backFile) data.set("generatedBack", creatorPdf.backFile);
+        data.set("pdfPageCount", String(creatorPdf.pageCount));
+        const response = await fetch(creatorApiUrl(`listings/${encodeURIComponent(pendingPdfDraftId)}/files`), {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "x-csrf-token": csrf },
+          body: data,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error?.message || payload?.error || "The PDF upload failed.");
+      }
+      const listingId = pendingPdfDraftId;
+      pendingPdfDraftId = "";
+      creatorPdfStatus.textContent = "Draft and PDF saved privately with the reviewed front and back covers. Nothing was published or shelved.";
+      creatorPdfInput.value = "";
+      creatorPdfReview.hidden = true;
+      creatorPdf = null;
+      showCreatorPdfPreview("front", null);
+      showCreatorPdfPreview("back", null);
+      document.querySelector("#creator-pdf-front-replacement").value = "";
+      document.querySelector("#creator-pdf-back-replacement").value = "";
+      const refreshed = await load();
+      if (continueEditing) {
+        const item = refreshed?.listings?.find((listing) => listing.id === listingId);
+        if (item) openListingEditor(item);
+      }
+    } catch (error) {
+      creatorPdfStatus.textContent = pendingPdfDraftId
+        ? `A draft is saved, but its PDF upload did not complete. Keep this file selected and retry: ${error.message}`
+        : error.message;
+    } finally {
+      buttons.forEach((button) => { button.disabled = false; });
+    }
+  }
+  document.querySelector("#creator-pdf-save-draft").addEventListener("click", () => saveCreatorPdfDraft(false));
+  document.querySelector("#creator-pdf-save-continue").addEventListener("click", () => saveCreatorPdfDraft(true));
   document
     .querySelector("#creator-draft-form")
     .addEventListener("submit", async (event) => {
@@ -594,9 +861,17 @@
       try {
         await api("listings", {
           title: form.title.value,
+          discovery: {
+            subtitle: form.subtitle.value,
+            authorCredit: form.authorCredit.value,
+            publisher: form.publisher.value,
+            version: form.version.value,
+            language: form.language.value,
+            previewOnly: form.pricingModel.value === "preview-only",
+          },
           shortDescription: form.shortDescription.value,
           longDescription: form.longDescription.value,
-          pricingModel: form.pricingModel.value,
+          pricingModel: form.pricingModel.value === "preview-only" ? "free" : form.pricingModel.value,
           priceCents: form.pricingModel.value === "fixed" ? Number(form.priceCents.value) : undefined,
           minimumPriceCents: form.pricingModel.value === "pwyw" ? Number(form.minimumPriceCents.value) : undefined,
           suggestedPriceCents: form.pricingModel.value === "pwyw" ? Number(form.suggestedPriceCents.value) : undefined,
@@ -647,9 +922,17 @@
       const result = await api(`listings/${form.listingId.value}`, {
         expectedRevision: Number(form.expectedRevision.value),
         title: form.title.value,
+        discovery: {
+          subtitle: form.subtitle.value,
+          authorCredit: form.authorCredit.value,
+          publisher: form.publisher.value,
+          version: form.version.value,
+          language: form.language.value,
+            previewOnly: form.pricingModel.value === "preview-only",
+        },
         shortDescription: form.shortDescription.value,
         longDescription: form.longDescription.value,
-        pricingModel: model,
+        pricingModel: model === "preview-only" ? "free" : model,
         priceCents: model === "fixed" ? Number(form.priceCents.value) : undefined,
         minimumPriceCents: model === "pwyw" ? Number(form.minimumPriceCents.value) : undefined,
         suggestedPriceCents: model === "pwyw" ? Number(form.suggestedPriceCents.value) : undefined,

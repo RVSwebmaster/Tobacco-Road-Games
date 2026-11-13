@@ -21,6 +21,7 @@
     "test:agency-legacy-continuity": "node scripts/test-agency-legacy-continuity.js",
     "test:owner-profile-finance": "node scripts/test-owner-profile-financial-controls.js",
     "test:product-pdf-autofill": "node scripts/test-product-pdf-autofill.js",
+    "test:creator-pdf-intake": "node scripts/test-creator-pdf-intake.js",
     "test:product-pdf-webp": "node scripts/test-product-pdf-webp.js",
     "test:native-pwyw": "node scripts/test-owner-intake.js && node scripts/test-cart-quote.js && node scripts/test-storefront-cart.js && node scripts/test-cart-checkout.js",
     "test:owner-intake-browser": "node scripts/test-owner-intake-browser.js",

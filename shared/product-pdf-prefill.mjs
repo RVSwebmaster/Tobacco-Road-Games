@@ -84,6 +84,12 @@ const getLabeledValue = (lines, labels, maxLength = 300) => {
   return "";
 };
 
+const getLabeledValues = (lines, labels, maxLength = 300) => {
+  const labelPattern = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const expression = new RegExp(`^(?:${labelPattern})(?:\\s*[:\\-]\\s*|\\s+)(.+)$`, "i");
+  return unique(lines.map((line) => line.match(expression)?.[1]).filter(Boolean).map((value) => cleanText(value).slice(0, maxLength)));
+};
+
 const readSection = (lines, headings, { maxLines = 8, maxLength = 1400 } = {}) => {
   const headingPattern = headings.map((heading) => heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
   const expression = new RegExp(`^(?:${headingPattern})(?:\\s*[:\\-]\\s*(.*))?$`, "i");
@@ -135,14 +141,15 @@ const normalizeDate = (value) => {
 
 const detectGameSystem = (text) => {
   const checks = [
-    [/\b(?:5e|5th edition|fifth edition)(?:\s+compatible)?\b/i, "5E Compatible"],
+    [/\b(?:5e|5th edition|fifth edition)\s+compatible\b/i, "5E Compatible"],
+    [/\bDungeons\s*&\s*Dragons\s+(?:5e|fifth edition)\b/i, "Dungeons & Dragons 5E"],
     [/\bSRD\s*5\.2(?:\.1)?\b/i, "SRD 5.2.1"],
     [/\bSRD\s*5\.1\b/i, "SRD 5.1"],
-    [/\bPathfinder(?:\s+Second Edition|\s+2E)?\b/i, "Pathfinder"],
-    [/\bCall of Cthulhu\b/i, "Call of Cthulhu"],
-    [/\bTraveller\b/i, "Traveller"],
-    [/\bGURPS\b/i, "GURPS"],
-    [/\bChampions\b/i, "Champions"],
+    [/\bPathfinder\s+(?:Second Edition|2E)\b/i, "Pathfinder"],
+    [/\bCall of Cthulhu\s+(?:Roleplaying|RPG)\b/i, "Call of Cthulhu"],
+    [/\bTraveller\s+(?:RPG|roleplaying)\b/i, "Traveller"],
+    [/\bGURPS\s+(?:Fourth Edition|4E)\b/i, "GURPS"],
+    [/\bChampions\s+(?:HERO System|roleplaying)\b/i, "Champions"],
     [/\bThreshold Engine\b/i, "Threshold Engine"],
     [/\bBig Damn Sci[- ]?Fi\b/i, "Big Damn Sci-Fi"],
     [/\bsystem[- ]agnostic\b/i, "System Agnostic"]
@@ -201,28 +208,55 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
   }));
   const allLines = normalizedPages.flatMap((page) => cleanLines(page.text));
   const allText = allLines.join("\n");
-  const firstPageLines = cleanLines(normalizedPages[0]?.text || "");
+  const openingPages = normalizedPages.filter((page) => page.pageNumber <= 4);
+  const openingLines = openingPages.flatMap((page) => cleanLines(page.text));
   const fields = {};
   const warnings = [];
+  const uncertain = {};
 
   const metadataTitle = getMetadataValue(normalizedMetadata, ["title", "dc:title"]);
-  const labeledTitle = getLabeledValue(allLines, ["Product Title", "Title"], 160);
-  const firstPageTitle = firstPageLines.find(isUsefulTitle) || "";
+  const labeledTitle = getLabeledValue(openingLines, ["Product Title", "Title"], 160);
+  const titleHeadingCandidates = unique(openingLines.filter((line) => isUsefulTitle(line) && isLikelyHeading(line)));
+  const firstPageTitle = titleHeadingCandidates.length === 1 ? titleHeadingCandidates[0] : "";
+  if (titleHeadingCandidates.length > 1) uncertain.title = titleHeadingCandidates.slice(0, 5);
   const title = isUsefulTitle(metadataTitle)
     ? metadataTitle
     : (isUsefulTitle(labeledTitle) ? labeledTitle : firstPageTitle);
-  addField(fields, "title", title, metadataTitle ? "PDF document title" : (labeledTitle ? "labeled title" : "first-page heading"));
+  const titleSource = isUsefulTitle(metadataTitle) ? "PDF document title" : (isUsefulTitle(labeledTitle) ? "labeled title" : "opening-page heading");
+  const competingTitle = [metadataTitle, labeledTitle, ...titleHeadingCandidates].filter(isUsefulTitle);
+  const titleConflict = unique(competingTitle).length > 1;
+  addField(fields, "title", title, titleSource, titleConflict ? "medium" : "high");
+  if (titleConflict) warnings.push("The PDF contains differing title references. The selected value is a source-based suggestion; confirm it before publishing.");
 
-  const subtitle = getLabeledValue(allLines, ["Subtitle"], 180);
+  const subtitle = getLabeledValue(openingLines, ["Subtitle"], 180);
   addField(fields, "subtitle", subtitle, "labeled subtitle");
+
+  const metadataAuthor = getMetadataValue(normalizedMetadata, ["author", "dc:creator"]);
+  const labeledAuthors = getLabeledValues(openingLines, ["Author", "Authors", "Written by", "Design by", "Designed by"], 240);
+  const authorCandidates = unique([metadataAuthor, ...labeledAuthors].filter(Boolean));
+  if (authorCandidates.length === 1) {
+    addField(fields, "author", authorCandidates[0], metadataAuthor ? "PDF author metadata" : "opening-page author credit");
+  } else if (authorCandidates.length > 1) {
+    uncertain.author = authorCandidates;
+    warnings.push("The PDF has conflicting author credits. No author was selected; review the listed candidates.");
+  }
+  const metadataPublisher = getMetadataValue(normalizedMetadata, ["publisher", "dc:publisher"]);
+  const labeledPublishers = getLabeledValues(openingLines, ["Publisher", "Published by"], 240);
+  const publisherCandidates = unique([metadataPublisher, ...labeledPublishers].filter(Boolean));
+  if (publisherCandidates.length === 1) {
+    addField(fields, "publisher", publisherCandidates[0], metadataPublisher ? "PDF publisher metadata" : "opening-page publisher credit");
+  } else if (publisherCandidates.length > 1) {
+    uncertain.publisher = publisherCandidates;
+    warnings.push("The PDF has conflicting publisher credits. No publisher was selected; review the listed candidates.");
+  }
 
   addField(fields, "pageCount", String(Number(pageCount) || 0), "PDF page tree");
   addField(fields, "format", "PDF", "selected PDF file");
 
-  const system = getLabeledValue(allLines, ["Game System", "System"], 120) || detectGameSystem(allText);
+  const system = getLabeledValue(openingLines, ["Game System", "System"], 120) || detectGameSystem(openingLines.join("\n"));
   addField(fields, "system", system, system && /^(?:5E Compatible|SRD|Pathfinder|Call of Cthulhu|Traveller|GURPS|Champions|Threshold Engine|Big Damn Sci-Fi|System Agnostic)/.test(system)
     ? "explicit system reference"
-    : "labeled game system");
+    : "labeled game system", system && !getLabeledValue(openingLines, ["Game System", "System"], 120) ? "medium" : "high");
   addField(fields, "line", getLabeledValue(allLines, ["Product Line", "Game Line"], 140), "labeled product line");
   addField(fields, "series", getLabeledValue(allLines, ["Series"], 140), "labeled series");
   addField(fields, "version", getLabeledValue(allLines, ["Version", "Document Version"], 80), "labeled version");
@@ -233,9 +267,9 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
     ? "PDF language metadata"
     : "labeled language");
 
-  const explicitDate = getLabeledValue(allLines, ["Publication Date", "Published", "Release Date", "Released"], 120);
+  const explicitDate = getLabeledValue(openingLines, ["Publication Date", "Published", "Release Date", "Released"], 120);
   addField(fields, "releaseDate", normalizeDate(explicitDate), "explicit publication date");
-  addField(fields, "genre", getLabeledValue(allLines, ["Genre"], 120), "labeled genre");
+  addField(fields, "genre", getLabeledValue(openingLines, ["Genre"], 120), "labeled genre");
 
   const metadataKeywords = getMetadataValue(normalizedMetadata, ["keywords", "pdf:keywords"]);
   const explicitTags = getLabeledValue(allLines, ["Tags", "Keywords"], 500);
@@ -252,7 +286,7 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
   addField(fields, "features", features, "labeled feature list", "medium");
 
   const metadataSubject = getMetadataValue(normalizedMetadata, ["subject", "dc:description"]);
-  const descriptionSection = readSection(allLines, ["Product Description", "About This Product", "Description"], {
+  const descriptionSection = readSection(openingLines, ["Product Description", "About This Product", "About This Book", "Overview", "Description", "Introduction"], {
     maxLines: 12,
     maxLength: 1800
   });
@@ -277,6 +311,7 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
 
   return {
     fields,
+    uncertain,
     pagesRead: normalizedPages.map((page) => page.pageNumber),
     readablePageCount: pagesWithText,
     warnings

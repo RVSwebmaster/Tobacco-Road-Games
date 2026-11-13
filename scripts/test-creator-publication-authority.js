@@ -50,9 +50,12 @@ async function main() {
   assert.equal(ownerOperational.registrationComplete, false, "Owner authority must not fabricate Creator registration completion.");
 
   const env = { TRG_ORDERS: db, TRG_PRODUCTS: memoryBucket() };
-  const rvListing = await createAndPublish({ creator: RV, title: "RV Preview", priceCents: 0, operations, files, env, db });
+  const rvListing = await createAndPublish({ creator: RV, title: "RV Preview", priceCents: 0, previewOnly: true, operations, files, env, db });
   let rvRow = raw.prepare("SELECT * FROM creator_listings WHERE id=?").get(rvListing);
   let rvProduct = raw.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").get(rvListing);
+  assert.equal(rvProduct.status, "preview-only");
+  assert.equal(rvProduct.buy_mode, "preview-only");
+  assert.equal(rvProduct.price_cents, 0);
   let response = await operations.handleCreatorRequest(
     creatorRequest(RV, `listings/${rvListing}/shelve`, { expectedRevision: rvRow.revision, expectedProductRevision: rvProduct.revision }), env, { database: db, nowMs: NOW_MS },
   );
@@ -116,8 +119,8 @@ async function createExistingRv(raw, auth) {
   raw.prepare("INSERT INTO creator_identity_ownership(creator_id,owner_user_id,identity_type,account_status,billing_status,entitlement_source,created_at,updated_at) VALUES(?,?,'primary','active','legacy_grandfathered','legacy_grandfathered',?,?)").run(RV.id, RV.userId, now, now);
   raw.prepare("UPDATE marketplace_creators SET marketplace_status='approved',registration_status='active',intake_registration_completed_at=COALESCE(intake_registration_completed_at,?),registration_completed_at=COALESCE(registration_completed_at,?) WHERE id=?").run(now, now, RV.id);
 }
-async function createAndPublish({ creator, title, priceCents, operations, files, env, db }) {
-  const listingId = await createDraft({ creator, title, priceCents, pricingModel: priceCents ? "fixed" : "free", operations, env, db });
+async function createAndPublish({ creator, title, priceCents, previewOnly = false, operations, files, env, db }) {
+  const listingId = await createDraft({ creator, title, priceCents, pricingModel: priceCents ? "fixed" : "free", previewOnly, operations, env, db });
   await uploadProduct({ creator, listingId, files, env, db });
   const response = await operations.handleCreatorRequest(
     creatorRequest(creator, `listings/${listingId}/publish`, { expectedRevision: 1, rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true }),
@@ -127,9 +130,9 @@ async function createAndPublish({ creator, title, priceCents, operations, files,
   assert.equal(response.status, 200, await response.text());
   return listingId;
 }
-async function createDraft({ creator, title, priceCents, pricingModel, operations, env, db }) {
+async function createDraft({ creator, title, priceCents, pricingModel, previewOnly = false, operations, env, db }) {
   const response = await operations.handleCreatorRequest(
-    creatorRequest(creator, "listings", { slug: `${creator.slug}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, title, shortDescription: "A preview publication.", longDescription: "A disposable preview publication for authority testing.", priceCents, pricingModel, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "test" }),
+    creatorRequest(creator, "listings", { slug: `${creator.slug}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, title, shortDescription: "A preview publication.", longDescription: "A disposable preview publication for authority testing.", priceCents, pricingModel, discovery: { previewOnly }, mediaType: "digital", format: ["PDF"], gameSystem: "System Neutral", genre: "test" }),
     env,
     { database: db, nowMs: NOW_MS },
   );
