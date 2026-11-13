@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Janni: A Mortal Kind of Immortality</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #eee8dc;
+        --muted: #c6bda9;
+        --gold: #c9a56b;
+        --bronze: #6f593d;
+        --night: #090a0d;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--night);
+        color: var(--ink);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--night);
+      }
+
+      .backdrop {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 68% 45%, rgba(105, 82, 48, 0.17), transparent 36%),
+          linear-gradient(120deg, #111217 0%, #090a0d 58%, #050608 100%);
+      }
+
+      .backdrop::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.025) 50%, transparent 100%);
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .art-frame {
+        position: absolute;
+        left: 5.5%;
+        top: 7%;
+        width: 56%;
+        height: 86%;
+        display: grid;
+        place-items: center;
+      }
+
+      .art-frame img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 24px 36px rgba(0, 0, 0, 0.52));
+      }
+
+      .portrait-frame {
+        left: 4%;
+        width: 60%;
+      }
+
+      .copy {
+        position: absolute;
+        left: 66%;
+        top: 21%;
+        width: 28%;
+        min-height: 54%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 20px;
+      }
+
+      .copy.centered {
+        align-items: center;
+        text-align: center;
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--gold);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        max-width: 100%;
+        font-size: 70px;
+        font-weight: 600;
+        letter-spacing: 0.035em;
+        line-height: 1.02;
+      }
+
+      h2 {
+        max-width: 100%;
+        font-size: 56px;
+        font-weight: 600;
+        letter-spacing: 0.045em;
+        line-height: 1.05;
+        text-transform: uppercase;
+      }
+
+      .subcopy {
+        max-width: 92%;
+        color: var(--muted);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 29px;
+        font-weight: 400;
+        letter-spacing: 0.035em;
+        line-height: 1.32;
+      }
+
+      .rule {
+        width: 132px;
+        height: 3px;
+        background: var(--gold);
+        box-shadow: 0 0 22px rgba(201, 165, 107, 0.25);
+      }
+
+      .emblem {
+        position: absolute;
+        right: 8%;
+        top: 15%;
+        width: 150px;
+        height: 150px;
+        object-fit: contain;
+        filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.45));
+      }
+
+      .ghuul .art-frame {
+        left: 9%;
+        width: 52%;
+      }
+
+      .ghuul .copy {
+        top: 17%;
+        min-height: 62%;
+      }
+
+      .hourglass {
+        left: 14%;
+        width: 42%;
+      }
+
+      .hourglass-copy {
+        top: 16%;
+        min-height: 64%;
+      }
+
+      .hourglass-copy h2 {
+        font-size: 52px;
+      }
+
+      .cost {
+        color: var(--gold);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 34px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .final .art-frame {
+        left: 4%;
+        width: 53%;
+      }
+
+      .final .copy {
+        top: 17%;
+        min-height: 65%;
+        gap: 16px;
+      }
+
+      .final h1 {
+        font-size: 86px;
+      }
+
+      .final .subcopy {
+        font-size: 28px;
+      }
+
+      .badges {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        margin-top: 10px;
+      }
+
+      .badge {
+        display: block;
+        width: 104px;
+        height: 104px;
+        object-fit: contain;
+      }
+
+      .final .trg-badge {
+        width: 210px;
+        height: 74px;
+        object-fit: contain;
+      }
+
+      .fade-black {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+        background: #000;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-j7pz" id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="30">
+      <div data-hf-id="hf-qnnn" class="backdrop" aria-hidden="true"></div>
+
+      <section data-hf-id="hf-8tkf" id="scene-1-cover-intro" class="scene clip" data-start="0" data-duration="3" data-track-index="1">
+        <div data-hf-id="hf-r1a1" class="art-frame" id="scene-1-art"><img data-hf-id="hf-z5y1" src="assets/janni/cover_full.jpg" alt="Janni book cover" /></div>
+        <div data-hf-id="hf-yamh" class="copy" id="scene-1-copy">
+          <p data-hf-id="hf-4r21" class="eyebrow">A child of two worlds</p>
+          <div data-hf-id="hf-a46i" class="rule"></div>
+          <h1 data-hf-id="hf-xclo">Mortal flesh.<br data-hf-id="hf-x5px" />Jinn blood.</h1>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-ixyu" id="scene-2-air" class="scene clip" data-start="3" data-duration="3" data-track-index="2">
+        <div data-hf-id="hf-zks3" class="art-frame portrait-frame" id="scene-2-art"><img data-hf-id="hf-fobt" src="assets/janni/air_janni.jpg" alt="Air Janni illustration" /></div>
+        <img data-hf-id="hf-vzs5" class="emblem" id="scene-2-emblem" src="assets/janni/air_emblem.png" alt="Air heritage emblem" />
+        <div data-hf-id="hf-z5n8" class="copy" id="scene-2-copy"><p data-hf-id="hf-kveu" class="eyebrow">Heritage I</p><h2 data-hf-id="hf-6ltt">Air</h2><div data-hf-id="hf-ya9a" class="rule"></div><p data-hf-id="hf-kvib" class="subcopy">Cold resistance</p></div>
+      </section>
+
+      <section data-hf-id="hf-ifz1" id="scene-3-earth" class="scene clip" data-start="6" data-duration="3" data-track-index="3">
+        <div data-hf-id="hf-yb9m" class="art-frame portrait-frame" id="scene-3-art"><img data-hf-id="hf-okxd" src="assets/janni/earth_janni.jpg" alt="Earth Janni illustration" /></div>
+        <img data-hf-id="hf-agi6" class="emblem" id="scene-3-emblem" src="assets/janni/earth_emblem.png" alt="Earth heritage emblem" />
+        <div data-hf-id="hf-ykof" class="copy" id="scene-3-copy"><p data-hf-id="hf-bwbh" class="eyebrow">Heritage II</p><h2 data-hf-id="hf-dbeh">Earth</h2><div data-hf-id="hf-yokb" class="rule"></div><p data-hf-id="hf-xp6z" class="subcopy">Lightning resistance</p></div>
+      </section>
+
+      <section data-hf-id="hf-4xug" id="scene-4-fire" class="scene clip" data-start="9" data-duration="3" data-track-index="4">
+        <div data-hf-id="hf-bz01" class="art-frame portrait-frame" id="scene-4-art"><img data-hf-id="hf-jtvd" src="assets/janni/fire_janni.jpg" alt="Fire Janni illustration" /></div>
+        <img data-hf-id="hf-8n0n" class="emblem" id="scene-4-emblem" src="assets/janni/fire_emblem.png" alt="Fire heritage emblem" />
+        <div data-hf-id="hf-xsey" class="copy" id="scene-4-copy"><p data-hf-id="hf-qiyk" class="eyebrow">Heritage III</p><h2 data-hf-id="hf-m70r">Fire</h2><div data-hf-id="hf-z2vc" class="rule"></div><p data-hf-id="hf-z98t" class="subcopy">Fire resistance</p></div>
+      </section>
+
+      <section data-hf-id="hf-kp9t" id="scene-5-water" class="scene clip" data-start="12" data-duration="3" data-track-index="5">
+        <div data-hf-id="hf-xt40" class="art-frame portrait-frame" id="scene-5-art"><img data-hf-id="hf-zofl" src="assets/janni/water_janni.jpg" alt="Water Janni illustration" /></div>
+        <img data-hf-id="hf-qkxw" class="emblem" id="scene-5-emblem" src="assets/janni/water_emblem.png" alt="Water heritage emblem" />
+        <div data-hf-id="hf-tf7h" class="copy" id="scene-5-copy"><p data-hf-id="hf-bi0g" class="eyebrow">Heritage IV</p><h2 data-hf-id="hf-gg4u">Water</h2><div data-hf-id="hf-waq5" class="rule"></div><p data-hf-id="hf-3f0q" class="subcopy">Acid resistance</p></div>
+      </section>
+
+      <section data-hf-id="hf-w6ig" id="scene-6-ghuul" class="scene clip ghuul" data-start="15" data-duration="6" data-track-index="6">
+        <div data-hf-id="hf-010y" class="art-frame" id="scene-6-art"><img data-hf-id="hf-xcww" src="assets/janni/country_of_ghuul.jpg" alt="Country of the Ghuul spirit illustration" /></div>
+        <div data-hf-id="hf-zezc" class="copy" id="scene-6-copy"><p data-hf-id="hf-fdwa" class="eyebrow">The Country of the Ghuul</p><div data-hf-id="hf-wp16" class="rule"></div><h1 data-hf-id="hf-hwi2">Age cannot claim them.<br data-hf-id="hf-rsrt" />Death can.</h1></div>
+      </section>
+
+      <section data-hf-id="hf-53cn" id="scene-7-hourglass" class="scene clip" data-start="21" data-duration="4" data-track-index="7">
+        <div data-hf-id="hf-mvip" class="art-frame hourglass" id="scene-7-art"><img data-hf-id="hf-dye4" src="assets/janni/hourglass_transparent.png" alt="Gilded hourglass" /></div>
+        <div data-hf-id="hf-8thx" class="copy hourglass-copy" id="scene-7-copy"><p data-hf-id="hf-39gv" class="eyebrow">The price of return</p><div data-hf-id="hf-x3c7" class="rule"></div><h2 data-hf-id="hf-1ic7">Some return.</h2><p data-hf-id="hf-9vah" class="subcopy">Every return has a price.</p><p data-hf-id="hf-7ebl" class="cost">−2 permanent Constitution</p></div>
+      </section>
+
+      <section data-hf-id="hf-665u" id="scene-8-final" class="scene clip final" data-start="25" data-duration="5" data-track-index="8">
+        <div data-hf-id="hf-5ugw" class="art-frame" id="scene-8-art"><img data-hf-id="hf-1rbm" src="assets/janni/cover_full.jpg?final=1" alt="Janni book cover" /></div>
+        <div data-hf-id="hf-tpxa" class="copy" id="scene-8-copy"><p data-hf-id="hf-bod4" class="eyebrow">Tobacco Road Games presents</p><div data-hf-id="hf-xhn8" class="rule"></div><h1 data-hf-id="hf-96ry">Janni</h1><p data-hf-id="hf-wmxa" class="subcopy">A Mortal Kind of Immortality</p><p data-hf-id="hf-0la5" class="subcopy">5E-compatible player ancestry</p><div data-hf-id="hf-1bhc" class="badges"><img data-hf-id="hf-1d22" class="badge" src="assets/janni/compatibility_badge_transparent.png" alt="5E compatibility badge" /><img data-hf-id="hf-vp0j" class="trg-badge" src="assets/janni/trg_badge_transparent.png" alt="Tobacco Road Games badge" /></div></div>
+      </section>
+
+      <audio data-hf-id="hf-72dw"
+        id="desert-city-music"
+        src="assets/janni/Desert%2520City.mp3"
+        data-start="0"
+        data-duration="30"
+        data-track-index="20"
+        data-volume="1"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0.447},{"t":2.1,"v":0.447},{"t":2.5,"v":1},{"t":2.8,"v":1},{"t":3,"v":0.447},{"t":3.77,"v":0.447},{"t":4.15,"v":1},{"t":5.8,"v":1},{"t":6,"v":0.447},{"t":6.83,"v":0.447},{"t":7.2,"v":1},{"t":8.8,"v":1},{"t":9,"v":0.447},{"t":9.9,"v":0.447},{"t":10.3,"v":1},{"t":11.8,"v":1},{"t":12,"v":0.447},{"t":12.85,"v":0.447},{"t":13.2,"v":1},{"t":14.8,"v":1},{"t":14.95,"v":0.282},{"t":17.54,"v":0.282},{"t":18,"v":0.63},{"t":20.8,"v":0.63},{"t":21,"v":0.282},{"t":23.97,"v":0.282},{"t":24.35,"v":0.63},{"t":24.7,"v":0.63},{"t":24.9,"v":0.447},{"t":28.5,"v":0.447},{"t":30,"v":0}]}]}'
+      ></audio>
+
+      <audio id="vo-opening" class="clip" src="assets/janni/audio/vo-01-opening.wav" data-start="0" data-duration="3" data-track-index="30" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-air" class="clip" src="assets/janni/audio/vo-02-air.wav" data-start="3" data-duration="3" data-track-index="31" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-earth" class="clip" src="assets/janni/audio/vo-03-earth.wav" data-start="6" data-duration="3" data-track-index="32" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-fire" class="clip" src="assets/janni/audio/vo-04-fire.wav" data-start="9" data-duration="3" data-track-index="33" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-water" class="clip" src="assets/janni/audio/vo-05-water.wav" data-start="12" data-duration="3" data-track-index="34" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-ghuul" class="clip" src="assets/janni/audio/vo-03-ghuul.wav" data-start="15" data-duration="6" data-track-index="35" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-return" class="clip" src="assets/janni/audio/vo-04-return.wav" data-start="21" data-duration="4" data-track-index="36" data-volume="1" data-audio-group="voiceover"></audio>
+      <audio id="vo-closing" class="clip" src="assets/janni/audio/vo-05-closing.wav" data-start="25" data-duration="5" data-track-index="37" data-volume="1" data-audio-group="voiceover"></audio>
+
+      <div data-hf-id="hf-gtiz" id="fade-black" class="fade-black" aria-hidden="true"></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      const entrance = (selector, at, duration = 0.42) => {
+        tl.fromTo(selector, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration, ease: "power2.out" }, at);
+      };
+
+      tl.fromTo("#scene-1-art", { opacity: 1, scale: 1 }, { opacity: 1, scale: 1.03, duration: 3, ease: "sine.inOut" }, 0);
+      entrance("#scene-1-copy", 0.18, 0.55);
+      tl.fromTo("#scene-1-copy .rule", { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "power2.out" }, 0.42);
+
+      [
+        ["2", "3", 1.02, "0.25"],
+        ["3", "6", 1.025, "-0.2"],
+        ["4", "9", 1.02, "0.18"],
+        ["5", "12", 1.025, "-0.16"],
+      ].forEach(([n, at, scale, drift]) => {
+        tl.fromTo(`#scene-${n}-art`, { opacity: 0, x: 0, scale: 1 }, { opacity: 1, x: drift, scale, duration: 3, ease: "sine.inOut" }, Number(at));
+        entrance(`#scene-${n}-copy`, Number(at) + 0.12);
+        entrance(`#scene-${n}-emblem`, Number(at) + 0.2, 0.5);
+      });
+
+      tl.fromTo("#scene-6-art", { opacity: 0, scale: 1 }, { opacity: 1, scale: 1.025, duration: 6, ease: "sine.inOut" }, 15);
+      entrance("#scene-6-copy", 15.12, 0.5);
+
+      tl.fromTo("#scene-7-art", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 21);
+      tl.fromTo("#scene-7-art", { scale: 1 }, { scale: 1.02, duration: 4, ease: "sine.inOut" }, 21);
+      entrance("#scene-7-copy", 21.12, 0.5);
+
+      tl.fromTo("#scene-8-art", { opacity: 0, scale: 1 }, { opacity: 1, scale: 1.018, duration: 1.0, ease: "power2.out" }, 25);
+      entrance("#scene-8-copy", 25.14, 0.5);
+      tl.fromTo("#fade-black", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power1.in" }, 29.55);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

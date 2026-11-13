@@ -1,0 +1,72 @@
+{
+  "source_file": "Janni(10).pdf",
+  "source_sha256": "434b9be0f1b32cc206126655f05577cb2ef2919874b76ee2031af7dd75ccba25",
+  "usage": "Existing Janni manuscript artwork only. Extracted/assembled with page fidelity for video editing. All material from supplied PDF.",
+  "assets": [
+    {
+      "file": "cover_full.jpg",
+      "source_page": 1,
+      "description": "Cover, including lettering and publisher/compatibility badges"
+    },
+    {
+      "file": "air_janni.jpg",
+      "source_page": 10,
+      "description": "Four heritage illustration with existing medallion"
+    },
+    {
+      "file": "earth_janni.jpg",
+      "source_page": 11,
+      "description": "Four heritage illustration with existing medallion"
+    },
+    {
+      "file": "fire_janni.jpg",
+      "source_page": 12,
+      "description": "Four heritage illustration with existing medallion"
+    },
+    {
+      "file": "water_janni.jpg",
+      "source_page": 13,
+      "description": "Four heritage illustration with existing medallion"
+    },
+    {
+      "file": "country_of_ghuul.jpg",
+      "source_page": 15,
+      "description": "Ghuul spirit illustration"
+    },
+    {
+      "file": "hourglass_transparent.png",
+      "source_page": 7,
+      "description": "Existing transparent hourglass art"
+    },
+    {
+      "file": "trg_badge_transparent.png",
+      "source_page": 1,
+      "description": "TRG publisher logo as original transparent art"
+    },
+    {
+      "file": "compatibility_badge_transparent.png",
+      "source_page": 1,
+      "description": "5E badge art from PDF"
+    },
+    {
+      "file": "air_emblem.png",
+      "source_page": 10,
+      "description": "Air emblem with transparency"
+    },
+    {
+      "file": "earth_emblem.png",
+      "source_page": 11,
+      "description": "Earth emblem with transparency"
+    },
+    {
+      "file": "fire_emblem.png",
+      "source_page": 12,
+      "description": "Fire emblem with transparency"
+    },
+    {
+      "file": "water_emblem.png",
+      "source_page": 13,
+      "description": "Water emblem with transparency"
+    }
+  ]
+}
