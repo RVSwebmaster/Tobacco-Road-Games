@@ -303,6 +303,19 @@ export async function getCreatorAccountReadiness(
       [creatorId],
     ),
     identityBilling = await getIdentityBillingState(db, creatorId, nowMs);
+  const ownerUser = owner
+    ? await db
+        .prepare("SELECT id,status,email_verified,role FROM users WHERE id=?")
+        .bind(owner.owner_user_id)
+        .first()
+    : null;
+  const ownerManagerMembership = owner
+    ? await optionalFirst(
+        db,
+        "SELECT 1 ok FROM creator_memberships WHERE creator_id=? AND user_id=? AND permission='manager'",
+        [creatorId, owner.owner_user_id],
+      )
+    : null;
   const checks = {
       customerAccountComplete: Boolean(
         user?.status === "active" &&
@@ -334,6 +347,19 @@ export async function getCreatorAccountReadiness(
       auditOperational: audit?.state !== "restricted",
     },
     requirementsComplete = Object.values(checks).every(Boolean),
+    ownerOperationalAuthority = Boolean(
+      owner?.identity_type === "primary" &&
+        owner?.account_status === "active" &&
+        ownerManagerMembership?.ok &&
+        ownerUser?.status === "active" &&
+        Number(ownerUser?.email_verified) === 1 &&
+        ownerUser?.role === "owner" &&
+        creator?.marketplace_status === "approved" &&
+        creator?.registration_status === "active" &&
+        creator?.closure_state === "active" &&
+        audit?.state !== "restricted" &&
+        identityBilling.active,
+    ),
     completionFieldAvailable = Object.prototype.hasOwnProperty.call(
       creator || {},
       "intake_registration_completed_at",
@@ -395,6 +421,7 @@ export async function getCreatorAccountReadiness(
         identityBilling.active,
     ),
     identityBilling,
+    ownerOperationalAuthority,
     owner,
     creator,
   };
@@ -407,7 +434,9 @@ export async function getCreatorOperationalEligibility(
   const readiness = await getCreatorAccountReadiness(db, creatorId, options);
   return {
     ...readiness,
-    eligible: readiness.requirementsComplete,
+    eligible:
+      readiness.requirementsComplete || readiness.ownerOperationalAuthority,
+    ownerOperationalAuthority: readiness.ownerOperationalAuthority,
     currentEligibilityEvaluatedAt: new Date(
       options.nowMs || Date.now(),
     ).toISOString(),

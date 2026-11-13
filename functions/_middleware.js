@@ -2,6 +2,7 @@ import { handleOfficeMiddleware } from "./_lib/office-middleware.mjs";
 import { isMarketplaceWriteDisabled, marketplaceWriteDisabledResponse } from "./_lib/preview-write-policy.mjs";
 import { readStoreState } from "./_lib/store-state.mjs";
 import { isPublicStorePage, maintenanceResponse } from "./_lib/store-maintenance.mjs";
+import { attachOwnerSessionForDocument } from "./_lib/owner-session-bootstrap.mjs";
 
 export async function onRequest(context) {
   const pathname = new URL(context.request.url).pathname;
@@ -18,13 +19,16 @@ export async function onRequest(context) {
     }
   }
   if (pathname === "/owner/intake" || pathname === "/owner/intake/") {
-    return withOwnerBuildHeaders(Response.redirect(new URL("/owner/product-intake.html", context.request.url).toString(), 303), context.env);
+    return ownerResponse(withOwnerBuildHeaders(Response.redirect(new URL("/owner/product-intake.html", context.request.url).toString(), 303), context.env), context);
   }
   const response = pathname.startsWith("/owner")
     ? withOwnerBuildHeaders(await context.next(), context.env)
     : await context.next();
   if(requestsPublicBanner(pathname,response))return new HTMLRewriter().on('header.site-header',{element(element){element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`,{html:true});}}).transform(response);
-  return response;
+  return pathname.startsWith("/owner") ? ownerResponse(response, context) : response;
+}
+function ownerResponse(response, context) {
+  return attachOwnerSessionForDocument(response, context.request, context.env);
 }
 function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 

@@ -44,15 +44,36 @@ async function main() {
   assert.equal(rvReadiness.payoutReady, false);
   assert.equal(rvReadiness.paymentMethodReady, false);
   assert.equal(rvReadiness.agreementCurrent, false);
-  assert.equal((await registration.getCreatorOperationalEligibility(db, RV.id)).eligible, false);
+  const ownerOperational = await registration.getCreatorOperationalEligibility(db, RV.id);
+  assert.equal(ownerOperational.eligible, true, "The active Owner may operate the linked primary Creator identity.");
+  assert.equal(ownerOperational.ownerOperationalAuthority, true);
+  assert.equal(ownerOperational.registrationComplete, false, "Owner authority must not fabricate Creator registration completion.");
 
   const env = { TRG_ORDERS: db, TRG_PRODUCTS: memoryBucket() };
   const rvListing = await createAndPublish({ creator: RV, title: "RV Preview", priceCents: 0, operations, files, env, db });
+  let rvRow = raw.prepare("SELECT * FROM creator_listings WHERE id=?").get(rvListing);
+  let rvProduct = raw.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").get(rvListing);
+  let response = await operations.handleCreatorRequest(
+    creatorRequest(RV, `listings/${rvListing}/shelve`, { expectedRevision: rvRow.revision, expectedProductRevision: rvProduct.revision }), env, { database: db, nowMs: NOW_MS },
+  );
+  assert.equal(response.status, 200, await response.text());
+  rvRow = raw.prepare("SELECT * FROM creator_listings WHERE id=?").get(rvListing);
+  rvProduct = raw.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").get(rvListing);
+  assert.equal(rvProduct.storefront_visibility, "listed");
+  response = await operations.handleCreatorRequest(
+    creatorRequest(RV, `listings/${rvListing}/unshelve`, { expectedRevision: rvRow.revision, expectedProductRevision: rvProduct.revision }), env, { database: db, nowMs: NOW_MS },
+  );
+  assert.equal(response.status, 200, await response.text());
+  rvProduct = raw.prepare("SELECT * FROM marketplace_products WHERE creator_listing_id=?").get(rvListing);
+  assert.equal(rvProduct.storefront_visibility, "unlisted");
   const ordinaryReadiness = await registration.getCreatorPublicationEligibility(db, ORDINARY.id);
   assert.equal(ordinaryReadiness.publicationEligible, true, "Ordinary approved Creator must receive the same publication authority.");
+  const ordinaryOperational = await registration.getCreatorOperationalEligibility(db, ORDINARY.id);
+  assert.equal(ordinaryOperational.eligible, false, "An ordinary Creator must still complete operational onboarding.");
+  assert.equal(ordinaryOperational.ownerOperationalAuthority, false);
   const ordinaryListing = await createAndPublish({ creator: ORDINARY, title: "Ordinary Preview", priceCents: 0, operations, files, env, db });
 
-  let response = await operations.handleCreatorRequest(
+  response = await operations.handleCreatorRequest(
     creatorRequest(RV, `listings/${ordinaryListing}/publish`, { expectedRevision: 1, rightsConfirmed: true, representationConfirmed: true, licensesConfirmed: true }),
     env,
     { database: db, nowMs: NOW_MS },
@@ -76,7 +97,7 @@ async function main() {
     { database: db, nowMs: NOW_MS },
   );
   assert.equal(response.status, 400);
-  assert.match((await response.json()).error.message, /commercial readiness/i, "Selling remains gated by commercial readiness.");
+  assert.match((await response.json()).error.message, /Creator Agreement must be accepted/i, "Selling remains gated by commercial readiness.");
   assert.ok(raw.prepare("SELECT id FROM marketplace_products WHERE creator_listing_id=?").get(rvListing));
   console.log("Creator publication authority, legacy compatibility, ownership, suspension, preview-only publishing, and commercial gating tests passed.");
 }

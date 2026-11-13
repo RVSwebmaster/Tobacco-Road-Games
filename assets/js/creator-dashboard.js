@@ -74,7 +74,9 @@
       ]);
     document.querySelector("#creator-name").textContent =
       summary.creator.displayName;
-    status.textContent = summary.intakeAccess
+    status.textContent = summary.ownerOperationalAuthority
+      ? `Profile ${summary.overview.profileStatus}. Owner access is active for the linked Creator identity; commercial requirements still apply to sales and payouts.`
+      : summary.intakeAccess
       ? `Profile ${summary.overview.profileStatus}. Current Creator eligibility confirmed.`
       : summary.historicalRegistration?.completed
         ? "Your Creator identity and history are preserved, but current eligibility needs attention before protected operations can resume."
@@ -300,7 +302,9 @@
       }),
     );
     document.querySelector("#creator-registration-message").textContent =
-      summary.intakeAccess
+      summary.ownerOperationalAuthority
+        ? "Owner authority is active for this linked Creator identity. Registration, agreement, and payout items remain visible for commercial operations; they do not block Owner catalog work."
+        : summary.intakeAccess
         ? "Your Creator registration is complete. Product and listing tools are available below."
         : "Finish the items marked “Needs attention.” Historical records and remediation remain available, but new intake, uploads, publication, advertising changes, service purchases, and payout requests are blocked until current eligibility is restored.";
     const remediation = document.querySelector(

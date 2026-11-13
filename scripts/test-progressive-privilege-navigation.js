@@ -9,14 +9,49 @@ async function main() {
   const navigation = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "public-navigation.mjs")).href);
   const handler = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "progressive-navigation.mjs")).href);
   const ownerAccess = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "owner-access-identity.mjs")).href);
+  const ownerBootstrap = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "owner-session-bootstrap.mjs")).href);
 
   assertMatrix(navigation.buildProgressiveNavigation);
   assertPublicHeaders(navigation.renderPublicNavigation);
   await assertOwnerAccess(ownerAccess.verifyOwnerAccessIdentity);
   await assertHandler(handler.handleProgressiveNavigationRequest);
+  await assertOwnerDocumentBootstrap(ownerBootstrap.attachOwnerSessionForDocument);
   assertHomepageIntegration();
   assertProtectedRoutesRemainProtected();
   console.log("Progressive privilege navigation tests passed.");
+}
+
+async function assertOwnerDocumentBootstrap(attach) {
+  const html = () => new Response("<html>owner</html>", { headers: { "content-type": "text/html" } });
+  const request = new Request("https://staging.example/owner/product-intake.html", {
+    headers: { accept: "text/html", cookie: "CF_Authorization=access" },
+  });
+  let establishedEmail = "";
+  let response = await attach(html(), request, {}, {
+    getSession: async () => ({ valid: false }),
+    verifyAccess: async () => ({ valid: true, email: "owner@example.test" }),
+    establishSession: async (_env, email) => {
+      establishedEmail = email;
+      return { cookieHeaders: ["__Host-trg_session=owner-session; Path=/; Secure; HttpOnly", "trg_account_csrf=owner-csrf; Path=/; Secure"] };
+    },
+  });
+  assert.equal(establishedEmail, "owner@example.test");
+  assert.match(response.headers.get("set-cookie"), /__Host-trg_session=owner-session/);
+  assert.match(response.headers.get("set-cookie"), /trg_account_csrf=owner-csrf/);
+
+  let accessChecked = false;
+  response = await attach(html(), request, {}, {
+    getSession: async () => ({ valid: true }),
+    verifyAccess: async () => { accessChecked = true; return { valid: false }; },
+  });
+  assert.equal(accessChecked, false, "A valid D1 session is reused without another Access bootstrap.");
+  assert.equal(response.headers.has("set-cookie"), false);
+
+  response = await attach(html(), new Request(request, { method: "POST" }), {}, {
+    getSession: async () => ({ valid: false }),
+    verifyAccess: async () => { throw new Error("non-document request must not bootstrap"); },
+  });
+  assert.equal(response.headers.has("set-cookie"), false);
 }
 
 function assertMatrix(build) {
