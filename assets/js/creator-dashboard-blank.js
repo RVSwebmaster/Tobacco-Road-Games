@@ -17,7 +17,9 @@
     creatorImage.removeAttribute("src");
     creatorInitials.textContent = initialsFor(displayName);
     creatorInitials.setAttribute("aria-label", `${initialsFor(displayName)} initials`);
-    creatorInitials.hidden = false;
+    creatorInitials.removeAttribute("hidden");
+    creatorInitials.style.display = "grid";
+    creatorInitials.setAttribute("aria-hidden", "false");
   }
 
   function imageIsUsable(image) {
@@ -67,6 +69,7 @@
       const creator = profilePayload.creator;
       const imageUrl = creator.logo || creator.profileImage || "";
       creatorInitials.hidden = true;
+      creatorInitials.style.display = "none";
       if (imageUrl) {
         creatorImage.onload = () => {
           if (!imageIsUsable(creatorImage)) showInitials(creator.displayName);
