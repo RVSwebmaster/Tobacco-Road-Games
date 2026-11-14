@@ -76,12 +76,14 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 
 .creator-dashboard-creator-identity {
   position: absolute;
-  top: 18px;
-  right: 20px;
+  top: 50%;
+  right: auto;
+  left: 75%;
   display: grid;
   justify-items: center;
   gap: 7px;
   width: min(220px, 50%);
+  transform: translate(-50%, -50%);
   color: #211108;
   font: 800 clamp(1.25rem, 3.5cqw, 1.65rem)/1.08 Georgia, "Times New Roman", serif;
   text-align: center;
@@ -188,9 +190,11 @@ body.creator-workspace-page .creator-dashboard-footer {
   }
 
   .creator-dashboard-creator-identity {
-    top: 14px;
-    right: 14px;
+    top: 50%;
+    right: auto;
+    left: 75%;
     width: min(150px, 46%);
+    transform: translate(-50%, -50%);
   }
 
   body.creator-workspace-page .creator-dashboard-footer {
