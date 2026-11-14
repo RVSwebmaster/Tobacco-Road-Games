@@ -76,7 +76,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 
 .creator-dashboard-creator-identity {
   position: absolute;
-  top: 50%;
+  top: 22%;
   right: auto;
   left: 75%;
   display: grid;
@@ -190,7 +190,7 @@ body.creator-workspace-page .creator-dashboard-footer {
   }
 
   .creator-dashboard-creator-identity {
-    top: 50%;
+    top: 22%;
     right: auto;
     left: 75%;
     width: min(150px, 46%);
