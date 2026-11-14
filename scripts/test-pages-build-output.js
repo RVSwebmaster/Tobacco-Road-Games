@@ -20,6 +20,13 @@ async function main() {
     for (const relativePath of builder.publicDirectories) {
       assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing public directory: ${relativePath}`);
     }
+    const preservedCreator = fs.readFileSync(path.join(outputDirectory, "temp-creator", "index.html"), "utf8");
+    assert.match(preservedCreator, /creator-dashboard\.js\?v=/, "Preserved Creator dashboard runtime is missing");
+    assert.match(preservedCreator, /id="creator-pdf-intake"/, "Preserved Creator PDF Intake is missing");
+    const blankCreator = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
+    assert.match(blankCreator, /<h1[^>]*>Creator Dashboard<\/h1>/, "Blank Creator Dashboard title is missing");
+    assert.match(blankCreator, /href="\/temp-creator\/"/, "Blank Creator Dashboard fallback link is missing");
+    assert.doesNotMatch(blankCreator, /id="creator-pdf-intake"/, "Blank Creator Dashboard must not contain PDF Intake");
     for (const relativePath of builder.excludedPublicFiles) {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `excluded file was copied: ${relativePath}`);
     }
