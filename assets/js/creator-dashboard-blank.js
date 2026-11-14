@@ -2,7 +2,28 @@
   const status = document.querySelector("#creator-status");
   const identity = document.querySelector("#creator-identity");
   const creatorImage = identity?.querySelector(".creator-dashboard-creator-image");
+  const creatorInitials = identity?.querySelector(".creator-dashboard-creator-initials");
   const creatorName = identity?.querySelector(".creator-dashboard-creator-name");
+
+  function initialsFor(displayName) {
+    const words = String(displayName || "").trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return "?";
+    if (words[0].length >= 2) return words[0].slice(0, 2).toUpperCase();
+    return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase() || "?";
+  }
+
+  function showInitials(displayName) {
+    creatorImage.hidden = true;
+    creatorImage.removeAttribute("src");
+    creatorInitials.textContent = initialsFor(displayName);
+    creatorInitials.hidden = false;
+  }
+
+  function imageIsUsable(image) {
+    if (!image.naturalWidth || !image.naturalHeight) return false;
+    const ratio = image.naturalWidth / image.naturalHeight;
+    return ratio >= 0.55 && ratio <= 2.25;
+  }
 
   async function loadCreatorSession() {
     try {
@@ -37,13 +58,15 @@
       }
       const creator = profilePayload.creator;
       const imageUrl = creator.logo || creator.profileImage || "";
+      creatorInitials.hidden = true;
       if (imageUrl) {
+        creatorImage.onload = () => {
+          if (!imageIsUsable(creatorImage)) showInitials(creator.displayName);
+        };
+        creatorImage.onerror = () => showInitials(creator.displayName);
         creatorImage.src = imageUrl;
         creatorImage.alt = `${creator.displayName} publishing identity`;
-        creatorImage.hidden = false;
-      } else {
-        creatorImage.hidden = true;
-      }
+      } else showInitials(creator.displayName);
       creatorName.textContent = creator.displayName;
       identity.hidden = false;
       status.textContent = "Creator session active.";

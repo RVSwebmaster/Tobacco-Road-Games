@@ -92,10 +92,28 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   width: clamp(66px, 12cqw, 104px);
   height: clamp(66px, 12cqw, 104px);
   max-width: 100%;
-  border: 2px solid rgba(53, 26, 11, 0.9);
-  border-radius: 50%;
-  object-fit: cover;
+  border: 3px solid rgba(53, 26, 11, 0.9);
+  border-radius: 9px;
+  background: rgba(245, 210, 143, 0.26);
+  object-fit: contain;
   box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38);
+}
+
+.creator-dashboard-creator-initials {
+  display: grid;
+  place-items: center;
+  width: clamp(66px, 12cqw, 104px);
+  height: clamp(66px, 12cqw, 104px);
+  border: 3px solid rgba(53, 26, 11, 0.9);
+  border-radius: 9px;
+  background:
+    linear-gradient(135deg, rgba(247, 215, 153, 0.94), rgba(168, 104, 48, 0.95)),
+    url("/assets/woodgrain-sign.svg");
+  color: #281307;
+  font: 900 clamp(2rem, 5.8cqw, 3.6rem)/1 Georgia, "Times New Roman", serif;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 0 rgba(255, 234, 176, 0.48), 0 3px 4px rgba(37, 17, 7, 0.38);
+  box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38), inset 0 0 0 2px rgba(255, 220, 148, 0.28);
 }
 
 .creator-dashboard-creator-name {
