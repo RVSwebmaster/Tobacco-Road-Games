@@ -6,23 +6,29 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>Creator Dashboard | Tobacco Road Games</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/assets/css/creator-dashboard.css" />
     <script src="/assets/js/creator-dashboard-blank.js" defer></script>
   </head>
-  <body class="view-section">
+  <body class="view-section creator-workspace-page">
     <div class="page-shell">
       <header class="site-header">
         <a class="brand" href="/creator/">
-          <img class="brand__logo" src="/assets/logo.png" alt="" />
+          <img class="brand__logo" src="/assets/tobacco-road-games-logo.png" alt="" />
           <span class="brand__name">Tobacco Road Games</span>
         </a>
+        <nav class="site-nav" aria-label="Creator Dashboard menu">
+          <span class="creator-menu-placeholder">Menu</span>
+        </nav>
       </header>
-      <main class="store-section" id="creator-dashboard">
-        <div class="section-heading">
-          <h1>Creator Dashboard</h1>
-          <p id="creator-status" role="status">Checking Creator session…</p>
-          <p id="creator-identity"></p>
-          <p><a href="/temp-creator/">Open preserved Creator Dashboard</a></p>
-        </div>
+      <main class="creator-workspace" id="creator-dashboard">
+        <div class="creator-workspace__atmosphere" aria-hidden="true"></div>
+        <section class="creator-workspace__stage" aria-labelledby="creator-dashboard-title">
+          <p class="creator-workspace__kicker">Tobacco Road Games</p>
+          <h1 id="creator-dashboard-title">Creator Dashboard</h1>
+          <p id="creator-status" class="creator-workspace__status" role="status">Checking Creator session…</p>
+          <p id="creator-identity" class="creator-workspace__identity"></p>
+          <p class="creator-workspace__reference"><a href="/temp-creator/">Open preserved Creator Dashboard</a></p>
+        </section>
       </main>
       <footer class="site-footer">
         <p>&copy; 2026 Tobacco Road Games.</p>

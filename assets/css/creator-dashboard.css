@@ -1,0 +1,235 @@
+body.creator-workspace-page {
+  min-width: 0;
+  background: #0b130e;
+}
+
+body.creator-workspace-page::before {
+  background-image:
+    linear-gradient(rgba(7, 15, 10, 0.18), rgba(7, 15, 10, 0.44)),
+    url("/assets/wallpaper.png?v=20260528a");
+  background-position: center top;
+  background-size: auto 180%;
+  filter: saturate(0.78) brightness(0.66);
+}
+
+body.creator-workspace-page::after {
+  background:
+    linear-gradient(180deg, rgba(5, 14, 9, 0.18), rgba(5, 14, 9, 0.72) 78%, rgba(5, 14, 9, 0.94)),
+    linear-gradient(90deg, rgba(4, 12, 8, 0.34), transparent 14%, transparent 86%, rgba(4, 12, 8, 0.34));
+}
+
+body.creator-workspace-page .page-shell {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body.creator-workspace-page .site-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 68px;
+  margin: 0;
+  padding: 9px clamp(18px, 4vw, 64px);
+  border: 0;
+  border-bottom: 5px solid #4a2c1b;
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, rgba(105, 59, 26, 0.18), transparent 18%, transparent 82%, rgba(105, 59, 26, 0.18)),
+    linear-gradient(180deg, #102017 0, #07150f 100%);
+  box-shadow: inset 0 1px 0 rgba(223, 188, 104, 0.24), inset 0 -1px 0 rgba(220, 172, 84, 0.45), 0 8px 18px rgba(0, 0, 0, 0.42);
+}
+
+body.creator-workspace-page .site-header::after {
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  left: 0;
+  height: 5px;
+  background: linear-gradient(180deg, #9d6b38, #3a2114 54%, #21130d);
+  content: "";
+}
+
+body.creator-workspace-page .brand {
+  min-width: 0;
+  gap: 11px;
+  color: #f0dfb7;
+}
+
+body.creator-workspace-page .brand__logo {
+  width: 48px;
+  max-height: 48px;
+}
+
+body.creator-workspace-page .brand__name {
+  color: #f0dfb7;
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  letter-spacing: 0.045em;
+}
+
+body.creator-workspace-page .site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 88px;
+}
+
+.creator-menu-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 14px;
+  border: 1px solid rgba(214, 178, 89, 0.5);
+  border-radius: 4px;
+  color: #d9cfb7;
+  font: 650 0.76rem/1.1 "Trebuchet MS", "Segoe UI", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.creator-workspace {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: calc(100vh - 68px);
+  overflow: hidden;
+  isolation: isolate;
+  border-bottom: 7px solid #4a2c1b;
+  background: linear-gradient(180deg, rgba(15, 37, 25, 0.24), rgba(6, 15, 10, 0.68));
+  box-shadow: inset 0 1px 0 rgba(222, 185, 98, 0.24), inset 0 -1px 0 #9a6a39;
+}
+
+.creator-workspace::before,
+.creator-workspace::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.creator-workspace::before {
+  inset: 28px 2.5vw;
+  border: 3px solid rgba(90, 56, 34, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(231, 195, 111, 0.18), 0 14px 28px rgba(0, 0, 0, 0.28);
+}
+
+.creator-workspace::after {
+  right: 2.5vw;
+  bottom: 30px;
+  left: 2.5vw;
+  height: 18px;
+  border-top: 2px solid rgba(231, 166, 91, 0.42);
+  background: linear-gradient(180deg, #633118 0 6px, #45200f 6px 13px, #281006 13px 100%);
+  box-shadow: 0 8px 13px rgba(18, 8, 3, 0.42);
+}
+
+.creator-workspace__atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 28% 12% at 50% 0%, rgba(255, 244, 201, 0.17), transparent 72%),
+    linear-gradient(90deg, rgba(36, 15, 6, 0.4), transparent 9%, transparent 91%, rgba(36, 15, 6, 0.4));
+}
+
+.creator-workspace__stage {
+  align-self: center;
+  justify-self: center;
+  width: min(900px, calc(100% - 10vw));
+  padding: clamp(42px, 8vw, 110px) clamp(26px, 6vw, 94px);
+  text-align: center;
+}
+
+.creator-workspace__kicker,
+.creator-workspace__status,
+.creator-workspace__identity,
+.creator-workspace__reference {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.creator-workspace__kicker {
+  color: #cfad5d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.creator-workspace__stage h1 {
+  margin: 12px 0 14px;
+  color: #f3e5c1;
+  font: 700 clamp(2.1rem, 6vw, 4.8rem)/0.98 Georgia, "Times New Roman", serif;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+}
+
+.creator-workspace__status,
+.creator-workspace__identity {
+  color: #c9bfa5;
+  font-size: 0.88rem;
+}
+
+.creator-workspace__identity:empty {
+  display: none;
+}
+
+.creator-workspace__reference {
+  margin-top: 22px;
+  font-size: 0.76rem;
+}
+
+.creator-workspace__reference a {
+  color: #d8b45f;
+}
+
+body.creator-workspace-page .site-footer {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  body.creator-workspace-page .site-header {
+    min-height: 76px;
+    padding: 9px 14px;
+  }
+
+  body.creator-workspace-page .brand__logo {
+    width: 42px;
+    max-height: 42px;
+  }
+
+  body.creator-workspace-page .brand__name {
+    font-size: 0.9rem;
+  }
+
+  body.creator-workspace-page .site-nav {
+    min-width: auto;
+  }
+
+  .creator-workspace {
+    min-height: calc(100vh - 76px);
+  }
+
+  .creator-workspace::before {
+    inset: 18px 12px;
+  }
+
+  .creator-workspace::after {
+    right: 12px;
+    bottom: 18px;
+    left: 12px;
+  }
+
+  .creator-workspace__stage {
+    width: min(100%, calc(100% - 36px));
+    padding: 70px 18px 94px;
+  }
+
+  .creator-workspace__stage h1 {
+    font-size: clamp(2rem, 12vw, 3.1rem);
+  }
+}
