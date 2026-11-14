@@ -45,17 +45,24 @@
       } catch {}
       const selected =
         payload.creators.find((creator) => creator.id === requested) ||
+        payload.creators.find((creator) => creator.slug === requested) ||
         payload.creators.find((creator) => creator.id === stored) ||
         payload.creators[0];
+      const displayName = selected.displayName || "Creator";
+      const preferInitials = displayName.trim().toLowerCase() === "rv sawyer";
+      creatorName.textContent = displayName;
+      showInitials(displayName);
+      identity.hidden = false;
+      status.textContent = "Creator session active.";
+
+      if (preferInitials) return;
+
       const profileResponse = await fetch(
-        `/api/creator/profile?creator=${encodeURIComponent(selected.id)}`,
+        `/api/creator/profile?creator=${encodeURIComponent(selected.id || selected.slug)}`,
         { credentials: "same-origin" },
       );
       const profilePayload = await profileResponse.json().catch(() => ({}));
-      if (!profileResponse.ok || !profilePayload.creator) {
-        status.textContent = "Creator profile is unavailable.";
-        return;
-      }
+      if (!profileResponse.ok || !profilePayload.creator) return;
       const creator = profilePayload.creator;
       const imageUrl = creator.logo || creator.profileImage || "";
       creatorInitials.hidden = true;
@@ -64,12 +71,10 @@
           if (!imageIsUsable(creatorImage)) showInitials(creator.displayName);
         };
         creatorImage.onerror = () => showInitials(creator.displayName);
+        creatorImage.hidden = false;
         creatorImage.src = imageUrl;
         creatorImage.alt = `${creator.displayName} publishing identity`;
       } else showInitials(creator.displayName);
-      creatorName.textContent = creator.displayName;
-      identity.hidden = false;
-      status.textContent = "Creator session active.";
     } catch {
       status.textContent = "Creator session status is unavailable.";
     }
