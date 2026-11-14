@@ -281,6 +281,7 @@
   }
 
   window.TRGHomepageShelves = Object.freeze({ hydrateBestSellers, hydrateOpenRulesLibrary, hydratePayload, hydrateShelf });
+  if (document.querySelector(".creator-dashboard-open-rules-bay")) return;
   fetch("/api/homepage-shelves", { cache: "no-store", credentials: "same-origin" })
     .then((response) => response.ok ? response.json() : { bestSellers: [] })
     .then(hydratePayload)

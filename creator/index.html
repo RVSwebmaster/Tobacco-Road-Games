@@ -7,6 +7,9 @@
     <title>Creator Dashboard | Tobacco Road Games</title>
     <link rel="stylesheet" href="/styles.css?v=5097271" />
     <link rel="stylesheet" href="/assets/css/creator-dashboard.css?v=wood-monogram-21" />
+    <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>
+    <script src="/assets/js/homepage-shelves.js?v=creator-open-rules2" defer></script>
+    <script src="/assets/js/creator-open-rules.js?v=13-books1" defer></script>
     <script src="/assets/js/creator-dashboard-blank.js?v=727f0ef" defer></script>
   </head>
   <body class="view-section creator-workspace-page">
@@ -43,13 +46,18 @@
               </div>
             </div>
           </section>
-          <section class="shop-wall-bay shop-wall-bay--library" aria-label="Empty right shelf bay">
-            <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty right shelves">
+          <section class="shop-wall-bay shop-wall-bay--products creator-dashboard-open-rules-bay" aria-labelledby="open-rules-library-heading">
+            <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
+            <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="OPEN RULES LIBRARY shelves">
               <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-                <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right" aria-hidden="true"></div>
+                <div class="shop-wall-product-row shop-wall-product-row--library">
+                  <div class="shop-wall-library-books" data-fill-library></div>
+                </div>
               </div>
               <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-                <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right" aria-hidden="true"></div>
+                <div class="shop-wall-product-row shop-wall-product-row--library">
+                  <div class="shop-wall-library-books" data-fill-library></div>
+                </div>
               </div>
             </div>
           </section>
