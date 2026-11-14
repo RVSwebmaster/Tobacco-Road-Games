@@ -108,7 +108,10 @@
 
     const book = document.createElement("span");
     book.className = "product-book homepage-open-rules-book__product";
-    book.style.setProperty("--book-angle", "88deg");
+    // The Monster Guide is the deepest spine. A true side-on angle keeps its
+    // spine and page-edge faces visually balanced instead of making the right
+    // page edge project wider than the left spine edge.
+    book.style.setProperty("--book-angle", product.slug === "5e-monster-guide" ? "90deg" : "88deg");
     const depth = Math.max(10, Number(spineWidth) || 12);
     book.style.setProperty("--book-depth", `${depth}px`);
     book.style.setProperty("--book-width", `${Math.max(80, depth * 8)}px`);
