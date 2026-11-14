@@ -5539,6 +5539,19 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   letter-spacing: 0.06em;
 }
 
+/* Keep the shared Open Rules book itself as the hover target on every shelf. */
+.shop-wall-library-books > .homepage-open-rules-book:hover {
+  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
+  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-wall-library-books > .homepage-open-rules-book:hover {
+    transform: none;
+  }
+}
+
 .guest-landing-page .guest-open-rules-mock-book.guest-open-rules-real-book {
   flex-basis: calc(var(--guest-library-book-width) * var(--open-rules-spine-ratio, 1));
   width: calc(var(--guest-library-book-width) * var(--open-rules-spine-ratio, 1));

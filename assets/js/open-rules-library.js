@@ -41,7 +41,7 @@
     const book = document.createElement("span");
     book.className = "product-book homepage-open-rules-book__product";
     // Keep the approved Monster Guide depth without collapsing the book body.
-    book.style.setProperty("--book-angle", "88deg");
+    book.style.setProperty("--book-angle", "90deg");
     const depth = Math.max(10, Number(spineWidth) || 12);
     book.style.setProperty("--book-depth", `${depth}px`);
     book.style.setProperty("--book-width", `${Math.max(80, depth * 8)}px`);

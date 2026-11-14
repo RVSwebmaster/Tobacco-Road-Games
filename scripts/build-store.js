@@ -14,7 +14,7 @@ const BUNDLE_RULES_PATH = path.join(ROOT, "data", "bundle-rules.json");
 const STORE_DIR = path.join(ROOT, "store");
 const BASE_URL = "https://tobaccoroadgames.com";
 const CACHE_BUST = "20260712-shelf12-hinges";
-const STOREFRONT_CACHE_BUST = "20261114-rendered-spines6";
+const STOREFRONT_CACHE_BUST = "20261114-open-rules-books1";
 const HOMEPAGE_MERCHANDISING_PATH = path.join(ROOT, "data", "homepage-merchandising.json");
 const HOMEPAGE_MERCHANDISING = fs.existsSync(HOMEPAGE_MERCHANDISING_PATH) ? JSON.parse(fs.readFileSync(HOMEPAGE_MERCHANDISING_PATH, "utf8")) : {};
 const HOMEPAGE_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "homepage-ad-preview.json"), "utf8"));
@@ -24,7 +24,7 @@ const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const GUEST_FEATURE_CACHE_BUST = "20261112-cover-first-preview1";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261114-balanced-monster-guide3";
-const PROGRESSIVE_NAV_CACHE_BUST = "20261114-rendered-spines6";
+const PROGRESSIVE_NAV_CACHE_BUST = "20261114-open-rules-books1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1173,7 +1173,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
   next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${PROGRESSIVE_NAV_CACHE_BUST}`);
-  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules1" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules2" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1189,7 +1189,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules1" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
+  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules2" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
