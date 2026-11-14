@@ -118,14 +118,17 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   color: #d8a84d;
   background: linear-gradient(180deg,
     #fff2b0 0%,
-    #d98b1c 5%,
-    #9a4a06 19%,
-    #4a1802 38%,
-    #251005 47%,
-    #b86409 56%,
-    #f1b63f 69%,
-    #8a3d04 82%,
-    #d88618 94%,
+    #fff2b0 3%,
+    #e6a32e 8%,
+    #b76008 22%,
+    #7b3303 30%,
+    #421301 46%,
+    #5b2102 53%,
+    #b76008 61%,
+    #e6a32e 76%,
+    #8a3b03 84%,
+    #d48517 94%,
+    #fff0a5 97%,
     #fff0a5 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -134,7 +137,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
   letter-spacing: 0.04em;
   text-shadow:
-    0 1px 0 rgba(255, 244, 181, 0.82),
+    0 1px 0 rgba(255, 244, 181, 0.68),
     0 3px 0 rgba(103, 39, 4, 0.78),
     0 12px 14px rgba(37, 17, 7, 0.66);
   box-shadow: none;
@@ -151,23 +154,26 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   color: #d8a84d;
   background: linear-gradient(180deg,
     #fff2b0 0%,
-    #d98b1c 5%,
-    #9a4a06 19%,
-    #4a1802 38%,
-    #251005 47%,
-    #b86409 56%,
-    #f1b63f 69%,
-    #8a3d04 82%,
-    #d88618 94%,
+    #fff2b0 3%,
+    #e6a32e 8%,
+    #b76008 22%,
+    #7b3303 30%,
+    #421301 46%,
+    #5b2102 53%,
+    #b76008 61%,
+    #e6a32e 76%,
+    #8a3b03 84%,
+    #d48517 94%,
+    #fff0a5 97%,
     #fff0a5 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 0.5px rgba(205, 133, 28, 0.82);
   text-shadow:
-    0 1px 0 rgba(255, 244, 181, 0.82),
-    0 2px 0 rgba(103, 39, 4, 0.78),
-    0 4px 7px rgba(37, 17, 7, 0.52);
+    0 1px 0 rgba(255, 244, 181, 0.64),
+    0 2px 0 rgba(103, 39, 4, 0.72),
+    0 4px 5px rgba(37, 17, 7, 0.42);
 }
 
 .creator-dashboard-shop-wall .shop-wall-shelf-level {
