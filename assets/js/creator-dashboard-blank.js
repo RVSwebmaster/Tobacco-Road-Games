@@ -16,6 +16,7 @@
     creatorImage.hidden = true;
     creatorImage.removeAttribute("src");
     creatorInitials.textContent = initialsFor(displayName);
+    creatorInitials.setAttribute("aria-label", `${initialsFor(displayName)} initials`);
     creatorInitials.hidden = false;
   }
 
