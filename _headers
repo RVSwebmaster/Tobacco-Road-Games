@@ -1,0 +1,25 @@
+/
+  Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
+
+/index.html
+  Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
+
+/customer.html
+  Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
+
+/guest/*
+  Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
+
+/creator/*
+  Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
+
