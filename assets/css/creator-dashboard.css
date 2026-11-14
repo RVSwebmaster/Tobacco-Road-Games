@@ -179,6 +179,13 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
 }
 
+/* The storefront base stylesheet uses a striped placeholder behind library rows.
+   Creator shelves carry real rendered books, so that placeholder must not remain
+   visible behind or below them. */
+.creator-dashboard-open-rules-bay .shop-wall-library-books {
+  background: transparent !important;
+}
+
 .creator-dashboard-open-rules-bay .homepage-open-rules-book:hover {
   transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
   filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
