@@ -173,6 +173,28 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   min-height: 126px;
 }
 
+/* Match the storefront Open Rules spine's established mouse-over affordance. */
+.creator-dashboard-open-rules-bay .homepage-open-rules-book {
+  pointer-events: auto;
+  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
+}
+
+.creator-dashboard-open-rules-bay .homepage-open-rules-book:hover {
+  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
+  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creator-dashboard-open-rules-bay .homepage-open-rules-book {
+    transition: none;
+  }
+
+  .creator-dashboard-open-rules-bay .homepage-open-rules-book:hover {
+    transform: none;
+  }
+}
+
 .creator-dashboard-visually-hidden {
   position: absolute;
   width: 1px;

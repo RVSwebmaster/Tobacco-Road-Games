@@ -31,6 +31,17 @@
     const bay = document.querySelector(".creator-dashboard-open-rules-bay");
     if (!bay || !window.TRGHomepageShelves?.hydrateOpenRulesLibrary) return;
 
+    const measureBookstopClearance = () => {
+      bay.querySelectorAll("[data-creator-open-rules-books]").forEach((books) => {
+        const row = books.parentElement;
+        const spineWidth = Number.parseFloat(getComputedStyle(row, "::after").width);
+        if (Number.isFinite(spineWidth) && spineWidth > 0) {
+          books.style.setProperty("--library-bookstop-clearance", `${spineWidth * 6}px`);
+        }
+      });
+    };
+    measureBookstopClearance();
+
     const products = (await Promise.all(PRODUCT_IDS.map(async (id) => {
       const response = await fetch(`/api/catalog?slug=${encodeURIComponent(id)}`, {
         cache: "no-store",
@@ -45,6 +56,10 @@
       { managed: true, visible: true, products },
       { managed: true, visible: true, products: [] }
     );
+    measureBookstopClearance();
+    bay.querySelectorAll(".shop-wall-shelf-level").forEach((level) => {
+      if (typeof ResizeObserver === "function") new ResizeObserver(measureBookstopClearance).observe(level);
+    });
     bay.dataset.creatorOpenRulesCount = String(products.length);
   };
 

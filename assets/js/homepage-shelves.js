@@ -196,7 +196,7 @@
       if (upperPayload.managed) hydrateGuestOpenRulesShelf(guestRows[0], upperProducts);
       if (lowerPayload.managed) hydrateGuestOpenRulesShelf(guestRows[1], lowerProducts);
     }
-    const rows = Array.from(bay.querySelectorAll("[data-fill-library]"));
+    const rows = Array.from(bay.querySelectorAll("[data-fill-library], [data-creator-open-rules-books]"));
     if (guestRows.length !== 2 && rows.length !== 2) return false;
     [[rows[0], upperPayload, upperProducts], [rows[1], lowerPayload, lowerProducts]].forEach(([row, payload, products]) => {
       if (!row || !payload.managed) return;
