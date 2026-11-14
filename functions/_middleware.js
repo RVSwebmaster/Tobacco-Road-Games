@@ -26,12 +26,26 @@ export async function onRequest(context) {
     ? withOwnerBuildHeaders(await context.next(), context.env)
     : await context.next();
   if(requestsPublicBanner(pathname,response))return new HTMLRewriter().on('header.site-header',{element(element){element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`,{html:true});}}).transform(response);
-  return usesOwnerSessionBootstrap ? ownerResponse(response, context) : response;
+  const documentResponse = usesOwnerSessionBootstrap ? ownerResponse(response, context) : response;
+  return shouldNeverReuseDocument(pathname) ? noStoreDocument(documentResponse) : documentResponse;
 }
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
 }
 function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
+
+function shouldNeverReuseDocument(pathname) {
+  return pathname === "/" || pathname === "/index.html" || pathname === "/customer.html" ||
+    pathname === "/guest/" || pathname === "/guest/index.html" || pathname.startsWith("/creator");
+}
+
+function noStoreDocument(response) {
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "no-store");
+  headers.set("pragma", "no-cache");
+  headers.set("expires", "0");
+  return new Response(response.body, { headers, status: response.status, statusText: response.statusText });
+}
 
 function withOwnerBuildHeaders(response, env) {
   const headers = new Headers(response.headers);
