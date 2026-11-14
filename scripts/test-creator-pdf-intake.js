@@ -68,6 +68,16 @@ async function main() {
   assert.match(dashboard, /Nothing was published or shelved/);
   assert.match(dashboard, /your edit kept/);
   assert.match(dashboard, /key === "pageCount" \|\| key === "legalNote"/);
+  assert.match(dashboard, /dataset\.allowIncompleteDraft = String\(\["draft", "needs_changes"\]/);
+  assert.match(dashboard, /shortDescription\.required = !allowIncompleteDraft/);
+  assert.match(dashboard, /priceCents\.required = model === "fixed" && !allowIncompleteDraft/);
+  assert.match(dashboard, /form\.priceCents\.value\.trim\(\) \? Number\(form\.priceCents\.value\) : undefined/);
+  assert.match(dashboard, /Saved at \$\{savedAt\}/);
+  assert.match(dashboard, /Not saved: \$\{error\.message\}/);
+  const editFormStart = html.indexOf('id="creator-edit-form"');
+  const editFormEnd = html.indexOf("</form>", editFormStart);
+  const editStatus = html.indexOf('id="creator-edit-status"');
+  assert.ok(editStatus > editFormStart && editStatus < editFormEnd, "Save confirmation must appear beside the edit form buttons.");
   assert.match(reader, /dc:creator/);
   assert.match(reader, /dc:publisher/);
   assert.doesNotMatch(reader, /https?:\/\//);

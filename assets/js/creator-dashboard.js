@@ -473,6 +473,7 @@
       form = document.querySelector("#creator-edit-form");
     details.hidden = false;
     details.open = true;
+    form.dataset.allowIncompleteDraft = String(["draft", "needs_changes"].includes(item.lifecycleState));
     form.listingId.value = item.id;
     form.expectedRevision.value = item.revision;
     form.title.value = item.title || "";
@@ -931,19 +932,26 @@
     creatorEditDetails = document.querySelector("#creator-edit-details");
   creatorEditForm.pricingModel.addEventListener("change", () => {
     const model = creatorEditForm.pricingModel.value;
+    const allowIncompleteDraft = creatorEditForm.dataset.allowIncompleteDraft === "true";
     for (const label of creatorEditForm.querySelectorAll("[data-edit-fixed-price]"))
       label.hidden = model !== "fixed";
     for (const label of creatorEditForm.querySelectorAll("[data-edit-pwyw-price]"))
       label.hidden = model !== "pwyw";
-    creatorEditForm.priceCents.required = model === "fixed";
-    creatorEditForm.minimumPriceCents.required = model === "pwyw";
-    creatorEditForm.suggestedPriceCents.required = model === "pwyw";
+    creatorEditForm.shortDescription.required = !allowIncompleteDraft;
+    creatorEditForm.longDescription.required = !allowIncompleteDraft;
+    creatorEditForm.gameSystem.required = !allowIncompleteDraft;
+    creatorEditForm.genre.required = !allowIncompleteDraft;
+    creatorEditForm.format.required = !allowIncompleteDraft;
+    creatorEditForm.priceCents.required = model === "fixed" && !allowIncompleteDraft;
+    creatorEditForm.minimumPriceCents.required = model === "pwyw" && !allowIncompleteDraft;
+    creatorEditForm.suggestedPriceCents.required = model === "pwyw" && !allowIncompleteDraft;
   });
   creatorEditForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget,
       output = document.querySelector("#creator-edit-status"),
       model = form.pricingModel.value;
+    output.textContent = "Saving listing changes…";
     try {
       const result = await api(`listings/${form.listingId.value}`, {
         expectedRevision: Number(form.expectedRevision.value),
@@ -959,19 +967,24 @@
         shortDescription: form.shortDescription.value,
         longDescription: form.longDescription.value,
         pricingModel: model === "preview-only" ? "free" : model,
-        priceCents: model === "fixed" ? Number(form.priceCents.value) : undefined,
-        minimumPriceCents: model === "pwyw" ? Number(form.minimumPriceCents.value) : undefined,
-        suggestedPriceCents: model === "pwyw" ? Number(form.suggestedPriceCents.value) : undefined,
+        priceCents: model === "fixed" && form.priceCents.value.trim() ? Number(form.priceCents.value) : undefined,
+        minimumPriceCents: model === "pwyw" && form.minimumPriceCents.value.trim() ? Number(form.minimumPriceCents.value) : undefined,
+        suggestedPriceCents: model === "pwyw" && form.suggestedPriceCents.value.trim() ? Number(form.suggestedPriceCents.value) : undefined,
         mediaType: form.mediaType.value,
         format: form.format.value.split(",").map((value) => value.trim()).filter(Boolean),
         gameSystem: form.gameSystem.value,
         genre: form.genre.value,
       });
       form.expectedRevision.value = result.revision;
-      output.textContent = result.message;
-      await load();
+      const savedAt = new Date().toLocaleTimeString();
+      output.textContent = `Saved at ${savedAt}. ${result.message}`;
+      try {
+        await load();
+      } catch (refreshError) {
+        output.textContent = `Saved at ${savedAt}; the listing is stored, but the dashboard did not refresh: ${refreshError.message}`;
+      }
     } catch (error) {
-      output.textContent = error.message;
+      output.textContent = `Not saved: ${error.message}`;
     }
   });
   document.querySelector("#creator-edit-cancel").addEventListener("click", () => {

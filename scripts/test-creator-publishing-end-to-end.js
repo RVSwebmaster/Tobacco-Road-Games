@@ -41,6 +41,36 @@ async function main() {
     await status(response, 201, "create draft");
     const listingId = (await response.json()).listing.id;
 
+    response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, "listings", {
+      slug: `${SLUG}-incomplete-draft`, title: "Janni", mediaType: "digital", format: ["PDF"],
+      gameSystem: "5E Compatible", genre: "", pricingModel: "fixed"
+    }), env, options);
+    await status(response, 201, "create incomplete PDF draft without pricing");
+    const incompleteDraftId = (await response.json()).listing.id;
+    response = await creator.handleCreatorRequest(creatorRequest(CREATOR_A, `listings/${incompleteDraftId}`, {
+      expectedRevision: 1,
+      title: "Janni",
+      shortDescription: "A substantive, creator-entered description for this draft.",
+      longDescription: "A fuller creator-entered description that can be saved before the creator has decided on pricing or genre.",
+      gameSystem: "5E Compatible",
+      genre: "",
+      mediaType: "digital",
+      format: ["PDF"],
+      pricingModel: "fixed",
+      discovery: { subtitle: "The Desert Heirs", authorCredit: "RV Sawyer", publisher: "Tobacco Road Games", version: "" }
+    }), env, options);
+    await status(response, 200, "save incomplete draft details without forcing pricing or genre");
+    const savedIncompleteDraft = raw.prepare("SELECT title,short_description,long_description,game_system,genre,listed_price_cents,discovery_json,revision FROM creator_listings WHERE id=?").get(incompleteDraftId);
+    assert.equal(savedIncompleteDraft.title, "Janni");
+    assert.match(savedIncompleteDraft.short_description, /creator-entered description/);
+    assert.match(savedIncompleteDraft.long_description, /before the creator has decided/);
+    assert.equal(savedIncompleteDraft.game_system, "5E Compatible");
+    assert.equal(savedIncompleteDraft.genre, "");
+    assert.equal(savedIncompleteDraft.listed_price_cents, null);
+    assert.equal(JSON.parse(savedIncompleteDraft.discovery_json).subtitle, "The Desert Heirs");
+    assert.equal(JSON.parse(savedIncompleteDraft.discovery_json).authorCredit, "RV Sawyer");
+    assert.equal(savedIncompleteDraft.revision, 2);
+
     const generated = new FormData();
     generated.set("purpose", "product");
     generated.set("file", new File([PDF_BYTES], "native-test.pdf", { type: "application/pdf" }));
