@@ -84,6 +84,16 @@ async function main() {
   assert.equal(info.Title, "The Starfall Expedition");
   assert.equal(info.Author, "Ana Example");
   await withMetadata.destroy();
+
+  const coverTextPdf = makePdf([{ lines: ["JANNI", "Subtitle: Forgotten Heirs of the Desert"] }]);
+  const coverTextDoc = await pdfjs.getDocument({ data: coverTextPdf, isEvalSupported: false }).promise;
+  const coverTextPage = await coverTextDoc.getPage(1);
+  const coverText = (await coverTextPage.getTextContent()).items.map((item) => item.str).join("\n");
+  assert.match(coverText, /Forgotten Heirs of the Desert/, "Selectable cover lettering is available to PDF.js text extraction.");
+  const coverTextResult = prefill.inferProductListingFromPdf({ pages: [{ pageNumber: 1, text: coverText }], pageCount: 1 });
+  assert.equal(coverTextResult.fields.subtitle.value, "Forgotten Heirs of the Desert");
+  await coverTextDoc.destroy();
+
   const metadataResult = prefill.inferProductListingFromPdf({
     metadata: { Title: info.Title, Author: info.Author, Publisher: info.Publisher, Subject: info.Subject },
     pages: [
@@ -114,9 +124,36 @@ async function main() {
   assert.doesNotMatch(janniLike.fields.title.value, /LEGAL NOTICE/i);
   assert.equal(janniLike.fields.publisher.value, "Lantern Press");
   assert.equal(janniLike.fields.author, undefined, "Copyright ownership must not be mistaken for author credit.");
-  assert.match(janniLike.fields.shortDescription.value, /dangerous journey/);
-  assert.equal(janniLike.fields.shortDescription.confidence, "low");
+  assert.equal(janniLike.fields.shortDescription, undefined, "Ordinary manuscript prose must not be auto-filled as sales copy.");
+  assert.equal(janniLike.fields.longDescription, undefined);
   assert.match(janniLike.fields.legalNote.value, /Copyright/);
+
+  const legalDescriptions = prefill.inferProductListingFromPdf({
+    metadata: { Subject: "Copyright © 2026. Licensed under Creative Commons Attribution 4.0. Attribution is required." },
+    pages: [
+      { pageNumber: 1, text: "Product Description:\nThis work is compatible with a roleplaying system. No affiliation is implied. Copyright © 2026." },
+      { pageNumber: 2, text: "LEGAL NOTICE\nThis work is licensed under Creative Commons Attribution 4.0. You must include attribution when distributing it." },
+      { pageNumber: 3, text: "A scene in which the travelers enter the ancient city and bargain with its masked rulers." },
+    ],
+    pageCount: 18,
+  });
+  assert.equal(legalDescriptions.fields.shortDescription, undefined, "Legal, license, disclaimer, attribution, and incidental narrative text must not become description copy.");
+  assert.equal(legalDescriptions.fields.longDescription, undefined);
+
+  const usefulManuscriptDescription = prefill.inferProductListingFromPdf({
+    pages: [
+      { pageNumber: 1, text: "JANNI\nSubtitle: The Desert's Forgotten Heirs" },
+      { pageNumber: 5, text: "This supplement presents three rival janni lineages, their desert city, and rules for bargains that bind mortal and elemental courts." },
+    ],
+    pageCount: 18,
+  });
+  assert.match(usefulManuscriptDescription.fields.shortDescription.value, /three rival janni lineages/i);
+  assert.equal(usefulManuscriptDescription.fields.shortDescription.source, "manuscript contents statement");
+  assert.equal(usefulManuscriptDescription.fields.shortDescription.confidence, "medium");
+  assert.equal(usefulManuscriptDescription.fields.genre, undefined);
+  assert.equal(usefulManuscriptDescription.fields.version, undefined);
+  assert.equal(usefulManuscriptDescription.fields.price, undefined);
+  assert.equal(usefulManuscriptDescription.fields.subtitle.value, "The Desert's Forgotten Heirs");
 
   const titlePageResult = prefill.inferProductListingFromPdf({
     pages: [
@@ -129,7 +166,7 @@ async function main() {
   assert.equal(titlePageResult.fields.title.confidence, "medium");
   assert.equal(titlePageResult.fields.author.value, "Mira North");
   assert.equal(titlePageResult.fields.publisher.value, "Ember House");
-  assert.equal(titlePageResult.fields.shortDescription.confidence, "medium");
+  assert.equal(titlePageResult.fields.shortDescription, undefined, "An Introduction heading alone does not establish product description copy.");
   assert.equal(titlePageResult.fields.system, undefined);
 
   const noMetadata = prefill.inferProductListingFromPdf({
@@ -145,6 +182,7 @@ async function main() {
 
   const scannedOnly = prefill.inferProductListingFromPdf({ fileName: "Scan.pdf", pages: [{ pageNumber: 1, text: "" }], pageCount: 1 });
   assert.match(scannedOnly.warnings.join(" "), /does not run OCR/i);
+  assert.match(scannedOnly.warnings.join(" "), /cover page has no selectable text/i);
 
   const conflict = prefill.inferProductListingFromPdf({
     metadata: { Author: "Metadata Author" },

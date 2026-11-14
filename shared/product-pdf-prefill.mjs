@@ -116,7 +116,53 @@ const getInlineCredits = (text, labels, maxLength = 240) => {
     .filter((value) => value.length >= 2 && value.length <= maxLength));
 };
 
-const isBoilerplateText = (value) => /\b(?:all rights reserved|copyright|©\s*\d{4}|published by|licensed under|open game license|creative commons|isbn|table of contents|legal notice|terms of use|privacy policy)\b/i.test(value);
+const isBoilerplateText = (value) => /\b(?:all rights reserved|copyright|©|licensed? under|licen[cs]e(?:d|s|ing)?|open game license|creative commons|attribution required|attribution requirements|published by|distributed by|must be compatible|compatible with|compatibility disclaimer|not affiliated with|no affiliation|disclaimer|legal notice|terms of use|privacy policy|isbn|table of contents|trademark|permission is required|you may not|you must include|without express written permission)\b/i.test(value);
+
+const DESCRIPTION_HEADINGS = Object.freeze([
+  "Product Description", "About This Product", "About This Book", "Book Description",
+  "Overview", "Summary", "Back Cover", "Back Cover Copy", "Description"
+]);
+
+const isUsefulDescription = (value, { labeled = false } = {}) => {
+  const text = cleanText(value);
+  if (text.length < (labeled ? 40 : 75) || text.length > 1800 || isBoilerplateText(text)) return false;
+  if (/^(?:copyright|legal notice|license|licence|disclaimer|compatibility|attribution)\b/i.test(text)) return false;
+  // For an unlabeled passage, require the manuscript to identify itself or
+  // explain what it contains. Ordinary narrative prose is not sales copy.
+  if (!labeled && !/\b(?:this (?:book|supplement|guide|adventure|volume|publication)|the book|the supplement|contains|includes|features|presents|explores|provides rules|introduces|offers rules|a collection of|a guide to)\b/i.test(text)) return false;
+  return /[A-Za-z]{3,}/.test(text) && /[.!?]/.test(text);
+};
+
+const findDescription = (metadataSubject, pages) => {
+  const candidates = [];
+  if (metadataSubject) candidates.push({ value: metadataSubject, source: "PDF subject metadata", labeled: true });
+  for (const page of pages) {
+    const section = readSection(cleanLines(page.text), DESCRIPTION_HEADINGS, { maxLines: 12, maxLength: 1800 });
+    if (section) candidates.push({ value: section, source: "labeled publication description", labeled: true });
+  }
+  // Scan sampled manuscript text for an authored contents statement, while
+  // excluding general narrative passages and legal/compatibility boilerplate.
+  const paragraphs = pages.flatMap((page) => {
+    const blocks = [];
+    let block = [];
+    for (const line of cleanLines(page.text)) {
+      if (isLikelyHeading(line)) {
+        if (block.length) blocks.push(block.join(" "));
+        block = [];
+      } else {
+        block.push(line);
+      }
+    }
+    if (block.length) blocks.push(block.join(" "));
+    return blocks;
+  }).map(cleanText).filter(Boolean);
+  for (const paragraph of paragraphs) {
+    if (/\b(?:this (?:book|supplement|guide|adventure|volume|publication)|the book|the supplement)\b/i.test(paragraph)) {
+      candidates.push({ value: paragraph, source: "manuscript contents statement", labeled: false });
+    }
+  }
+  return candidates.find((candidate) => isUsefulDescription(candidate.value, { labeled: candidate.labeled })) || null;
+};
 
 const readSection = (lines, headings, { maxLines = 8, maxLength = 1400 } = {}) => {
   const headingPattern = headings.map((heading) => heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -321,28 +367,26 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
   addField(fields, "features", features, "labeled feature list", "medium");
 
   const metadataSubject = getMetadataValue(normalizedMetadata, ["subject", "dc:description"]);
-  const descriptionSection = readSection(openingLines, ["Product Description", "About This Product", "About This Book", "Overview", "Description", "Introduction"], {
-    maxLines: 12,
-    maxLength: 1800
-  });
-  const proseCandidates = openingLines
-    .map((line) => cleanText(line))
-    .filter((line) => line.length >= 55 && line.length <= 1200 && !isLikelyHeading(line) && !isBoilerplateText(line)
-      && !/^(?:author|authors|written by|designed by|design by|created by|publisher|published by|isbn|version|game system|system|genre)\b/i.test(line));
-  const openingProse = proseCandidates.slice(0, 3).join(" ").slice(0, 1800);
-  const description = descriptionSection || metadataSubject || openingProse;
-  if (description) {
+  const descriptionCandidate = findDescription(metadataSubject, normalizedPages);
+  if (descriptionCandidate) {
+    const description = cleanText(descriptionCandidate.value).slice(0, 1800);
     const sentences = description.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [description];
     const shortDescription = cleanText(sentences.slice(0, 2).join(" ")).slice(0, 420);
-    addField(fields, "shortDescription", shortDescription, descriptionSection ? "labeled product description" : (metadataSubject ? "PDF subject metadata" : "opening-page descriptive text · verify"), descriptionSection || metadataSubject ? "medium" : "low");
+    addField(fields, "shortDescription", shortDescription, descriptionCandidate.source, "medium");
     if (description.length > shortDescription.length + 20) {
-      addField(fields, "longDescription", description.slice(0, 1800), descriptionSection ? "labeled product description" : (metadataSubject ? "PDF subject metadata" : "opening-page descriptive text · verify"), descriptionSection || metadataSubject ? "medium" : "low");
+      addField(fields, "longDescription", description, descriptionCandidate.source, "medium");
     }
   }
 
   addField(fields, "legalNote", findLegalCopy(normalizedPages), "explicit legal or license copy", "medium");
 
   const pagesWithText = normalizedPages.filter((page) => cleanText(page.text)).length;
+  const coverPage = normalizedPages.find((page) => page.pageNumber === 1);
+  if (!fields.subtitle && coverPage) {
+    warnings.push(cleanText(coverPage.text)
+      ? "No explicitly labeled subtitle was found in selectable cover text. Review the cover for an unlabeled subtitle or lettering embedded in the artwork."
+      : "The cover page has no selectable text. Its printed subtitle may be embedded in the artwork; this browser workflow does not run OCR." );
+  }
   if (!pagesWithText) {
     warnings.push("No selectable text was found. The document may be scanned or image-only; this browser workflow does not run OCR. Page count and cover images are still available.");
   } else if (pagesWithText < normalizedPages.length) {

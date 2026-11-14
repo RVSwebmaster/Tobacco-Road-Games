@@ -651,7 +651,9 @@
       if (key === "pageCount" || key === "legalNote") continue;
       const target = targets[key];
       const existingValue = target ? String(form.elements[target].value || "").trim() : "";
-      if (target && !existingValue) {
+      const descriptionField = key === "shortDescription" || key === "longDescription";
+      const trustworthyDescription = !descriptionField || field.confidence === "medium" || field.confidence === "high";
+      if (target && !existingValue && trustworthyDescription) {
         form.elements[target].value = Array.isArray(field.value) ? field.value.join(", ") : field.value;
       }
       const row = document.createElement("li");
