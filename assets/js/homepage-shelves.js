@@ -141,7 +141,9 @@
   function createOpenRulesSpine(product) {
     const link = document.createElement("a");
     const pageCount = Number(product.metadata?.pageCount);
-    const shelfWidth = Math.max(12, Math.round(depthForPages(pageCount) * 220 / 340));
+    const shelfWidth = product.slug === "5e-monster-guide"
+      ? 16
+      : Math.max(12, Math.round(depthForPages(pageCount) * 220 / 340));
     link.className = "shop-wall-product-mock shop-wall-product-mock--spine homepage-library-book homepage-open-rules-book";
     link.href = product.fullUrl;
     link.dataset.productCard = "true";
