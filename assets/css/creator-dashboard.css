@@ -116,6 +116,10 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   border-radius: 0;
   background: none;
   color: #d8a84d;
+  background: linear-gradient(180deg, #fff1ad 0%, #f0c35b 24%, #a96517 50%, #ffe49a 66%, #c27b1d 84%, #fff0ae 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
   letter-spacing: 0.04em;
   text-shadow: 0 1px 0 rgba(255, 231, 161, 0.86), 0 12px 14px rgba(37, 17, 7, 0.66);
