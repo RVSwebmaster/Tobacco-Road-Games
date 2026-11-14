@@ -18,7 +18,16 @@ async function main() {
   await assertOwnerDocumentBootstrap(ownerBootstrap.attachOwnerSessionForDocument);
   assertHomepageIntegration();
   assertProtectedRoutesRemainProtected();
+  assertCreatorSessionBootstrapScope();
   console.log("Progressive privilege navigation tests passed.");
+}
+
+function assertCreatorSessionBootstrapScope() {
+  const middleware = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8");
+  assert.match(middleware, /pathname\.startsWith\("\/owner"\) \|\| pathname\.startsWith\("\/creator"\)/,
+    "Owner Access must bootstrap the shared TRG session for the Creator workspace too.");
+  assert.match(middleware, /return usesOwnerSessionBootstrap \? ownerResponse\(response, context\) : response/,
+    "The Creator document response must receive the same session bootstrap as the Owner document.");
 }
 
 async function assertOwnerDocumentBootstrap(attach) {

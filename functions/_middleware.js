@@ -21,11 +21,12 @@ export async function onRequest(context) {
   if (pathname === "/owner/intake" || pathname === "/owner/intake/") {
     return ownerResponse(withOwnerBuildHeaders(Response.redirect(new URL("/owner/product-intake.html", context.request.url).toString(), 303), context.env), context);
   }
-  const response = pathname.startsWith("/owner")
+  const usesOwnerSessionBootstrap = pathname.startsWith("/owner") || pathname.startsWith("/creator");
+  const response = usesOwnerSessionBootstrap
     ? withOwnerBuildHeaders(await context.next(), context.env)
     : await context.next();
   if(requestsPublicBanner(pathname,response))return new HTMLRewriter().on('header.site-header',{element(element){element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`,{html:true});}}).transform(response);
-  return pathname.startsWith("/owner") ? ownerResponse(response, context) : response;
+  return usesOwnerSessionBootstrap ? ownerResponse(response, context) : response;
 }
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
