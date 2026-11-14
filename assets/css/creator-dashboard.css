@@ -116,13 +116,27 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   border-radius: 0;
   background: none;
   color: #d8a84d;
-  background: linear-gradient(180deg, #fff1ad 0%, #f0c35b 24%, #a96517 50%, #ffe49a 66%, #c27b1d 84%, #fff0ae 100%);
+  background: linear-gradient(180deg,
+    #fffbe2 0%,
+    #fff4c2 8%,
+    #e7a33b 18%,
+    #9b4c09 39%,
+    #4c1d03 51%,
+    #8c3e05 61%,
+    #d98418 76%,
+    #f7c967 89%,
+    #fff6c9 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1px rgba(205, 133, 28, 0.82);
   font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
   letter-spacing: 0.04em;
-  text-shadow: 0 1px 0 rgba(255, 231, 161, 0.86), 0 12px 14px rgba(37, 17, 7, 0.66);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 224, 0.95),
+    0 -1px 0 rgba(255, 246, 196, 0.9),
+    0 3px 0 rgba(103, 39, 4, 0.78),
+    0 12px 14px rgba(37, 17, 7, 0.66);
   box-shadow: none;
 }
 
