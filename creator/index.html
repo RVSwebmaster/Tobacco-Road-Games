@@ -20,18 +20,33 @@
           <span class="creator-menu-placeholder">Menu</span>
         </nav>
       </header>
-      <main class="creator-workspace" id="creator-dashboard">
-        <div class="creator-workspace__atmosphere" aria-hidden="true"></div>
-        <section class="creator-workspace__stage" aria-labelledby="creator-dashboard-title">
-          <p class="creator-workspace__kicker">Tobacco Road Games</p>
-          <h1 id="creator-dashboard-title">Creator Dashboard</h1>
-          <p id="creator-status" class="creator-workspace__status" role="status">Checking Creator session…</p>
-          <p id="creator-identity" class="creator-workspace__identity"></p>
-          <p class="creator-workspace__reference"><a href="/temp-creator/">Open preserved Creator Dashboard</a></p>
+      <main class="homepage-shop-wall creator-dashboard-shop-wall" id="creator-dashboard">
+        <h1 class="creator-dashboard-visually-hidden">Creator Dashboard</h1>
+        <section class="shop-wall-row shop-wall-row--identity" aria-label="Empty Tobacco Road Games Creator workspace">
+          <section class="shop-wall-bay shop-wall-bay--library" aria-label="Empty left shelf bay">
+            <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty left shelves">
+              <div class="shop-wall-shelf-level shop-wall-shelf-level--upper"></div>
+              <div class="shop-wall-shelf-level shop-wall-shelf-level--lower"></div>
+            </div>
+          </section>
+          <section class="shop-wall-bay shop-wall-bay--identity" aria-label="Tobacco Road Games emblem panel">
+            <div class="shop-wall-identity-sign" aria-hidden="true">
+              <img src="/assets/tobacco-road-games-logo.png" alt="" loading="eager" decoding="async" />
+            </div>
+          </section>
+          <section class="shop-wall-bay shop-wall-bay--library" aria-label="Empty right shelf bay">
+            <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty right shelves">
+              <div class="shop-wall-shelf-level shop-wall-shelf-level--upper"></div>
+              <div class="shop-wall-shelf-level shop-wall-shelf-level--lower"></div>
+            </div>
+          </section>
+          <span class="shop-wall-shelf-fixtures" aria-hidden="true"><span></span><span></span><span></span></span>
         </section>
+        <p id="creator-status" class="creator-dashboard-visually-hidden" role="status">Checking Creator session…</p>
+        <p id="creator-identity" class="creator-dashboard-visually-hidden"></p>
       </main>
-      <footer class="site-footer">
-        <p>&copy; 2026 Tobacco Road Games.</p>
+      <footer class="site-footer creator-dashboard-footer">
+        <p><a href="/temp-creator/">Open preserved Creator Dashboard</a></p>
       </footer>
     </div>
   </body>
