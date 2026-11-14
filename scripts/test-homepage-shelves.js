@@ -185,6 +185,7 @@ function testClientWiring() {
   assert.match(openRules, /homepage-open-rules-book__rotation/);
   assert.match(openRules, /--book-angle/, "Shelf books must use the rendered rotation angle.");
   assert.match(openRules, /panel\.className = "product-book__spine-art"/);
+  assert.match(openRules, /product-book__back/);
   assert.match(openRules, /title\.className = "product-book__spine-title"/);
   assert.match(openRules, /credit\.className = "product-book__spine-credit"/);
   const styles = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");

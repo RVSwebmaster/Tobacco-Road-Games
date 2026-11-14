@@ -56,6 +56,15 @@
     cover.decoding = "async";
     front.append(cover);
 
+    const back = document.createElement("span");
+    back.className = "product-book__face product-book__back";
+    const backCover = document.createElement("img");
+    backCover.src = cover.src;
+    backCover.alt = "";
+    backCover.loading = "lazy";
+    backCover.decoding = "async";
+    back.append(backCover);
+
     const spine = document.createElement("span");
     spine.className = "product-book__face product-book__spine";
     spine.append(createRotationSpine(product));
@@ -63,7 +72,7 @@
     const pages = document.createElement("span");
     pages.className = "product-book__face product-book__pages";
 
-    book.append(front, spine, pages);
+    book.append(front, back, spine, pages);
     stage.append(book);
     return stage;
   }
