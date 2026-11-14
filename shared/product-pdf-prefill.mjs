@@ -6,6 +6,14 @@ const GENERIC_TITLES = new Set([
   "untitled"
 ]);
 
+const BOILERPLATE_HEADINGS = new Set([
+  "legal notice", "copyright", "copyright notice", "license", "licence", "licensing",
+  "open game license", "creative commons license", "table of contents", "contents",
+  "dedication", "acknowledgments", "acknowledgements", "credits", "legal information",
+  "disclaimer", "terms of use", "privacy notice", "notice", "foreword", "index",
+  "about the author", "open content", "ogl", "preface", "appendix", "references", "permissions"
+]);
+
 const MONTHS = Object.freeze({
   january: 1,
   february: 2,
@@ -69,9 +77,17 @@ const isUsefulTitle = (value) => {
   const text = cleanText(value);
   if (text.length < 2 || text.length > 160) return false;
   if (GENERIC_TITLES.has(text.toLowerCase())) return false;
+  if (BOILERPLATE_HEADINGS.has(text.replace(/[:.]+$/, "").toLowerCase())) return false;
+  if (/^(?:legal notice|copyright|license|licence|licensing|table of contents|contents|dedication|credits|disclaimer|all rights reserved)\b/i.test(text)) return false;
   if (/^(?:https?:\/\/|www\.|copyright|all rights reserved|page \d+)/i.test(text)) return false;
   if (/^tobacco road games$/i.test(text)) return false;
   return true;
+};
+
+const filenameTitle = (value) => {
+  const base = cleanText(String(value || "").split(/[\\/]/).pop() || "").replace(/\.pdf$/i, "");
+  const title = cleanText(base.replace(/[._-]+/g, " "));
+  return isUsefulTitle(title) ? title.slice(0, 160) : "";
 };
 
 const getLabeledValue = (lines, labels, maxLength = 300) => {
@@ -89,6 +105,18 @@ const getLabeledValues = (lines, labels, maxLength = 300) => {
   const expression = new RegExp(`^(?:${labelPattern})(?:\\s*[:\\-]\\s*|\\s+)(.+)$`, "i");
   return unique(lines.map((line) => line.match(expression)?.[1]).filter(Boolean).map((value) => cleanText(value).slice(0, maxLength)));
 };
+
+const cleanCredit = (value) => cleanText(value).replace(/[.;]+$/, "").trim();
+
+const getInlineCredits = (text, labels, maxLength = 240) => {
+  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const expression = new RegExp(`(?:^|[\\n.;]\\s*|[,()]\\s*)(?:${escaped})\\s*[:\\-]?\\s+([^\\n.;|]{2,${maxLength}})`, "gim");
+  return unique([...String(text || "").matchAll(expression)]
+    .map((match) => cleanText(match[1]).replace(/\s*(?:,?\s*)?(?:all rights reserved|copyright|©|\bISBN\b).*$/i, "").trim())
+    .filter((value) => value.length >= 2 && value.length <= maxLength));
+};
+
+const isBoilerplateText = (value) => /\b(?:all rights reserved|copyright|©\s*\d{4}|published by|licensed under|open game license|creative commons|isbn|table of contents|legal notice|terms of use|privacy policy)\b/i.test(value);
 
 const readSection = (lines, headings, { maxLines = 8, maxLength = 1400 } = {}) => {
   const headingPattern = headings.map((heading) => heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
@@ -200,7 +228,7 @@ export function selectPdfPages(pageCount, options = {}) {
   return [...selected].sort((left, right) => left - right);
 }
 
-export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCount = 0 } = {}) {
+export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCount = 0, fileName = "" } = {}) {
   const normalizedMetadata = normalizeMetadata(metadata);
   const normalizedPages = pages.map((page, index) => ({
     pageNumber: Number(page?.pageNumber || index + 1),
@@ -221,18 +249,22 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
   if (titleHeadingCandidates.length > 1) uncertain.title = titleHeadingCandidates.slice(0, 5);
   const title = isUsefulTitle(metadataTitle)
     ? metadataTitle
-    : (isUsefulTitle(labeledTitle) ? labeledTitle : firstPageTitle);
-  const titleSource = isUsefulTitle(metadataTitle) ? "PDF document title" : (isUsefulTitle(labeledTitle) ? "labeled title" : "opening-page heading");
+    : (isUsefulTitle(labeledTitle) ? labeledTitle : (firstPageTitle || filenameTitle(fileName)));
+  const titleSource = isUsefulTitle(metadataTitle) ? "PDF document title" : (isUsefulTitle(labeledTitle) ? "explicitly labeled title" : (firstPageTitle ? "opening-page title heading · verify" : "PDF filename · fallback suggestion"));
   const competingTitle = [metadataTitle, labeledTitle, ...titleHeadingCandidates].filter(isUsefulTitle);
   const titleConflict = unique(competingTitle).length > 1;
-  addField(fields, "title", title, titleSource, titleConflict ? "medium" : "high");
+  const titleConfidence = titleConflict ? "medium" : (isUsefulTitle(metadataTitle) || isUsefulTitle(labeledTitle) ? "high" : (firstPageTitle ? "medium" : "low"));
+  addField(fields, "title", title, titleSource, titleConfidence);
   if (titleConflict) warnings.push("The PDF contains differing title references. The selected value is a source-based suggestion; confirm it before publishing.");
 
   const subtitle = getLabeledValue(openingLines, ["Subtitle"], 180);
   addField(fields, "subtitle", subtitle, "labeled subtitle");
 
   const metadataAuthor = getMetadataValue(normalizedMetadata, ["author", "dc:creator"]);
-  const labeledAuthors = getLabeledValues(openingLines, ["Author", "Authors", "Written by", "Design by", "Designed by"], 240);
+  const labeledAuthors = unique([
+    ...getLabeledValues(openingLines, ["Author", "Authors", "Written by", "Design by", "Designed by", "Created by", "Text by", "Game Design by"], 240),
+    ...getInlineCredits(openingPages.map((page) => page.text).join("\n"), ["Author", "Authors", "Written by", "Designed by", "Design by", "Created by", "Text by", "Game Design by"], 240)
+  ].map(cleanCredit));
   const authorCandidates = unique([metadataAuthor, ...labeledAuthors].filter(Boolean));
   if (authorCandidates.length === 1) {
     addField(fields, "author", authorCandidates[0], metadataAuthor ? "PDF author metadata" : "opening-page author credit");
@@ -241,7 +273,10 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
     warnings.push("The PDF has conflicting author credits. No author was selected; review the listed candidates.");
   }
   const metadataPublisher = getMetadataValue(normalizedMetadata, ["publisher", "dc:publisher"]);
-  const labeledPublishers = getLabeledValues(openingLines, ["Publisher", "Published by"], 240);
+  const labeledPublishers = unique([
+    ...getLabeledValues(openingLines, ["Publisher", "Published by"], 240),
+    ...getInlineCredits(openingPages.map((page) => page.text).join("\n"), ["Publisher", "Published by", "Published and distributed by"], 240)
+  ].map(cleanCredit));
   const publisherCandidates = unique([metadataPublisher, ...labeledPublishers].filter(Boolean));
   if (publisherCandidates.length === 1) {
     addField(fields, "publisher", publisherCandidates[0], metadataPublisher ? "PDF publisher metadata" : "opening-page publisher credit");
@@ -290,13 +325,18 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
     maxLines: 12,
     maxLength: 1800
   });
-  const description = descriptionSection || metadataSubject;
+  const proseCandidates = openingLines
+    .map((line) => cleanText(line))
+    .filter((line) => line.length >= 55 && line.length <= 1200 && !isLikelyHeading(line) && !isBoilerplateText(line)
+      && !/^(?:author|authors|written by|designed by|design by|created by|publisher|published by|isbn|version|game system|system|genre)\b/i.test(line));
+  const openingProse = proseCandidates.slice(0, 3).join(" ").slice(0, 1800);
+  const description = descriptionSection || metadataSubject || openingProse;
   if (description) {
     const sentences = description.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [description];
     const shortDescription = cleanText(sentences.slice(0, 2).join(" ")).slice(0, 420);
-    addField(fields, "shortDescription", shortDescription, descriptionSection ? "labeled product description" : "PDF subject metadata", "medium");
+    addField(fields, "shortDescription", shortDescription, descriptionSection ? "labeled product description" : (metadataSubject ? "PDF subject metadata" : "opening-page descriptive text · verify"), descriptionSection || metadataSubject ? "medium" : "low");
     if (description.length > shortDescription.length + 20) {
-      addField(fields, "longDescription", description.slice(0, 1800), descriptionSection ? "labeled product description" : "PDF subject metadata", "medium");
+      addField(fields, "longDescription", description.slice(0, 1800), descriptionSection ? "labeled product description" : (metadataSubject ? "PDF subject metadata" : "opening-page descriptive text · verify"), descriptionSection || metadataSubject ? "medium" : "low");
     }
   }
 
@@ -304,7 +344,7 @@ export function inferProductListingFromPdf({ metadata = {}, pages = [], pageCoun
 
   const pagesWithText = normalizedPages.filter((page) => cleanText(page.text)).length;
   if (!pagesWithText) {
-    warnings.push("No readable text was found. This PDF may be scanned or image-only; page count and format are still available.");
+    warnings.push("No selectable text was found. The document may be scanned or image-only; this browser workflow does not run OCR. Page count and cover images are still available.");
   } else if (pagesWithText < normalizedPages.length) {
     warnings.push("Some sampled pages contained no readable text. Review the extracted suggestions before publishing.");
   }

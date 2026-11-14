@@ -57,11 +57,17 @@ async function main() {
   assert.match(html, /id="creator-pdf-draft-form"/);
   assert.match(html, /id="creator-pdf-front-replacement"/);
   assert.match(html, /id="creator-pdf-back-replacement"/);
+  assert.match(html, /creator-pdf-cover-grid/);
+  assert.match(html, /creator-pdf-legal-details/);
+  assert.match(html, /creator-pdf-front-open/);
+  assert.match(html, /creator-pdf-back-open/);
+  assert.match(fs.readFileSync(path.join(ROOT, "styles.css"), "utf8"), /max-height: 300px/);
   assert.match(html, /Manual listing entry/);
   assert.match(dashboard, /readProductPdf\(file\)/);
   assert.match(dashboard, /renderDefaultPdfCoverFiles\(file\)/);
   assert.match(dashboard, /Nothing was published or shelved/);
-  assert.match(dashboard, /existing entry was kept/);
+  assert.match(dashboard, /your edit kept/);
+  assert.match(dashboard, /key === "pageCount" \|\| key === "legalNote"/);
   assert.match(reader, /dc:creator/);
   assert.match(reader, /dc:publisher/);
   assert.doesNotMatch(reader, /https?:\/\//);
@@ -93,6 +99,25 @@ async function main() {
   assert.equal(metadataResult.fields.genre.value, "Science Fantasy");
   assert.match(metadataResult.fields.shortDescription.value, /fallen star/);
 
+  const janniLike = prefill.inferProductListingFromPdf({
+    metadata: { Title: "LEGAL NOTICE", Author: "", Subject: "" },
+    fileName: "Janni.pdf",
+    pages: [
+      { pageNumber: 1, text: "LEGAL NOTICE\nCopyright © 2026 Janni Works. Published by Lantern Press. All rights reserved." },
+      { pageNumber: 2, text: "A dangerous journey through a city where old powers bargain for mortal lives and every promise comes at a cost." },
+    ],
+    pageCount: 18,
+  });
+  assert.equal(janniLike.fields.title.value, "Janni");
+  assert.equal(janniLike.fields.title.confidence, "low");
+  assert.match(janniLike.fields.title.source, /filename/i);
+  assert.doesNotMatch(janniLike.fields.title.value, /LEGAL NOTICE/i);
+  assert.equal(janniLike.fields.publisher.value, "Lantern Press");
+  assert.equal(janniLike.fields.author, undefined, "Copyright ownership must not be mistaken for author credit.");
+  assert.match(janniLike.fields.shortDescription.value, /dangerous journey/);
+  assert.equal(janniLike.fields.shortDescription.confidence, "low");
+  assert.match(janniLike.fields.legalNote.value, /Copyright/);
+
   const titlePageResult = prefill.inferProductListingFromPdf({
     pages: [
       { pageNumber: 1, text: "" },
@@ -101,6 +126,7 @@ async function main() {
     pageCount: 3,
   });
   assert.equal(titlePageResult.fields.title.value, "THE GLASS MARCH");
+  assert.equal(titlePageResult.fields.title.confidence, "medium");
   assert.equal(titlePageResult.fields.author.value, "Mira North");
   assert.equal(titlePageResult.fields.publisher.value, "Ember House");
   assert.equal(titlePageResult.fields.shortDescription.confidence, "medium");
@@ -116,6 +142,9 @@ async function main() {
   assert.equal(noMetadata.fields.system, undefined);
   assert.equal(noMetadata.fields.genre, undefined);
   assert.equal(noMetadata.fields.shortDescription, undefined);
+
+  const scannedOnly = prefill.inferProductListingFromPdf({ fileName: "Scan.pdf", pages: [{ pageNumber: 1, text: "" }], pageCount: 1 });
+  assert.match(scannedOnly.warnings.join(" "), /does not run OCR/i);
 
   const conflict = prefill.inferProductListingFromPdf({
     metadata: { Author: "Metadata Author" },

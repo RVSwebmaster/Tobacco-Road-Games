@@ -94,7 +94,7 @@ export async function readProductPdf(file, options = {}) {
       pages.push({ pageNumber, text: await extractPageText(document, pageNumber) });
     }
     return {
-      ...inferProductListingFromPdf({ metadata, pages, pageCount: document.numPages }),
+      ...inferProductListingFromPdf({ metadata, pages, pageCount: document.numPages, fileName }),
       fileName,
       fileSize: Number(file.size || 0),
       pageCount: document.numPages,

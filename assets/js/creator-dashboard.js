@@ -608,6 +608,9 @@
     if (url) URL.revokeObjectURL(url);
     if (which === "front") creatorPdfFrontUrl = "";
     else creatorPdfBackUrl = "";
+    const openLink = document.querySelector(which === "front" ? "#creator-pdf-front-open" : "#creator-pdf-back-open");
+    openLink.hidden = true;
+    openLink.removeAttribute("href");
   }
   function showCreatorPdfPreview(which, file) {
     revokeCreatorPdfPreview(which);
@@ -622,6 +625,9 @@
     else creatorPdfBackUrl = url;
     image.src = url;
     image.hidden = false;
+    const openLink = document.querySelector(which === "front" ? "#creator-pdf-front-open" : "#creator-pdf-back-open");
+    openLink.href = url;
+    openLink.hidden = false;
   }
   function reportCreatorPdfPreparation(result) {
     const form = document.querySelector("#creator-pdf-draft-form"),
@@ -631,17 +637,32 @@
         system: "gameSystem", genre: "genre", version: "version", language: "language", format: "format",
       },
       report = document.querySelector("#creator-pdf-extraction-report"),
+      legalDetails = document.querySelector("#creator-pdf-legal-details"),
+      legalExcerpt = document.querySelector("#creator-pdf-legal-excerpt"),
       warnings = document.querySelector("#creator-pdf-warnings"),
       rows = [];
+    const labels = {
+      title: "Title", subtitle: "Subtitle", author: "Author credit", publisher: "Publisher credit",
+      shortDescription: "Short description", longDescription: "Full description", system: "Game system",
+      genre: "Genre", version: "Version", language: "Language", format: "Format", tags: "Keywords",
+      contentDescriptors: "Content warnings", features: "Features", releaseDate: "Release date", line: "Product line", series: "Series",
+    };
     for (const [key, field] of Object.entries(result.fields || {})) {
-      if (key === "pageCount") continue;
+      if (key === "pageCount" || key === "legalNote") continue;
       const target = targets[key];
       const existingValue = target ? String(form.elements[target].value || "").trim() : "";
       if (target && !existingValue) {
         form.elements[target].value = Array.isArray(field.value) ? field.value.join(", ") : field.value;
       }
       const row = document.createElement("li");
-      row.textContent = `${key}: ${Array.isArray(field.value) ? field.value.join(", ") : field.value} — ${field.source} (${field.confidence} confidence)${existingValue ? " · your existing entry was kept" : ""}`;
+      row.className = `creator-pdf-field creator-pdf-field--${field.confidence || "unknown"}`;
+      const heading = document.createElement("strong");
+      heading.textContent = `${labels[key] || key}: `;
+      const value = document.createElement("span");
+      value.textContent = Array.isArray(field.value) ? field.value.join(", ") : field.value;
+      const source = document.createElement("small");
+      source.textContent = `${field.source} · ${field.confidence || "unrated"}${existingValue ? " · your edit kept" : ""}`;
+      row.append(heading, value, source);
       rows.push(row);
     }
     for (const [key, candidates] of Object.entries(result.uncertain || {})) {
@@ -655,6 +676,9 @@
       rows.push(row);
     }
     report.replaceChildren(...rows);
+    const legal = result.fields?.legalNote?.value || "";
+    legalDetails.hidden = !legal;
+    legalExcerpt.textContent = legal;
     const warningRows = [...(result.warnings || [])];
     for (const [field, label] of [["title", "Title"], ["author", "Author credit"], ["publisher", "Publisher credit"], ["shortDescription", "Short description"], ["longDescription", "Full description"], ["system", "Game system"], ["genre", "Genre"]]) {
       if (!result.fields?.[field]?.value && !result.uncertain?.[field]) warningRows.push(`${label} was not established from this PDF; please enter it if applicable.`);

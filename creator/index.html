@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>Creator Dashboard | Tobacco Road Games</title>
     <link rel="stylesheet" href="/styles.css" />
-    <script src="/assets/js/creator-dashboard.js?v=20261113-pdf-intake" defer></script>
+    <script src="/assets/js/creator-dashboard.js?v=20261113-janni-pdf-fix" defer></script>
   </head>
   <body class="view-section">
     <div class="page-shell">
@@ -221,6 +221,10 @@
               <p>Extracted values show their source. Medium-confidence values are suggestions. Conflicting credits stay blank until you decide. Reanalyzing never replaces text you have already entered.</p>
               <ul id="creator-pdf-extraction-report" class="creator-status-list"></ul>
               <ul id="creator-pdf-warnings" class="creator-status-list"></ul>
+              <details id="creator-pdf-legal-details" class="creator-pdf-legal" hidden>
+                <summary>View copyright and license excerpts</summary>
+                <p id="creator-pdf-legal-excerpt"></p>
+              </details>
               <form id="creator-pdf-draft-form" class="account-form">
                 <label>Title <input name="title" maxlength="160" /></label>
                 <label>Subtitle <input name="subtitle" maxlength="180" /></label>
@@ -248,15 +252,17 @@
                 </label>
                 <label>Format <input name="format" value="PDF" maxlength="120" /></label>
                 <p id="creator-pdf-page-count"></p>
-                <div class="account-grid">
-                  <article class="account-card">
+                <div class="creator-pdf-cover-grid">
+                  <article class="account-card creator-pdf-cover-card">
                     <h4>Front cover · PDF page 1</h4>
                     <img id="creator-pdf-front-preview" alt="Generated front cover preview" hidden />
+                    <a id="creator-pdf-front-open" class="creator-pdf-open" target="_blank" rel="noopener" hidden>Open larger preview</a>
                     <label>Replace front cover <input id="creator-pdf-front-replacement" type="file" accept="image/png,image/jpeg,image/webp" /></label>
                   </article>
-                  <article class="account-card">
+                  <article class="account-card creator-pdf-cover-card">
                     <h4>Back cover · final PDF page</h4>
                     <img id="creator-pdf-back-preview" alt="Generated back cover preview" hidden />
+                    <a id="creator-pdf-back-open" class="creator-pdf-open" target="_blank" rel="noopener" hidden>Open larger preview</a>
                     <label>Replace back cover <input id="creator-pdf-back-replacement" type="file" accept="image/png,image/jpeg,image/webp" /></label>
                   </article>
                 </div>
