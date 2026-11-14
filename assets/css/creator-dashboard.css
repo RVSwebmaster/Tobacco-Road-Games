@@ -81,9 +81,9 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   display: grid;
   justify-items: center;
   gap: 7px;
-  width: min(166px, 38%);
+  width: min(220px, 50%);
   color: #211108;
-  font: 800 clamp(0.95rem, 2.7cqw, 1.25rem)/1.08 Georgia, "Times New Roman", serif;
+  font: 800 clamp(1.25rem, 3.5cqw, 1.65rem)/1.08 Georgia, "Times New Roman", serif;
   text-align: center;
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
 }
@@ -114,7 +114,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   border-radius: 0;
   background: none;
   color: #d8a84d;
-  font: 900 clamp(4.2rem, 10.5cqw, 6.4rem)/0.9 Georgia, "Times New Roman", serif;
+  font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
   letter-spacing: 0.04em;
   text-shadow: 0 1px 0 rgba(255, 231, 161, 0.86), 0 3px 4px rgba(37, 17, 7, 0.58);
   box-shadow: none;
@@ -190,7 +190,7 @@ body.creator-workspace-page .creator-dashboard-footer {
   .creator-dashboard-creator-identity {
     top: 14px;
     right: 14px;
-    width: min(125px, 38%);
+    width: min(150px, 46%);
   }
 
   body.creator-workspace-page .creator-dashboard-footer {
