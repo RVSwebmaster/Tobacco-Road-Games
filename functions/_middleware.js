@@ -25,8 +25,12 @@ export async function onRequest(context) {
   const response = usesOwnerSessionBootstrap
     ? withOwnerBuildHeaders(await context.next(), context.env)
     : await context.next();
-  if(requestsPublicBanner(pathname,response))return new HTMLRewriter().on('header.site-header',{element(element){element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`,{html:true});}}).transform(response);
-  const documentResponse = usesOwnerSessionBootstrap ? ownerResponse(response, context) : response;
+  let documentResponse = usesOwnerSessionBootstrap ? ownerResponse(response, context) : response;
+  if (requestsPublicBanner(pathname, response)) {
+    documentResponse = new HTMLRewriter().on('header.site-header', { element(element) {
+      element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`, { html: true });
+    }}).transform(documentResponse);
+  }
   return shouldNeverReuseDocument(pathname) ? noStoreDocument(documentResponse) : documentResponse;
 }
 function ownerResponse(response, context) {
