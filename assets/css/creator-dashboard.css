@@ -71,7 +71,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   width: min(204px, 92%);
   max-height: 204px;
   margin: -20px auto 0;
-  transform: translateX(-23cqw);
+  transform: translateX(-25cqw);
 }
 
 .creator-dashboard-shop-wall .shop-wall-shelf-level {
