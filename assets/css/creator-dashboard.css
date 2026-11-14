@@ -108,8 +108,8 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 }
 
 .creator-dashboard-creator-initials {
-  display: grid !important;
-  place-items: center;
+  display: inline-block !important;
+  text-align: center;
   width: auto;
   height: auto;
   border: 0;
@@ -133,6 +133,8 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
     #fff1ac 100%);
   -webkit-background-clip: text;
   background-clip: text;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 1px rgba(211, 139, 28, 0.9);
   font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
