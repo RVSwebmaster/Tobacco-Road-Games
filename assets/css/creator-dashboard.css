@@ -88,6 +88,12 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
 }
 
+.creator-dashboard-creator-identity[hidden],
+.creator-dashboard-creator-image[hidden],
+.creator-dashboard-creator-initials[hidden] {
+  display: none !important;
+}
+
 .creator-dashboard-creator-image {
   width: clamp(66px, 12cqw, 104px);
   height: clamp(66px, 12cqw, 104px);
