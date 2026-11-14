@@ -31,7 +31,13 @@ export async function onRequest(context) {
       element.after(`<aside class="marketplace-ad-banner" data-ad-banner data-ad-pool="public" hidden><a href="#"><span>Advertisement</span><img alt=""></a></aside><script src="/assets/js/ad-banner.js" defer></script>`, { html: true });
     }}).transform(documentResponse);
   }
-  return shouldNeverReuseDocument(pathname) ? noStoreDocument(documentResponse) : documentResponse;
+  // The Pages Functions response for /creator is a live stream; wrapping that
+  // response to rewrite cache headers drops its body. Asset URL versioning is
+  // the cache boundary for Creator, while static public documents can use the
+  // no-store wrapper safely.
+  return shouldNeverReuseDocument(pathname) && !usesOwnerSessionBootstrap
+    ? noStoreDocument(documentResponse)
+    : documentResponse;
 }
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
