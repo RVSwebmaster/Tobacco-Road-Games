@@ -1164,7 +1164,7 @@ function buildHomepage(products, indexes, bundleRules) {
   const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>(?:\s*<aside class="storefront-(?:ad-marquee|news-chiron)"[^>]*><\/aside>)*/;
   const footerPattern = /\s*<footer class="site-footer">[\s\S]*?<\/footer>/;
   const scriptPattern = /\s*<script>\s*window\.addEventListener\("DOMContentLoaded",[\s\S]*?<\/script>\s*(?=<\/body>)/;
-  const homepageScriptsPattern = /\s*(?:<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\s*)?<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/homepage-shelves\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
+  const homepageScriptsPattern = /\s*(?:<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\s*)?<script src="\/assets\/js\/cart\.js\?v=[^"]+" defer><\/script>\s*<script src="\/assets\/js\/storefront\.js\?v=[^"]+" defer><\/script>(?:\s*<script src="\/assets\/js\/open-rules-library\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/homepage-shelves\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/news-chyron\.js\?v=[^"]+" defer><\/script>)?(?:\s*<script src="\/assets\/js\/shelf-curios\.js\?v=[^"]+" defer><\/script>)?\s*(?=<\/body>)/;
   if (!navPattern.test(html)) throw new Error("Homepage navigation could not be found.");
   if (!mainPattern.test(html)) throw new Error("Homepage main content area could not be found.");
   let next = html
@@ -1173,7 +1173,7 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
   next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${PROGRESSIVE_NAV_CACHE_BUST}`);
-  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules1" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1189,7 +1189,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
+  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules1" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
@@ -1197,6 +1197,7 @@ function buildGuestLandingPage(products) {
     .replace("</head>", `${guestStylesheet}</head>`)
     .replace(navPattern, `${renderSharedPublicNav("", "Primary", GUEST_NAV_ITEMS, false)}\n    `)
     .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`)
+    .replace(/\s*<script src="\/assets\/js\/open-rules-library\.js\?v=[^"]+" defer><\/script>/, "")
     .replace(/^\s*<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\r?\n/m, "")
     .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_FEATURE_CACHE_BUST}" defer></script>\n</body>`);
 

@@ -165,6 +165,7 @@ function runtimeProduct(slug, cents, overrides = {}) {
 
 function testClientWiring() {
   const client = fs.readFileSync(path.join(ROOT, "assets", "js", "homepage-shelves.js"), "utf8");
+  const openRules = fs.readFileSync(path.join(ROOT, "assets", "js", "open-rules-library.js"), "utf8");
   const preview = fs.readFileSync(path.join(ROOT, "assets", "js", "guest-product-preview.js"), "utf8");
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.match(client, /\/api\/homepage-shelves/);
@@ -176,21 +177,16 @@ function testClientWiring() {
   assert.match(client, /suppressedSlugs/);
   assert.match(client, /openRulesLibraryUpper/);
   assert.match(client, /openRulesLibraryLower/);
-  assert.match(client, /homepage-open-rules-book/);
-  assert.match(client, /products\.slice\(0, 18\)/);
+  assert.match(client, /TRGOpenRulesLibrary/);
+  assert.match(openRules, /function createOpenRulesSpine\(product\)/);
+  assert.match(openRules, /function createGuestOpenRulesBook\(product, baseWidth\)/);
+  assert.match(openRules, /products?\.metadata/);
   assert.match(client, /hydrateGuestOpenRulesShelf/);
-  assert.match(client, /depthForPages\(pageCount\) \* 220 \/ 340/);
-  assert.match(client, /guest-open-rules-real-book/);
-  assert.match(client, /row\.replaceChildren\(\.\.\.shelfProducts\.map/);
-  assert.match(client, /--open-rules-spine-ratio/);
-  assert.match(client, /guest-open-rules-real-book__link/);
-  assert.match(client, /function createRotationSpine\(product\)/);
-  assert.match(client, /function createRotationBook\(product/);
-  assert.match(client, /homepage-open-rules-book__rotation/);
-  assert.match(client, /--book-angle/, "Shelf books must use the rendered rotation angle.");
-  assert.match(client, /panel\.className = "product-book__spine-art"/);
-  assert.match(client, /title\.className = "product-book__spine-title"/);
-  assert.match(client, /credit\.className = "product-book__spine-credit"/);
+  assert.match(openRules, /homepage-open-rules-book__rotation/);
+  assert.match(openRules, /--book-angle/, "Shelf books must use the rendered rotation angle.");
+  assert.match(openRules, /panel\.className = "product-book__spine-art"/);
+  assert.match(openRules, /title\.className = "product-book__spine-title"/);
+  assert.match(openRules, /credit\.className = "product-book__spine-credit"/);
   const styles = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
   assert.match(styles, /\.shop-wall-library-books > \.homepage-open-rules-book[\s\S]*?--open-rules-spine-width/);
   assert.match(preview, /guestPreviewBound/);
