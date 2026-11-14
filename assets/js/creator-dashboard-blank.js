@@ -1,9 +1,17 @@
 (() => {
   const status = document.querySelector("#creator-status");
   const identity = document.querySelector("#creator-identity");
-  const creatorImage = identity?.querySelector(".creator-dashboard-creator-image");
-  const creatorInitials = identity?.querySelector(".creator-dashboard-creator-initials");
+  let creatorImage = identity?.querySelector(".creator-dashboard-creator-image");
+  let creatorInitials = identity?.querySelector(".creator-dashboard-creator-initials");
   const creatorName = identity?.querySelector(".creator-dashboard-creator-name");
+
+  if (identity && !creatorInitials) {
+    creatorInitials = document.createElement("span");
+    creatorInitials.className = "creator-dashboard-creator-initials";
+    creatorInitials.hidden = true;
+    creatorInitials.setAttribute("aria-hidden", "true");
+    identity.insertBefore(creatorInitials, creatorName || null);
+  }
 
   function initialsFor(displayName) {
     const words = String(displayName || "").trim().split(/\s+/).filter(Boolean);
@@ -13,8 +21,11 @@
   }
 
   function showInitials(displayName) {
-    creatorImage.hidden = true;
-    creatorImage.removeAttribute("src");
+    if (creatorImage) {
+      creatorImage.hidden = true;
+      creatorImage.removeAttribute("src");
+    }
+    if (!creatorInitials) return;
     creatorInitials.textContent = initialsFor(displayName);
     creatorInitials.setAttribute("aria-label", `${initialsFor(displayName)} initials`);
     creatorInitials.removeAttribute("hidden");
@@ -68,9 +79,12 @@
       if (!profileResponse.ok || !profilePayload.creator) return;
       const creator = profilePayload.creator;
       const imageUrl = creator.logo || creator.profileImage || "";
-      creatorInitials.hidden = true;
-      creatorInitials.style.display = "none";
+      if (creatorInitials) {
+        creatorInitials.hidden = true;
+        creatorInitials.style.display = "none";
+      }
       if (imageUrl) {
+        if (!creatorImage) return;
         creatorImage.onload = () => {
           if (!imageIsUsable(creatorImage)) showInitials(creator.displayName);
         };
