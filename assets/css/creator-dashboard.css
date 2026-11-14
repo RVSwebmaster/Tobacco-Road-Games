@@ -67,8 +67,10 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 }
 
 .creator-dashboard-shop-wall .shop-wall-identity-sign img {
-  width: min(340px, 92%);
-  max-height: 340px;
+  align-self: start;
+  width: min(204px, 92%);
+  max-height: 204px;
+  margin: 10px auto 0;
 }
 
 .creator-dashboard-shop-wall .shop-wall-shelf-level {
@@ -124,8 +126,8 @@ body.creator-workspace-page .creator-dashboard-footer {
   }
 
   .creator-dashboard-shop-wall .shop-wall-identity-sign img {
-    width: min(230px, 92%);
-    max-height: 230px;
+    width: min(138px, 92%);
+    max-height: 138px;
   }
 
   body.creator-workspace-page .creator-dashboard-footer {
