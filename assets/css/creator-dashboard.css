@@ -66,12 +66,41 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   transform: none;
 }
 
-.creator-dashboard-shop-wall .shop-wall-identity-sign img {
+.creator-dashboard-shop-wall .shop-wall-identity-sign .creator-dashboard-brand-mark {
   align-self: start;
-  width: min(204px, 92%);
-  max-height: 204px;
+  width: min(183.6px, 92%);
+  max-height: 183.6px;
   margin: -20px auto 0;
   transform: translateX(-25cqw);
+}
+
+.creator-dashboard-creator-identity {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  width: min(150px, 34%);
+  color: #211108;
+  font: 800 clamp(0.75rem, 2.25cqw, 1.05rem)/1.08 Georgia, "Times New Roman", serif;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
+}
+
+.creator-dashboard-creator-image {
+  width: clamp(66px, 12cqw, 104px);
+  height: clamp(66px, 12cqw, 104px);
+  max-width: 100%;
+  border: 2px solid rgba(53, 26, 11, 0.9);
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38);
+}
+
+.creator-dashboard-creator-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .creator-dashboard-shop-wall .shop-wall-shelf-level {
@@ -126,9 +155,15 @@ body.creator-workspace-page .creator-dashboard-footer {
     min-height: max(900px, calc(100vh - 58px));
   }
 
-  .creator-dashboard-shop-wall .shop-wall-identity-sign img {
-    width: min(138px, 92%);
-    max-height: 138px;
+  .creator-dashboard-shop-wall .shop-wall-identity-sign .creator-dashboard-brand-mark {
+    width: min(124px, 92%);
+    max-height: 124px;
+  }
+
+  .creator-dashboard-creator-identity {
+    top: 14px;
+    right: 14px;
+    width: min(112px, 34%);
   }
 
   body.creator-workspace-page .creator-dashboard-footer {
