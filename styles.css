@@ -5451,8 +5451,8 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   border-color: rgba(30, 15, 7, 0.92);
   box-shadow:
     inset 1px 0 rgba(255, 234, 178, 0.32),
-    inset -2px 0 rgba(16, 7, 3, 0.48),
-    1px 0 1px rgba(15, 7, 3, 0.48);
+    inset -1px 0 rgba(16, 7, 3, 0.48),
+    0 0 1px rgba(15, 7, 3, 0.48);
 }
 
 .homepage-open-rules-book__rotation {
