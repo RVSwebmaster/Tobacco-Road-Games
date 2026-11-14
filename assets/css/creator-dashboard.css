@@ -151,7 +151,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   width: 100%;
   height: auto;
   overflow: visible;
-  filter: drop-shadow(0 12px 14px rgba(37, 17, 7, 0.66));
+  filter: drop-shadow(0 12px 14px rgba(37, 17, 7, 0.82));
 }
 
 .creator-dashboard-creator-initials:not([hidden]) {
