@@ -88,7 +88,7 @@ export async function collectSource(db, source, fetchImpl = fetch, now = Date.no
 export async function createOwnerAnnouncement(db, { headline, articleUrl, publishedAt, expiresAt, priority = 0, actorId, now = Date.now() }) {
   const title = String(headline || "").trim();
   const url = String(articleUrl || "").trim();
-  if (!title || title.length > 240 || !/^https:\/\//i.test(url)) throw new Error("TRG announcements require a headline and HTTPS source URL.");
+  if (!title || title.length > 240 || !/^https:\/\//i.test(url)) throw new Error("Tobacco Road Games announcements require a headline and HTTPS source URL.");
   const createdAt = new Date(now).toISOString();
   const published = new Date(publishedAt || now);
   const expiry = new Date(expiresAt || (published.getTime() + 30 * 86400000));

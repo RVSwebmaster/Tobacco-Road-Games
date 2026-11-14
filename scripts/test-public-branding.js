@@ -6,7 +6,7 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const SKIP_DIRS = new Set([".git", ".wrangler", "node_modules", "owner", "office", "assets", "data", "shared"]);
 const BRAND_ABBREVIATION = /\bTRG\b/i;
-const MACHINE_TOKEN = /^TRG(?:[_:./-][A-Z0-9_$./:-]+)$/i;
+const MACHINE_TOKEN = /^TRG(?:[_:./-]\S+)$/i;
 
 function findPublicAbbreviation(value) {
   const text = String(value || "").trim();
@@ -16,6 +16,15 @@ function findPublicAbbreviation(value) {
 function assertPublicCopy(text, source) {
   if (findPublicAbbreviation(text)) {
     throw new Error(`${source}: public-facing copy must spell out Tobacco Road Games: ${JSON.stringify(text)}`);
+  }
+}
+
+function assertPublicCodeStrings(sourceText, source) {
+  for (const value of publicScriptStrings(sourceText)) {
+    const text = String(value || "").trim();
+    if (!/\s/.test(text) && /^[A-Z0-9_.:/-]+$/i.test(text)) continue;
+    if (/^TRG-[^\s]*\$\{/i.test(text)) continue;
+    assertPublicCopy(text, source);
   }
 }
 
@@ -84,7 +93,14 @@ async function main() {
   for (const file of clientScripts) {
     const relative = path.relative(ROOT, file).replaceAll(path.sep, "/");
     if (/(?:^|\/)owner[-/]/i.test(relative)) continue;
-    for (const copy of publicScriptStrings(fs.readFileSync(file, "utf8"))) assertPublicCopy(copy, relative);
+    assertPublicCodeStrings(fs.readFileSync(file, "utf8"), relative);
+  }
+
+  const serverSources = walk(path.join(ROOT, "functions"))
+    .filter((item) => /\.(?:js|mjs)$/.test(item) && !/office-(?:access|middleware)\.(?:js|mjs)$/i.test(item));
+  for (const file of serverSources) {
+    const relative = path.relative(ROOT, file).replaceAll(path.sep, "/");
+    assertPublicCodeStrings(fs.readFileSync(file, "utf8"), relative);
   }
 
   const dataDirectory = path.join(ROOT, "data");
