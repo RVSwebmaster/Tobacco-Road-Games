@@ -110,7 +110,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 .creator-dashboard-creator-initials {
   display: inline-block !important;
   text-align: center;
-  width: auto;
+  width: min(220px, 100%);
   height: auto;
   border: 0;
   border-radius: 0;
@@ -144,6 +144,14 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
     0 3px 0 rgba(103, 39, 4, 0.78),
     0 12px 14px rgba(37, 17, 7, 0.66);
   box-shadow: none;
+}
+
+.creator-dashboard-creator-initials-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 12px 14px rgba(37, 17, 7, 0.66));
 }
 
 .creator-dashboard-creator-initials:not([hidden]) {

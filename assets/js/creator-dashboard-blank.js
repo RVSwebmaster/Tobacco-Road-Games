@@ -26,11 +26,57 @@
       creatorImage.removeAttribute("src");
     }
     if (!creatorInitials) return;
-    creatorInitials.textContent = initialsFor(displayName);
-    creatorInitials.setAttribute("aria-label", `${initialsFor(displayName)} initials`);
+    const initials = initialsFor(displayName);
+    creatorInitials.replaceChildren(buildMetalInitials(initials));
+    creatorInitials.setAttribute("aria-label", `${initials} initials`);
     creatorInitials.removeAttribute("hidden");
     creatorInitials.style.display = "grid";
     creatorInitials.setAttribute("aria-hidden", "false");
+  }
+
+  function buildMetalInitials(initials) {
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNamespace, "svg");
+    const defs = document.createElementNS(svgNamespace, "defs");
+    const gradient = document.createElementNS(svgNamespace, "linearGradient");
+    const text = document.createElementNS(svgNamespace, "text");
+    const gradientId = `creator-metal-${Math.random().toString(36).slice(2)}`;
+
+    svg.setAttribute("class", "creator-dashboard-creator-initials-svg");
+    svg.setAttribute("viewBox", "0 0 220 140");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", initials);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    gradient.setAttribute("id", gradientId);
+    gradient.setAttribute("x1", "0");
+    gradient.setAttribute("y1", "0");
+    gradient.setAttribute("x2", "0");
+    gradient.setAttribute("y2", "1");
+    [
+      ["0%", "#fff7c7"], ["3%", "#f6c24f"], ["15%", "#cf7b0d"],
+      ["28%", "#7b3002"], ["43%", "#351003"], ["50%", "#241006"],
+      ["58%", "#9e4b04"], ["70%", "#f0b63b"], ["80%", "#7a2f02"],
+      ["87%", "#321003"], ["95%", "#c46b0a"], ["100%", "#fff1ac"],
+    ].forEach(([offset, color]) => {
+      const stop = document.createElementNS(svgNamespace, "stop");
+      stop.setAttribute("offset", offset);
+      stop.setAttribute("stop-color", color);
+      gradient.append(stop);
+    });
+    text.setAttribute("x", "110");
+    text.setAttribute("y", "111");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("font-family", "Georgia, Times New Roman, serif");
+    text.setAttribute("font-size", "136");
+    text.setAttribute("font-weight", "900");
+    text.setAttribute("fill", `url(#${gradientId})`);
+    text.setAttribute("stroke", "#d38b1c");
+    text.setAttribute("stroke-width", "1.5");
+    text.setAttribute("paint-order", "stroke fill");
+    text.textContent = initials;
+    defs.append(gradient);
+    svg.append(defs, text);
+    return svg;
   }
 
   function imageIsUsable(image) {
