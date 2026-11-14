@@ -117,15 +117,16 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   background: none;
   color: #d8a84d;
   background: linear-gradient(180deg,
-    #fffbe2 0%,
-    #fff4c2 8%,
-    #e7a33b 18%,
-    #9b4c09 39%,
-    #4c1d03 51%,
-    #8c3e05 61%,
-    #d98418 76%,
-    #f7c967 89%,
-    #fff6c9 100%);
+    #fff2b0 0%,
+    #d98b1c 5%,
+    #9a4a06 19%,
+    #4a1802 38%,
+    #251005 47%,
+    #b86409 56%,
+    #f1b63f 69%,
+    #8a3d04 82%,
+    #d88618 94%,
+    #fff0a5 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -133,8 +134,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
   letter-spacing: 0.04em;
   text-shadow:
-    0 1px 0 rgba(255, 255, 224, 0.95),
-    0 -1px 0 rgba(255, 246, 196, 0.9),
+    0 1px 0 rgba(255, 244, 181, 0.82),
     0 3px 0 rgba(103, 39, 4, 0.78),
     0 12px 14px rgba(37, 17, 7, 0.66);
   box-shadow: none;
@@ -150,22 +150,22 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   overflow-wrap: anywhere;
   color: #d8a84d;
   background: linear-gradient(180deg,
-    #fffbe2 0%,
-    #fff4c2 10%,
-    #e7a33b 20%,
-    #9b4c09 40%,
-    #4c1d03 52%,
-    #8c3e05 62%,
-    #d98418 77%,
-    #f7c967 90%,
-    #fff6c9 100%);
+    #fff2b0 0%,
+    #d98b1c 5%,
+    #9a4a06 19%,
+    #4a1802 38%,
+    #251005 47%,
+    #b86409 56%,
+    #f1b63f 69%,
+    #8a3d04 82%,
+    #d88618 94%,
+    #fff0a5 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 0.5px rgba(205, 133, 28, 0.82);
   text-shadow:
-    0 1px 0 rgba(255, 255, 224, 0.95),
-    0 -1px 0 rgba(255, 246, 196, 0.9),
+    0 1px 0 rgba(255, 244, 181, 0.82),
     0 2px 0 rgba(103, 39, 4, 0.78),
     0 4px 7px rgba(37, 17, 7, 0.52);
 }
