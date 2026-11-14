@@ -117,19 +117,20 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   background: none;
   color: #d8a84d;
   background: linear-gradient(180deg,
-    #fff2b0 0%,
-    #fff2b0 3%,
-    #e6a32e 8%,
-    #b76008 22%,
-    #7b3303 30%,
-    #421301 46%,
-    #5b2102 53%,
-    #b76008 61%,
-    #e6a32e 76%,
-    #8a3b03 84%,
-    #d48517 94%,
-    #fff0a5 97%,
-    #fff0a5 100%);
+    #fff4b8 0%,
+    #fff4b8 2.5%,
+    #e9a52d 7%,
+    #c8750b 17%,
+    #6b2702 29%,
+    #321003 43%,
+    #4b1902 50%,
+    #b65e06 58%,
+    #f0b83d 69%,
+    #6d2a02 79%,
+    #3a1202 86%,
+    #c8730e 94%,
+    #fff0a1 97.5%,
+    #fff0a1 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -153,19 +154,20 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   overflow-wrap: anywhere;
   color: #d8a84d;
   background: linear-gradient(180deg,
-    #fff2b0 0%,
-    #fff2b0 3%,
-    #e6a32e 8%,
-    #b76008 22%,
-    #7b3303 30%,
-    #421301 46%,
-    #5b2102 53%,
-    #b76008 61%,
-    #e6a32e 76%,
-    #8a3b03 84%,
-    #d48517 94%,
-    #fff0a5 97%,
-    #fff0a5 100%);
+    #fff4b8 0%,
+    #fff4b8 2.5%,
+    #e9a52d 7%,
+    #c8750b 17%,
+    #6b2702 29%,
+    #321003 43%,
+    #4b1902 50%,
+    #b65e06 58%,
+    #f0b83d 69%,
+    #6d2a02 79%,
+    #3a1202 86%,
+    #c8730e 94%,
+    #fff0a1 97.5%,
+    #fff0a1 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
