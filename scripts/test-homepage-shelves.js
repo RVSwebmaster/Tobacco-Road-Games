@@ -190,6 +190,8 @@ function testClientWiring() {
   assert.match(openRules, /credit\.className = "product-book__spine-credit"/);
   const styles = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
   assert.match(styles, /\.shop-wall-library-books > \.homepage-open-rules-book[\s\S]*?--open-rules-spine-width/);
+  const creatorStyles = fs.readFileSync(path.join(ROOT, "assets", "css", "creator-dashboard.css"), "utf8");
+  assert.match(creatorStyles, /\.shop-wall-library-books a\[data-product-card="true"\]:hover[\s\S]*?translateY\(-10px\)/);
   assert.match(preview, /guestPreviewBound/);
   assert.match(preview, /realProductLink/);
   assert.match(preview, /trg:homepage-shelves-updated/);
