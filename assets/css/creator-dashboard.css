@@ -225,7 +225,7 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 
 .creator-dashboard-open-rules-bay .shop-wall-library-books a:hover .homepage-open-rules-book__rotation,
 .creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered .homepage-open-rules-book__rotation {
-  transform: translateY(-10px);
+  transform: translateY(-10px) !important;
 }
 
 .creator-dashboard-open-rules-bay .shop-wall-library-books a:hover,
