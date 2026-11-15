@@ -179,6 +179,10 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
 }
 
+.creator-dashboard-open-rules-bay .homepage-open-rules-book__rotation {
+  transition: transform 200ms ease;
+}
+
 /* The live Creator shelf renders product anchors with data-product-card. Keep
    the hover target tied to that rendered element even if shelf wrappers change. */
 .creator-dashboard-open-rules-bay .shop-wall-library-books a[data-product-card="true"] {
@@ -214,13 +218,27 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 }
 
 .creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered {
-  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06) !important;
+  transform: none !important;
   filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
   z-index: 3;
 }
 
+.creator-dashboard-open-rules-bay .shop-wall-library-books a:hover .homepage-open-rules-book__rotation,
+.creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered .homepage-open-rules-book__rotation {
+  transform: translateY(-10px);
+}
+
+.creator-dashboard-open-rules-bay .shop-wall-library-books a:hover,
+.creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered {
+  transform: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .creator-dashboard-open-rules-bay .homepage-open-rules-book {
+    transition: none;
+  }
+
+  .creator-dashboard-open-rules-bay .homepage-open-rules-book__rotation {
     transition: none;
   }
 
@@ -241,6 +259,11 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   }
 
   .creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered {
+    transform: none;
+  }
+
+  .creator-dashboard-open-rules-bay .shop-wall-library-books a:hover .homepage-open-rules-book__rotation,
+  .creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered .homepage-open-rules-book__rotation {
     transform: none;
   }
 }
