@@ -192,6 +192,8 @@ function testClientWiring() {
   assert.match(styles, /\.shop-wall-library-books > \.homepage-open-rules-book[\s\S]*?--open-rules-spine-width/);
   const creatorStyles = fs.readFileSync(path.join(ROOT, "assets", "css", "creator-dashboard.css"), "utf8");
   assert.match(creatorStyles, /\.shop-wall-library-books a\[data-product-card="true"\]:hover[\s\S]*?translateY\(-10px\)/);
+  const creatorRuntime = fs.readFileSync(path.join(ROOT, "assets", "js", "creator-open-rules.js"), "utf8");
+  assert.match(creatorRuntime, /creator-open-rules-book-hovered/);
   assert.match(preview, /guestPreviewBound/);
   assert.match(preview, /realProductLink/);
   assert.match(preview, /trg:homepage-shelves-updated/);
