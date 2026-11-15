@@ -173,28 +173,18 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   min-height: 126px;
 }
 
-/* Match the storefront Open Rules spine's established mouse-over affordance. */
-.creator-dashboard-open-rules-bay .homepage-open-rules-book {
-  pointer-events: auto;
-  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
-}
-
-.creator-dashboard-open-rules-bay .homepage-open-rules-book__rotation {
-  transition: transform 200ms ease;
-}
-
-/* The live Creator shelf renders product anchors with data-product-card. Keep
-   the hover target tied to that rendered element even if shelf wrappers change. */
-.creator-dashboard-open-rules-bay .shop-wall-library-books a[data-product-card="true"] {
-  pointer-events: auto;
-  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
-}
-
 /* The storefront base stylesheet uses a striped placeholder behind library rows.
    Creator shelves carry real rendered books, so that placeholder must not remain
    visible behind or below them. */
 .creator-dashboard-open-rules-bay .shop-wall-library-books {
   background: transparent !important;
+  overflow: visible;
+}
+
+/* One hover target: the rendered book anchor rises as a complete unit. */
+.creator-dashboard-open-rules-bay .homepage-open-rules-book {
+  pointer-events: auto;
+  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
 }
 
 .creator-dashboard-open-rules-bay .homepage-open-rules-book:hover {
@@ -203,69 +193,8 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   z-index: 3;
 }
 
-.creator-dashboard-open-rules-bay .shop-wall-library-books a[data-product-card="true"]:hover {
-  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
-  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
-  z-index: 3;
-}
-
-/* Final rendered fallback: the live shelf books are anchors, regardless of
-   wrapper depth or data attributes added by the runtime. */
-.creator-dashboard-open-rules-bay .shop-wall-library-books a:hover {
-  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06) !important;
-  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
-  z-index: 3;
-}
-
-.creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered {
-  transform: none !important;
-  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
-  z-index: 3;
-}
-
-.creator-dashboard-open-rules-bay .shop-wall-library-books a:hover .homepage-open-rules-book__rotation,
-.creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered .homepage-open-rules-book__rotation {
-  transform: translateY(-10px) !important;
-}
-
-.creator-dashboard-open-rules-bay .shop-wall-library-books a:hover,
-.creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered {
-  transform: none !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .creator-dashboard-open-rules-bay .homepage-open-rules-book {
-    transition: none;
-  }
-
-  .creator-dashboard-open-rules-bay .homepage-open-rules-book__rotation {
-    transition: none;
-  }
-
-  .creator-dashboard-open-rules-bay .shop-wall-library-books a[data-product-card="true"] {
-    transition: none;
-  }
-
-  .creator-dashboard-open-rules-bay .homepage-open-rules-book:hover {
-    transform: none;
-  }
-
-  .creator-dashboard-open-rules-bay .shop-wall-library-books a[data-product-card="true"]:hover {
-    transform: none;
-  }
-
-  .creator-dashboard-open-rules-bay .shop-wall-library-books a:hover {
-    transform: none;
-  }
-
-  .creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered {
-    transform: none;
-  }
-
-  .creator-dashboard-open-rules-bay .shop-wall-library-books a:hover .homepage-open-rules-book__rotation,
-  .creator-dashboard-open-rules-bay .shop-wall-library-books a.creator-open-rules-book-hovered .homepage-open-rules-book__rotation {
-    transform: none;
-  }
+.creator-dashboard-open-rules-bay .homepage-open-rules-book__rotation {
+  overflow: visible;
 }
 
 .creator-dashboard-visually-hidden {

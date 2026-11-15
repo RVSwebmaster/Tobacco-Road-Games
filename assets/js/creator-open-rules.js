@@ -31,20 +31,6 @@
     const bay = document.querySelector(".creator-dashboard-open-rules-bay");
     if (!bay || !window.TRGHomepageShelves?.hydrateOpenRulesLibrary) return;
 
-    if (!bay.dataset.creatorOpenRulesHoverBound) {
-      bay.addEventListener("pointerover", (event) => {
-        const book = event.target.closest(".shop-wall-library-books a");
-        if (book && bay.contains(book)) book.classList.add("creator-open-rules-book-hovered");
-      });
-      bay.addEventListener("pointerout", (event) => {
-        const book = event.target.closest(".shop-wall-library-books a");
-        if (book && bay.contains(book) && !book.contains(event.relatedTarget)) {
-          book.classList.remove("creator-open-rules-book-hovered");
-        }
-      });
-      bay.dataset.creatorOpenRulesHoverBound = "true";
-    }
-
     const measureBookstopClearance = () => {
       bay.querySelectorAll("[data-creator-open-rules-books]").forEach((books) => {
         const row = books.parentElement;
