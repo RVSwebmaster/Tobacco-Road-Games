@@ -3,7 +3,6 @@ import {
   getHomepageConfiguration,
   HOMEPAGE_SHELF_CAPACITY,
   OPEN_RULES_LIBRARY_SHELF_CAPACITY,
-  INITIAL_OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
   validateHomepageConfiguration
 } from "./homepage-config-d1.mjs";
 import {
@@ -16,15 +15,7 @@ import { getProductById, listProducts } from "./product-catalog-d1.mjs";
 export const HOMEPAGE_BEST_SELLER_WINDOW_DAYS = 30;
 export const HOMEPAGE_BEST_SELLER_LIMIT = 43;
 export const HOMEPAGE_NEW_RELEASE_WINDOW_DAYS = 7;
-// Compatibility exports for older build/test consumers. Runtime shelf membership
-// comes from the validated D1 homepage configuration below.
-export const OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze(INITIAL_OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS);
-export const OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS = Object.freeze(defaultHomepageConfiguration().shelves.openRulesLibraryLower.productIds);
 export { OPEN_RULES_LIBRARY_SHELF_CAPACITY };
-export const OPEN_RULES_LIBRARY_PRODUCT_IDS = Object.freeze([
-  ...OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
-  ...OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS
-]);
 
 const BEST_SELLER_SQL = `
 SELECT
@@ -66,10 +57,7 @@ export async function getHomepageShelves(database, options = {}) {
     upper: configuration.shelves.openRulesLibraryUpper.productIds,
     lower: configuration.shelves.openRulesLibraryLower.productIds
   };
-  const openRulesIds = Array.isArray(options.catalog) && !configuredOpenRules.upper.length && !configuredOpenRules.lower.length
-    ? { upper: OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS, lower: OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS }
-    : configuredOpenRules;
-  const openRulesLibrary = await getOpenRulesLibraryShelves(database, options.catalog, openRulesIds);
+  const openRulesLibrary = await getOpenRulesLibraryShelves(database, options.catalog, configuredOpenRules);
 
   const featuredConfig = configuration.shelves.featuredCreator;
   const featuredPool = featuredConfig.creatorId
@@ -95,18 +83,24 @@ export async function getHomepageShelves(database, options = {}) {
     bestSellers: shelves.bestSellers.products,
     configurationRevision: configurationRecord.revision,
     shelves,
-    windowDays
+    windowDays,
+    ...(configurationRecord.unavailable ? { unavailable: true } : {})
   };
 }
 
 export async function getOpenRulesLibraryProducts(database, compatibilityCatalog = null) {
-  const shelves = await getOpenRulesLibraryShelves(database, compatibilityCatalog);
+  const configurationRecord = await loadConfiguration(database);
+  const configured = {
+    upper: configurationRecord.configuration.shelves.openRulesLibraryUpper.productIds,
+    lower: configurationRecord.configuration.shelves.openRulesLibraryLower.productIds
+  };
+  const shelves = await getOpenRulesLibraryShelves(database, compatibilityCatalog, configured);
   return [...shelves.upper, ...shelves.lower];
 }
 
-export async function getOpenRulesLibraryShelves(database, compatibilityCatalog = null, configured = null) {
-  const upperIds = configured?.upper || OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS;
-  const lowerIds = configured?.lower || OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS;
+export async function getOpenRulesLibraryShelves(database, compatibilityCatalog = null, configured = {}) {
+  const upperIds = Array.isArray(configured.upper) ? configured.upper : [];
+  const lowerIds = Array.isArray(configured.lower) ? configured.lower : [];
   const products = Array.isArray(compatibilityCatalog)
     ? compatibilityCatalog
     : await getApprovedPublicProductsByIds(database, [...upperIds, ...lowerIds]);
@@ -116,7 +110,7 @@ export async function getOpenRulesLibraryShelves(database, compatibilityCatalog 
   };
 }
 
-export function selectOpenRulesLibraryProducts(products, productIds = OPEN_RULES_LIBRARY_PRODUCT_IDS) {
+export function selectOpenRulesLibraryProducts(products, productIds = []) {
   const byId = new Map(products.map((product) => [String(product.id || product.slug || ""), product]));
   return productIds.slice(0, OPEN_RULES_LIBRARY_SHELF_CAPACITY)
     .map((id) => byId.get(id))
@@ -218,7 +212,7 @@ async function loadConfiguration(database, supplied) {
     return { configuration, revision: Number(supplied.revision || 0) };
   }
   try { return await getHomepageConfiguration(database); }
-  catch { return { configuration: defaultHomepageConfiguration(), revision: 0 }; }
+  catch { return { configuration: defaultHomepageConfiguration(), revision: 0, unavailable: true }; }
 }
 
 async function configuredProductSlugs(database, ids, compatibilityCatalog) {

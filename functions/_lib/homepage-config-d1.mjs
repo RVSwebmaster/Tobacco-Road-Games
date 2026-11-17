@@ -5,13 +5,6 @@ export const HOMEPAGE_SHELF_KEYS = Object.freeze([
 ]);
 export const HOMEPAGE_SHELF_CAPACITY = 43;
 export const OPEN_RULES_LIBRARY_SHELF_CAPACITY = 18;
-export const INITIAL_OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS = Object.freeze([
-  "5e-players-manual", "5e-spellbook", "5e-bard-spellbook", "5e-cleric-spellbook",
-  "5e-druid-spellbook", "5e-paladin-spellbook", "5e-ranger-spellbook",
-  "5e-sorcerer-spellbook", "5e-warlock-spellbook", "5e-wizard-spellbook",
-  "5e-relics-and-wonders", "5e-dungeon-masters-handbook", "5e-monster-guide"
-]);
-
 const PRODUCT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const CREATOR_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 
