@@ -26,7 +26,9 @@ function assertCreatorSessionBootstrapScope() {
   const middleware = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8");
   assert.match(middleware, /pathname\.startsWith\("\/owner"\) \|\| pathname\.startsWith\("\/creator"\)/,
     "Owner Access must bootstrap the shared TRG session for the Creator workspace too.");
-  assert.match(middleware, /return usesOwnerSessionBootstrap \? ownerResponse\(response, context\) : response/,
+  assert.match(middleware, /const usesOwnerSessionBootstrap = pathname\.startsWith\("\/owner"\) \|\| pathname\.startsWith\("\/creator"\)/,
+    "Owner and Creator documents share the session bootstrap scope.");
+  assert.match(middleware, /let documentResponse = usesOwnerSessionBootstrap \? ownerResponse\(response, context\) : response/,
     "The Creator document response must receive the same session bootstrap as the Owner document.");
 }
 
