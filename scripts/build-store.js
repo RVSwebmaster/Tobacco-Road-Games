@@ -22,9 +22,14 @@ const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data
 const HOMEPAGE_NEWS_PREVIEW = [];
 const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
-const GUEST_FEATURE_CACHE_BUST = "20261112-cover-first-preview1";
-const HOMEPAGE_SHELVES_CACHE_BUST = "20261114-balanced-monster-guide3";
-const PROGRESSIVE_NAV_CACHE_BUST = "20261114-open-rules-books2";
+const GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2";
+const HOMEPAGE_SHELVES_CACHE_BUST = "20261116-open-rules-master-shelf4";
+const PROGRESSIVE_NAV_CACHE_BUST = "20261116-open-rules-master-shelf1";
+const STOREFRONT_STYLES_CACHE_BUST = "20261116-open-rules-spine-title-fit2";
+const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
+const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
+const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
+const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1172,8 +1177,8 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, renderHomepageShopWallMain(products).trimStart())
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${PROGRESSIVE_NAV_CACHE_BUST}`);
-  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules3" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}`);
+  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=${OPEN_RULES_LIBRARY_CACHE_BUST}" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1189,7 +1194,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules3" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
+  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=${OPEN_RULES_LIBRARY_CACHE_BUST}" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_EXAMINATION_STYLE_CACHE_BUST}">\n`;
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
@@ -1199,11 +1204,26 @@ function buildGuestLandingPage(products) {
     .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`)
     .replace(/\s*<script src="\/assets\/js\/open-rules-library\.js\?v=[^"]+" defer><\/script>/, "")
     .replace(/^\s*<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\r?\n/m, "")
-    .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_FEATURE_CACHE_BUST}" defer></script>\n</body>`);
+    .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_EXAMINATION_CACHE_BUST}" defer></script>\n</body>`);
 
   const guestLandingPage = next.replace(/^[ \t]+$/gm, "");
   writeFile("guest/index.html", guestLandingPage);
-  writeFile("customer.html", guestLandingPage);
+  writeFile("customer.html", renderCustomerLandingPage(guestLandingPage));
+}
+
+function renderCustomerLandingPage(guestLandingPage) {
+  let customerPage = guestLandingPage
+    .replace('class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo', 'class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo data-customer-storefront')
+    .replace('<nav class="site-nav" aria-label="Primary">', '<nav class="site-nav" aria-label="Primary" data-progressive-navigation>')
+    .replace('class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading"', 'class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading" data-homepage-library')
+    .replace('aria-label="Empty Guest personal library shelves"', 'aria-label="Your personal library shelves"')
+    .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"')
+    .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right"');
+  if (customerPage === guestLandingPage) throw new Error("Customer storefront markers could not be added.");
+  customerPage = customerPage
+    .replace(/<script src="\/assets\/js\/guest-product-preview\.js\?v=[^"]+" defer><\/script>/, `<script src="/assets/js/guest-product-preview.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>`)
+    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>\n</body>`);
+  return customerPage;
 }
 
 function renderGuestLandingShopWallMain(products) {
@@ -1216,7 +1236,6 @@ function renderGuestLandingShopWallMain(products) {
   const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
   const featuredCreator = configuredCreator || fallbackFeatured;
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
-  const openRules = eligible.filter(isOpenRulesProduct).slice(0, 36);
 
   return `    <main id="top" class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo aria-labelledby="homepage-shop-wall-heading">
       <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
@@ -1228,7 +1247,7 @@ function renderGuestLandingShopWallMain(products) {
         </picture>
         ${renderGuestLibraryBay()}
         ${renderHomepageIdentityBay()}
-        ${renderGuestOpenRulesBay(openRules)}
+        ${renderGuestOpenRulesBay()}
         ${renderHomepageShelfFixtures()}
       </section>
       </div>
@@ -1261,29 +1280,19 @@ function renderGuestLibraryBay() {
         </section>`;
 }
 
-function renderGuestOpenRulesBay(products) {
-  const renderMockBook = (position) => {
-    const height = 72 + ((position * 7) % 21);
-    return `<span class="guest-open-rules-mock-book guest-open-rules-mock-book--tone-${((position - 1) % 6) + 1}" data-library-position="${position}" data-magical-book data-mock-open-rule="true" style="--mock-book-height:${height}%" aria-hidden="true"><span class="guest-open-rules-mock-book__label">OPEN RULES</span></span>`;
-  };
-  const renderShelf = (shelfProducts, startPosition, shelfOrder) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
-                <div class="bookshelf-grid shop-wall-books guest-open-rules-books" data-magical-bookshelf data-magical-shelf-order="${shelfOrder}" data-magical-direction="right-to-left" style="--shelf-items:18">${Array.from({ length: 18 }, (_, index) => {
-                  const position = startPosition + index;
-                  const product = shelfProducts[index];
-                  return product
-                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true, guestPreview: true }).replace('class="bookshelf-book', `data-library-position="${position}" data-magical-book class="bookshelf-book`)
-                    : renderMockBook(position);
-                }).join("")}</div>
+function renderGuestOpenRulesBay() {
+  const renderShelf = (startPosition, shelfOrder) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
+                <div class="bookshelf-grid shop-wall-books guest-open-rules-books" data-magical-bookshelf data-magical-shelf-order="${shelfOrder}" data-magical-direction="right-to-left" style="--shelf-items:18"></div>
               </div>`;
   return `
         <section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay" aria-labelledby="open-rules-library-heading">
           <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
           <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              ${renderShelf(products.slice(0, 18), 1, 3)}
+              ${renderShelf(1, 3)}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              ${renderShelf(products.slice(18, 36), 19, 4)}
+              ${renderShelf(19, 4)}
             </div>
           </div>
         </section>`;
@@ -3606,4 +3615,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel };
+module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, renderCustomerLandingPage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel };

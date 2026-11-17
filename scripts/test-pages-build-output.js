@@ -35,10 +35,20 @@ async function main() {
     }
     const generatedGuest = fs.readFileSync(path.join(outputDirectory, "guest", "index.html"), "utf8");
     const generatedCustomer = fs.readFileSync(path.join(outputDirectory, "customer.html"), "utf8");
-    assert.equal(generatedCustomer, generatedGuest, "Pages output must include the identical Customer baseline.");
-    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261112-cover-first-preview1/);
-    assert.match(generatedGuest, /guest-landing\.css\?v=20261112-cover-first-preview1/);
-    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261112-cover-first-preview1/);
+    assert.match(generatedCustomer, /data-customer-storefront/);
+    assert.match(generatedCustomer, /data-progressive-navigation/);
+    const openRulesSection = (page) => page.match(/<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/)?.[0] || "";
+    assert.equal(openRulesSection(generatedCustomer), openRulesSection(generatedGuest), "Customer Open Rules shelf must remain identical to the Guest shelf.");
+    const lowerMerchandising = (page) => {
+      const start = page.indexOf('<section class="shop-wall-row shop-wall-row--merchandising"');
+      const end = page.indexOf("</main>", start);
+      return start >= 0 && end >= 0 ? page.slice(start, end) : "";
+    };
+    assert.equal(lowerMerchandising(generatedCustomer), lowerMerchandising(generatedGuest), "Customer lower merchandising must remain untouched.");
+    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261116-open-rules-master-shelf2/);
+    assert.match(generatedGuest, /guest-landing\.css\?v=20261116-guest-examination-close1/);
+    assert.match(generatedGuest, /homepage-shelves\.js\?v=20261116-open-rules-master-shelf4/);
+    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261116-guest-book-examination7/);
     assert.doesNotMatch(generatedGuest, /data-magical-bookshelf-replay/);
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "guest-product-preview.js")), "Guest preview runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "homepage-shelves.js")), "Homepage shelf runtime is missing from Pages output");

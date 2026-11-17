@@ -133,14 +133,12 @@
 }
 
 /* Approved Guest bookshelf affordance: lift only the hovered book anchor. */
-.guest-landing-page .bookshelf-book:not(.is-examining),
-.guest-landing-page .guest-open-rules-mock-book {
+.guest-landing-page .bookshelf-book:not(.is-examining) {
   pointer-events: auto;
   transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
 }
 
-.guest-landing-page .bookshelf-book:hover:not(.is-examining),
-.guest-landing-page .guest-open-rules-mock-book:hover {
+.guest-landing-page .bookshelf-book:hover:not(.is-examining) {
   transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
   filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
   z-index: 3;
@@ -328,4 +326,39 @@
   .guest-landing-page .guest-bookshelf-magic,
   .guest-landing-page .guest-bookshelf-magic__flash,
   .guest-landing-page .guest-bookshelf-magic i { animation: none !important; }
+}
+
+/* Guest book examination close control; positioned against the opened cover. */
+.guest-open-rules-real-book.is-examining.is-returning {
+  transition-duration: 1.5s;
+  transition-timing-function: cubic-bezier(.16, .72, .18, 1);
+}
+
+.guest-open-rules-examination-close {
+  position: fixed;
+  z-index: 10001;
+  display: grid;
+  width: clamp(38px, 9vw, 46px);
+  height: clamp(38px, 9vw, 46px);
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgba(255, 233, 190, .92);
+  border-radius: 50%;
+  background: rgba(28, 14, 8, .94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .7), inset 0 0 0 1px rgba(118, 73, 33, .9);
+  color: #fff1cf;
+  font: 700 30px/1 Arial, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.guest-open-rules-examination-close:hover,
+.guest-open-rules-examination-close:focus-visible {
+  background: #6c3216;
+  outline: 3px solid #fff1cf;
+  outline-offset: 2px;
+}
+
+.guest-open-rules-examination-close[hidden] {
+  display: none;
 }

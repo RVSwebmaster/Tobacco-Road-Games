@@ -41,6 +41,10 @@
   }
 
   async function loadLibrary() {
+    if (document.querySelector("[data-customer-storefront]")) {
+      await loadCustomerLibrary();
+      return;
+    }
     prepareAuthenticatedGuestLibrary();
     const response = await fetch("/api/account/library", {
       credentials: "same-origin",
@@ -55,6 +59,63 @@
         clearTimeout(libraryRefreshTimer);
         libraryRefreshTimer = setTimeout(renderLibrary, 40);
       }).observe(row);
+    });
+  }
+
+  async function loadCustomerLibrary() {
+    const response = await fetch("/api/account/library", {
+      credentials: "same-origin",
+      headers: { accept: "application/json" }
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    prepareCustomerLibrary();
+    renderCustomerLibrary(Array.isArray(payload.items) ? payload.items : []);
+  }
+
+  function prepareCustomerLibrary() {
+    const bay = document.querySelector("[data-customer-storefront] .guest-library-bay[data-homepage-library]");
+    if (!bay) return;
+    bay.querySelector(".shop-wall-shelves--library")?.setAttribute("aria-label", "Your personal library shelves");
+    bay.querySelectorAll("[data-customer-library-row]").forEach((row) => {
+      row.classList.remove("guest-library-empty-row");
+      row.removeAttribute("aria-hidden");
+      row.querySelector(".guest-library-sign")?.remove();
+    });
+  }
+
+  function renderCustomerLibrary(items) {
+    const rows = Array.from(document.querySelectorAll("[data-customer-storefront] [data-customer-library-row]"));
+    const makeBook = openRules?.createOpenRulesShelfBook;
+    if (!rows.length || typeof makeBook !== "function") return;
+    const visibleItems = items.slice(0, rows.length * 18);
+    rows.forEach((row, rowIndex) => {
+      const shelfItems = visibleItems.slice(rowIndex * 18, (rowIndex + 1) * 18);
+      row.replaceChildren();
+      if (!shelfItems.length) return;
+      const shelf = document.createElement("div");
+      shelf.className = "shop-wall-library-books";
+      const shelfWidth = Number(row.getBoundingClientRect?.().width) || 0;
+      const viewportWidth = Number(window.innerWidth) || shelfWidth || 800;
+      const preferredWidth = Math.min(22, Math.max(11, viewportWidth * 0.0135));
+      const baseWidth = shelfWidth > 17 ? Math.min(preferredWidth, (shelfWidth - 17) / 18) : preferredWidth;
+      shelfItems.forEach((item, index) => {
+        const slug = String(item.productId || "");
+        const product = {
+          id: slug,
+          slug,
+          title: String(item.productTitle || "Owned product"),
+          creator: String(item.creator || "Tobacco Road Games"),
+          cover: String(item.coverImage || "/assets/tobacco-road-games-logo.png"),
+          fullUrl: String(item.downloadUrl || "/account.html#library-panel"),
+          description: "Owned product in your personal library."
+        };
+        shelf.append(makeBook(product, rowIndex * 18 + index, baseWidth));
+      });
+      row.append(shelf);
+      document.dispatchEvent(new CustomEvent("trg:homepage-shelves-updated", {
+        detail: { shelf: `openRulesLibraryCustomer${rowIndex + 1}`, row: shelf, count: shelfItems.length }
+      }));
     });
   }
 
