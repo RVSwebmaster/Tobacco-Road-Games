@@ -779,38 +779,75 @@
     for (const label of creatorPdfForm.querySelectorAll("[data-pdf-pwyw-price]")) label.hidden = model !== "pwyw";
   });
   creatorPdfForm.pricingModel.dispatchEvent(new Event("change"));
-  async function saveCreatorPdfDraft(continueEditing) {
+  const persistedPdfDraftMismatches = (body, listing) => {
+    const text = (value) => String(value ?? "").trim();
+    const mismatches = [];
+    for (const [label, expected, actual] of [
+      ["Title", body.title, listing.title],
+      ["Short description", body.shortDescription, listing.shortDescription],
+      ["Full description", body.longDescription, listing.longDescription],
+      ["Game system", body.gameSystem, listing.gameSystem],
+      ["Genre", body.genre, listing.genre],
+      ["Subtitle", body.discovery.subtitle, listing.subtitle],
+      ["Author credit", body.discovery.authorCredit, listing.authorCredit],
+      ["Publisher credit", body.discovery.publisher, listing.publisher],
+      ["Version", body.discovery.version, listing.version],
+      ["Language", body.discovery.language, listing.language],
+      ["Media type", body.mediaType, listing.mediaType],
+    ]) {
+      if (text(expected) !== text(actual)) mismatches.push(label);
+    }
+    if (JSON.stringify(body.format) !== JSON.stringify(listing.formats || [])) mismatches.push("Format");
+    if (body.priceCents !== undefined && Number(body.priceCents) !== Number(listing.priceCents)) mismatches.push("Price");
+    if (body.minimumPriceCents !== undefined && Number(body.minimumPriceCents) !== Number(listing.minimumPriceCents)) mismatches.push("PWYW minimum");
+    if (body.suggestedPriceCents !== undefined && Number(body.suggestedPriceCents) !== Number(listing.suggestedPriceCents)) mismatches.push("PWYW suggested price");
+    if (body.pricingModel !== listing.pricingModel) mismatches.push("Pricing model");
+    return mismatches;
+  };
+  async function saveCreatorPdfDraft(continueEditing, pressedButton) {
     const buttons = [
       document.querySelector("#creator-pdf-save-draft"),
       document.querySelector("#creator-pdf-save-continue"),
     ];
+    creatorPdfStatus.textContent = "Save clicked. Checking the prepared PDF and listing details…";
     if (!creatorPdf?.file) {
-      creatorPdfStatus.textContent = "Choose and prepare a product PDF first.";
+      creatorPdfStatus.textContent = "Draft not saved: choose a PDF and wait for its cover previews before saving.";
       return;
     }
+    const originalButtonLabels = buttons.map((button) => button.textContent);
     buttons.forEach((button) => { button.disabled = true; });
+    if (pressedButton) {
+      pressedButton.textContent = "Saving draft…";
+      pressedButton.setAttribute("aria-busy", "true");
+    }
+    creatorPdfStatus.textContent = "Saving listing details…";
+    let listingWasWritten = false;
+    let listingWasConfirmed = false;
+    let fileWasConfirmed = false;
     try {
       const form = creatorPdfForm,
-        pricingModel = form.pricingModel.value,
+        value = (name) => String(form.elements.namedItem(name)?.value ?? ""),
+        pricingModel = value("pricingModel"),
+        price = (name) => value(name).trim() ? Number(value(name)) : undefined,
         body = {
           pdfAssisted: true,
-          title: form.title.value.trim(),
-          mediaType: form.mediaType.value,
-          format: form.format.value.split(",").map((value) => value.trim()).filter(Boolean),
-          shortDescription: form.shortDescription.value,
-          longDescription: form.longDescription.value,
-          gameSystem: form.gameSystem.value,
-          genre: form.genre.value,
+          title: value("title").trim(),
+          mediaType: value("mediaType"),
+          format: value("format").split(",").map((item) => item.trim()).filter(Boolean),
+          shortDescription: value("shortDescription"),
+          longDescription: value("longDescription"),
+          gameSystem: value("gameSystem"),
+          genre: value("genre"),
           pricingModel: pricingModel === "preview-only" ? "free" : pricingModel,
-          priceCents: pricingModel === "fixed" && form.priceCents.value ? Number(form.priceCents.value) : undefined,
-          minimumPriceCents: pricingModel === "pwyw" && form.minimumPriceCents.value ? Number(form.minimumPriceCents.value) : undefined,
-          suggestedPriceCents: pricingModel === "pwyw" && form.suggestedPriceCents.value ? Number(form.suggestedPriceCents.value) : undefined,
+          priceCents: pricingModel === "fixed" ? price("priceCents") : undefined,
+          minimumPriceCents: pricingModel === "pwyw" ? price("minimumPriceCents") : undefined,
+          suggestedPriceCents: pricingModel === "pwyw" ? price("suggestedPriceCents") : undefined,
           discovery: {
-            subtitle: form.subtitle.value,
-            authorCredit: form.authorCredit.value,
-            publisher: form.publisher.value,
-            version: form.version.value,
-            language: form.language.value,
+            subtitle: value("subtitle"),
+            authorCredit: value("authorCredit"),
+            publisher: value("publisher"),
+            version: value("version"),
+            language: value("language"),
             previewOnly: pricingModel === "preview-only",
           },
         };
@@ -819,25 +856,27 @@
         const created = await api("listings", body);
         pendingPdfDraftId = created.listing.id;
         pendingPdfDraftRevision = Number(created.listing.revision || 1);
+        listingWasWritten = true;
       } else if (body.title.trim()) {
         const updated = await api(`listings/${encodeURIComponent(pendingPdfDraftId)}`, {
           ...body,
           expectedRevision: pendingPdfDraftRevision,
         });
         pendingPdfDraftRevision = Number(updated.revision || pendingPdfDraftRevision + 1);
+        listingWasWritten = true;
       } else {
-        const existing = await api("listings");
-        uploadAlreadyRecorded = (existing.files || []).some((file) =>
-          file.listing_id === pendingPdfDraftId && file.purpose === "product" && file.validation_state !== "superseded");
-        if (!uploadAlreadyRecorded)
-          throw new Error("This draft is saved. Add a title before retrying the PDF upload so your latest edits can be saved too.");
+        throw new Error("Enter a title before saving this draft so the listing details can be persisted.");
       }
-      creatorPdfStatus.textContent = "Draft saved. Uploading the PDF and reviewed WebP covers privately…";
-      if (!uploadAlreadyRecorded) {
-        const currentFiles = await api("listings");
-        uploadAlreadyRecorded = (currentFiles.files || []).some((file) =>
-          file.listing_id === pendingPdfDraftId && file.purpose === "product" && file.validation_state !== "superseded");
-      }
+      creatorPdfStatus.textContent = "Listing details sent. Verifying the saved fields…";
+      const savedListingData = await api("listings"),
+        savedListing = (savedListingData.listings || []).find((listing) => listing.id === pendingPdfDraftId);
+      if (!savedListing) throw new Error("The server did not return the saved draft for confirmation.");
+      const mismatches = persistedPdfDraftMismatches(body, savedListing);
+      if (mismatches.length) throw new Error(`The server did not confirm these fields: ${mismatches.join(", ")}. Your draft is still open; no success was reported.`);
+      listingWasConfirmed = true;
+      uploadAlreadyRecorded = (savedListingData.files || []).some((file) =>
+        file.listing_id === pendingPdfDraftId && file.purpose === "product" && file.validation_state !== "superseded");
+      creatorPdfStatus.textContent = "Listing fields confirmed. Checking the PDF upload…";
       if (!uploadAlreadyRecorded) {
         const data = new FormData();
         data.set("listingId", pendingPdfDraftId);
@@ -855,9 +894,18 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload?.error?.message || payload?.error || "The PDF upload failed.");
       }
+      const confirmedData = await api("listings"),
+        confirmedListing = (confirmedData.listings || []).find((listing) => listing.id === pendingPdfDraftId);
+      if (!confirmedListing) throw new Error("The server could not confirm the saved listing after the PDF upload.");
+      const finalMismatches = persistedPdfDraftMismatches(body, confirmedListing);
+      if (finalMismatches.length) throw new Error(`The server did not confirm these fields: ${finalMismatches.join(", ")}.`);
+      fileWasConfirmed = (confirmedData.files || []).some((file) =>
+        file.listing_id === pendingPdfDraftId && file.purpose === "product" && file.validation_state !== "superseded");
+      if (!fileWasConfirmed) throw new Error("The server did not confirm the product PDF upload.");
       const listingId = pendingPdfDraftId;
       pendingPdfDraftId = "";
-      creatorPdfStatus.textContent = "Draft and PDF saved privately with the reviewed front and back covers. Nothing was published or shelved.";
+      const savedAt = new Date().toLocaleTimeString();
+      creatorPdfStatus.textContent = `Draft fields and PDF confirmed saved at ${savedAt}. Nothing was published or shelved.`;
       creatorPdfInput.value = "";
       creatorPdfReview.hidden = true;
       creatorPdf = null;
@@ -865,21 +913,35 @@
       showCreatorPdfPreview("back", null);
       document.querySelector("#creator-pdf-front-replacement").value = "";
       document.querySelector("#creator-pdf-back-replacement").value = "";
-      const refreshed = await load();
-      if (continueEditing) {
-        const item = refreshed?.listings?.find((listing) => listing.id === listingId);
-        if (item) openListingEditor(item);
+      try {
+        const refreshed = await load();
+        if (continueEditing) {
+          const item = refreshed?.listings?.find((listing) => listing.id === listingId);
+          if (item) openListingEditor(item);
+        }
+      } catch (refreshError) {
+        creatorPdfStatus.textContent = `Draft fields and PDF confirmed saved at ${savedAt}; the dashboard refresh failed: ${refreshError.message}`;
       }
     } catch (error) {
-      creatorPdfStatus.textContent = pendingPdfDraftId
-        ? `A draft is saved, but its PDF upload did not complete. Keep this file selected and retry: ${error.message}`
-        : error.message;
+      if (listingWasConfirmed && !fileWasConfirmed) {
+        creatorPdfStatus.textContent = `Draft details saved, but the PDF upload was not confirmed. Keep this PDF selected and retry: ${error.message}`;
+      } else if (listingWasWritten && !listingWasConfirmed) {
+        creatorPdfStatus.textContent = `Draft record created, but its fields were not confirmed. The form is still open; no success was reported: ${error.message}`;
+      } else {
+        creatorPdfStatus.textContent = `Draft not saved: ${error.message}`;
+      }
     } finally {
-      buttons.forEach((button) => { button.disabled = false; });
+      buttons.forEach((button, index) => {
+        button.disabled = false;
+        button.textContent = originalButtonLabels[index];
+        button.removeAttribute("aria-busy");
+      });
     }
   }
-  document.querySelector("#creator-pdf-save-draft").addEventListener("click", () => saveCreatorPdfDraft(false));
-  document.querySelector("#creator-pdf-save-continue").addEventListener("click", () => saveCreatorPdfDraft(true));
+  creatorPdfForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveCreatorPdfDraft(event.submitter?.id === "creator-pdf-save-continue", event.submitter);
+  });
   document
     .querySelector("#creator-draft-form")
     .addEventListener("submit", async (event) => {

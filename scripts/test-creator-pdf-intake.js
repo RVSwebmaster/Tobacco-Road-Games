@@ -49,7 +49,7 @@ function makePdf(pages, info = {}) {
 async function main() {
   const prefill = await import(pathToFileURL(path.join(ROOT, "shared", "product-pdf-prefill.mjs")));
   const imageUtils = await import(pathToFileURL(path.join(ROOT, "shared", "product-pdf-image-utils.mjs")));
-  const html = fs.readFileSync(path.join(ROOT, "creator", "index.html"), "utf8");
+  const html = fs.readFileSync(path.join(ROOT, "temp-creator", "index.html"), "utf8");
   const dashboard = fs.readFileSync(path.join(ROOT, "assets", "js", "creator-dashboard.js"), "utf8");
   const reader = fs.readFileSync(path.join(ROOT, "assets", "js", "product-pdf-autofill.mjs"), "utf8");
 
@@ -71,9 +71,18 @@ async function main() {
   assert.match(dashboard, /dataset\.allowIncompleteDraft = String\(\["draft", "needs_changes"\]/);
   assert.match(dashboard, /shortDescription\.required = !allowIncompleteDraft/);
   assert.match(dashboard, /priceCents\.required = model === "fixed" && !allowIncompleteDraft/);
-  assert.match(dashboard, /form\.priceCents\.value\.trim\(\) \? Number\(form\.priceCents\.value\) : undefined/);
-  assert.match(dashboard, /Saved at \$\{savedAt\}/);
-  assert.match(dashboard, /Not saved: \$\{error\.message\}/);
+  assert.match(dashboard, /price = \(name\) => value\(name\)\.trim\(\) \? Number\(value\(name\)\) : undefined/);
+  assert.match(dashboard, /pressedButton\.textContent = "Saving draft…"/);
+  assert.match(dashboard, /Save clicked\. Checking the prepared PDF and listing details/);
+  assert.match(dashboard, /elements\.namedItem\(name\)/);
+  assert.match(dashboard, /persistedPdfDraftMismatches/);
+  assert.match(dashboard, /Listing fields confirmed/);
+  assert.match(dashboard, /Draft fields and PDF confirmed saved at \$\{savedAt\}/);
+  assert.match(dashboard, /Draft not saved: \$\{error\.message\}/);
+  assert.match(dashboard, /creatorPdfForm\.addEventListener\("submit"/);
+  assert.match(html, /id="creator-pdf-save-draft" type="submit"/);
+  assert.match(html, /id="creator-pdf-save-continue" type="submit"/);
+  assert.match(fs.readFileSync(path.join(ROOT, "styles.css"), "utf8"), /\.button:active:not\(:disabled\)/);
   const editFormStart = html.indexOf('id="creator-edit-form"');
   const editFormEnd = html.indexOf("</form>", editFormStart);
   const editStatus = html.indexOf('id="creator-edit-status"');
