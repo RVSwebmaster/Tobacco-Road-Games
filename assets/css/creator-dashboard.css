@@ -26,30 +26,102 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
 }
 
-/* This content overlays the center column of the shared cabinet. The panel,
-   logo, wordmark, dimensions, and wood remain supplied by Guest furniture. */
-.creator-dashboard-identity-overlay {
+/* The Creator profile does not use the public storefront's rotating shelf dressing. */
+body:has(.creator-dashboard-shop-wall) .shelf-dressing {
+  display: none !important;
+}
+
+/* Creator-only replacement for the retired Open Rules sign. This hangs an
+   existing Guest-style framed poster on the bay's back wall while the frozen
+   cabinet artwork and live shelf geometry remain unchanged. */
+.creator-dashboard-open-rules-poster {
   position: absolute;
-  z-index: 4;
-  top: 0;
-  left: 50%;
-  width: 33.333333%;
-  height: 100%;
-  container-type: inline-size;
+  top: calc(5% - 24px);
+  left: 83.333%;
+  z-index: 2;
+  width: auto;
+  height: 90%;
   transform: translateX(-50%);
+  filter: drop-shadow(2px 4px 5px rgba(16, 7, 3, 0.55));
+  pointer-events: none;
+  user-select: none;
+}
+
+.creator-dashboard-open-rules-light-cover {
+  position: absolute;
+  top: 240px;
+  left: 83.333%;
+  z-index: 1;
+  width: 240px;
+  height: 120px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(112, 49, 15, 0.96) 0%, rgba(112, 49, 15, 0.7) 42%, rgba(112, 49, 15, 0.2) 74%, transparent 100%);
   pointer-events: none;
 }
 
-.creator-dashboard-creator-identity {
+.creator-dashboard-open-rules-light-overlay {
   position: absolute;
-  top: 12.3%;
-  right: 2%;
+  top: 0;
+  left: 83.333%;
+  z-index: 3;
+  width: 240px;
+  height: 65%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(ellipse 14% 9% at 50% 3%, rgba(255, 249, 214, 0.98) 0%, rgba(255, 214, 116, 0.78) 38%, transparent 100%),
+    radial-gradient(ellipse 28% 24% at 50% 15%, rgba(255, 229, 154, 0.76) 0%, rgba(246, 165, 62, 0.42) 44%, transparent 82%),
+    radial-gradient(ellipse 52% 82% at 50% 45%, rgba(255, 207, 105, 0.34) 0%, rgba(212, 113, 37, 0.16) 42%, rgba(84, 35, 12, 0.03) 62%, transparent 82%);
+  opacity: 0.9;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Creator desktop title-board variant uses the same single cabinet board.
+   The board texture/frame stay in its Creator-only artwork asset; identity is
+   positioned on that existing board without adding another panel. */
+.creator-dashboard-identity-overlay {
+  position: absolute;
+  z-index: 4;
+  top: -2.5%;
+  left: 50%;
+  width: 33.333333%;
+  height: 67%;
+  container-type: inline-size;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  justify-content: space-between;
+  column-gap: 0;
+  box-sizing: border-box;
+  padding: 5% 0 0;
+  transform: translateX(calc(-50% - 20px));
+  pointer-events: none;
+}
+
+.creator-dashboard-trg-emblem {
+  grid-column: 1;
+  display: block;
+  position: relative;
+  top: -4%;
+  transform: translateY(-38px);
+  justify-self: center;
+  width: min(110%, 209px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 5px rgba(37, 17, 7, 0.52));
+}
+
+.creator-dashboard-creator-identity {
+  position: relative;
+  grid-column: 2;
+  display: grid;
+  align-content: start;
   justify-items: center;
-  gap: 4px;
-  width: 52%;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
   color: #211108;
-  font: 800 clamp(1rem, 3.1cqw, 1.3rem)/1.12 Georgia, "Times New Roman", serif;
+  font: 800 clamp(1rem, 2.8cqw, 1.3rem)/1.12 Georgia, "Times New Roman", serif;
   text-align: center;
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
 }
@@ -61,19 +133,19 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 }
 
 .creator-dashboard-creator-image {
-  width: clamp(54px, 15cqw, 76px);
-  height: clamp(54px, 15cqw, 76px);
+  width: min(110%, 209px);
+  height: 154px;
   max-width: 100%;
-  border: 2px solid rgba(53, 26, 11, 0.9);
-  border-radius: 7px;
-  background: rgba(245, 210, 143, 0.26);
+  border: 0;
+  border-radius: 0;
+  background: none;
   object-fit: contain;
-  box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38);
+  box-shadow: none;
 }
 
 .creator-dashboard-creator-initials {
   display: inline-block !important;
-  width: min(236px, 100%);
+  width: min(227px, 110%);
   height: auto;
   color: transparent;
   background: linear-gradient(180deg,
@@ -107,8 +179,93 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   max-width: 100%;
   overflow-wrap: anywhere;
   color: #000;
-  font: 800 clamp(.86rem, 2.7cqw, 1.05rem)/1.12 Georgia, "Times New Roman", serif;
+  font: 800 clamp(.86rem, 2.4cqw, 1.05rem)/1.12 Georgia, "Times New Roman", serif;
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
+}
+
+/* The board artwork variant is desktop-only. Keep existing responsive artwork
+   and Creator identity placement unchanged below the desktop breakpoint. */
+@media (max-width: 1023px) {
+  .creator-dashboard-open-rules-poster {
+    top: 5%;
+    left: 75%;
+    width: auto;
+    height: 90%;
+  }
+
+  .creator-dashboard-open-rules-light-cover {
+    top: 310px;
+    left: 75%;
+    width: 170px;
+    height: 100px;
+  }
+
+  .creator-dashboard-open-rules-light-overlay {
+    left: 75%;
+    width: 170px;
+    height: 65%;
+  }
+
+  .creator-dashboard-trg-emblem { display: block; }
+
+  .creator-dashboard-identity-overlay {
+    top: -3%;
+    left: 50%;
+    width: 91%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 0;
+    padding: 5% 0 0;
+  }
+
+  .creator-dashboard-creator-identity {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    width: 100%;
+    transform: none;
+  }
+
+  .creator-dashboard-trg-emblem { top: -4%; }
+
+  .creator-dashboard-creator-image {
+    width: clamp(59px, 16.5cqw, 84px);
+    height: clamp(59px, 16.5cqw, 84px);
+    border: 2px solid rgba(53, 26, 11, 0.9);
+    border-radius: 7px;
+    background: rgba(245, 210, 143, 0.26);
+    box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38);
+  }
+
+  .creator-dashboard-creator-initials { width: min(260px, 110%); }
+  .creator-dashboard-creator-name { font-size: clamp(.86rem, 2.7cqw, 1.05rem); }
+}
+
+@media (max-width: 699px) {
+  .creator-dashboard-open-rules-poster {
+    top: 5%;
+    left: 50%;
+    width: auto;
+    height: 90%;
+  }
+
+  .creator-dashboard-open-rules-light-cover {
+    top: 490px;
+    left: 50%;
+    width: 170px;
+    height: 100px;
+  }
+
+  .creator-dashboard-open-rules-light-overlay {
+    left: 50%;
+    width: 170px;
+    height: 65%;
+  }
 }
 
 .creator-dashboard-visually-hidden {

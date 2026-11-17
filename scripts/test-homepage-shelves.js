@@ -338,8 +338,10 @@ function testClientWiring() {
     "Complete Open Rules titles must remain single-column and must not be ellipsized.");
   const creatorStyles = fs.readFileSync(path.join(ROOT, "assets", "css", "creator-dashboard.css"), "utf8");
   assert.doesNotMatch(creatorStyles, /\.homepage-open-rules-book:hover/);
-  assert.match(creatorStyles, /\.creator-dashboard-open-rules-bay \.shop-wall-library-books[\s\S]*?overflow: visible/);
-  assert.match(creatorStyles, /\.creator-dashboard-open-rules-bay \.homepage-open-rules-book__rotation[\s\S]*?overflow: visible/);
+  assert.doesNotMatch(creatorStyles, /\.creator-dashboard-open-rules-bay \.shop-wall-library-books/,
+    "Creator Open Rules keeps its approved poster-only furniture bay");
+  assert.doesNotMatch(creatorStyles, /\.creator-dashboard-open-rules-bay \.homepage-open-rules-book__rotation/,
+    "Creator Open Rules does not inherit Guest book rotation markup");
   assert.match(preview, /guestPreviewBound/);
   assert.match(preview, /realProductLink/);
   assert.match(preview, /trg:homepage-shelves-updated/);

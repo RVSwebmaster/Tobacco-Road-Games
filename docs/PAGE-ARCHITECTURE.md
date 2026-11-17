@@ -10,9 +10,9 @@ Guest is the canonical storefront composition. `scripts/build-store.js` produces
 - `renderStorefrontUpperCabinet()` owns the shared upper cabinet frame and frozen responsive cabinet artwork.
 - `renderGuestLibraryBay()`, `renderGuestOpenRulesBay()` / `renderRoleOpenRulesBay()`, `renderHomepageIdentityBay()`, and `renderHomepageShelfFixtures()` provide the corresponding shared or role-configured markup.
 - `renderCustomerLandingPage(guestLandingPage)` derives Customer from Guest and adds Customer-specific session, navigation, and library hooks.
-- `renderCreatorIdentityPage(guestLandingPage)` derives Creator from Guest, retains the shared cabinet composition, and applies Creator-specific identity, navigation, library, and footer behavior.
+- `renderCreatorIdentityPage(guestLandingPage)` derives Creator from Guest, retains the shared cabinet composition, and applies the canonized Creator furniture, identity, navigation, library, framed right-bay poster, lighting overlay, and footer behavior.
 
-The frozen cabinet assets are `assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png`, `upper-cabinet-tablet.png`, and `upper-cabinet-mobile.png`. Their visual composition is locked by the root [AGENTS.md](../AGENTS.md). Shared cabinet geometry belongs to the shared storefront styles, not duplicated role CSS. `assets/css/creator-dashboard.css` is for Creator-only identity/navigation styling and must not fork common furniture rules.
+The frozen shared cabinet assets are `assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png`, `upper-cabinet-tablet.png`, and `upper-cabinet-mobile.png`. Guest and Customer continue to use these unchanged. Creator selects its approved role-scoped desktop, tablet, and mobile title-board variants, which remove the baked central mark and the two decorative potted plants while preserving the shared cabinet geometry. The approved Creator furniture configuration is the definitive design reference for the Creator Profile and Creator Dashboard surfaces; the framed right-bay poster uses the Guest wall-art treatment and Creator-only lighting overlay. Shared cabinet geometry belongs to the shared storefront styles, not duplicated role CSS. `assets/css/creator-dashboard.css` owns only Creator identity/navigation placement and the explicitly scoped Creator poster treatment; it must not fork common furniture rules.
 
 ## Runtime responsibilities
 
@@ -28,13 +28,14 @@ The frozen cabinet assets are `assets/images/storefront-shelf-dressing/upper-cab
 | --- | --- | --- |
 | Guest (`/guest/`, and root rewrite) | Canonical storefront generator, shared cabinet, common styles and shelf renderer | Guest navigation and public browsing behavior. |
 | Customer (`/customer`) | Guest-derived markup and shared furniture/renderer | Customer identity, account state, owned-library data, and navigation. An empty owned library stays empty. |
-| Creator (`/creator/`) | Guest-derived markup and shared furniture/renderer | Creator identity, menu, personal-library ownership, and Creator controls. These must not duplicate common cabinet geometry. |
+| Creator (`/creator/`) | Guest-derived markup and shared furniture/renderer | Creator identity, menu, personal-library ownership, and Creator controls. Its responsive picture sources use the Creator title-board variants; profile logo/initials/name remain runtime content from the existing Creator identity flow. |
 | Public author profile (`/authors/<slug>/`) | Author profile generators and common site shell | Public-facing author content; independent of the Creator identity page. |
 
 ## Approved and unfinished boundaries
 
 - **Approved:** RV approved the Guest and Creator visual screenshots for the shared cabinet baseline. The shared architecture was committed in `ae1af4a` (`Share canonical cabinet rendering with Creator`).
-- **Unfinished:** Creator identity treatment still has a known overlap with the TRG medallion in the baked cabinet image. See [Creator identity follow-up](creator-identity-follow-up.md). Do not reinterpret the furniture approval as approval of this identity treatment.
-- **Unfinished:** `scripts/test-creator-open-rules-data.js` fails at its current line 104 because the generated Creator page contains the identity overlay that the assertion forbids. Preserve that failure as a separate issue; do not weaken the assertion just to pass.
+- **Approved:** RV granted visual acceptance on 2026-11-17 for the Creator furniture configuration: responsive Creator title-board artwork, identity placement, removed plants/bookstops/Open Rules shelf and sign, Hurricane lantern placement, centered framed right-bay poster, shelf alignment, and restored overhead lighting. Guest and Customer remain unchanged.
+- **Outstanding:** Record and implement the automatic 45-second product-cover rotation on the Creator furniture display without interaction or configuration controls. No rotation control is part of the approved furniture design.
+- **Verified locally:** `scripts/test-creator-open-rules-data.js` checks the Creator-only artwork, identity markup/profile behavior, framed poster and lighting layers, matching cabinet dimensions, and shared examination controls. It does not replace browser visual acceptance.
 
 The user-approved shared cabinet architecture is the baseline. A role-specific visual exception requires an explicit assignment and must not be introduced by copying or editing common furniture rules.

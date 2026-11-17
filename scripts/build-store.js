@@ -1253,12 +1253,13 @@ function renderCreatorIdentityPage(guestLandingPage) {
       libraryBay: renderGuestLibraryBay({ role: "creator" }),
       identityBay: renderHomepageIdentityBay({ creatorIdentity: true }),
       openRulesBay: renderRoleOpenRulesBay("creator"),
-      includeLowerContent: false
+      includeLowerContent: false,
+      creatorTitleBoard: true
     }))
     .replace("</main>", '<p id="creator-status" class="creator-dashboard-visually-hidden" role="status">Checking Creator session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", '  <link rel="stylesheet" href="/assets/css/creator-dashboard.css?v=creator-shared-upper-cabinet1">\n</head>')
+    .replace("</head>", '  <link rel="stylesheet" href="/assets/css/creator-dashboard.css?v=creator-title-board2">\n</head>')
     .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer creator-dashboard-footer"><p><a href="/temp-creator/">Open preserved Creator Dashboard</a></p></footer>\n    </div>')
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
@@ -1308,12 +1309,22 @@ function renderGuestLandingShopWallMain(products, options = {}) {
 }
 
 function renderStorefrontUpperCabinet(options = {}) {
+  const creatorTitleBoard = options.creatorTitleBoard === true;
+  const mobileCabinet = creatorTitleBoard
+    ? "/assets/images/storefront-shelf-dressing/upper-cabinet-creator-mobile.png?v=creator-title-board3"
+    : "/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1";
+  const tabletCabinet = creatorTitleBoard
+    ? "/assets/images/storefront-shelf-dressing/upper-cabinet-creator-tablet.png?v=creator-title-board3"
+    : "/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1";
+  const desktopCabinet = creatorTitleBoard
+    ? "/assets/images/storefront-shelf-dressing/upper-cabinet-creator-desktop.png?v=creator-title-board3"
+    : "/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1";
   return `<div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
       <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
         <picture class="shop-wall-cabinet-art" aria-hidden="true">
-          <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1">
-          <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1">
-          <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
+          <source media="(max-width: 699px)" srcset="${mobileCabinet}">
+          <source media="(max-width: 1023px)" srcset="${tabletCabinet}">
+          <img src="${desktopCabinet}" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
         </picture>
         ${options.libraryBay ?? renderGuestLibraryBay()}
         ${options.identityBay ?? renderHomepageIdentityBay()}
@@ -1359,6 +1370,8 @@ function renderRoleOpenRulesBay(role) {
           <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
           <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              ${creator ? '<span class="creator-dashboard-open-rules-light-cover" aria-hidden="true"></span>' : ""}
+              ${creator ? '<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="Framed The Familiar poster on the Open Rules Library back wall" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>' : ""}
               ${renderShelf(1, 3)}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
@@ -1507,12 +1520,12 @@ function renderHomepageIdentityBay({ creatorIdentity = false } = {}) {
         <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
           <div class="shop-wall-identity-space">
             <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
-          </div>
-          <div class="shop-wall-identity-sign" aria-hidden="true">
+          </div>${creatorIdentity ? "" : `<div class="shop-wall-identity-sign" aria-hidden="true">
             <img src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=20261003-golden-d20-1" alt="" loading="eager" decoding="async">
             <p class="shop-wall-identity-title"><span>Tobacco Road</span><span>Games</span></p>
-          </div>
+          </div>`}
           ${creatorIdentity ? `<div class="creator-dashboard-identity-overlay" aria-label="Creator identity">
+            <img class="creator-dashboard-trg-emblem" src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=creator-title-board1" alt="Tobacco Road Games emblem" loading="eager" decoding="async">
             <div id="creator-identity" class="creator-dashboard-creator-identity" hidden>
               <img class="creator-dashboard-creator-image" alt="" loading="eager" decoding="async" hidden />
               <span class="creator-dashboard-creator-initials" hidden aria-hidden="true"></span>
