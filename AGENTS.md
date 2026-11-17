@@ -64,3 +64,13 @@ On October 4, 2026, RV explicitly requested merging the grapevine, kudzu (upper 
 - Retain the original PNGs and old dressing CSS as authoring references only. They do not position the merged objects at runtime. Do not regenerate the baked artwork automatically during builds.
 - npm run test:storefront-visual pins the composite image hashes, scene geometry, scale handling, and homepage/generator parity. Staging deployment must pass this check first. These frozen baselines require explicit RV approval before changing them.
 - The bamboo, dogwood, lower shelves, and interactive curios are outside this merge and retain all existing protections.
+
+## Reusable Storefront Rendering Standard
+
+- Guest is the canonical visual source for storefront page structure and shared components. Keep the upper-cabinet frame, frozen artwork, shelf geometry, and common layout rules in `scripts/build-store.js` and `styles.css`; do not copy those definitions into role-specific HTML or CSS.
+- `renderGuestLandingShopWallMain()` composes the Guest main area. `renderStorefrontUpperCabinet()` is the single source for the fixed upper cabinet and its artwork. `renderGuestLibraryBay()`, `renderGuestOpenRulesBay()`, `renderHomepageIdentityBay()`, and `renderHomepageShelfFixtures()` own their corresponding component markup.
+- `renderCustomerLandingPage()` derives Customer from the rendered Guest page and applies only Customer-specific data hooks, session behavior, and navigation.
+- `renderCreatorIdentityPage()` derives Creator from the rendered Guest page and uses the same upper-cabinet component. Creator-specific identity, menu, personal-library ownership, empty Open Rules shelves, and footer are explicit role configuration. Keep Creator behavior in its existing scripts; do not fork shared furniture, interaction, or geometry.
+- Common visual rules and book interaction styles belong in the shared storefront stylesheets. `assets/css/creator-dashboard.css` may contain Creator-only identity and navigation presentation, but must not redefine common cabinet geometry, shelf positions, shared book sizes, or shared animations.
+- If a role genuinely needs a different artwork component, retain the approved original and add a role-scoped variant. Never modify or regenerate the frozen upper-cabinet PNGs without explicit approval.
+- For storefront changes, run `npm run test:storefront-visual` and preserve the approved Guest and Customer visual baselines. Deployment is a separate explicitly authorized action.

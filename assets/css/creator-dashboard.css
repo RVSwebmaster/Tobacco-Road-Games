@@ -1,23 +1,5 @@
-/* Creator reconstruction uses the storefront's structural wall primitives.
-   Only the merchandise, dressing, and interaction layers are omitted. */
-
-body.creator-workspace-page {
-  min-width: 0;
-  overflow-x: hidden;
-}
-
-body.creator-workspace-page .page-shell {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-}
-
-body:has(.creator-dashboard-shop-wall) .site-header {
-  position: sticky;
-  top: 0;
-  z-index: 140;
-}
+/* Creator-only identity and navigation. Cabinet geometry, shelves, artwork,
+   and shared book interactions live in the storefront stylesheets. */
 
 body:has(.creator-dashboard-shop-wall) .site-header .brand {
   display: none;
@@ -44,48 +26,30 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
 }
 
-.creator-dashboard-shop-wall {
-  min-height: calc(100vh - 50px);
-  padding: 0;
-}
-
-.creator-dashboard-shop-wall .shop-wall-row--identity {
-  min-height: max(420px, calc(100vh - 50px));
-}
-
-.creator-dashboard-shop-wall .shop-wall-bay--identity {
-  padding: clamp(22px, 3vw, 44px);
-}
-
-.creator-dashboard-shop-wall .shop-wall-bay--library {
-  grid-template-rows: 1fr;
-}
-
-/* Reuse the established sign panel as the central wooden emblem panel. */
-.creator-dashboard-shop-wall .shop-wall-identity-sign {
-  transform: none;
-}
-
-.creator-dashboard-shop-wall .shop-wall-identity-sign .creator-dashboard-brand-mark {
-  align-self: start;
-  width: min(183.6px, 92%);
-  max-height: 183.6px;
-  margin: -20px auto 0;
-  transform: translateX(-25cqw);
+/* This content overlays the center column of the shared cabinet. The panel,
+   logo, wordmark, dimensions, and wood remain supplied by Guest furniture. */
+.creator-dashboard-identity-overlay {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  left: 50%;
+  width: 33.333333%;
+  height: 100%;
+  container-type: inline-size;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .creator-dashboard-creator-identity {
   position: absolute;
-  top: 22%;
-  right: auto;
-  left: 75%;
+  top: 12.3%;
+  right: 2%;
   display: grid;
   justify-items: center;
-  gap: 7px;
-  width: min(220px, 50%);
-  transform: translate(-50%, -50%);
+  gap: 4px;
+  width: 52%;
   color: #211108;
-  font: 800 clamp(1.25rem, 3.5cqw, 1.65rem)/1.08 Georgia, "Times New Roman", serif;
+  font: 800 clamp(1rem, 3.1cqw, 1.3rem)/1.12 Georgia, "Times New Roman", serif;
   text-align: center;
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
 }
@@ -97,11 +61,11 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 }
 
 .creator-dashboard-creator-image {
-  width: clamp(66px, 12cqw, 104px);
-  height: clamp(66px, 12cqw, 104px);
+  width: clamp(54px, 15cqw, 76px);
+  height: clamp(54px, 15cqw, 76px);
   max-width: 100%;
-  border: 3px solid rgba(53, 26, 11, 0.9);
-  border-radius: 9px;
+  border: 2px solid rgba(53, 26, 11, 0.9);
+  border-radius: 7px;
   background: rgba(245, 210, 143, 0.26);
   object-fit: contain;
   box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38);
@@ -109,41 +73,26 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
 
 .creator-dashboard-creator-initials {
   display: inline-block !important;
-  text-align: center;
-  width: min(220px, 100%);
+  width: min(236px, 100%);
   height: auto;
-  border: 0;
-  border-radius: 0;
-  background: none;
   color: transparent;
   background: linear-gradient(180deg,
-    #fff7c7 0%,
-    #fff7c7 2%,
-    #f6c24f 6%,
-    #cf7b0d 15%,
-    #7b3002 27%,
-    #351003 40%,
-    #241006 47%,
-    #9e4b04 55%,
-    #f0b63b 67%,
-    #7a2f02 77%,
-    #321003 85%,
-    #c46b0a 94%,
-    #fff1ac 98%,
-    #fff1ac 100%);
-  -webkit-background-clip: text;
+    #fff7c7 0%, #fff7c7 2%, #f6c24f 6%, #cf7b0d 15%, #7b3002 27%,
+    #351003 40%, #241006 47%, #9e4b04 55%, #f0b63b 67%, #7a2f02 77%,
+    #321003 85%, #c46b0a 94%, #fff1ac 98%, #fff1ac 100%);
   background-clip: text;
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 1px rgba(211, 139, 28, 0.9);
-  font: 900 clamp(5.4rem, 13.5cqw, 8.5rem)/0.9 Georgia, "Times New Roman", serif;
+  font: 900 clamp(2.1rem, 6.5cqw, 3rem)/0.9 Georgia, "Times New Roman", serif;
   letter-spacing: 0.04em;
+  text-align: center;
   text-shadow:
     0 1px 0 rgba(255, 244, 181, 0.68),
     0 3px 0 rgba(103, 39, 4, 0.78),
     0 12px 14px rgba(37, 17, 7, 0.66);
-  box-shadow: none;
 }
 
 .creator-dashboard-creator-initials-svg {
@@ -154,47 +103,12 @@ body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder {
   filter: drop-shadow(0 12px 14px rgba(37, 17, 7, 0.82));
 }
 
-.creator-dashboard-creator-initials:not([hidden]) {
-  visibility: visible;
-  opacity: 1;
-}
-
 .creator-dashboard-creator-name {
   max-width: 100%;
   overflow-wrap: anywhere;
-  color: #211108;
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  -webkit-text-stroke: 0;
+  color: #000;
+  font: 800 clamp(.86rem, 2.7cqw, 1.05rem)/1.12 Georgia, "Times New Roman", serif;
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
-}
-
-.creator-dashboard-shop-wall .shop-wall-shelf-level {
-  min-height: 126px;
-}
-
-/* The storefront base stylesheet uses a striped placeholder behind library rows.
-   Creator shelves carry real rendered books, so that placeholder must not remain
-   visible behind or below them. */
-.creator-dashboard-open-rules-bay .shop-wall-library-books {
-  background: transparent !important;
-  overflow: visible;
-}
-
-/* One hover target: the rendered book anchor rises as a complete unit. */
-.creator-dashboard-open-rules-bay .homepage-open-rules-book {
-  pointer-events: auto;
-  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
-}
-
-.creator-dashboard-open-rules-bay .homepage-open-rules-book:hover {
-  transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
-  filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
-  z-index: 3;
-}
-
-.creator-dashboard-open-rules-bay .homepage-open-rules-book__rotation {
-  overflow: visible;
 }
 
 .creator-dashboard-visually-hidden {
@@ -228,38 +142,4 @@ body.creator-workspace-page .creator-dashboard-footer {
 
 .creator-dashboard-footer a {
   color: #c6a95d;
-}
-
-@media (max-width: 1023px) {
-  .creator-dashboard-shop-wall .shop-wall-row--identity {
-    min-height: max(620px, calc(100vh - 58px));
-  }
-
-  .creator-dashboard-shop-wall .shop-wall-bay--identity {
-    min-height: 300px;
-  }
-}
-
-@media (max-width: 699px) {
-  .creator-dashboard-shop-wall .shop-wall-row--identity {
-    min-height: max(900px, calc(100vh - 58px));
-  }
-
-  .creator-dashboard-shop-wall .shop-wall-identity-sign .creator-dashboard-brand-mark {
-    width: min(124px, 92%);
-    max-height: 124px;
-  }
-
-  .creator-dashboard-creator-identity {
-    top: 22%;
-    right: auto;
-    left: 75%;
-    width: min(150px, 46%);
-    transform: translate(-50%, -50%);
-  }
-
-  body.creator-workspace-page .creator-dashboard-footer {
-    padding: 9px 14px;
-    text-align: center;
-  }
 }
