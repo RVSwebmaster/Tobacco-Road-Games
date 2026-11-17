@@ -6,6 +6,12 @@ This directory is the canonical, production-connected Tobacco Road Games website
 
 All Tobacco Road Games website inspection, editing, builds, tests, asset placement, uploads, source-control work, and Cloudflare deployments must be performed from this directory unless the user explicitly names a different target.
 
+## TRG Project Continuity Records
+
+At the start of every development assignment, consult `docs/SITE-GEOGRAPHY.md`, `docs/PAGE-ARCHITECTURE.md`, and `docs/PROJECT-STATE.md` before making changes. Use them to locate the relevant code, identify the canonical page/component, and understand approved work and known unfinished work.
+
+When an assignment changes site geography, page ownership/dependencies, or the project’s approved/unfinished state, update the corresponding record as part of that assignment. Keep records concise and evidence-based, link to source files, date state changes, and label facts as approved, verified, proposed, or unfinished. Do not promote a proposal to approved status or let documentation override the current source, explicit user direction, or approval boundaries. Unrelated assignments need not rewrite unchanged records.
+
 Do not substitute or redirect work to:
 
 `C:\Users\rvsaw\Desktop\TobaccoRoadGames`
