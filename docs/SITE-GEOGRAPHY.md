@@ -30,7 +30,7 @@ The build output is not a `public/` directory. `scripts/build-pages-output.mjs` 
 | `/creator/` | `creator/index.html`, generated from the rendered Guest page by `renderCreatorIdentityPage()`. | Canonical Creator Profile/Dashboard furniture surface with role-specific identity/session behavior. |
 | `/authors/` and `/authors/<slug>/` | `authors.html` and generated `authors/<slug>/index.html`. | Public author profiles; distinct from `/creator/`. |
 | `/store/` and `/store/open-rules-library/` | Generated under `store/` by `scripts/build-store.js`. | Static store/catalog pages coexist with runtime APIs. |
-| `/temp-creator/` | Preserved static Creator dashboard area copied into the Pages artifact. | Uses the same canonized Creator furniture configuration as `/creator/`; its private dashboard controls remain separate. |
+| `/creator-dashboard/` | `creator-dashboard/index.html`, using `renderCreatorFurniture()` from `scripts/build-store.js`. | Permanent private Creator Dashboard with the same shared furniture as `/creator/`. |
 
 `_routes.json` includes `/creator/*`, `/customer.html`, `/store/*`, and the listed API route families for Pages Functions. It does not route every static page through a Function.
 

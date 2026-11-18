@@ -138,6 +138,8 @@ function main() {
   buildHomepage(publicCatalogProducts, indexes, bundleRules);
   const guestLandingPage = buildGuestLandingPage(publicCatalogProducts);
   writeFile("creator/index.html", renderCreatorIdentityPage(guestLandingPage));
+  const creatorDashboardTemplate = fs.readFileSync(path.join(ROOT, "creator-dashboard", "index.html"), "utf8");
+  writeFile("creator-dashboard/index.html", creatorDashboardTemplate.replace("<!-- Shared approved Creator furniture is emitted by scripts/build-store.js. -->", renderCreatorFurniture()));
   buildAccountPage();
   buildStaticPublicPage("support.html", "");
 
@@ -1260,7 +1262,7 @@ function renderCreatorIdentityPage(guestLandingPage) {
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
     .replace("</head>", '  <link rel="stylesheet" href="/assets/css/creator-dashboard.css?v=creator-title-board2">\n</head>')
-    .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer creator-dashboard-footer"><p><a href="/temp-creator/">Open preserved Creator Dashboard</a></p></footer>\n    </div>')
+    .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer creator-dashboard-footer"><p><a href="/creator-dashboard/">Open Creator Dashboard</a></p></footer>\n    </div>')
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
       '  <script src="/assets/js/open-rules-library.js?v=shared-open-rules6" defer></script>',
@@ -1274,6 +1276,15 @@ function renderCreatorIdentityPage(guestLandingPage) {
     throw new Error("Creator role configuration could not be applied to the shared Guest page.");
   }
   return creatorPage.replace(/^[ \t]+$/gm, "");
+}
+
+function renderCreatorFurniture() {
+  return renderStorefrontUpperCabinet({
+    creatorTitleBoard: true,
+    libraryBay: renderGuestLibraryBay({ role: "creator" }),
+    identityBay: renderHomepageIdentityBay({ creatorIdentity: true }),
+    openRulesBay: renderRoleOpenRulesBay("creator")
+  });
 }
 
 function renderGuestLandingShopWallMain(products, options = {}) {
@@ -3705,4 +3716,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderCreatorIdentityPage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel };
+module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderCreatorFurniture, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderCreatorIdentityPage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel };

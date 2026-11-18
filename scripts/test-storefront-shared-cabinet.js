@@ -74,8 +74,9 @@ assert.doesNotMatch(guest, /creator-dashboard-open-rules-poster/, "Guest does no
 assert.doesNotMatch(customer, /creator-dashboard-open-rules-poster/, "Customer does not inherit the Creator poster");
 assert.doesNotMatch(guest, /creator-dashboard-open-rules-light-cover/, "Guest does not inherit the Creator light-effect cover");
 assert.doesNotMatch(customer, /creator-dashboard-open-rules-light-cover/, "Customer does not inherit the Creator light-effect cover");
-const dashboard = fs.readFileSync(path.join(ROOT, "temp-creator/index.html"), "utf8");
+const dashboard = fs.readFileSync(path.join(ROOT, "creator-dashboard/index.html"), "utf8");
 assert.match(dashboard, /class="creator-dashboard-shop-wall"/, "Creator Dashboard uses the canonized furniture wrapper");
+assert.equal((dashboard.match(/shop-wall-fixed-cabinet/g) || []).length, 1, "Dashboard furniture is generated once through the shared renderer");
 assert.match(dashboard, /upper-cabinet-creator-desktop\.png\?v=creator-title-board3/, "Creator Dashboard uses the Creator cabinet artwork");
 assert.match(dashboard, /class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster"/, "Creator Dashboard uses the framed right-bay poster");
 

@@ -49,7 +49,7 @@ function makePdf(pages, info = {}) {
 async function main() {
   const prefill = await import(pathToFileURL(path.join(ROOT, "shared", "product-pdf-prefill.mjs")));
   const imageUtils = await import(pathToFileURL(path.join(ROOT, "shared", "product-pdf-image-utils.mjs")));
-  const html = fs.readFileSync(path.join(ROOT, "temp-creator", "index.html"), "utf8");
+  const html = fs.readFileSync(path.join(ROOT, "creator-dashboard", "index.html"), "utf8");
   const dashboard = fs.readFileSync(path.join(ROOT, "assets", "js", "creator-dashboard.js"), "utf8");
   const reader = fs.readFileSync(path.join(ROOT, "assets", "js", "product-pdf-autofill.mjs"), "utf8");
 
