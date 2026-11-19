@@ -61,7 +61,7 @@ assert.match(client, /state\.product\.style\.setProperty\("--book-angle", "90deg
 assert.match(client, /transitionend/);
 assert.match(client, /realProductLink/);
 assert.match(client, /trg:homepage-shelves-updated/);
-assert.match(client, /document\.addEventListener\("trg:homepage-shelves-updated", bindBooks\);\s*document\.addEventListener\("trg:creator-library-updated", bindBooks\);\s*bindBooks\(\);/, "Existing books bind immediately, while dynamic Creator books bind on their own event.");
+assert.match(client, /document\.addEventListener\("trg:homepage-shelves-updated", bindBooks\);\s*document\.addEventListener\("trg:member-library-updated", bindBooks\);\s*bindBooks\(\);/, "Existing books bind immediately, while dynamic Member Profile books bind on their own event.");
 assert.match(client, /createElement\("a"\)/, "Shelf previews must use real anchors.");
 assert.match(client, /link\.href = product\.fullUrl/);
 assert.match(client, /aria-haspopup/, "Shelf books must expose link-style dialog semantics.");

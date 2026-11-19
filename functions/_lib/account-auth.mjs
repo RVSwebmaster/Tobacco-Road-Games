@@ -2,6 +2,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { scryptAsync } from "@noble/hashes/scrypt";
 import { EmailProviderError, createEmailProvider, isEmailDeliveryConfigured } from "./email-provider.mjs";
 import { activatePendingCustomer, saveCustomerRegistration, validateCustomerRegistration } from "./customer-registration.mjs";
+import { resolveMemberProfileAccess } from "./member-profile-access.mjs";
 
 export const ACCOUNT_SESSION_COOKIE = "__Host-trg_session";
 export const ACCOUNT_CSRF_COOKIE = "trg_account_csrf";
@@ -86,11 +87,22 @@ export async function handleAccountMeRequest(request, env) {
       "set-cookie": buildAccountCsrfCookie(csrfToken)
     });
   }
+  const memberIdentity = await env.TRG_ORDERS
+    .prepare("SELECT display_name, avatar_url FROM user_account_profiles WHERE user_id=?")
+    .bind(session.user.id)
+    .first();
+  const memberAccess = await resolveMemberProfileAccess(env.TRG_ORDERS, session.user);
   return json({
     authenticated: true,
     csrfToken: session.csrfToken,
     googleClientId: publicGoogleClientId(env),
-    user: { ...publicUser(session.user), customerPrivilegesActive: await customerPrivilegesActive(env.TRG_ORDERS, session.user.id) }
+    user: {
+      ...publicUser(session.user),
+      customerPrivilegesActive: await customerPrivilegesActive(env.TRG_ORDERS, session.user.id),
+      displayName: memberIdentity?.display_name || "",
+      avatarUrl: memberIdentity?.avatar_url || "",
+      ...memberAccess
+    }
   }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.rawSessionToken, session.csrfToken)
   });

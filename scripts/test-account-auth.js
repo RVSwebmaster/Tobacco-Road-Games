@@ -16,7 +16,7 @@ CREATE TABLE customer_registration_states (
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE user_account_profiles (
-  user_id TEXT PRIMARY KEY,display_name TEXT NOT NULL DEFAULT '',billing_first_name TEXT NOT NULL DEFAULT '',
+  user_id TEXT PRIMARY KEY,display_name TEXT NOT NULL DEFAULT '',avatar_url TEXT NOT NULL DEFAULT '',billing_first_name TEXT NOT NULL DEFAULT '',
   billing_last_name TEXT NOT NULL DEFAULT '',billing_address_line1 TEXT NOT NULL DEFAULT '',billing_city TEXT NOT NULL DEFAULT '',
   billing_state_region TEXT NOT NULL DEFAULT '',billing_postal_code TEXT NOT NULL DEFAULT '',billing_country TEXT NOT NULL DEFAULT '',
   payment_method_status TEXT NOT NULL DEFAULT 'missing',customer_activated_at TEXT

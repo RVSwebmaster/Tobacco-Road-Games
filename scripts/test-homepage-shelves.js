@@ -336,7 +336,7 @@ function testClientWiring() {
     "Long spine titles must be fitted to the rendered title area.");
   assert.match(styles, /\.homepage-open-rules-book__product \.product-book__spine-title[\s\S]*?white-space: nowrap;[\s\S]*?scaleY\(var\(--open-rules-title-scale, 1\)\)[\s\S]*?text-overflow: clip;/,
     "Complete Open Rules titles must remain single-column and must not be ellipsized.");
-  const creatorStyles = fs.readFileSync(path.join(ROOT, "assets", "css", "creator-dashboard.css"), "utf8");
+  const creatorStyles = fs.readFileSync(path.join(ROOT, "assets", "css", "member-profile.css"), "utf8");
   assert.doesNotMatch(creatorStyles, /\.homepage-open-rules-book:hover/);
   assert.doesNotMatch(creatorStyles, /\.creator-dashboard-open-rules-bay \.shop-wall-library-books/,
     "Creator Open Rules keeps its approved poster-only furniture bay");

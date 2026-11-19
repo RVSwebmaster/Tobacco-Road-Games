@@ -9,10 +9,10 @@ const source = fs.readFileSync(path.join(ROOT, "assets/js/creator-profile-catalo
 const creatorPage = fs.readFileSync(path.join(ROOT, "creator/index.html"), "utf8");
 const dashboardPage = fs.readFileSync(path.join(ROOT, "creator-dashboard/index.html"), "utf8");
 const guestPage = fs.readFileSync(path.join(ROOT, "guest/index.html"), "utf8");
-const creatorCss = fs.readFileSync(path.join(ROOT, "assets/css/creator-dashboard.css"), "utf8");
-const renderedCreatorPage = buildStore.renderCreatorIdentityPage(guestPage);
+const creatorCss = fs.readFileSync(path.join(ROOT, "assets/css/member-profile.css"), "utf8");
+const renderedCreatorPage = buildStore.renderMemberProfilePage(guestPage, { canonicalPath: "/creator/", creatorCatalogRotation: true });
 
-assert.equal(renderedCreatorPage, creatorPage, "The Creator Profile output matches its canonical generator.");
+assert.equal(renderedCreatorPage.replace(/\r\n/g, "\n"), creatorPage.replace(/\r\n/g, "\n"), "The Creator Profile output matches its canonical generator.");
 assert.match(creatorPage, /data-creator-profile-catalog-cover/);
 assert.match(creatorPage, /creator-profile-catalog-rotation\.js\?v=creator-catalog-cover-rotation1/);
 assert.match(creatorCss, /\.creator-profile-catalog-cover[\s\S]*clip-path:\s*inset\(2\.2% 11\.6% 2%\)/,

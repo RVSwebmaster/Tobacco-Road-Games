@@ -1,5 +1,5 @@
 (() => {
-  const page = document.querySelector("[data-guest-landing], [data-creator-identity-page]");
+  const page = document.querySelector("[data-guest-landing], [data-creator-identity-page], [data-member-profile-page]");
   if (!page) return;
   let books = [];
   let dialog;
@@ -281,7 +281,7 @@
     books.forEach((book) => {
       if (book.dataset.guestPreviewBound === "true") return;
       book.dataset.guestPreviewBound = "true";
-      if (book.classList.contains("guest-open-rules-real-book") && ["/", "/guest/", "/customer", "/customer/", "/creator", "/creator/"].includes(window.location.pathname)) {
+      if (book.classList.contains("guest-open-rules-real-book") && (["/", "/guest/", "/customer", "/customer/", "/creator", "/creator/"].includes(window.location.pathname) || page.matches("[data-member-profile-page]"))) {
         bindOpenRulesExamination(book);
         return;
       }
@@ -296,7 +296,7 @@
   }
 
   document.addEventListener("trg:homepage-shelves-updated", bindBooks);
-  document.addEventListener("trg:creator-library-updated", bindBooks);
+  document.addEventListener("trg:member-library-updated", bindBooks);
   bindBooks();
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && activeOpenRulesExamination) {
@@ -308,7 +308,7 @@
     if (activeOpenRulesExamination) restoreOpenRulesBook({ focus: false });
   });
 
-  if (!page.matches("[data-creator-identity-page]")) fetch("/data/guest-preview-products.json?v=20261112-cover-first-preview1", { cache: "no-store" })
+  if (!page.matches("[data-creator-identity-page], [data-member-profile-page]")) fetch("/data/guest-preview-products.json?v=20261112-cover-first-preview1", { cache: "no-store" })
     .then((response) => response.ok ? response.json() : [])
     .then((products) => {
       const shelfByCollection = {

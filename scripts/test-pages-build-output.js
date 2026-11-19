@@ -23,10 +23,15 @@ async function main() {
     const preservedCreator = fs.readFileSync(path.join(outputDirectory, "creator-dashboard", "index.html"), "utf8");
     assert.match(preservedCreator, /creator-dashboard\.js\?v=/, "Preserved Creator dashboard runtime is missing");
     assert.match(preservedCreator, /id="creator-pdf-intake"/, "Preserved Creator PDF Intake is missing");
-    const blankCreator = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
-    assert.match(blankCreator, /<h1[^>]*>Creator Dashboard<\/h1>/, "Blank Creator Dashboard title is missing");
-    assert.match(blankCreator, /href="\/creator-dashboard\/"/, "Creator Dashboard link is missing");
-    assert.doesNotMatch(blankCreator, /id="creator-pdf-intake"/, "Blank Creator Dashboard must not contain PDF Intake");
+    const creatorProfile = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
+    assert.match(creatorProfile, /<title>Member Profile \| Tobacco Road Games<\/title>/, "Creator Profile has its correct shared Profile title.");
+    assert.match(creatorProfile, /href="\/creator-dashboard\/"/, "Creator Profile retains its private Dashboard link.");
+    assert.doesNotMatch(creatorProfile, /id="creator-pdf-intake"/, "Creator Profile does not absorb Dashboard publishing controls.");
+    for (const route of ["customer-profile", "founding-25-profile", "premium-creator-profile", "admin-profile", "owner-profile"]) {
+      const profile = fs.readFileSync(path.join(outputDirectory, route, "index.html"), "utf8");
+      assert.match(profile, /<title>Member Profile \| Tobacco Road Games<\/title>/);
+      assert.match(profile, /data-member-profile-page/);
+    }
     for (const relativePath of builder.excludedPublicFiles) {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `excluded file was copied: ${relativePath}`);
     }

@@ -62,6 +62,7 @@
     "test:creator-product-publication-sandbox": "node scripts/test-creator-product-publication-sandbox.js",
     "test:creator-active-shelf-slots": "node scripts/test-creator-native-direct-publication.js",
     "test:creator-profile-cover-rotation": "node scripts/test-creator-profile-catalog-rotation.js",
+    "test:member-profiles": "node scripts/test-member-profile-access.js && node scripts/test-member-profile-library.js && node scripts/test-member-profiles.js && node scripts/test-storefront-shared-cabinet.js",
     "test:creator-product-withdrawal": "node scripts/test-creator-native-review-publication.js",
     "test:creator-publishing-end-to-end": "node scripts/test-creator-publishing-end-to-end.js",
     "test:product-inactivity-shelf-expiration": "node scripts/test-product-inactivity-shelf-expiration.js",

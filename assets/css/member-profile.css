@@ -1,0 +1,319 @@
+/* Shared Member Profile and Creator Dashboard presentation. Cabinet geometry,
+   shelves, artwork, and common book interactions remain in shared styles. */
+
+body:has(.creator-dashboard-shop-wall) .site-header .brand,
+body:has(.member-profile-shop-wall) .site-header .brand {
+  display: none;
+}
+
+body:has(.creator-dashboard-shop-wall) .site-nav,
+body:has(.member-profile-shop-wall) .site-nav {
+  width: min(1420px, 100%);
+  justify-content: center;
+}
+
+body:has(.creator-dashboard-shop-wall) .creator-menu-placeholder,
+body:has(.member-profile-shop-wall) .creator-menu-placeholder {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  padding: 6px 0 5px;
+  border: 0;
+  border-radius: 0;
+  color: #251309;
+  font: 800 1.008rem/1.1 Georgia, "Times New Roman", serif;
+  letter-spacing: 0.025em;
+  text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
+}
+
+/* The Creator profile does not use the public storefront's rotating shelf dressing. */
+body:has(.creator-dashboard-shop-wall) .shelf-dressing,
+body:has(.member-profile-shop-wall) .shelf-dressing {
+  display: none !important;
+}
+
+/* Creator-only replacement for the retired Open Rules sign. This hangs an
+   existing Guest-style framed poster on the bay's back wall while the frozen
+   cabinet artwork and live shelf geometry remain unchanged. */
+.creator-dashboard-open-rules-poster {
+  position: absolute;
+  top: calc(5% - 24px);
+  left: 83.333%;
+  z-index: 2;
+  width: auto;
+  height: 90%;
+  transform: translateX(-50%);
+  filter: drop-shadow(2px 4px 5px rgba(16, 7, 3, 0.55));
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The public Creator identity page swaps catalog artwork into the existing
+   framed poster aperture. The underlying Familiar image remains the frame. */
+.creator-profile-catalog-cover {
+  z-index: 3;
+  clip-path: inset(2.2% 11.6% 2%);
+  object-fit: contain;
+  background: #151515;
+}
+
+.creator-dashboard-open-rules-light-cover {
+  position: absolute;
+  top: 240px;
+  left: 83.333%;
+  z-index: 1;
+  width: 240px;
+  height: 120px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(112, 49, 15, 0.96) 0%, rgba(112, 49, 15, 0.7) 42%, rgba(112, 49, 15, 0.2) 74%, transparent 100%);
+  pointer-events: none;
+}
+
+.creator-dashboard-open-rules-light-overlay {
+  position: absolute;
+  top: 0;
+  left: 83.333%;
+  z-index: 3;
+  width: 240px;
+  height: 65%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(ellipse 14% 9% at 50% 3%, rgba(255, 249, 214, 0.98) 0%, rgba(255, 214, 116, 0.78) 38%, transparent 100%),
+    radial-gradient(ellipse 28% 24% at 50% 15%, rgba(255, 229, 154, 0.76) 0%, rgba(246, 165, 62, 0.42) 44%, transparent 82%),
+    radial-gradient(ellipse 52% 82% at 50% 45%, rgba(255, 207, 105, 0.34) 0%, rgba(212, 113, 37, 0.16) 42%, rgba(84, 35, 12, 0.03) 62%, transparent 82%);
+  opacity: 0.9;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Creator desktop title-board variant uses the same single cabinet board.
+   The board texture/frame stay in its Creator-only artwork asset; identity is
+   positioned on that existing board without adding another panel. */
+.creator-dashboard-identity-overlay {
+  position: absolute;
+  z-index: 4;
+  top: -2.5%;
+  left: 50%;
+  width: 33.333333%;
+  height: 67%;
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  justify-content: space-between;
+  column-gap: 0;
+  box-sizing: border-box;
+  padding: 5% 0 0;
+  transform: translateX(calc(-50% - 20px));
+  pointer-events: none;
+}
+
+.creator-dashboard-trg-emblem {
+  grid-column: 1;
+  display: block;
+  position: relative;
+  top: -4%;
+  transform: translateY(-38px);
+  justify-self: center;
+  width: min(110%, 209px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 5px rgba(37, 17, 7, 0.52));
+}
+
+.creator-dashboard-creator-identity {
+  position: relative;
+  grid-column: 2;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  color: #211108;
+  font: 800 clamp(1rem, 2.8cqw, 1.3rem)/1.12 Georgia, "Times New Roman", serif;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
+}
+
+.creator-dashboard-creator-identity[hidden],
+.creator-dashboard-creator-image[hidden],
+.creator-dashboard-creator-initials[hidden] {
+  display: none !important;
+}
+
+.creator-dashboard-creator-image {
+  width: min(110%, 209px);
+  height: 154px;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  object-fit: contain;
+  box-shadow: none;
+}
+
+.creator-dashboard-creator-initials {
+  display: inline-block !important;
+  width: min(227px, 110%);
+  height: auto;
+  color: transparent;
+  background: linear-gradient(180deg,
+    #fff7c7 0%, #fff7c7 2%, #f6c24f 6%, #cf7b0d 15%, #7b3002 27%,
+    #351003 40%, #241006 47%, #9e4b04 55%, #f0b63b 67%, #7a2f02 77%,
+    #321003 85%, #c46b0a 94%, #fff1ac 98%, #fff1ac 100%);
+  background-clip: text;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1px rgba(211, 139, 28, 0.9);
+  font: 900 clamp(2.1rem, 6.5cqw, 3rem)/0.9 Georgia, "Times New Roman", serif;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow:
+    0 1px 0 rgba(255, 244, 181, 0.68),
+    0 3px 0 rgba(103, 39, 4, 0.78),
+    0 12px 14px rgba(37, 17, 7, 0.66);
+}
+
+.creator-dashboard-creator-initials-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 12px 14px rgba(37, 17, 7, 0.82));
+}
+
+.creator-dashboard-creator-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: #000;
+  font: 800 clamp(.86rem, 2.4cqw, 1.05rem)/1.12 Georgia, "Times New Roman", serif;
+  text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
+}
+
+/* The board artwork variant is desktop-only. Keep existing responsive artwork
+   and Creator identity placement unchanged below the desktop breakpoint. */
+@media (max-width: 1023px) {
+  .creator-dashboard-open-rules-poster {
+    top: 5%;
+    left: 75%;
+    width: auto;
+    height: 90%;
+  }
+
+  .creator-dashboard-open-rules-light-cover {
+    top: 310px;
+    left: 75%;
+    width: 170px;
+    height: 100px;
+  }
+
+  .creator-dashboard-open-rules-light-overlay {
+    left: 75%;
+    width: 170px;
+    height: 65%;
+  }
+
+  .creator-dashboard-trg-emblem { display: block; }
+
+  .creator-dashboard-identity-overlay {
+    top: -3%;
+    left: 50%;
+    width: 91%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 0;
+    padding: 5% 0 0;
+  }
+
+  .creator-dashboard-creator-identity {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    width: 100%;
+    transform: none;
+  }
+
+  .creator-dashboard-trg-emblem { top: -4%; }
+
+  .creator-dashboard-creator-image {
+    width: clamp(59px, 16.5cqw, 84px);
+    height: clamp(59px, 16.5cqw, 84px);
+    border: 2px solid rgba(53, 26, 11, 0.9);
+    border-radius: 7px;
+    background: rgba(245, 210, 143, 0.26);
+    box-shadow: 0 3px 7px rgba(37, 17, 7, 0.38);
+  }
+
+  .creator-dashboard-creator-initials { width: min(260px, 110%); }
+  .creator-dashboard-creator-name { font-size: clamp(.86rem, 2.7cqw, 1.05rem); }
+}
+
+@media (max-width: 699px) {
+  .creator-dashboard-open-rules-poster {
+    top: 5%;
+    left: 50%;
+    width: auto;
+    height: 90%;
+  }
+
+  .creator-dashboard-open-rules-light-cover {
+    top: 490px;
+    left: 50%;
+    width: 170px;
+    height: 100px;
+  }
+
+  .creator-dashboard-open-rules-light-overlay {
+    left: 50%;
+    width: 170px;
+    height: 65%;
+  }
+}
+
+.creator-dashboard-visually-hidden,
+.member-profile-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+body.creator-workspace-page .creator-dashboard-footer,
+body.member-profile-page .member-profile-footer {
+  display: block;
+  margin: 0;
+  padding: 10px 22px;
+  border: 0;
+  border-top: 5px solid #4a2c1b;
+  border-radius: 0;
+  background: linear-gradient(90deg, #0b1d14, #06120c 60%, #0b1d14);
+  color: #aa9d80;
+  text-align: right;
+}
+
+.creator-dashboard-footer p,
+.member-profile-footer p {
+  margin: 0;
+  font: 500 0.68rem/1.35 Georgia, "Times New Roman", serif;
+}
+
+.creator-dashboard-footer a,
+.member-profile-footer a {
+  color: #c6a95d;
+}

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/assets/css/creator-dashboard.css?v=creator-title-board2" />
     <script src="/assets/js/creator-dashboard.js?v=20261113-draft-save-confirmation" defer></script>
-    <script src="/assets/js/creator-dashboard-blank.js?v=creator-shared-upper-cabinet1" defer></script>
+    <script src="/assets/js/member-identity-board.js?v=member-identity-board1" defer></script>
   </head>
   <body class="view-section">
     <div class="page-shell">
@@ -58,12 +58,12 @@
           <div class="shop-wall-identity-space">
             <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
           </div>
-          <div class="creator-dashboard-identity-overlay" aria-label="Creator identity">
+          <div class="creator-dashboard-identity-overlay" aria-label="Member identity">
             <img class="creator-dashboard-trg-emblem" src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=creator-title-board1" alt="Tobacco Road Games emblem" loading="eager" decoding="async">
-            <div id="creator-identity" class="creator-dashboard-creator-identity" hidden>
-              <img class="creator-dashboard-creator-image" alt="" loading="eager" decoding="async" hidden />
-              <span class="creator-dashboard-creator-initials" hidden aria-hidden="true"></span>
-              <span class="creator-dashboard-creator-name"></span>
+            <div id="creator-identity" class="creator-dashboard-creator-identity" data-member-identity-board hidden>
+              <img class="creator-dashboard-creator-image" data-member-identity-image alt="" loading="eager" decoding="async" hidden />
+              <span class="creator-dashboard-creator-initials" data-member-identity-initials hidden aria-hidden="true"></span>
+              <span class="creator-dashboard-creator-name" data-member-identity-name></span>
             </div>
           </div>
         </section>
