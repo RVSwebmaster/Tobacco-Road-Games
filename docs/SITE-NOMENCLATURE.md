@@ -16,4 +16,4 @@ Last verified: 2026-11-19 against the Owner-accepted staging deployment `0fba318
 - **Visual foundation: ACCEPTED** on staging deployment `0fba318d-75ba-48a2-b61a-cbdb250c33c9`.
 - **Six routes: VERIFIED:** `/customer-profile/`, `/creator/`, `/founding-25-profile/`, `/premium-creator-profile/`, `/admin-profile/`, and `/owner-profile/`.
 - **Functional acceptance pending:** authenticated identity and account-class behavior, account privileges, persistent library selection, and live Creator cover rotation. Persistent library selection is not implemented; the account library API reports purchases without a saved member shelf-selection source, so shelves remain empty rather than guessing.
-- **Recovery:** branch `recovery/trg-member-profile-base-v1`; implementation commit and annotated tag `trg-member-profile-base-v1` are recorded in the final recovery closeout entry below.
+- **GitHub recovery:** implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` on branch `recovery/trg-member-profile-base-v1`; annotated tag `trg-member-profile-base-v1` points to that commit.

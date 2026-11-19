@@ -59,7 +59,7 @@ Last reconciled: 2026-11-19. This is a working-state record, not a deployment st
 - **Visual acceptance:** ACCEPTED on staging deployment `0fba318d-75ba-48a2-b61a-cbdb250c33c9`. Chrome verified all six routes, generic signed-out Profile title, shared identity runtime, and approved responsive artwork references. Route responses and cabinet/identity assets returned successfully. This records visual acceptance only.
 - **Functional acceptance pending:** authenticated member identity/class behavior, privileges, persistent library selection, and live catalog cover changes. No persistent member shelf-selection source exists; shelves remain empty rather than presenting arbitrary purchases. Do not describe these features as functionally accepted.
 - **Rollback:** successful pre-acceptance staging deployment `1ae9665a-56d4-4297-8d63-2e3e00310c7d` remains available.
-- **Recovery:** dedicated branch `recovery/trg-member-profile-base-v1`; implementation commit and annotated tag `trg-member-profile-base-v1` are recorded in the final recovery closeout entry below.
+- **GitHub recovery:** implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` on `recovery/trg-member-profile-base-v1`; annotated tag `trg-member-profile-base-v1` points to that commit.
 
 ## Purchased delivery continuity repair — implemented locally 2026-11-18
 
