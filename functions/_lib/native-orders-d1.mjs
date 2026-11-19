@@ -141,10 +141,15 @@ function prepareItemInsert(database, publicId, item) {
       pricing_model_snapshot,selected_price_cents,minimum_price_cents_snapshot,
       suggested_price_cents_snapshot,publication_state_snapshot,
       product_status_snapshot,delivery_r2_key_snapshot,
-      delivery_filename_snapshot,delivery_content_type_snapshot
+      delivery_filename_snapshot,delivery_content_type_snapshot,
+      creator_first_published_at_snapshot,creator_fee_basis_points_snapshot,
+      creator_fixed_fee_cents_snapshot,creator_reserve_days_snapshot,
+      creator_fee_policy_reason_snapshot,creator_fee_policy_id_snapshot,
+      creator_fee_policy_effective_at_snapshot,creator_commission_category_snapshot,
+      creator_commission_policy_version_snapshot
     ) VALUES(
       (SELECT id FROM orders WHERE public_id=?),?,?,?,?,?,?,?,?,?,?,?,?,
-      'native_d1',?,?,?,?,?,?,?,?,?,?,?,?
+      'native_d1',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
     )
   `).bind(
     publicId,
@@ -171,7 +176,16 @@ function prepareItemInsert(database, publicId, item) {
     item.productStatus,
     item.deliveryR2Key,
     item.deliveryFilename,
-    item.deliveryContentType
+    item.deliveryContentType,
+    item.creatorFirstPublishedAt,
+    item.creatorFeeBasisPoints,
+    item.creatorFixedFeeCents,
+    item.creatorReserveDays,
+    item.creatorFeePolicyReason,
+    item.creatorFeePolicyId,
+    item.creatorFeePolicyEffectiveAt,
+    item.creatorCommissionCategory,
+    item.creatorCommissionPolicyVersion
   );
 }
 
@@ -222,6 +236,15 @@ function normalizeItems(items, createdAt) {
       authorSlugsJson: requiredText(item?.authorSlugsJson, "authorSlugsJson"),
       catalogRevision: positiveInteger(item?.catalogRevision, "catalogRevision"),
       createdAt: String(item?.createdAt || createdAt),
+      creatorFeeBasisPoints: boundedInteger(item?.creatorFeeBasisPoints, "creatorFeeBasisPoints", 0, 10000),
+      creatorFeePolicyId: optionalPositiveInteger(item?.creatorFeePolicyId, "creatorFeePolicyId"),
+      creatorFeePolicyReason: requiredText(item?.creatorFeePolicyReason, "creatorFeePolicyReason"),
+      creatorFeePolicyEffectiveAt: validTimestamp(item?.creatorFeePolicyEffectiveAt, "creatorFeePolicyEffectiveAt"),
+      creatorCommissionCategory: oneOf(item?.creatorCommissionCategory, ["standard", "founding25", "premier", "owner", "admin"], "creatorCommissionCategory"),
+      creatorCommissionPolicyVersion: requiredText(item?.creatorCommissionPolicyVersion, "creatorCommissionPolicyVersion"),
+      creatorFirstPublishedAt: optionalTimestamp(item?.creatorFirstPublishedAt, "creatorFirstPublishedAt"),
+      creatorFixedFeeCents: nonnegativeInteger(item?.creatorFixedFeeCents, "creatorFixedFeeCents"),
+      creatorReserveDays: boundedInteger(item?.creatorReserveDays, "creatorReserveDays", 0, 365),
       currency: requiredText(item?.currency, "currency").toUpperCase(),
       deliveryContentType: requiredText(item?.deliveryContentType, "deliveryContentType"),
       deliveryFilename: requiredText(item?.deliveryFilename, "deliveryFilename"),
@@ -271,6 +294,30 @@ function optionalNonnegativeInteger(value, name) {
 function positiveInteger(value, name) {
   if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive integer.`);
   return value;
+}
+
+function optionalPositiveInteger(value, name) {
+  if (value === null || value === undefined) return null;
+  return positiveInteger(value, name);
+}
+
+function boundedInteger(value, name, minimum, maximum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`${name} must be an integer from ${minimum} through ${maximum}.`);
+  }
+  return value;
+}
+
+function validTimestamp(value, name) {
+  const text = requiredText(value, name);
+  const parsed = Date.parse(text);
+  if (!Number.isFinite(parsed)) throw new Error(`${name} must be a valid timestamp.`);
+  return new Date(parsed).toISOString();
+}
+
+function optionalTimestamp(value, name) {
+  if (value === null || value === undefined || value === "") return null;
+  return validTimestamp(value, name);
 }
 
 function oneOf(value, allowed, name) {

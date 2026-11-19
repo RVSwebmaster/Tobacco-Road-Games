@@ -354,7 +354,7 @@ async function main() {
       dashboard.indexOf("if (!summary.intakeAccess) return;"),
   );
   assert.match(
-    fs.readFileSync(path.join(ROOT, "creator/index.html"), "utf8"),
+    fs.readFileSync(path.join(ROOT, "creator-dashboard/index.html"), "utf8"),
     /id="creator-listings" hidden/,
   );
   const advertisingSource = fs.readFileSync(

@@ -1,3 +1,5 @@
+import { financialCsvRows } from "./financial-csv.mjs";
+
 export function resolveReportPeriod({
   period = "month",
   value = "",
@@ -305,7 +307,7 @@ export function creatorBusinessReportCsv(creator, report) {
     ["Ledger net movement cents", report.totals.ledgerNetCents],
     ["Reconciled", "yes"],
   );
-  return lines.map((row) => row.map(csv).join(",")).join("\r\n") + "\r\n";
+  return financialCsvRows(lines);
 }
 function sum(rows, key) {
   return rows.reduce((total, row) => total + Number(row[key] || 0), 0);
@@ -313,8 +315,4 @@ function sum(rows, key) {
 async function rows(statement) {
   const result = await statement.all();
   return result.results || [];
-}
-function csv(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

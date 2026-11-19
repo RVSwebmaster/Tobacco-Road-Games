@@ -422,12 +422,14 @@ async function testCartCheckoutRedirect() {
 function testStoreGenerationCartMode() {
   const tempRoot = createTempRepo([
     "assets/js/cart.js",
+    "index.html",
     "data/authors.js",
     "data/bundle-rules.json",
     "data/bb1-creator-ad-preview.json",
     "data/homepage-ad-preview.json",
     "data/homepage-news-preview.json",
     "data/products.json",
+    "creator-dashboard/index.html",
     "scripts/build-runtime-catalog.mjs",
     "scripts/build-store.js",
     "shared/pricing.js",

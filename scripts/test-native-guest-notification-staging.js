@@ -109,6 +109,10 @@ async function setup() {
     publicId: `TRG-2PB-${suffix.slice(0, 12).toUpperCase()}`, subtotalCents: 725, totalCents: 725
   }, [{
     authorSlugsJson: '["rv-sawyer"]', catalogRevision: product.revision, currency: "USD",
+    creatorFeeBasisPoints: 2000, creatorFeePolicyEffectiveAt: new Date().toISOString(),
+    creatorFeePolicyReason: "standard", creatorCommissionCategory: "standard",
+    creatorCommissionPolicyVersion: "legacy-marketplace-policy", creatorFirstPublishedAt: product.publishedAt,
+    creatorFixedFeeCents: 0, creatorReserveDays: 14, creatorFeePolicyId: null,
     deliveryContentType: "application/pdf", deliveryFilename: "Task 2P-B Purchased.pdf", deliveryR2Key: state.deliveryKey,
     effectiveUnitPriceCents: 725, lastUpdatedSnapshot: product.updatedAt, lineTotalCents: 725, listPriceCents: 725,
     minimumPriceCents: null, nativeCreatorId: product.creatorId, nativeProductId: product.id, pricingModel: "fixed",

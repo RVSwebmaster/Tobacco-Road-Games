@@ -53,18 +53,10 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
     }
   ];
 
-  let capturedForm = null;
-  let capturedHeaders = null;
+  let stripeCalled = false;
   const stripeFetchImpl = async (url, options = {}) => {
-    assert.match(String(url), /\/checkout\/sessions$/, "Checkout should call Stripe's Checkout Session creation endpoint.");
-    capturedForm = new URLSearchParams(String(options.body || ""));
-    capturedHeaders = options.headers || {};
-    return createJsonResponse({
-      id: "cs_test_created",
-      livemode: false,
-      ui_mode: "hosted_page",
-      url: "https://checkout.stripe.com/c/pay/cs_test_created"
-    });
+    stripeCalled = true;
+    throw new Error("Retired legacy paid checkout must never call Stripe.");
   };
 
   const response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
@@ -88,289 +80,70 @@ async function testCheckoutEndpoint(cartCheckout, cookieHelpers) {
     stripeFetchImpl
   });
 
-  assert.equal(response.status, 201, "Valid checkout requests should create a Checkout Session.");
+  assert.equal(response.status, 410, "A legacy catalog fixture cannot initiate a new paid purchase.");
   const payload = await response.json();
-  assert.equal(payload.checkoutUrl, "https://checkout.stripe.com/c/pay/cs_test_created", "Checkout should return only the Stripe-hosted redirect URL.");
-  assert.equal(payload.subtotalCents, 400, "Checkout should use server-authoritative sale pricing.");
-  assert.equal(payload.totalCents, 400, "Checkout should preserve tax-inclusive totals.");
-  assert.equal(payload.taxInclusive, true, "Checkout should preserve the tax-inclusive pricing flag.");
-  assert.equal(payload.paymentStatus, "pending", "Checkout should create a pending order before payment completion.");
-  assert.equal(payload.pricingNote, TAX_NOTE, "Checkout should preserve the exact pricing note.");
-  assert.ok(!("stripeCheckoutSessionId" in payload), "Checkout responses must not expose the Stripe Session ID.");
+  assert.equal(payload.code, "legacy_paid_checkout_retired");
+  assert.equal(stripeCalled, false);
+  assert.equal(await countRows(d1, "orders"), 0, "Retired paid checkout must not create a pending legacy order.");
+  assert.equal(await countRows(d1, "order_items"), 0, "Retired paid checkout must not create legacy order items.");
 
-  const setCookie = response.headers.get("set-cookie") || "";
-  assert.match(setCookie, /trg_checkout_access=/, "Checkout should issue a checkout-access cookie.");
-  assert.match(setCookie, /HttpOnly/i, "Checkout-access cookie should be HttpOnly.");
-  assert.match(setCookie, /Secure/i, "Checkout-access cookie should be Secure.");
-  assert.match(setCookie, /SameSite=Lax/i, "Checkout-access cookie should be SameSite=Lax.");
-  assert.match(setCookie, /Path=\/store\/checkout\//i, "Checkout-access cookie should be scoped to checkout return pages.");
-  assert.match(setCookie, new RegExp(`Max-Age=${cookieHelpers.CHECKOUT_ACCESS_COOKIE_MAX_AGE_SECONDS}`), "Checkout-access cookie should use the shared max-age constant.");
-
-  const checkoutCookie = decodeCheckoutCookie(setCookie);
-  assert.equal(checkoutCookie.publicOrderReference, payload.publicOrderReference, "Checkout-access cookies should carry the public order reference.");
-  assert.equal(checkoutCookie.stripeCheckoutSessionId, "cs_test_created", "Checkout-access cookies should carry the Stripe Checkout Session ID.");
-  assert.ok(typeof checkoutCookie.createdAt === "string" && checkoutCookie.createdAt.length > 0, "Checkout-access cookies should carry a creation timestamp.");
-  assert.ok(!("customerEmail" in checkoutCookie), "Checkout-access cookies must not expose customer email.");
-  assert.ok(!("id" in checkoutCookie), "Checkout-access cookies must not expose the internal order ID.");
-
-  assert.equal(capturedForm.get("mode"), "payment", "Stripe checkout should use payment mode.");
-  assert.equal(capturedForm.get("client_reference_id"), payload.publicOrderReference, "Stripe checkout should reconcile with the public order reference.");
-  assert.equal(capturedForm.get("customer_email"), "buyer@example.com", "Stripe checkout should use the canonical confirmed buyer email for stable idempotent parameters.");
-  assert.equal(capturedHeaders["idempotency-key"], "trg-checkout-trgca_00000000-0000-4000-8000-000000000001", "Stripe checkout should use the stable attempt as its idempotency key.");
-  assert.equal(capturedHeaders["stripe-version"], "2026-06-24.dahlia", "Stripe checkout should pin the documented stable Dahlia API version.");
-  assert.equal(capturedForm.get("ui_mode"), "hosted_page", "Dahlia Checkout should explicitly use the renamed hosted-page UI mode.");
-  assert.equal(capturedForm.get("metadata[trg_order_public_id]"), payload.publicOrderReference, "Stripe Session metadata should include the public TRG order reference.");
-  assert.equal(capturedForm.get("metadata[trg_checkout_attempt_id]"), payload.checkoutAttemptId, "Stripe Session metadata should include the checkout attempt identifier.");
-  assert.equal(capturedForm.get("line_items[0][price_data][currency]"), "usd", "Stripe line items should send server-authoritative currency.");
-  assert.equal(capturedForm.get("line_items[0][price_data][unit_amount]"), "400", "Stripe line items should send server-authoritative effective prices.");
-  assert.equal(capturedForm.get("line_items[0][price_data][tax_behavior]"), "inclusive", "Stripe line items should preserve tax-inclusive pricing.");
-  assert.equal(capturedForm.get("line_items[0][price_data][product_data][name]"), "Agency", "Stripe line items should use the trusted product title.");
-  assert.equal(capturedForm.get("line_items[0][price_data][product_data][description]"), "By RV Sawyer", "Stripe line items should use safe author display text.");
-  assert.match(capturedForm.get("success_url") || "", /\/store\/checkout\/complete\?session_id=\{CHECKOUT_SESSION_ID\}/, "Stripe checkout should use the documented success URL placeholder.");
-  assert.match(capturedForm.get("cancel_url") || "", /\/store\/checkout\/canceled$/, "Stripe checkout should return to the TRG cancellation page.");
-
-  const order = await findSingleRow(d1, "SELECT * FROM orders");
-  assert.equal(capturedForm.get("metadata[trg_order_id]"), String(order.id), "Stripe Session metadata should include the server-controlled internal TRG order ID.");
-  assert.equal(order.payment_status, "pending", "Checkout must not mark orders paid in this phase.");
-  assert.equal(order.stripe_checkout_session_id, "cs_test_created", "Checkout should attach the Stripe Checkout Session ID after creation.");
-
-  const item = await findSingleRow(d1, "SELECT * FROM order_items");
-  assert.equal(item.effective_unit_price_cents, 400, "Checkout should snapshot the sale price in D1.");
-  assert.equal(item.list_price_cents, 500, "Checkout should snapshot the regular list price in D1.");
+  const inFlightDb = createD1Database().d1;
+  const { resolvePendingOrderItems } = await importModule("functions/_lib/orders-pending.mjs");
+  const { createCheckoutRequestHash } = await importModule("functions/_lib/checkout-attempt.mjs");
+  const orders = await importModule("functions/_lib/orders-d1.mjs");
+  const resolution = resolvePendingOrderItems([{ quantity: 1, slug: "agency" }], new Map([["agency", catalogProducts[0]]]), {
+    now: Date.parse("2026-07-09T12:00:00.000Z")
+  });
+  const attempt = "trgca_00000000-0000-4000-8000-000000000099";
+  const hash = await createCheckoutRequestHash({ currency: "USD", customerEmailNormalized: "buyer@example.com",
+    items: resolution.itemSnapshots, subtotalCents: resolution.subtotalCents, totalCents: resolution.totalCents }, "email-secret");
+  const createdAt = "2026-07-09T12:00:00.000Z";
+  const oldOrder = await orders.createPendingOrder(inFlightDb, { checkoutAttemptId: attempt,
+    checkoutRequestHash: hash, checkoutSessionStatus: "active", checkoutUpdatedAt: createdAt,
+    createdAt, currency: "USD", customerEmail: "buyer@example.com", customerEmailHash: "historical-hash",
+    customerEmailNormalized: "buyer@example.com", emailStatus: "pending", fulfillmentStatus: "pending",
+    paymentStatus: "pending", subtotalCents: resolution.subtotalCents, totalCents: resolution.totalCents,
+    stripeCheckoutSessionId: "cs_test_historical_legacy", stripeCheckoutSessionUrl: "https://checkout.stripe.test/existing" }, resolution.itemSnapshots);
+  let resumedStripeCalls = 0;
+  const resumed = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
+    method: "POST", body: JSON.stringify({ checkoutAttemptId: attempt, email: "buyer@example.com",
+      emailConfirmation: "buyer@example.com", items: [{ quantity: 1, slug: "agency" }] })
+  }), { CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret", ORDER_EMAIL_HASH_SECRET: "email-secret", TRG_ORDERS: inFlightDb }, {
+    catalogProducts, now: Date.parse("2026-07-09T12:05:00.000Z"),
+    stripeFetchImpl: async () => { resumedStripeCalls += 1; throw new Error("An existing Session must be resumed, not recreated."); }
+  });
+  assert.equal(resumed.status, 200, "A previously initiated legacy Session remains resumable.");
+  assert.equal((await resumed.json()).checkoutUrl, "https://checkout.stripe.test/existing");
+  assert.equal(resumedStripeCalls, 0);
+  assert.equal(await countRows(inFlightDb, "orders"), 1, "Session recovery does not create another order.");
+  assert.equal(oldOrder.checkout_session_status, "active");
 }
 
 async function testCheckoutValidation(cartCheckout) {
-  const validCatalog = [
-    {
-      authorDisplay: "RV Sawyer",
-      authorSlugs: ["rv-sawyer"],
-      buyMode: "cart",
-      currency: "USD",
-      lastUpdated: "2026-07-01",
-      priceCents: 500,
-      saleEnabled: false,
-      salePriceCents: null,
-      slug: "agency",
-      status: "available-direct",
-      title: "Agency",
-      version: "2026.1"
-    }
-  ];
-
-  let response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000002",
-      email: "buyer@example.com",
-      emailConfirmation: "different@example.com",
-      items: [{ quantity: 1, slug: "agency" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    STRIPE_SECRET_KEY: "sk_test_mocked",
-    TRG_ORDERS: createD1Database().d1
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => {
-      throw new Error("stripe should not be called");
-    }
-  });
+  const validCatalog = [{ authorDisplay: "RV Sawyer", authorSlugs: ["rv-sawyer"], buyMode: "cart", currency: "USD",
+    lastUpdated: "2026-07-01", priceCents: 500, saleEnabled: false, salePriceCents: null, slug: "agency",
+    status: "available-direct", title: "Agency", version: "2026.1" }];
+  const env = () => ({ CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret", ORDER_EMAIL_HASH_SECRET: "email-secret",
+    STRIPE_SECRET_KEY: "sk_test_mocked", TRG_ORDERS: createD1Database().d1 });
+  const request = (attempt, emailConfirmation, slug = "agency") => new Request("https://example.com/api/cart/checkout", {
+    method: "POST", body: JSON.stringify({ checkoutAttemptId: `trgca_00000000-0000-4000-8000-${attempt}`,
+      email: "buyer@example.com", emailConfirmation, items: [{ quantity: 1, slug }] }) });
+  let response = await cartCheckout.handleCartCheckoutRequest(request("000000000002", "different@example.com"), env(), { catalogProducts: validCatalog,
+    now: Date.parse("2026-07-09T12:00:00.000Z"), stripeFetchImpl: async () => { throw new Error("Stripe should not be called."); } });
   assert.equal(response.status, 400, "Checkout should reject mismatched email confirmation.");
-
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000003",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "unknown" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    STRIPE_SECRET_KEY: "sk_test_mocked",
-    TRG_ORDERS: createD1Database().d1
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => {
-      throw new Error("stripe should not be called");
-    }
-  });
-  assert.equal(response.status, 400, "Checkout should reject unknown products.");
-
-  const stagingRestrictionDb = createD1Database().d1;
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000004",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "janni" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    STAGING_CHECKOUT_PRODUCT_SLUG: "agency",
-    STRIPE_SECRET_KEY: "sk_test_mocked",
-    TRG_ORDERS: stagingRestrictionDb
-  }, {
-    catalogProducts: [
-      ...validCatalog,
-      { ...validCatalog[0], slug: "janni", title: "Janni" }
-    ],
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => {
-      throw new Error("stripe should not be called");
-    }
-  });
+  response = await cartCheckout.handleCartCheckoutRequest(request("000000000003", "buyer@example.com", "unknown"), env(), {
+    catalogProducts: validCatalog, now: Date.parse("2026-07-09T12:00:00.000Z"),
+    stripeFetchImpl: async () => { throw new Error("Stripe should not be called."); } });
+  assert.equal(response.status, 400, "Checkout should reject unknown products before deciding the payment route.");
+  const stagingDb = createD1Database().d1;
+  response = await cartCheckout.handleCartCheckoutRequest(request("000000000004", "buyer@example.com", "janni"), {
+    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret", ORDER_EMAIL_HASH_SECRET: "email-secret", STAGING_CHECKOUT_PRODUCT_SLUG: "agency",
+    STRIPE_SECRET_KEY: "sk_test_mocked", TRG_ORDERS: stagingDb }, {
+      catalogProducts: [...validCatalog, { ...validCatalog[0], slug: "janni", title: "Janni" }], now: Date.parse("2026-07-09T12:00:00.000Z"),
+      stripeFetchImpl: async () => { throw new Error("Stripe should not be called."); } });
   assert.equal(response.status, 400, "Staging checkout should reject products outside the Agency-only gate.");
-  assert.equal(await countRows(stagingRestrictionDb, "orders"), 0, "Rejected staging products must not create pending orders.");
-
-  const failureDb = createD1Database().d1;
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000005",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "agency" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    STRIPE_SECRET_KEY: "sk_live_not_allowed",
-    TRG_ORDERS: createD1Database().d1
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => createJsonResponse({
-      id: "cs_test_created",
-      livemode: false,
-      ui_mode: "hosted_page",
-      url: "https://checkout.stripe.com/c/pay/cs_test_created"
-    })
-  });
-  assert.equal(response.status, 502, "Checkout should reject live Stripe keys outside an explicit production pipeline.");
-
-  const liveDb = createD1Database().d1;
-  let liveStripeCalled = false;
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000015",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "agency" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    PAYMENT_PIPELINE_STAGE: "production",
-    STRIPE_SECRET_KEY: "sk_live_mocked",
-    TRG_ORDERS: liveDb
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => {
-      liveStripeCalled = true;
-      return createJsonResponse({
-        id: "cs_live_created",
-        livemode: true,
-        ui_mode: "hosted_page",
-        url: "https://checkout.stripe.com/c/pay/cs_live_created"
-      });
-    }
-  });
-  assert.equal(response.status, 201, "Explicit production checkout should accept a live key and live Session.");
-  assert.equal(liveStripeCalled, true, "Explicit production checkout should call Stripe.");
-
-  const mismatchedLiveDb = createD1Database().d1;
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000016",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "agency" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    PAYMENT_PIPELINE_STAGE: "production",
-    STRIPE_SECRET_KEY: "sk_live_mocked",
-    TRG_ORDERS: mismatchedLiveDb
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => createJsonResponse({
-      id: "cs_test_wrong_mode",
-      livemode: false,
-      ui_mode: "hosted_page",
-      url: "https://checkout.stripe.com/c/pay/cs_test_wrong_mode"
-    })
-  });
-  assert.equal(response.status, 503, "Production checkout must reject a test-mode Session response.");
-
-  const retiredUiModeDb = createD1Database().d1;
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000006",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "agency" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    STRIPE_SECRET_KEY: "sk_test_mocked",
-    TRG_ORDERS: retiredUiModeDb
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => createJsonResponse({
-      id: "cs_test_retired_ui_mode",
-      livemode: false,
-      ui_mode: "hosted",
-      url: "https://checkout.stripe.com/c/pay/cs_test_retired_ui_mode"
-    })
-  });
-  assert.equal(response.status, 503, "Checkout should reject a Session response using Dahlia's retired hosted UI mode.");
-  const retiredUiModeOrder = await findSingleRow(retiredUiModeDb, "SELECT * FROM orders");
-  assert.equal(retiredUiModeOrder.checkout_session_status, "retryable", "An incompatible Stripe response should preserve the attempt for safe recovery.");
-  assert.equal(retiredUiModeOrder.stripe_checkout_session_id, null, "An incompatible Session response must not be attached to D1.");
-
-  response = await cartCheckout.handleCartCheckoutRequest(new Request("https://example.com/api/cart/checkout", {
-    body: JSON.stringify({
-      checkoutAttemptId: "trgca_00000000-0000-4000-8000-000000000007",
-      email: "buyer@example.com",
-      emailConfirmation: "buyer@example.com",
-      items: [{ quantity: 1, slug: "agency" }]
-    }),
-    method: "POST"
-  }), {
-    CHECKOUT_ACCESS_COOKIE_SECRET: "cookie-secret",
-    ORDER_EMAIL_HASH_SECRET: "email-secret",
-    STRIPE_SECRET_KEY: "sk_test_mocked",
-    TRG_ORDERS: failureDb
-  }, {
-    catalogProducts: validCatalog,
-    now: Date.parse("2026-07-09T12:00:00.000Z"),
-    stripeFetchImpl: async () => {
-      throw new Error("synthetic stripe failure");
-    }
-  });
-  assert.equal(response.status, 503, "Indeterminate Stripe connection failures should be explicitly retryable.");
-  assert.equal(await countRows(failureDb, "orders"), 1, "Checkout should create the pending order before attempting Stripe session creation.");
-  const failedOrder = await findSingleRow(failureDb, "SELECT * FROM orders");
-  assert.equal(failedOrder.stripe_checkout_session_id, null, "Failed Stripe session creation should not attach a session ID.");
-  assert.equal(failedOrder.checkout_session_status, "retryable", "Indeterminate Stripe failures should preserve a retryable checkout attempt.");
-  assert.equal(failedOrder.payment_status, "pending", "Indeterminate Stripe failures must remain pending for recovery.");
+  assert.equal(await countRows(stagingDb, "orders"), 0);
 }
-
 async function testNativePwywCheckout(cartCheckout) {
   const now = Date.parse("2026-07-09T12:00:00.000Z");
   const product = {
@@ -418,12 +191,10 @@ async function testNativePwywCheckout(cartCheckout) {
     }
   });
   const paidPayload = await paidResponse.json();
-  assert.equal(paidResponse.status, 201, "A positive native PWYW amount should create the ordinary Stripe checkout.");
-  assert.equal(paidPayload.totalCents, 875, "Checkout responses must use the customer's chosen PWYW amount.");
-  assert.equal(paidStripeAmount, "875", "Stripe must receive the exact server-validated PWYW amount in integer cents.");
-  const paidItem = await findSingleRow(paidDatabase, "SELECT * FROM order_items");
-  assert.equal(paidItem.effective_unit_price_cents, 875, "D1 order lines must snapshot the actual PWYW amount.");
-  assert.equal(paidItem.list_price_cents, 1295, "D1 order lines should retain the suggested amount as the list-price reference.");
+  assert.equal(paidResponse.status, 410, "A paid legacy PWYW fixture cannot initiate checkout through the retired route.");
+  assert.equal(paidPayload.code, "legacy_paid_checkout_retired");
+  assert.equal(paidStripeAmount, null, "Retired legacy checkout must not send a customer-selected amount to Stripe.");
+  assert.equal(await countRows(paidDatabase, "orders"), 0);
 
   const freeDatabase = createD1Database().d1;
   let freeStripeCalls = 0;

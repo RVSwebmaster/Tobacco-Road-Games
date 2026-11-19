@@ -10,6 +10,8 @@ import {
 } from "./native-orders-d1.mjs";
 import { getRuntimePricingPolicy } from "./runtime-catalog.mjs";
 import { readStoreState, storeClosedResponse } from "./store-state.mjs";
+import { getEffectiveFeePolicy } from "./creator-finance.mjs";
+import { resolveSalePolicy } from "./marketplace-policy.mjs";
 import {
   assertNotFraudBlocked,
   assertVerifiedPurchaseIdentity,
@@ -121,11 +123,27 @@ export async function handleNativeOrderPreparationRequest(request, env = {}, opt
     }
   }
 
-  const snapshots = nativeItems.map(item => ({
+  const feePolicy = await getEffectiveFeePolicy(database, env, now);
+  const snapshots = await Promise.all(nativeItems.map(async item => {
+    const salePolicy = await resolveSalePolicy(database, {
+      creatorId: item.nativeCreatorId,
+      firstPublishedAt: item.firstPublishedAt,
+      nowMs: now
+    });
+    return ({
     authorSlugsJson: JSON.stringify(catalogMap.get(item.productSlug)?.authorSlugs || []),
     catalogRevision: item.catalogRevision,
     createdAt: new Date(now).toISOString(),
+    creatorFeeBasisPoints: salePolicy.basisPoints,
+    creatorFeePolicyId: null,
+    creatorFeePolicyReason: salePolicy.reason,
+    creatorFeePolicyEffectiveAt: salePolicy.effectiveAt,
+    creatorFirstPublishedAt: item.firstPublishedAt,
+    creatorFixedFeeCents: 0,
+    creatorReserveDays: feePolicy.reserveDays,
     currency: item.currency,
+    creatorCommissionCategory: salePolicy.category,
+    creatorCommissionPolicyVersion: salePolicy.policyVersion,
     deliveryContentType: item.deliveryContentType,
     deliveryFilename: item.deliveryFilename,
     deliveryR2Key: item.deliveryR2Key,
@@ -145,6 +163,7 @@ export async function handleNativeOrderPreparationRequest(request, env = {}, opt
     quantity: item.quantity,
     suggestedPriceCents: item.suggestedPriceCents,
     versionSnapshot: item.versionSnapshot
+    });
   }));
   const checkoutRequestHash = await createNativeOrderRequestHash({
     currency: resolution.currency,

@@ -1,6 +1,6 @@
 # Tobacco Road Games Marketplace Policy Canon
 
-Status: Canonical business policy, updated through verified-purchase, refund, fraud, and Creator-requested payout alignment
+Status: Canonical business policy, updated through verified-purchase, refund, fraud, Creator-requested payout, commission/processing-fee, and Creator capacity approval (2026-11-18)
 
 Implementation baseline: `8eeb799 Remove public AI philosophy statement`
 Audience: internal product, policy, and engineering work
@@ -24,13 +24,15 @@ No AI-use disclosure is required in seller registration, the Creator Agreement, 
 
 There are no listing fees. TRG earns revenue when creators earn revenue.
 
-| Account | Active catalog capacity | Included active public product ads | PWYW capacity | Dashboard sponsorships |
-|---|---:|---:|---:|---|
-| Standard / Free Creator | 20 | 1 | 1 | One outside-vendor banner placement |
-| Preferred Creator | 22 | 5 | 2 | None |
-| RV Sawyer | Unlimited catalog capacity | Fair access under the same promotional rules | Subject to published promotional fairness | Owner status grants no scarce promotional priority |
+| Account | Active catalog capacity | Public shelf allocation | Included active public product ads | PWYW capacity | Dashboard sponsorships |
+|---|---:|---:|---:|---:|---|
+| Standard / Free Creator | 12 | 6 | 1 | 1 | One outside-vendor banner placement |
+| Founding-25 | 24 | 12 | Same rules as applicable Creator account | Unchanged | Same rules as applicable Creator account |
+| Premier Creator (active paid Preferred term) | 24 | 12 | 5 | 2 | None |
+| Admin | Unlimited | Unlimited | Existing promotional policy | Existing PWYW policy | Existing promotional policy |
+| Owner | Unlimited | 14 | Existing promotional policy | Existing PWYW policy | Owner status grants no scarce promotional priority |
 
-Draft, paused, and inactive listings do not consume active catalog capacity. Catalog capacity is distinct from scarce promotional shelf space.
+Draft, paused, and inactive listings do not consume active catalog capacity. Catalog capacity is distinct from shelf allocation: only active, published, listed products consume shelf slots. Existing approved downgrade procedures remain unchanged. A privilege change does not delete products, transaction records, or customer entitlements; an overage remains visible and blocks additions or new shelf placement until capacity is available.
 
 Preferred Creator is a paid service tier, not a merit or performance status. It has no sales requirement or arbitrary cutoff. It is sold as one annual term through either:
 
@@ -41,26 +43,38 @@ The monthly choice is payment cadence for the annual commitment, not a seasonal 
 
 A missed monthly installment has a settled grace period of seven calendar days. The commitment remains in force and Preferred benefits remain provisionally active during grace while Stripe retry/remediation or an explicit full Creator Balance cure may occur. After day seven, continued nonpayment suspends Preferred benefits and future activity uses Standard benefits and commission rules; the installment obligation and 12-month commitment remain outstanding, and prior sale snapshots and historical records remain unchanged.
 
-Preferred benefits are a 90/10 creator/TRG split while active, 22 active listings, five active public product ads, no outside-vendor creator-dashboard ad, and additional promotional consideration where applicable. Marketplace-wide holiday and special promotions remain available to all creators.
+Preferred benefits include Premier's 24 active listings and 12 shelf slots, five active public product ads, no outside-vendor creator-dashboard ad, and additional promotional consideration where applicable. For sales under `owner-approved-commission-v1` (effective 2026-11-18), an active paid Preferred term is classified as Premier for commission and receives a 95/5 Creator/TRG split. Preferred is historical service terminology; this mapping does not grant a paid term, Premier benefits, or any other entitlement to a Creator who does not already qualify. Earlier sales retain their sale-time terms. Marketplace-wide holiday and special promotions remain available to all creators.
 
 One seller registration includes one primary Creator account/profile free. Additional Creator accounts are available for genuinely separate public identities or brands at $10 per month or $100 per year prepaid per additional account. Each is a separate marketplace identity with its own profile and ordinary account-level entitlements. Preferred fees apply in addition when an additional account is Preferred. Additional identities are an account-management option and anti-gaming control, not a promoted growth product; aliases must not multiply free catalog, ad, PWYW, promotional, or other account-level benefits.
 
 Every primary or additional, Free or Preferred Creator account must maintain a valid Stripe-hosted payment method. It may support marketplace purchases, Ad Credits, Preferred billing, additional-account fees, and future creator-side paid services. TRG stores only safe provider references and basic display metadata such as card brand and last four where appropriate, never raw payment credentials.
 
-## 3. Marketplace revenue splits
+## 3. Historical marketplace revenue splits
+
+The splits below remain the terms for transactions established under the prior policy. They are historical terms and are not recalculated by the 2026-11-18 policy version.
 
 Each genuinely new durable product identity receives one 30-day launch period:
 
 - creator: 90%;
 - TRG: 10%.
 
-After that one-time period, the standard split is creator 80% / TRG 20%. While Preferred status is active, future sales use creator 90% / TRG 10%.
+Before `owner-approved-commission-v1` took effect, the post-launch standard split was Creator 80% / TRG 20%, and active Preferred sales used Creator 90% / TRG 10%. Those are historical transaction terms only. Future eligible sales use the current policy in §3A; prior order snapshots and ledger entries are unchanged.
 
 The launch clock belongs to the durable product identity. It never restarts after delisting, relisting, renaming, slug or cover changes, file updates, dashboard changes, inactivity, or reactivation. Only a genuinely new product identity receives a new launch period.
 
 Every sale must snapshot the applicable split and its reason at sale time. Later status or policy changes never rewrite historical sales.
 
 TRG may run marketplace-wide events that voluntarily reduce TRG’s share, including a 90/10 event. Such events must not reduce creator revenue. TRG must not apply sitewide price discounts to creator products without creator opt-in. Event selection and sale-time snapshots must be durable and auditable.
+
+## 3A. Owner-approved commission and processing-fee policy — effective 2026-11-18
+
+For transactions using policy version `owner-approved-commission-v1`, Creator shares are: Standard Creator 90%; Owner-assigned Founding-25 95%; Premier Creator 95%. An active paid Preferred service term resolves to the Premier commission classification for future transactions; the terminology change does not grant or extend the service term or its nonfinancial benefits. Owner-owned product revenue is 100% house revenue. Admin-owned product revenue is 100% TRG revenue, with no Creator compensation. “Founding-25” is an explicit, audited Owner assignment, separate from Preferred/Premier service status; the historical Founding Creator badge does not confer this financial category. At most 25 distinct assignments may remain active or reserved at once. Assignment/revocation affects future transactions only; revocation does not automatically assign a released place to another Creator.
+
+The split is calculated from each item's product amount in integer minor units using the immutable order-item category and policy-version snapshots. A superseded fixed per-line charge is zero under this version. Existing transaction snapshots and historical ledger entries retain their original terms.
+
+Actual Stripe processing fees are retrieved from the Charge's Balance Transaction. The fee classified as transaction processing is allocated proportionally over product item amounts and separately represented non-product amounts, in integer minor units with stable remainder ordering. Creator-attributed processing fees reduce only the Creator share; processing fees allocated to TRG-owned products are absorbed by TRG. Taxes and other non-product amounts are excluded from Creator gross and Creator earnings. If a charged non-product amount cannot be separated using the durable tax snapshot, the fee reconciliation is held for Owner review and Creator earnings remain nonpayable until resolved. Application fees, taxes, dispute penalties, unrelated Stripe account fees, and other expenses are not reclassified as Creator processing costs.
+
+If Stripe has not yet supplied the Balance Transaction, paid delivery remains confirmed and the Creator earning stays held from payout until reconciliation. Repeated webhook delivery and Owner recovery use idempotent fee-allocation records. Refund accounting preserves the actual historical processing fee because Stripe may not return it; resulting negative/unrecovered amounts are recorded and flagged for review, without assuming a new expense-allocation policy.
 
 ## 4. Public promotional rotation
 

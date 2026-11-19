@@ -187,7 +187,7 @@ async function main() {
   assert.ok(script); new Function(script);
   assert.match(reviewHtml, /Approve & Publish/);
   assert.match(reviewHtml, /x-csrf-token/);
-  const creatorHtml = fs.readFileSync(path.join(ROOT, "creator", "index.html"), "utf8");
+  const creatorHtml = fs.readFileSync(path.join(ROOT, "creator-dashboard", "index.html"), "utf8");
   const creatorScript = fs.readFileSync(path.join(ROOT, "assets", "js", "creator-dashboard.js"), "utf8");
   assert.match(creatorHtml, /id="creator-edit-form"/);
   assert.match(creatorHtml, /Save changes privately, then publish them when ready/);

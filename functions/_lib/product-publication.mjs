@@ -354,11 +354,14 @@ export async function updatePublishedProduct(
       expectedRevision,
       nowMs: options.nowMs
     });
+    // Delivery keys are immutable purchase snapshots. Keep replaced PDFs even
+    // when no order-item row references them yet: a checkout may have resolved
+    // the previous catalog revision before this D1 update and write its snapshot
+    // immediately afterwards. No publication cleanup path may delete a PDF.
     const replacedKeys = [
       cover && current.coverR2Key,
       hasPdf && current.backCoverR2Key,
-      !hasPdf && backCover && current.backCoverR2Key,
-      pdf && current.deliveryR2Key
+      !hasPdf && backCover && current.backCoverR2Key
     ].filter(key => key && ![coverKey, backCoverKey, deliveryKey].includes(key) && key.startsWith("catalog-publications/"));
     if (replacedKeys.length) {
       try { await bucket.delete([...new Set(replacedKeys)]); }

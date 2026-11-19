@@ -7,9 +7,25 @@ const { pathToFileURL } = require("node:url");
 const ROOT = path.resolve(__dirname, "..");
 const MIGRATION = [
   "007_shared_accounts.sql",
-  "008_token_claim_markers.sql"
-].map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n");
+  "008_token_claim_markers.sql",
+  "078_auth_rate_limit_cleanup_index.sql"
+].map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n") + `
+CREATE TABLE customer_registration_states (
+  user_id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('pending','active')),
+  activated_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE user_account_profiles (
+  user_id TEXT PRIMARY KEY,display_name TEXT NOT NULL DEFAULT '',billing_first_name TEXT NOT NULL DEFAULT '',
+  billing_last_name TEXT NOT NULL DEFAULT '',billing_address_line1 TEXT NOT NULL DEFAULT '',billing_city TEXT NOT NULL DEFAULT '',
+  billing_state_region TEXT NOT NULL DEFAULT '',billing_postal_code TEXT NOT NULL DEFAULT '',billing_country TEXT NOT NULL DEFAULT '',
+  payment_method_status TEXT NOT NULL DEFAULT 'missing',customer_activated_at TEXT
+);
+CREATE TABLE customer_registration_consents (
+  user_id TEXT PRIMARY KEY,terms_accepted_at TEXT,privacy_acknowledged_at TEXT
+);`;
 const ORIGIN = "https://tobaccoroadgames.com";
+const RATE_LIMIT_BASE = Date.parse("2026-07-31T12:00:00.000Z");
 const TEST_OPTIONS = Object.freeze({
   disableRateLimit: true,
   now: Date.now(),
@@ -30,6 +46,7 @@ async function main() {
   await testGoogleLoginValidationAndLinking(auth);
   await testCsrfRejection(auth);
   await testTokenStorageAndRateLimits(auth);
+  await testAtomicRateLimitConcurrencyAndExpiry(auth);
   assertAccountPageAndRoutes();
   assertNoAuthBoundaryChanges();
   console.log("Shared account auth tests passed.");
@@ -729,6 +746,200 @@ async function testTokenStorageAndRateLimits(auth) {
     passwordConfirmation: "ValidPassphrase!23"
   }), limitedEnv, { ...TEST_OPTIONS, disableRateLimit: false });
   assert.equal(response.status, 429, "Repeated registration attempts should be throttled.");
+}
+
+async function testAtomicRateLimitConcurrencyAndExpiry(auth) {
+  const concurrentEnv = createEnv();
+  const failedAttempts = await Promise.all(Array.from({ length: 40 }, () =>
+    auth.loginAccount(jsonRequest("/api/auth/login", {
+      email: "parallel-login@example.com",
+      password: "WrongPassphrase!23"
+    }, { "cf-connecting-ip": "192.0.2.44" }), concurrentEnv, {
+      now: RATE_LIMIT_BASE,
+      passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+    })
+  ));
+  assert.equal(failedAttempts.filter((response) => response.status === 401).length, 10,
+    "Exactly the established ten login attempts may pass the fixed-window throttle.");
+  assert.equal(failedAttempts.filter((response) => response.status === 429).length, 30,
+    "Concurrent attempts beyond the existing threshold must be rejected.");
+  const concurrentRow = await concurrentEnv.TRG_ORDERS.prepare(
+    "SELECT attempt_count FROM auth_rate_limits WHERE key_hash=?"
+  ).bind(await auth.hashToken("login|192.0.2.44|parallel-login@example.com")).first();
+  assert.equal(Number(concurrentRow.attempt_count), 40,
+    "The atomic counter must record every attempt, including blocked attempts.");
+
+  const resumeEnv = createEnv();
+  const credentials = {
+    email: "resume-after-throttle@example.com",
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  };
+  const registered = await auth.registerAccount(jsonRequest("/api/auth/register", credentials, {
+    "cf-connecting-ip": "192.0.2.45"
+  }), resumeEnv, {
+    now: RATE_LIMIT_BASE,
+    disableRateLimit: true,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(registered.status, 201);
+  for (let index = 0; index < 10; index += 1) {
+    const response = await auth.loginAccount(jsonRequest("/api/auth/login", {
+      email: credentials.email,
+      password: "WrongPassphrase!23"
+    }, { "cf-connecting-ip": "192.0.2.46" }), resumeEnv, {
+      now: RATE_LIMIT_BASE + index,
+      passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+    });
+    assert.equal(response.status, 401);
+  }
+  const blocked = await auth.loginAccount(jsonRequest("/api/auth/login", credentials, {
+    "cf-connecting-ip": "192.0.2.46"
+  }), resumeEnv, {
+    now: RATE_LIMIT_BASE + 11,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(blocked.status, 429);
+  const resumed = await auth.loginAccount(jsonRequest("/api/auth/login", credentials, {
+    "cf-connecting-ip": "192.0.2.46"
+  }), resumeEnv, {
+    now: RATE_LIMIT_BASE + 60 * 60 * 1000 + 1,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(resumed.status, 200,
+    "A valid account login must work after the unchanged one-hour restriction expires.");
+  const resumedRow = await resumeEnv.TRG_ORDERS.prepare(
+    "SELECT attempt_count,window_started_at FROM auth_rate_limits WHERE key_hash=?"
+  ).bind(await auth.hashToken("login|192.0.2.46|resume-after-throttle@example.com")).first();
+  assert.equal(Number(resumedRow.attempt_count), 1,
+    "The expired key must start a fresh fixed window after successful resume.");
+  assert.equal(resumedRow.window_started_at, new Date(RATE_LIMIT_BASE + 60 * 60 * 1000 + 1).toISOString());
+
+  const identityEnv = createEnv();
+  const identityCredentials = {
+    email: "distributed-attempts@example.com",
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  };
+  const identityRegistration = await auth.registerAccount(jsonRequest("/api/auth/register", identityCredentials), identityEnv, {
+    now: RATE_LIMIT_BASE,
+    disableRateLimit: true,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(identityRegistration.status, 201);
+  for (let index = 0; index < 100; index += 1) {
+    const response = await auth.loginAccount(jsonRequest("/api/auth/login", {
+      email: identityCredentials.email,
+      password: "WrongPassphrase!23"
+    }, { "cf-connecting-ip": `198.51.100.${index + 1}` }), identityEnv, {
+      now: RATE_LIMIT_BASE,
+      passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+    });
+    assert.equal(response.status, 401, "The broad identity allowance should permit ordinary failed-login recovery attempts.");
+  }
+  const identityBlocked = await auth.loginAccount(jsonRequest("/api/auth/login", {
+    email: identityCredentials.email,
+    password: "WrongPassphrase!23"
+  }, { "cf-connecting-ip": "198.51.100.101" }), identityEnv, {
+    now: RATE_LIMIT_BASE,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(identityBlocked.status, 429,
+    "Changing source IP must not bypass the independently enforced failed-login identity limit.");
+  const identityKey = await auth.hashToken(`login|identity|${identityCredentials.email}`);
+  assert.equal(Number((await identityEnv.TRG_ORDERS.prepare(
+    "SELECT attempt_count FROM auth_rate_limits WHERE key_hash=?"
+  ).bind(identityKey).first()).attempt_count), 101);
+  const validAfterFailures = await auth.loginAccount(jsonRequest("/api/auth/login", identityCredentials, {
+    "cf-connecting-ip": "198.51.100.102"
+  }), identityEnv, { now: RATE_LIMIT_BASE, passwordHashOptions: TEST_OPTIONS.passwordHashOptions });
+  assert.equal(validAfterFailures.status, 200,
+    "A saturated failed-login bucket must not lock out a user who supplies the correct password.");
+
+  const networkEnv = createEnv();
+  const sharedNetworkResults = await Promise.all(Array.from({ length: 601 }, (_, index) =>
+    auth.loginAccount(jsonRequest("/api/auth/login", {
+      email: `shared-network-${index}@example.com`,
+      password: "WrongPassphrase!23"
+    }, { "cf-connecting-ip": "203.0.113.88" }), networkEnv, {
+      now: RATE_LIMIT_BASE,
+      passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+    })
+  ));
+  assert.equal(sharedNetworkResults.filter((response) => response.status === 401).length, 600,
+    "The 600-attempt network allowance should accommodate a high-volume shared network.");
+  assert.equal(sharedNetworkResults.filter((response) => response.status === 429).length, 1,
+    "Changing account identities must not bypass the independent source-network limit.");
+  const networkKey = await auth.hashToken("login|network|203.0.113.88");
+  assert.equal(Number((await networkEnv.TRG_ORDERS.prepare(
+    "SELECT attempt_count FROM auth_rate_limits WHERE key_hash=?"
+  ).bind(networkKey).first()).attempt_count), 601);
+  const sharedNetworkAccount = {
+    email: "shared-network-valid@example.com",
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  };
+  const sharedNetworkRegistration = await auth.registerAccount(jsonRequest("/api/auth/register", sharedNetworkAccount, {
+    "cf-connecting-ip": "203.0.113.88"
+  }), networkEnv, {
+    now: RATE_LIMIT_BASE,
+    disableRateLimit: true,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(sharedNetworkRegistration.status, 201);
+  const validOnSaturatedNetwork = await auth.loginAccount(jsonRequest("/api/auth/login", sharedNetworkAccount, {
+    "cf-connecting-ip": "203.0.113.88"
+  }), networkEnv, { now: RATE_LIMIT_BASE, passwordHashOptions: TEST_OPTIONS.passwordHashOptions });
+  assert.equal(validOnSaturatedNetwork.status, 200,
+    "A shared-network failure bucket must not block a legitimate user with the correct password.");
+
+  const googleEnv = createEnv();
+  const googleOptions = {
+    now: RATE_LIMIT_BASE,
+    google: {
+      clientId: "google-client-id",
+      jwtVerify: async () => ({ payload: { email: "google-throttle@example.com", email_verified: true, sub: "google-throttle-subject" } })
+    }
+  };
+  const googleAttempt = (index) => auth.loginWithGoogle(jsonRequest("/api/auth/google", {
+    credential: "valid-google-credential",
+    csrfToken: "google-csrf"
+  }, {
+    cookie: "trg_account_csrf=google-csrf",
+    "x-csrf-token": "google-csrf",
+    "cf-connecting-ip": `192.0.2.${index + 1}`
+  }), googleEnv, googleOptions);
+  const googleResults = [];
+  for (let index = 0; index < 101; index += 1) googleResults.push(await googleAttempt(index));
+  assert.equal(googleResults.filter((response) => response.status === 200).length, 100,
+    "Google identity throttling must use the verified provider subject across source IPs.");
+  assert.equal(googleResults.filter((response) => response.status === 429).length, 1);
+  const googleIdentityKey = await auth.hashToken("google|identity|google-throttle-subject");
+  assert.equal(Number((await googleEnv.TRG_ORDERS.prepare(
+    "SELECT attempt_count FROM auth_rate_limits WHERE key_hash=?"
+  ).bind(googleIdentityKey).first()).attempt_count), 101);
+
+  const cleanupEnv = createEnv();
+  const staleAt = new Date(RATE_LIMIT_BASE - 2 * 60 * 60 * 1000).toISOString();
+  const seed = cleanupEnv.TRG_ORDERS.prepare(
+    "INSERT INTO auth_rate_limits(key_hash,action,attempt_count,window_started_at) VALUES(?,?,1,?)"
+  );
+  for (let index = 0; index < 250; index += 1) {
+    await seed.bind(`stale-key-${index}`, "login", staleAt).run();
+  }
+  const afterCleanup = await auth.loginAccount(jsonRequest("/api/auth/login", {
+    email: "cleanup-check@example.com", password: "WrongPassphrase!23"
+  }, { "cf-connecting-ip": "192.0.2.47" }), cleanupEnv, {
+    now: RATE_LIMIT_BASE,
+    passwordHashOptions: TEST_OPTIONS.passwordHashOptions
+  });
+  assert.equal(afterCleanup.status, 401);
+  assert.equal(await countRows(cleanupEnv.TRG_ORDERS, "auth_rate_limits"), 153,
+    "One request may remove at most 100 expired keys while adding combined, identity, and network counters.");
+  const cleanupIndex = cleanupEnv.TRG_ORDERS.prepare(
+    "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_auth_rate_limits_window_started'"
+  );
+  assert.ok(await cleanupIndex.first(), "Expired-row cleanup must have its supporting index.");
 }
 
 function createEnv(options = {}) {

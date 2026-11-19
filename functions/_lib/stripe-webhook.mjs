@@ -5,23 +5,25 @@ import {
   getWebhookEventById,
   markWebhookEventFailure
 } from "./orders-d1.mjs";
-import { repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
+import { repairNativePaidOrderFulfillment, repairPaidOrderFulfillment } from "./order-fulfillment.mjs";
 import { OrderDeliveryError, deliverPaidOrderEmail } from "./order-delivery.mjs";
 import { STRIPE_API_VERSION } from "./stripe-api.mjs";
-import { creatorSaleStatements, getEffectiveFeePolicy, resolveFeePolicy } from "./creator-finance.mjs";
+import { creatorSaleStatements, getEffectiveFeePolicy, repairNativePaidOrderAccounting, resolveFeePolicy } from "./creator-finance.mjs";
 import {recordQualifyingActivity} from './product-inactivity.mjs';
 import {fulfillCreditPurchase} from './creator-advertising.mjs';
 import { settleStripeIdentityCoverage } from "./creator-identity-billing.mjs";
 import { settleAnnualPreferredStripe } from "./preferred-billing.mjs";
 import { processStripeCreatorFinanceEvent, STRIPE_CREATOR_FINANCE_EVENTS } from "./creator-provider-finance.mjs";
-import { grantNativePaidOrderEntitlements, markNativeEntitlementFailure } from "./native-entitlements-d1.mjs";
+import { createPendingOrderFeeStatement, processStripeOrderFeeEvent, STRIPE_ORDER_FEE_EVENTS } from "./stripe-order-fees.mjs";
+import { markNativeEntitlementFailure } from "./native-entitlements-d1.mjs";
 
 export const STRIPE_WEBHOOK_EVENT_TYPES = Object.freeze([
   "checkout.session.completed",
   "checkout.session.expired",
   "checkout.session.async_payment_succeeded",
   "checkout.session.async_payment_failed",
-  ...STRIPE_CREATOR_FINANCE_EVENTS
+  ...STRIPE_CREATOR_FINANCE_EVENTS,
+  ...STRIPE_ORDER_FEE_EVENTS
 ]);
 
 const SIGNATURE_TOLERANCE_SECONDS = 300;
@@ -83,7 +85,9 @@ export async function handleStripeWebhookRequest(request, env = {}, options = {}
       deliveryEnv: env,
       deliveryFetchImpl: options.deliveryFetchImpl,
       deliveryProducts: options.deliveryProducts,
-      feePolicy: await getEffectiveFeePolicy(env.TRG_ORDERS,env,options.nowMs)
+      feePolicy: await getEffectiveFeePolicy(env.TRG_ORDERS, env, options.nowMs),
+      stripeSecretKey: env.STRIPE_SECRET_KEY,
+      stripeFetchImpl: options.stripeFetchImpl
     });
     return jsonResponse({
       duplicate: result.duplicate,
@@ -164,12 +168,21 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   });
 
   if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)&&["processed","ignored"].includes(eventRecord.event.processing_status))return{duplicate:true,event:eventRecord.event,processingResult:eventRecord.event.processing_result||"duplicate_noop"};
+  if (STRIPE_ORDER_FEE_EVENTS.includes(eventType) && ["processed", "ignored"].includes(eventRecord.event.processing_status)) {
+    const feeResult = await processStripeOrderFeeEvent(database, stripeEvent, {
+      env: { STRIPE_SECRET_KEY: options.stripeSecretKey, PAYMENT_PIPELINE_STAGE: options.pipelineStage },
+      fetchImpl: options.stripeFetchImpl,
+      createdAt: receivedAt
+    });
+    return { duplicate: true, event: eventRecord.event, processingResult: feeResult?.action || "fee_event_noop", feeReconciliation: feeResult };
+  }
 
   if (["processed", "ignored"].includes(eventRecord.event.processing_status)) {
+    const nativeAccounting = await repairProcessedNativeCreatorAccounting(database, eventRecord.event, options);
     const nativeEntitlements = await repairProcessedNativeEntitlements(
       database,
       eventRecord.event,
-      { nowMs: options.nowMs }
+      { productsBucket: options.productsBucket, nowMs: options.nowMs }
     );
     const fulfillment = await repairProcessedPaidOrder(
       database,
@@ -189,6 +202,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
       delivery,
       event: eventRecord.event,
       fulfillment,
+      nativeAccounting,
       nativeEntitlements,
       processingResult: eventRecord.event.processing_result || "duplicate_noop"
     };
@@ -201,10 +215,11 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   if (!claimed.claimed) {
     if(STRIPE_CREATOR_FINANCE_EVENTS.includes(eventType)&&["processed","ignored"].includes(claimed.event?.processing_status))return{duplicate:true,event:claimed.event,processingResult:claimed.event.processing_result||"duplicate_noop"};
     if (["processed", "ignored"].includes(claimed.event?.processing_status)) {
+      const nativeAccounting = await repairProcessedNativeCreatorAccounting(database, claimed.event, options);
       const nativeEntitlements = await repairProcessedNativeEntitlements(
         database,
         claimed.event,
-        { nowMs: options.nowMs }
+        { productsBucket: options.productsBucket, nowMs: options.nowMs }
       );
       const fulfillment = await repairProcessedPaidOrder(
         database,
@@ -224,6 +239,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
         delivery,
         event: claimed.event,
         fulfillment,
+        nativeAccounting,
         nativeEntitlements,
         processingResult: claimed.event.processing_result || "duplicate_noop"
       };
@@ -491,6 +507,25 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
     catch{return fail("provider_financial_accounting_failed",400,null);}
   }
 
+  if (STRIPE_ORDER_FEE_EVENTS.includes(eventType)) {
+    try {
+      const feeResult = await processStripeOrderFeeEvent(database, stripeEvent, {
+        env: { STRIPE_SECRET_KEY: options.stripeSecretKey, PAYMENT_PIPELINE_STAGE: options.pipelineStage },
+        fetchImpl: options.stripeFetchImpl,
+        createdAt: stripeEventTimestamp(stripeEvent, receivedAt)
+      });
+      const result = await finalizeWebhookEvent(database, eventRecord.event, processingToken, {
+        internalOrderId: feeResult?.orderId || null,
+        processingResult: feeResult?.action || "fee_event_noop",
+        processingStatus: "processed",
+        processedAt: receivedAt
+      });
+      return { ...result, feeReconciliation: feeResult };
+    } catch {
+      return fail("stripe_processing_fee_reconciliation_failed", 500, null);
+    }
+  }
+
   if (!STRIPE_WEBHOOK_EVENT_TYPES.includes(eventType)) {
     const result = await finalizeWebhookEvent(database, eventRecord.event, processingToken, {
       processingResult: "ignored_event_type",
@@ -571,7 +606,7 @@ export async function processStripeWebhookEvent(database, stripeEvent, options =
   }
 
   const nativeEntitlements = orderAction === "paid" && isNativeOrder(order)
-    ? await grantNativeEntitlementsOrThrow(database, Number(order.id), { nowMs: options.nowMs })
+    ? await repairNativeEntitlementsOrThrow(database, options.productsBucket, Number(order.id), { nowMs: options.nowMs })
     : null;
   const fulfillment = orderAction === "paid" && !isNativeOrder(order)
     ? await repairPaidOrderFulfillment(database, options.productsBucket, Number(order.id), {
@@ -645,33 +680,46 @@ async function repairProcessedPaidOrder(database, eventRecord, productsBucket, o
   });
 }
 
+async function repairProcessedNativeCreatorAccounting(database, eventRecord, options = {}) {
+  const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
+  if (!orderId || eventRecord?.processing_status !== "processed") return null;
+  const order = await getOrderById(database, orderId);
+  if (!order || order.catalog_source !== "native_d1" || order.payment_status !== "paid") return null;
+  const result = await repairNativePaidOrderAccounting(database, orderId, { nowMs: options.nowMs });
+  if (!result.ready) {
+    throw new StripeWebhookError("Native Creator accounting is incomplete and requires Owner review.", {
+      code: result.reason || "native_creator_accounting_incomplete",
+      httpStatus: 500
+    });
+  }
+  return result;
+}
+
 async function repairProcessedNativeEntitlements(database, eventRecord, options = {}) {
   const orderId = parsePositiveInteger(eventRecord?.internal_order_id);
   if (!orderId || eventRecord?.processing_status !== "processed") return null;
   const order = await getOrderById(database, orderId);
   if (!order || !isNativeOrder(order) || order.payment_status !== "paid") return null;
-  return grantNativeEntitlementsOrThrow(database, orderId, options);
+  return repairNativePaidOrderFulfillment(database, options.productsBucket, orderId, options);
 }
 
-async function grantNativeEntitlementsOrThrow(database, orderId, options = {}) {
+async function repairNativeEntitlementsOrThrow(database, productsBucket, orderId, options = {}) {
   try {
-    const result = await grantNativePaidOrderEntitlements(database, orderId, options);
-    if (!result.ready) throw new Error(`Native entitlement grant did not become ready: ${result.result}.`);
-    return {
-      entitlementCount: Number(result.entitlementCount || 0),
-      ready: true,
-      result: result.result
-    };
+    const result = await repairNativePaidOrderFulfillment(database, productsBucket, orderId, options);
+    if (!result.ready) {
+      throw new StripeWebhookError(`Native fulfillment did not become ready: ${result.result}.`, {
+        code: result.result || "native_fulfillment_not_ready",
+        httpStatus: 500
+      });
+    }
+    return result;
   } catch (error) {
-    await markNativeEntitlementFailure(
-      database,
-      orderId,
-      "native_entitlement_processing_failed",
-      options
-    ).catch(() => {});
+    if (!(error instanceof StripeWebhookError)) {
+      await markNativeEntitlementFailure(database, orderId, "native_entitlement_processing_failed", options).catch(() => {});
+    }
     throw new StripeWebhookError("Native ownership creation failed and remains retryable.", {
       cause: error,
-      code: "native_entitlement_processing_failed",
+      code: error instanceof StripeWebhookError ? error.code : "native_entitlement_processing_failed",
       httpStatus: 500
     });
   }
@@ -712,8 +760,15 @@ async function finalizeWebhookEvent(database, eventRecord, processingToken, outc
         WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
           AND native_order_state IN ('pending','failed','canceled')
       `).bind(Number(outcome.order.id)));
-    } else {
-      statements.push(...await creatorSaleStatements(database,outcome.order,outcome.feePolicy||resolveFeePolicy({},Date.parse(outcome.paidAt)),outcome.paidAt));
+    }
+    statements.push(...await creatorSaleStatements(database,outcome.order,outcome.feePolicy||resolveFeePolicy({},Date.parse(outcome.paidAt)),outcome.paidAt));
+    if (isNativeOrder(outcome.order)) {
+      const pendingFee = await createPendingOrderFeeStatement(database, {
+        ...outcome.order,
+        payment_source: "stripe",
+        stripe_payment_intent_id: outcome.paymentIntentId
+      }, outcome.paidAt);
+      if (pendingFee) statements.push(pendingFee);
     }
   } else if (outcome.orderAction === "expired") {
     statements.push(database.prepare(`

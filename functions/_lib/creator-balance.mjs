@@ -121,12 +121,14 @@ export async function settleCreatorBalancePurchase(
         nowMs,
       }),
       gross = Number(item.lineTotalCents),
-      fee = Math.min(
-        gross,
-        Math.round((gross * applied.basisPoints) / 10000) +
-          policy.fixedLineFeeCents,
-      ),
-      net = gross - fee;
+      fee = applied.houseRevenue
+        ? gross
+        : Math.min(
+            gross,
+            Math.round((gross * applied.basisPoints) / 10000) +
+              (applied.policyVersion === "owner-approved-commission-v1" ? 0 : policy.fixedLineFeeCents),
+          ),
+      net = applied.houseRevenue ? 0 : gross - fee;
     totalFee += fee;
     totalNet += net;
     item._finance = { listing, applied, gross, fee, net, index };
@@ -192,7 +194,7 @@ export async function settleCreatorBalancePurchase(
         ),
       db
         .prepare(
-          "INSERT INTO creator_sale_snapshots(order_id,order_item_id,creator_id,product_slug,product_title,unit_list_price_cents,unit_price_paid_cents,quantity,discount_cents,gross_cents,fee_basis_points,fixed_fee_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at,product_identity_id,policy_reason) SELECT o.id,oi.id,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM orders o JOIN order_items oi ON oi.order_id=o.id AND oi.product_slug=? WHERE o.public_id=?",
+          "INSERT INTO creator_sale_snapshots(order_id,order_item_id,creator_id,product_slug,product_title,unit_list_price_cents,unit_price_paid_cents,quantity,discount_cents,gross_cents,fee_basis_points,fixed_fee_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at,product_identity_id,policy_reason,account_category,account_category_verified) SELECT o.id,oi.id,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1 FROM orders o JOIN order_items oi ON oi.order_id=o.id AND oi.product_slug=? WHERE o.public_id=?",
         )
         .bind(
           f.listing.creator_id,
@@ -211,10 +213,11 @@ export async function settleCreatorBalancePurchase(
           now,
           f.listing.id,
           f.applied.reason,
+          f.applied.category || "standard",
           item.productSlug,
           orderPublicId,
         ),
-      db
+      ...(f.applied.houseRevenue ? [] : [db
         .prepare(
           "INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,order_id,order_item_id,product_slug,available_at,payout_state,reason,idempotency_key,created_at) SELECT ?,'sale_earning',?,?,o.id,oi.id,?,?,?,'Internal Creator Balance sale',?,? FROM orders o JOIN order_items oi ON oi.order_id=o.id AND oi.product_slug=? WHERE o.public_id=?",
         )
@@ -229,7 +232,7 @@ export async function settleCreatorBalancePurchase(
           now,
           item.productSlug,
           orderPublicId,
-        ),
+        )]),
       db
         .prepare(
           "INSERT INTO marketplace_internal_commission_ledger(order_id,order_item_id,entry_type,amount_cents,currency,idempotency_key,created_at) SELECT o.id,oi.id,'commission',?,?,?,? FROM orders o JOIN order_items oi ON oi.order_id=o.id AND oi.product_slug=? WHERE o.public_id=?",

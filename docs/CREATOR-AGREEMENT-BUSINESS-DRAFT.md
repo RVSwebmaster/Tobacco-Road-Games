@@ -51,7 +51,9 @@ Marketplace review is limited to objective operational concerns including legali
 
 ## 8. Marketplace fees and sale-time snapshots
 
-For the first 30 days of a durable product identity’s first-ever public lifetime, Creator receives 90% and Tobacco Road Games receives 10% of applicable product revenue. After that launch period, a Standard Creator receives 80% and Tobacco Road Games receives 20%. While Preferred Creator status is active, Creator receives 90% and Tobacco Road Games receives 10%.
+For transactions under the prior policy, the sale-time splits recorded in the historical snapshot continue to govern; the former 30-day launch, Standard, and Preferred terms are not retroactively changed. Effective November 18, 2026, the Owner-approved policy version provides 90% to Standard Creators, 95% to an explicitly Owner-assigned Founding-25 Creator, and 95% to a Creator with active Preferred/Premier status. Owner-owned products are house revenue; Admin-owned products generate no Creator compensation. The historical Founding Creator badge alone does not establish Founding-25 commission status.
+
+Stripe transaction processing fees are deducted from the Creator share for Creator-owned products. Tobacco Road Games absorbs the processing-fee allocation for its own products. No fixed per-line charge applies under the new policy version. Actual fees, allocation, delayed reconciliation, and historical transaction terms are governed by the Marketplace Policy Canon and immutable sale/order snapshots. Other Stripe fees or dispute penalties are not automatically charged to Creators.
 
 Every sale records the split and policy reason in effect at sale time. Historical sales are not recalculated when later policies, fees, or Creator status change. Editing, pausing, repricing, delisting, relisting, reactivation, or return from inactivity does not restart the original launch period. A marketplace-wide promotional split event may reduce Tobacco Road Games’ share and improve Creator’s share, but it will not reduce Creator’s share without Creator’s agreement.
 
@@ -59,7 +61,7 @@ Every sale records the split and policy reason in effect at sale time. Historica
 
 Preferred Creator is a paid service tier, not an award, merit badge, or endorsement. It costs $20 per month under a 12-month commitment or $200 prepaid for one year. A missed monthly installment has a seven-calendar-day grace period during which the commitment remains in force and benefits remain provisionally active while payment is retried or cured. Continued nonpayment after day seven suspends Preferred benefits without canceling the installment obligation or commitment. Cancellation stops renewal but does not retroactively terminate the current paid or committed term. When Preferred status ends, future eligible transactions and capacity return to Standard terms; historical transactions are not recalculated.
 
-Settled Preferred benefits include the 90/10 split, 22 active catalog slots, five active product-ad slots, no outside-vendor dashboard advertising, Creator Notices, and appropriate promotional consideration. No benefit guarantees sales or exposure.
+Settled Preferred benefits include the approved Premier 95/5 split, 24 active catalog slots, 12 shelf slots, five active product-ad slots, no outside-vendor dashboard advertising, Creator Notices, and appropriate promotional consideration. No benefit guarantees sales or exposure.
 
 ## 10. Additional Creator identities
 
@@ -67,7 +69,7 @@ One primary Creator identity is included without an identity fee. Genuinely sepa
 
 ## 11. Catalog capacity
 
-A Standard Creator may maintain 20 active products. A Preferred Creator may maintain 22 active products. Paused, inactive, and properly delisted products do not occupy active capacity where marketplace policy so provides. When capacity is vacated, Creator may immediately use that slot for another eligible product, subject to registration, compliance, and publication requirements.
+A Standard Creator may maintain 12 active products and use 6 shelf slots. A Founding-25 or Premier Creator may maintain 24 active products and use 12 shelf slots. Admin accounts have unlimited catalog and shelf capacity. The Owner has unlimited catalog capacity and 14 shelf slots. Paused, inactive, and properly delisted products do not occupy active catalog capacity. Existing approved downgrade procedures remain unchanged: capacity changes do not delete listings or customer purchase records, and an over-capacity account must return below its current limit before adding or placing more products.
 
 ## 12. Product activity, inactivity, and relisting
 

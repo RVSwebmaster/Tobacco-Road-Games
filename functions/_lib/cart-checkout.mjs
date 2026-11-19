@@ -170,6 +170,35 @@ export async function handleCartCheckoutRequest(request, env = {}, options = {})
     totalCents: resolution.totalCents
   }, emailHashSecret);
 
+  // New paid product purchases must use native D1 snapshots and accounting.
+  // A previously-created legacy Stripe session remains resumable so that an
+  // in-flight payment is not stranded, but this route cannot create another.
+  if (Number(resolution.totalCents) > 0) {
+    let priorLegacyOrder = null;
+    try { priorLegacyOrder = await database.prepare("SELECT * FROM orders WHERE checkout_attempt_id=?")
+      .bind(checkoutAttemptId).first(); } catch {}
+    if (priorLegacyOrder) {
+      if (priorLegacyOrder.catalog_source === "native_d1") {
+        return jsonResponse({ code: "checkout_attempt_conflict", error: "This checkout attempt belongs to a native catalog order.", retryable: false }, 409);
+      }
+      if (priorLegacyOrder.checkout_request_hash !== checkoutRequestHash) {
+        return jsonResponse({ code: "checkout_attempt_conflict", error: "This checkout attempt identifier was already used for different checkout details.", retryable: false }, 409);
+      }
+      if (priorLegacyOrder.payment_status === "pending"
+        && priorLegacyOrder.checkout_session_status === "active"
+        && priorLegacyOrder.stripe_checkout_session_id
+        && priorLegacyOrder.stripe_checkout_session_url) {
+        return createSuccessfulCheckoutResponse({
+          checkoutAttemptId, checkoutCookieSecret,
+          checkoutSession: { id: priorLegacyOrder.stripe_checkout_session_id, url: priorLegacyOrder.stripe_checkout_session_url },
+          order: priorLegacyOrder, pricingPolicy, resolution, reused: true, status: 200,
+        });
+      }
+      return jsonResponse({ code: "legacy_paid_checkout_retired", error: "This legacy paid checkout attempt cannot be restarted. Use the current native catalog checkout.", retryable: false }, 410);
+    }
+    return jsonResponse({ code: "legacy_paid_checkout_retired", error: "New paid purchases must use the current native catalog checkout.", retryable: false }, 410);
+  }
+
   let orderResult;
   try {
     orderResult = await createOrGetPendingOrderByCheckoutAttempt(database, {

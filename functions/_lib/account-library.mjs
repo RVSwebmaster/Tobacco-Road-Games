@@ -16,6 +16,10 @@ export async function handleAccountLibraryRequest(request, env = {}, options = {
     return json({ error: { code: "not_authenticated", message: "Sign in to view My Library." } }, 401);
   }
   const database = options.database || env.TRG_ORDERS;
+  const customerRegistration = await database.prepare("SELECT state FROM customer_registration_states WHERE user_id=?").bind(session.user.id).first();
+  if (customerRegistration?.state === "pending") {
+    return json({ error: { code: "customer_registration_incomplete", message: "Verify your email and register a payment method to activate Customer access." } }, 403);
+  }
   const secret = String(options.downloadSigningSecret || env.DOWNLOAD_SIGNING_SECRET || "");
   const canSign = isDownloadSigningSecretConfigured(secret);
   const owned = new Map();

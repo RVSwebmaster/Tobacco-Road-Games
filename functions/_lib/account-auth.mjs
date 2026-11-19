@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { scryptAsync } from "@noble/hashes/scrypt";
 import { EmailProviderError, createEmailProvider, isEmailDeliveryConfigured } from "./email-provider.mjs";
+import { activatePendingCustomer, saveCustomerRegistration, validateCustomerRegistration } from "./customer-registration.mjs";
 
 export const ACCOUNT_SESSION_COOKIE = "__Host-trg_session";
 export const ACCOUNT_CSRF_COOKIE = "trg_account_csrf";
@@ -8,12 +9,22 @@ export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_CLEANUP_BATCH_SIZE = 100;
 const RATE_LIMITS = Object.freeze({
   google: 20,
   login: 10,
   password_reset: 6,
   register: 6,
   verification: 8
+});
+// Independent buckets supplement the existing per-action + IP + submitted
+// identity bucket. Network limits are intentionally broader for shared NATs.
+const INDEPENDENT_RATE_LIMITS = Object.freeze({
+  google: { identity: 100, network: 1200 },
+  login: { identity: 100, network: 600 },
+  password_reset: { identity: 20, network: 300 },
+  register: { identity: 20, network: 300 },
+  verification: { identity: 20, network: 300 }
 });
 const INPUT_LIMITS = Object.freeze({
   csrfToken: 128,
@@ -79,7 +90,7 @@ export async function handleAccountMeRequest(request, env) {
     authenticated: true,
     csrfToken: session.csrfToken,
     googleClientId: publicGoogleClientId(env),
-    user: publicUser(session.user)
+    user: { ...publicUser(session.user), customerPrivilegesActive: await customerPrivilegesActive(env.TRG_ORDERS, session.user.id) }
   }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.rawSessionToken, session.csrfToken)
   });
@@ -93,6 +104,9 @@ export async function registerAccount(request, env, options = {}) {
   const passwordField = readBoundedField(body, "password", INPUT_LIMITS.password);
   const passwordConfirmationField = readBoundedField(body, body.passwordConfirmation !== undefined ? "passwordConfirmation" : "confirmPassword", INPUT_LIMITS.password);
   if (!emailField.ok || !passwordField.ok || !passwordConfirmationField.ok) return inputRejected();
+  if (body.customerRegistration === true && !validateCustomerRegistration(body).valid) {
+    return json({ error: { code: "invalid_customer_registration", message: "Complete the required Customer profile, billing, and agreement fields. Phone numbers are not collected." } }, 400);
+  }
   const email = normalizeEmail(emailField.value);
   const password = passwordField.value;
   const passwordConfirmation = passwordConfirmationField.value;
@@ -127,6 +141,11 @@ export async function registerAccount(request, env, options = {}) {
       VALUES (?, ?, ?, ?)
     `).bind(user.id, passwordHash, now, now)
   ]);
+  await db.prepare("INSERT INTO customer_registration_states(user_id,state,created_at,updated_at) VALUES(?,'pending',?,?)")
+    .bind(user.id, now, now).run();
+  if (body.customerRegistration === true) {
+    await saveCustomerRegistration(db, user.id, body, now);
+  }
   const loaded = await getUserById(db, user.id);
   const verification = await createEmailVerificationToken(db, user.id, options);
   await sendVerificationEmail(request, env, loaded, verification.token, options);
@@ -134,7 +153,7 @@ export async function registerAccount(request, env, options = {}) {
   return json({
     ok: true,
     message: "Account created. Check your email to verify the address.",
-    user: publicUser(loaded)
+    user: { ...publicUser(loaded), customerPrivilegesActive: false }
   }, 201, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
@@ -150,21 +169,21 @@ export async function loginAccount(request, env, options = {}) {
   const email = normalizeEmail(emailField.value);
   const password = passwordField.value;
   const db = requireDb(env);
-  if (!(await allowRateLimit(db, request, "login", email || "unknown", options))) {
+  if (!(await allowRateLimit(db, request, "login", email || "unknown", options, { deferIdentity: true, deferNetwork: true }))) {
     return json({ error: { code: "rate_limited", message: "Too many sign-in attempts. Please wait and try again." } }, 429);
   }
 
   const generic = () => json({ error: { code: "invalid_login", message: "The email or password did not work." } }, 401);
   const user = isEmail(email) ? await getUserByEmail(db, email) : null;
   if (!user || user.status !== "active") {
-    return generic();
+    return await allowLoginFailure(db, request, email || "unknown", options) ? generic() : loginRateLimited();
   }
   const credential = await db.prepare("SELECT password_hash FROM password_credentials WHERE user_id = ?").bind(user.id).first();
   if (!credential || !(await verifyPassword(password, credential.password_hash))) {
-    return generic();
+    return await allowLoginFailure(db, request, email, options) ? generic() : loginRateLimited();
   }
   const session = await createSession(db, user, options);
-  return json({ ok: true, user: publicUser(user) }, 200, {
+  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: await customerPrivilegesActive(db, user.id) } }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
 }
@@ -184,7 +203,7 @@ export async function loginWithGoogle(request, env, options = {}) {
     return json({ error: { code: "csrf_rejected", message: "This account request could not be verified." } }, 403);
   }
   const db = requireDb(env);
-  if (!(await allowRateLimit(db, request, "google", "gis", options))) {
+  if (!(await allowRateLimit(db, request, "google", "gis", options, { deferIdentity: true }))) {
     return json({ error: { code: "rate_limited", message: "Too many Google sign-in attempts. Please wait and try again." } }, 429);
   }
 
@@ -194,6 +213,9 @@ export async function loginWithGoogle(request, env, options = {}) {
   }
   if (!verified.emailVerified) {
     return json({ error: { code: "google_email_unverified", message: "Google has not verified this email address." } }, 403);
+  }
+  if (!(await allowIdentityRateLimit(db, "google", verified.subject, options))) {
+    return json({ error: { code: "rate_limited", message: "Too many Google sign-in attempts. Please wait and try again." } }, 429);
   }
 
   const now = nowIso(options);
@@ -215,6 +237,8 @@ export async function loginWithGoogle(request, env, options = {}) {
         VALUES (?, ?, 1, ?, 'active', 'user', ?, ?)
       `).bind(userId, verified.email, now, now, now).run();
       user = await getUserById(db, userId);
+      await db.prepare("INSERT INTO customer_registration_states(user_id,state,created_at,updated_at) VALUES(?,'pending',?,?)")
+        .bind(userId, now, now).run();
     } else {
       return json({ error: { code: "google_signin_unavailable", message: "Google sign-in could not be completed. Use another sign-in method or contact support." } }, 409);
     }
@@ -226,7 +250,7 @@ export async function loginWithGoogle(request, env, options = {}) {
   }
 
   const session = await createSession(db, user, options);
-  return json({ ok: true, user: publicUser(user) }, 200, {
+  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: await customerPrivilegesActive(db, user.id) } }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
 }
@@ -254,7 +278,7 @@ export async function verifyEmail(request, env, options = {}) {
   if (!tokenField.ok) return inputRejected();
   const token = tokenField.value;
   const db = requireDb(env);
-  if (!(await allowRateLimit(db, request, "verification", "verify", options))) {
+  if (!(await allowRateLimit(db, request, "verification", "verify", options, { identityValue: token }))) {
     return json({ error: { code: "rate_limited", message: "Too many verification attempts. Please wait and try again." } }, 429);
   }
   const tokenHash = await hashToken(token);
@@ -278,6 +302,8 @@ export async function verifyEmail(request, env, options = {}) {
   if (affectedRows(results[0]) !== 1 || affectedRows(results[1]) !== 1) {
     return json({ error: { code: "verification_invalid", message: "This verification link is invalid or expired." } }, 410);
   }
+  const verifiedUser = await db.prepare("SELECT user_id FROM email_verification_tokens WHERE claim_marker=?").bind(claimMarker).first();
+  if (verifiedUser?.user_id) await activatePendingCustomer(db, verifiedUser.user_id, now);
   return json({ ok: true, message: "Email verified." });
 }
 
@@ -589,24 +615,97 @@ async function sendAccountEmail(env, message, idempotencyKey, options = {}) {
   return createEmailProvider(env).send(message, { idempotencyKey });
 }
 
-async function allowRateLimit(db, request, action, identity, options = {}) {
+async function allowRateLimit(db, request, action, identity, options = {}, dimensions = {}) {
   if (options.disableRateLimit) return true;
   const limit = RATE_LIMITS[action] || 5;
-  const key = await hashToken(`${action}|${request.headers.get("cf-connecting-ip") || "unknown"}|${identity}`);
   const now = nowMs(options);
   const nowText = new Date(now).toISOString();
-  const current = await db.prepare("SELECT attempt_count, window_started_at FROM auth_rate_limits WHERE key_hash = ?").bind(key).first();
-  if (!current || Date.parse(current.window_started_at) < now - RATE_LIMIT_WINDOW_MS) {
-    await db.prepare(`
-      INSERT INTO auth_rate_limits (key_hash, action, attempt_count, window_started_at)
-      VALUES (?, ?, 1, ?)
-      ON CONFLICT(key_hash) DO UPDATE SET action = excluded.action, attempt_count = 1, window_started_at = excluded.window_started_at
-    `).bind(key, action, nowText).run();
-    return true;
+  const expiredBefore = new Date(now - RATE_LIMIT_WINDOW_MS).toISOString();
+
+  // Gradually prune stale hashed keys without allowing one request to delete
+  // an unbounded table. The window-start index keeps each bounded batch cheap.
+  await db.prepare(`
+    DELETE FROM auth_rate_limits
+    WHERE key_hash IN (
+      SELECT key_hash FROM auth_rate_limits
+      WHERE window_started_at < ?
+      ORDER BY window_started_at
+      LIMIT ?
+    )
+  `).bind(expiredBefore, RATE_LIMIT_CLEANUP_BATCH_SIZE).run();
+
+  const ip = String(request.headers.get("cf-connecting-ip") || "unknown");
+  const combinedKey = await hashToken(`${action}|${ip}|${identity}`);
+  const networkKey = await hashToken(`${action}|network|${ip}`);
+  const independentLimits = INDEPENDENT_RATE_LIMITS[action] || { identity: limit * 2, network: limit * 20 };
+  const combinedCount = await incrementRateLimit(db, combinedKey, action, nowText, expiredBefore);
+  const networkCount = dimensions.deferNetwork ? null : await incrementRateLimit(db, networkKey, action, nowText, expiredBefore);
+  let identityAllowed = true;
+  if (!dimensions.deferIdentity) {
+    const identityForBucket = dimensions.identityValue === undefined ? identityValue(identity) : dimensions.identityValue;
+    identityAllowed = await allowIdentityRateLimit(db, action, identityForBucket, options, independentLimits.identity);
   }
-  if (Number(current.attempt_count) >= limit) return false;
-  await db.prepare("UPDATE auth_rate_limits SET attempt_count = attempt_count + 1 WHERE key_hash = ?").bind(key).run();
-  return true;
+  return combinedCount <= limit && identityAllowed && (networkCount === null || networkCount <= independentLimits.network);
+}
+
+async function allowLoginFailure(db, request, identity, options = {}) {
+  if (options.disableRateLimit) return true;
+  const action = "login";
+  const limits = INDEPENDENT_RATE_LIMITS[action];
+  const now = nowMs(options);
+  const expiredBefore = new Date(now - RATE_LIMIT_WINDOW_MS).toISOString();
+  const nowText = new Date(now).toISOString();
+  const ip = String(request.headers.get("cf-connecting-ip") || "unknown");
+  const identityKey = await hashToken(`${action}|identity|${identity}`);
+  const networkKey = await hashToken(`${action}|network|${ip}`);
+  const identityCount = await incrementRateLimit(db, identityKey, action, nowText, expiredBefore);
+  const networkCount = await incrementRateLimit(db, networkKey, action, nowText, expiredBefore);
+  return identityCount <= limits.identity && networkCount <= limits.network;
+}
+
+async function allowIdentityRateLimit(db, action, identity, options = {}, limit = null) {
+  if (options.disableRateLimit) return true;
+  const maximum = Number.isInteger(limit) ? limit : (INDEPENDENT_RATE_LIMITS[action]?.identity || RATE_LIMITS[action] || 5);
+  const now = nowMs(options);
+  const key = await hashToken(`${action}|identity|${identity}`);
+  const count = await incrementRateLimit(
+    db,
+    key,
+    action,
+    new Date(now).toISOString(),
+    new Date(now - RATE_LIMIT_WINDOW_MS).toISOString(),
+  );
+  return count <= maximum;
+}
+
+async function incrementRateLimit(db, key, action, nowText, expiredBefore) {
+  // Count and window rollover happen in one SQLite write. Concurrent requests
+  // serialize through the conflict update, so each dimension has one ordered
+  // fixed-window counter even when the caller changes its other key dimension.
+  const row = await db.prepare(`
+    INSERT INTO auth_rate_limits (key_hash, action, attempt_count, window_started_at)
+    VALUES (?, ?, 1, ?)
+    ON CONFLICT(key_hash) DO UPDATE SET
+      action = excluded.action,
+      attempt_count = CASE
+        WHEN auth_rate_limits.window_started_at < ? THEN 1
+        ELSE auth_rate_limits.attempt_count + 1
+      END,
+      window_started_at = CASE
+        WHEN auth_rate_limits.window_started_at < ? THEN excluded.window_started_at
+        ELSE auth_rate_limits.window_started_at
+      END
+    RETURNING attempt_count
+  `).bind(key, action, nowText, expiredBefore, expiredBefore).first();
+  return Number(row?.attempt_count || 0);
+}
+
+function loginRateLimited() {
+  return json({ error: { code: "rate_limited", message: "Too many sign-in attempts. Please wait and try again." } }, 429);
+}
+
+function identityValue(value) {
+  return String(value || "unknown");
 }
 
 async function getUserByEmail(db, email) {
@@ -629,6 +728,11 @@ function publicUser(user) {
 
 function publicGoogleClientId(env) {
   return String(env.GOOGLE_CLIENT_ID || "").trim();
+}
+
+async function customerPrivilegesActive(db, userId) {
+  const state = await db.prepare("SELECT state FROM customer_registration_states WHERE user_id=?").bind(userId).first();
+  return !state || state.state === "active";
 }
 
 function requireDb(env) {

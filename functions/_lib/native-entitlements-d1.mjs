@@ -306,10 +306,12 @@ export async function markNativeEntitlementFailure(database, orderId, failureCod
   await database.prepare(`
     UPDATE orders
     SET native_entitlement_status='failed',native_entitlement_failure_code=?,
-        native_entitlement_updated_at=?
+        native_entitlement_updated_at=?,fulfillment_status='failed',
+        fulfillment_failure_code=?,fulfillment_updated_at=?
     WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
       AND native_order_state IN ('paid','free_acquired') AND native_entitlement_status<>'ready'
-  `).bind(String(failureCode || "native_entitlement_failed"), nowIso(options.nowMs), id).run();
+  `).bind(String(failureCode || "native_entitlement_failed"), nowIso(options.nowMs),
+    String(failureCode || "native_entitlement_failed"), nowIso(options.nowMs), id).run();
   return database.prepare("SELECT * FROM orders WHERE id=?").bind(id).first();
 }
 

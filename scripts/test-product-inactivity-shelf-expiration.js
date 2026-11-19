@@ -51,6 +51,10 @@ async function main() {
     applyMigrations(raw);
     await createCreator(raw, accountAuth, CREATOR_A);
     await createCreator(raw, accountAuth, CREATOR_B);
+    // This regression seeds more than the current Standard catalog allocation
+    // to isolate inactivity behavior. Give only this disposable fixture the
+    // established Owner catalog override; no production Creator is changed.
+    raw.prepare("UPDATE marketplace_creators SET owner_catalog_override=1 WHERE id=?").run(CREATOR_B.id);
     raw.prepare(
       `INSERT INTO creator_badge_awards(
         id,creator_id,badge_id,source,source_notes,awarded_at,awarded_by,created_at
@@ -138,11 +142,11 @@ async function main() {
       environment,
       { database: db, nowMs: NOW_MS }
     );
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 200);
     assert.equal(
       listing(raw, "trg-house-old").inactivity_exemption_kind,
       "trg_house",
-      "Creator metadata changes must not alter the Owner-controlled classification."
+      "Creator listing updates must not alter the Owner-controlled classification."
     );
 
     assert.equal(

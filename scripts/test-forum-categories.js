@@ -109,12 +109,25 @@ function d1(raw) {
 
 function assertNavigationAndRoutes() {
   const build = fs.readFileSync(path.join(ROOT, "scripts", "build-store.js"), "utf8");
-  assert.match(build, /href: "\/forum", label: "Community Forum"/, "Generated public and store navigation must include Community Forum.");
-  const account = fs.readFileSync(path.join(ROOT, "account.html"), "utf8");
-  assert.match(account, /href="\/forum">Community Forum<\/a>/, "Account navigation must include Community Forum.");
-  for (const page of ["index.html", "support.html"]) {
+  const publicNav = build.match(/const PUBLIC_NAV_ITEMS = Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(publicNav, "The generated storefront must use the canonical public navigation list.");
+  assert.ok(publicNav[1].includes('{ key: "explore", href: "/store/catalog/", label: "Explore" }'));
+  assert.ok(publicNav[1].includes('{ key: "support", href: SUPPORT_URL, label: "Support" }'));
+  assert.ok(publicNav[1].includes('{ key: "account", href: "/account.html", label: "Login/Signup" }'));
+  assert.match(publicNav[1], /key: "cart", href: "\/store\/cart\/", label: 'Cart <span/);
+  assert.equal((publicNav[1].match(/\{ key:/g) || []).length, 4, "Public navigation must contain only the four approved items.");
+  assert.match(build, /const GUEST_NAV_ITEMS = Object\.freeze\(\[\.\.\.PUBLIC_NAV_ITEMS\]\)/);
+  assert.match(build, /const HOMEPAGE_NAV_ITEMS = Object\.freeze\(\[\.\.\.PUBLIC_NAV_ITEMS\]\)/);
+  assert.doesNotMatch(publicNav[1], /forum/i, "The forum must not be added to approved public navigation.");
+  for (const page of ["index.html", "support.html", "account.html"]) {
     const source = fs.readFileSync(path.join(ROOT, page), "utf8");
-    assert.match(source, /href="\/forum">Community Forum<\/a>/, `${page} navigation must include Community Forum.`);
+    const nav = source.match(/<nav class="site-nav" aria-label="Primary"[^>]*>([\s\S]*?)<\/nav>/);
+    assert.ok(nav, `${page} must have a primary public navigation region.`);
+    assert.deepEqual(
+      [...nav[1].matchAll(/href="([^"]+)"/g)].map((match) => match[1]),
+      ["/store/catalog/", "/support.html", "/account.html", "/store/cart/"],
+      `${page} must preserve the approved four-item public navigation.`
+    );
   }
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/forum/member/*") && routes.include.includes("/api/forum/*"));

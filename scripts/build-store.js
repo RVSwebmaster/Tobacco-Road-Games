@@ -1254,7 +1254,7 @@ function renderCreatorIdentityPage(guestLandingPage) {
       pageHeading: '<h1 class="creator-dashboard-visually-hidden">Creator Dashboard</h1>',
       libraryBay: renderGuestLibraryBay({ role: "creator" }),
       identityBay: renderHomepageIdentityBay({ creatorIdentity: true }),
-      openRulesBay: renderRoleOpenRulesBay("creator"),
+      openRulesBay: renderRoleOpenRulesBay("creator", { rotateCatalogCovers: true }),
       includeLowerContent: false,
       creatorTitleBoard: true
     }))
@@ -1270,6 +1270,7 @@ function renderCreatorIdentityPage(guestLandingPage) {
       '  <script src="/assets/js/creator-open-rules.js?v=creator-identity-library1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
       '  <script src="/assets/js/creator-dashboard-blank.js?v=creator-shared-upper-cabinet1" defer></script>',
+      '  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>',
       "</body>"
     ].join("\n"));
   if (!creatorPage.includes('data-creator-identity-page') || !creatorPage.includes('creator-dashboard-footer')) {
@@ -1371,8 +1372,11 @@ function renderGuestOpenRulesBay() {
   return renderRoleOpenRulesBay("guest");
 }
 
-function renderRoleOpenRulesBay(role) {
+function renderRoleOpenRulesBay(role, { rotateCatalogCovers = false } = {}) {
   const creator = role === "creator";
+  const posterMarkup = !creator ? "" : rotateCatalogCovers
+    ? '<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false"><img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster creator-profile-catalog-cover" src="/assets/the-familiar-framed-poster.png" data-creator-profile-catalog-cover data-catalog-api="/api/catalog" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>'
+    : '<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="Framed The Familiar poster on the Open Rules Library back wall" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>';
   const renderShelf = (startPosition, shelfOrder) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row"${creator ? ' aria-hidden="true"' : ` data-library-start-position="${startPosition}"`}>
                 ${creator ? "" : `<div class="bookshelf-grid shop-wall-books guest-open-rules-books" data-magical-bookshelf data-magical-shelf-order="${shelfOrder}" data-magical-direction="right-to-left" style="--shelf-items:18"></div>`}
               </div>`;
@@ -1382,7 +1386,7 @@ function renderRoleOpenRulesBay(role) {
           <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
               ${creator ? '<span class="creator-dashboard-open-rules-light-cover" aria-hidden="true"></span>' : ""}
-              ${creator ? '<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="Framed The Familiar poster on the Open Rules Library back wall" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>' : ""}
+              ${posterMarkup}
               ${renderShelf(1, 3)}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">

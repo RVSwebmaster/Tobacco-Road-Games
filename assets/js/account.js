@@ -28,6 +28,12 @@
   const libraryList = document.querySelector("#library-list");
   const recoveryForm = document.querySelector("#purchase-recovery-form");
   const recoveryStatus = document.querySelector("#purchase-recovery-status");
+  const customerPaymentPanel = document.querySelector("#customer-payment-method-panel");
+  const customerPaymentList = document.querySelector("#customer-payment-method-list");
+  const customerPaymentForm = document.querySelector("#customer-payment-method-form");
+  const customerPaymentStatus = document.querySelector("#customer-payment-method-status");
+  const customerPaymentGuidance = document.querySelector("#customer-payment-method-guidance");
+  const customerPaymentElementHost = document.querySelector("#customer-payment-element");
   const accountProfilePanel = document.querySelector("#account-profile-panel"),
     accountProfileForm = document.querySelector("#account-profile-form"),
     accountProfileStatus = document.querySelector("#account-profile-status"),
@@ -71,6 +77,11 @@
   let googleInitializeAttempts = 0;
   let currentAccountEmailVerified = false;
   let pendingClaimCredential = "";
+  let stripeInstance = null;
+  let stripeElements = null;
+  let paymentElement = null;
+  let activeSetupAttemptId = "";
+  let savedPaymentMethods = [];
   const maxGoogleInitializeAttempts = 20;
 
   const setStatus = (message, error = false) => {
@@ -114,16 +125,18 @@
       if (forumPanel) forumPanel.hidden = true;
       if (libraryPanel) libraryPanel.hidden = true;
       if (accountProfilePanel) accountProfilePanel.hidden = true;
+      if (customerPaymentPanel) customerPaymentPanel.hidden = true;
       if (creatorRegistrationPanel) creatorRegistrationPanel.hidden = true;
       setStatus(
         pendingClaimCredential
           ? "Sign in or create an account with the same email used for the purchase. Verify the email before claiming."
           : "Choose Google, sign in, or create a Tobacco Road Games account.",
       );
-      return;
+      return false;
     }
     summary.innerHTML = "";
     currentAccountEmailVerified = Boolean(payload.user.emailVerified);
+    const customerPrivilegesActive = payload.user.customerPrivilegesActive !== false;
     const email = document.createElement("p");
     email.textContent = `Signed in as ${payload.user.email}`;
     const verified = document.createElement("p");
@@ -131,8 +144,14 @@
       ? "Email verified."
       : "Email not verified yet.";
     summary.append(email, verified);
+    if (!customerPrivilegesActive) {
+      const pending = document.createElement("p");
+      pending.textContent = "Customer access activates after email verification and successful card registration.";
+      summary.append(pending);
+    }
     signout.hidden = false;
     resend.hidden = payload.user.emailVerified;
+    if (accountProfilePanel) accountProfilePanel.hidden = false;
     if (forumPanel) {
       forumPanel.hidden = false;
       refreshForumProfile(payload.user.emailVerified).catch((error) => {
@@ -140,18 +159,53 @@
         forumProfileStatus.classList.add("discussion-status--error");
       });
     }
-    refreshLibrary().catch((error) => {
-      if (libraryStatus) libraryStatus.textContent = error.message;
-    });
-    refreshRegistrationPanels().catch((error) => {
-      if (accountProfileStatus)
-        accountProfileStatus.textContent = error.message;
-    });
+    if (libraryPanel) libraryPanel.hidden = !customerPrivilegesActive;
+    if (customerPrivilegesActive) {
+      refreshLibrary().catch((error) => {
+        if (libraryStatus) libraryStatus.textContent = error.message;
+      });
+      refreshRegistrationPanels().catch((error) => {
+        if (accountProfileStatus) accountProfileStatus.textContent = error.message;
+      });
+    } else if (creatorRegistrationPanel) {
+      creatorRegistrationPanel.hidden = true;
+    }
+    if (!customerPrivilegesActive) {
+      refreshCustomerProfile().catch((error) => {
+        if (accountProfileStatus) accountProfileStatus.textContent = error.message;
+      });
+    }
+    if (customerPaymentPanel) {
+      customerPaymentPanel.hidden = false;
+      refreshCustomerPaymentMethods().catch((error) => {
+        if (customerPaymentStatus) customerPaymentStatus.textContent = error.message;
+      });
+    }
     if (pendingClaimCredential) {
       presentPendingClaim(payload.user.emailVerified);
     } else {
       setStatus("Account loaded.");
     }
+    return customerPrivilegesActive;
+  }
+
+  async function refreshCustomerProfile() {
+    const response = await fetch("/api/account/profile", { credentials: "same-origin" });
+    const profile = await response.json().catch(() => ({}));
+    if (!response.ok) throw Error(profile.error?.message || "Account profile unavailable.");
+    for (const key of ["legalName", "birthday", "displayName", "avatarUrl"])
+      if (accountProfileForm.elements[key]) accountProfileForm.elements[key].value = profile.user[key] || "";
+    for (const [key, value] of Object.entries(profile.user.billing || {}))
+      if (accountProfileForm.elements[key]) accountProfileForm.elements[key].value = value || "";
+    accountProfileForm.elements.acceptTerms.checked = Boolean(profile.user.agreements?.termsVersion);
+    accountProfileForm.elements.acknowledgePrivacy.checked = Boolean(profile.user.agreements?.privacyVersion);
+    accountProfileForm.elements.acceptTerms.required = profile.user.customerPrivilegesActive === false || !profile.user.agreements?.termsVersion;
+    accountProfileForm.elements.acknowledgePrivacy.required = profile.user.customerPrivilegesActive === false || !profile.user.agreements?.privacyVersion;
+    accountProfileForm.elements.accountNotices.checked = Boolean(profile.user.notificationPreferences?.accountNotices);
+    customerPaymentGuidance.textContent = profile.user.customerPrivilegesActive === false
+      ? `${profile.user.emailVerified ? "Email verified" : "Verify your email"} and a successful saved-card setup are both required to activate Customer access.`
+      : "Your Customer profile and personal library are active. You can add, select, or remove saved cards below.";
+    return profile.user;
   }
 
   async function refreshLibrary() {
@@ -512,9 +566,13 @@
       const form = event.currentTarget;
       const data = Object.fromEntries(new FormData(form));
       try {
-        await api("/api/auth/login", data);
+        const login = await api("/api/auth/login", data);
         form.reset();
         await refreshAccount();
+        if (login.user?.customerPrivilegesActive !== false) {
+          window.location.assign("/customer");
+          return;
+        }
         setStatus("Signed in.");
       } catch (error) {
         setStatus(error.message, true);
@@ -527,11 +585,14 @@
       event.preventDefault();
       const form = event.currentTarget;
       const data = Object.fromEntries(new FormData(form));
+      data.customerRegistration = true;
+      data.acceptTerms = form.elements.acceptTerms.checked;
+      data.acknowledgePrivacy = form.elements.acknowledgePrivacy.checked;
       try {
         await api("/api/auth/register", data);
         form.reset();
         await refreshAccount();
-        setStatus("Account created. Check your email to verify the address.");
+        setStatus("Account created. Verify your email, save a card, and Customer access will activate automatically.");
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -608,10 +669,28 @@
         const payload = await api("/api/auth/verify-email", { token: verify });
         url.searchParams.delete("verify");
         history.replaceState(null, "", url.toString());
-        await refreshAccount();
+        const active = await refreshAccount();
+        if (active) {
+          window.location.assign("/customer");
+          return;
+        }
         setStatus(payload.message || "Email verified.");
       } catch (error) {
         setStatus(error.message, true);
+      }
+    }
+    if (url.searchParams.has("payment_setup_return")) {
+      const setupIntentId = url.searchParams.get("setup_intent") || "";
+      const attemptId = sessionStorage.getItem("trg.customerPaymentAttempt") || "";
+      for (const key of ["payment_setup_return", "setup_intent", "setup_intent_client_secret", "redirect_status"])
+        url.searchParams.delete(key);
+      history.replaceState(null, "", url.toString());
+      if (setupIntentId && attemptId) {
+        try {
+          await finishCustomerPaymentSetup(attemptId, setupIntentId);
+        } catch (error) {
+          customerPaymentStatus.textContent = error.message;
+        }
       }
     }
     if (reset) {
@@ -641,10 +720,14 @@
 
   window.handleTrgGoogleCredential = async (credentialResponse) => {
     try {
-      await api("/api/auth/google", {
+      const account = await api("/api/auth/google", {
         credential: credentialResponse.credential,
       });
       await refreshAccount();
+      if (account.user?.customerPrivilegesActive !== false) {
+        window.location.assign("/customer");
+        return;
+      }
       setStatus("Signed in with Google.");
     } catch (error) {
       setStatus(error.message, true);
@@ -711,15 +794,15 @@
         throw Error(p.error?.message || "Account profile unavailable.");
       return p;
     });
-    for (const key of [
-      "legalName",
-      "birthday",
-      "phone",
-      "displayName",
-      "avatarUrl",
-    ])
+    for (const key of ["legalName", "birthday", "displayName", "avatarUrl"])
       if (accountProfileForm.elements[key])
         accountProfileForm.elements[key].value = profile.user[key] || "";
+    for (const [key, value] of Object.entries(profile.user.billing || {}))
+      if (accountProfileForm.elements[key]) accountProfileForm.elements[key].value = value || "";
+    accountProfileForm.elements.acceptTerms.checked = Boolean(profile.user.agreements?.termsVersion);
+    accountProfileForm.elements.acknowledgePrivacy.checked = Boolean(profile.user.agreements?.privacyVersion);
+    accountProfileForm.elements.acceptTerms.required = profile.user.customerPrivilegesActive === false || !profile.user.agreements?.termsVersion;
+    accountProfileForm.elements.acknowledgePrivacy.required = profile.user.customerPrivilegesActive === false || !profile.user.agreements?.privacyVersion;
     accountProfileForm.elements.accountNotices.checked = Boolean(
       profile.user.notificationPreferences?.accountNotices,
     );
@@ -867,6 +950,166 @@
         ? "Stripe-hosted payment-method collection is intentionally unavailable in this staging build. Tobacco Road Games does not collect or store raw card numbers."
         : "Stripe-hosted payment-method setup is not available yet. Tobacco Road Games does not collect or store raw card numbers.";
   }
+  async function refreshCustomerPaymentMethods() {
+    if (!customerPaymentPanel || !customerPaymentList) return;
+    const response = await fetch("/api/account/payment-methods", { credentials: "same-origin" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw Error(payload.error?.message || "Saved cards could not be loaded.");
+    savedPaymentMethods = payload.paymentMethods || [];
+    customerPaymentList.replaceChildren(...savedPaymentMethods.map((method) => {
+      const card = document.createElement("article"),
+        detail = document.createElement("p"),
+        actions = document.createElement("div");
+      card.className = "product-card__body";
+      const expiry = method.expirationMonth && method.expirationYear
+        ? `Expires ${String(method.expirationMonth).padStart(2, "0")}/${method.expirationYear}`
+        : "Expiration is held by Stripe";
+      detail.textContent = `${method.cardholderName || "Card"} · ${String(method.brand || "Card").replaceAll("_", " ")} ending ${method.last4} · ${expiry}${method.id === payload.defaultId ? " · Default" : ""}`;
+      actions.className = "creator-onboarding-actions";
+      if (method.id !== payload.defaultId) {
+        const makeDefault = document.createElement("button");
+        makeDefault.type = "button";
+        makeDefault.className = "button button--secondary";
+        makeDefault.textContent = "Make Default";
+        makeDefault.dataset.paymentAction = "set_default";
+        makeDefault.dataset.paymentMethodId = method.id;
+        actions.append(makeDefault);
+      }
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "button button--secondary";
+      remove.textContent = "Remove Card";
+      remove.dataset.paymentAction = "remove";
+      remove.dataset.paymentMethodId = method.id;
+      actions.append(remove);
+      card.append(detail, actions);
+      return card;
+    }));
+    const profileResponse = await fetch("/api/account/profile", { credentials: "same-origin" });
+    const account = await profileResponse.json().catch(() => ({}));
+    const billing = account.user?.billing || {};
+    const hasProfile = Boolean(account.user?.displayName && billing.firstName && billing.lastName && billing.addressLine1 && billing.city && billing.stateRegion && billing.postalCode && billing.country && account.user.agreements?.termsVersion && account.user.agreements?.privacyVersion);
+    customerPaymentForm.hidden = !hasProfile;
+    if (!hasProfile) {
+      customerPaymentGuidance.textContent = "Complete and save the required profile, billing information, and agreements before setting up a card.";
+      return;
+    }
+    customerPaymentGuidance.textContent = savedPaymentMethods.length
+      ? "Card data is held by Stripe. Tobacco Road Games stores only the secure payment reference and card display details. No registration fee is charged."
+      : "Register one card to activate Customer access. Card data is held by Stripe; Tobacco Road Games stores only the secure payment reference and card display details. No registration fee is charged.";
+    const heading = document.querySelector("#customer-payment-method-form-heading");
+    if (heading) heading.textContent = savedPaymentMethods.length ? "Add another card" : "Register your initial card";
+  }
+  customerPaymentList?.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-payment-action]");
+    if (!button) return;
+    button.disabled = true;
+    try {
+      if (button.dataset.paymentAction === "remove" && !window.confirm("Remove this saved card from your account?")) return;
+      const result = await api("/api/account/payment-methods", {
+        action: button.dataset.paymentAction,
+        paymentMethodId: button.dataset.paymentMethodId,
+      });
+      customerPaymentStatus.textContent = button.dataset.paymentAction === "remove" ? "Saved card removed." : "Default card updated.";
+      await refreshCustomerPaymentMethods();
+    } catch (error) {
+      customerPaymentStatus.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+  customerPaymentForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const submit = form.querySelector("button[type=submit]");
+    submit.disabled = true;
+    try {
+      if (!form.elements.savePaymentMethod.checked) throw Error("Authorize saving this card to continue.");
+      if (!activeSetupAttemptId) {
+        activeSetupAttemptId = crypto.randomUUID();
+        const setup = await api("/api/account/payment-methods", {
+          action: "create_setup",
+          idempotencyKey: activeSetupAttemptId,
+          savePaymentMethod: true,
+        });
+        await loadStripeJs();
+        stripeInstance = window.Stripe(setup.publishableKey);
+        stripeElements = stripeInstance.elements({ clientSecret: setup.clientSecret });
+        paymentElement = stripeElements.create("payment");
+        customerPaymentElementHost.replaceChildren();
+        paymentElement.mount(customerPaymentElementHost);
+        sessionStorage.setItem("trg.customerPaymentAttempt", activeSetupAttemptId);
+        form.dataset.setupClientSecret = setup.clientSecret;
+        customerPaymentStatus.textContent = "Secure card form ready. Enter the card details and save.";
+        submit.textContent = "Save Payment Method";
+        submit.disabled = false;
+        return;
+      }
+      const profile = await fetch("/api/account/profile", { credentials: "same-origin" }).then((r) => r.json());
+      const billing = profile.user?.billing || {};
+      const result = await stripeInstance.confirmSetup({
+        elements: stripeElements,
+        clientSecret: form.dataset.setupClientSecret,
+        confirmParams: {
+          return_url: `${window.location.origin}/account.html?payment_setup_return=1`,
+          payment_method_data: {
+            billing_details: {
+              name: form.elements.cardholderName.value.trim(),
+              address: {
+                line1: billing.addressLine1,
+                line2: billing.addressLine2 || undefined,
+                city: billing.city,
+                state: billing.stateRegion,
+                postal_code: billing.postalCode,
+                country: billing.country,
+              },
+            },
+            allow_redisplay: "always",
+          },
+        },
+        redirect: "if_required",
+      });
+      if (result.error) throw Error(result.error.message || "Stripe could not save this card.");
+      if (result.setupIntent?.status !== "succeeded") throw Error("Complete the card verification step before continuing.");
+      await finishCustomerPaymentSetup(activeSetupAttemptId, result.setupIntent.id);
+    } catch (error) {
+      customerPaymentStatus.textContent = error.message || "Card registration could not be completed.";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  async function finishCustomerPaymentSetup(attemptId, setupIntentId) {
+    const result = await api("/api/account/payment-methods", {
+      action: "confirm_setup", attemptId, setupIntentId,
+    });
+    sessionStorage.removeItem("trg.customerPaymentAttempt");
+    activeSetupAttemptId = "";
+    customerPaymentForm.reset();
+    delete customerPaymentForm.dataset.setupClientSecret;
+    paymentElement?.unmount();
+    paymentElement = null;
+    stripeElements = null;
+    customerPaymentStatus.textContent = result.activated
+      ? "Card saved. Customer access is active; opening your storefront."
+      : "Card saved. Customer access activates after email verification.";
+    const active = await refreshAccount();
+    if (active) window.location.assign("/customer");
+  }
+
+  async function loadStripeJs() {
+    if (window.Stripe) return;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://js.stripe.com/v3/";
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(Error("Secure Stripe card entry could not be loaded."));
+      document.head.append(script);
+    });
+    if (!window.Stripe) throw Error("Secure Stripe card entry is unavailable.");
+  }
+
   accountProfileForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const f = event.currentTarget;
@@ -874,12 +1117,24 @@
       await api("/api/account/profile", {
         legalName: f.legalName.value,
         birthday: f.birthday.value || null,
-        phone: f.phone.value,
         displayName: f.displayName.value,
         avatarUrl: f.avatarUrl.value,
+        firstName: f.firstName.value,
+        lastName: f.lastName.value,
+        company: f.company.value,
+        addressLine1: f.addressLine1.value,
+        addressLine2: f.addressLine2.value,
+        city: f.city.value,
+        stateRegion: f.stateRegion.value,
+        postalCode: f.postalCode.value,
+        country: f.country.value,
+        acceptTerms: f.acceptTerms.checked,
+        acknowledgePrivacy: f.acknowledgePrivacy.checked,
         notificationPreferences: { accountNotices: f.accountNotices.checked },
       });
-      accountProfileStatus.textContent = "Private account profile saved.";
+      await refreshCustomerProfile();
+      await refreshCustomerPaymentMethods();
+      accountProfileStatus.textContent = "Customer profile and billing information saved.";
     } catch (error) {
       accountProfileStatus.textContent = error.message;
     }

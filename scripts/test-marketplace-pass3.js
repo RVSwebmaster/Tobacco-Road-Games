@@ -17,6 +17,7 @@ async function main() {
 
   const raw = new DatabaseSync(":memory:"); raw.exec("PRAGMA foreign_keys=ON;");
   for (const name of ["001_direct_storefront.sql", "003_checkout_attempt_idempotency.sql", "004_verified_stripe_webhooks.sql", "005_secure_download_entitlements.sql", "007_shared_accounts.sql", "016_order_account_ownership.sql"]) raw.exec(fs.readFileSync(path.join(ROOT, "migrations", name), "utf8"));
+  raw.exec("CREATE TABLE customer_registration_states (user_id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('pending','active')), activated_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);");
   const db = d1(raw), now = new Date(NOW).toISOString();
   for (const user of ["user-one", "user-two"]) { raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?,?,1,'active','user',?,?)").run(user, `${user}@example.com`, now, now); const token=`${user}-token`; raw.prepare("INSERT INTO sessions(id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at) VALUES(?,?,?,?,?,?,?)").run(`${user}-session`,user,await auth.hashToken(token),await auth.hashToken(`${user}-csrf`),now,"2027-08-26T12:00:00Z",now); }
   const first=await createOrder(orders,db,"one","user-one"), second=await createOrder(orders,db,"two","user-two"), historical=await createOrder(orders,db,"historical",null);

@@ -1,0 +1,1456 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-19T02:28:47.468Z",
+  "command": "npm run verify:launch",
+  "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+  "workingTree": {
+    "branch": "codex/operation-severance-task1",
+    "head": "8931f6018f8ca800481488dac9cd708c1047dde9",
+    "clean": false,
+    "statusEntries": [
+      " M _routes.json",
+      " M account.html",
+      " M assets/css/creator-dashboard.css",
+      " M assets/js/account.js",
+      " M assets/js/creator-dashboard.js",
+      " M creator-dashboard/index.html",
+      " M creator/index.html",
+      " M docs/ACCOUNT-AUTH-FOUNDATION.md",
+      " M docs/CREATOR-AGREEMENT-BUSINESS-DRAFT.md",
+      " M docs/CREATOR-AGREEMENT-POLICY-CROSSWALK.md",
+      " M docs/FULL-SITE-WIDE-POLICY-SYSTEMS-AUDIT-2026-08-31.md",
+      " M docs/MARKETPLACE-POLICY-ALIGNMENT-PASS-10.md",
+      " M docs/MARKETPLACE-POLICY-CANON.md",
+      " M docs/OPERATION-SEVERANCE-TASK-2OA-HANDOFF.md",
+      " M docs/PAGE-ARCHITECTURE.md",
+      " M docs/PREFERRED-CREATOR-RECURRING-BILLING.md",
+      " M docs/PROJECT-STATE.md",
+      " M functions/_lib/account-auth.mjs",
+      " M functions/_lib/account-library.mjs",
+      " M functions/_lib/account-profile.mjs",
+      " M functions/_lib/cart-catalog.mjs",
+      " M functions/_lib/cart-checkout.mjs",
+      " M functions/_lib/creator-balance.mjs",
+      " M functions/_lib/creator-business-report.mjs",
+      " M functions/_lib/creator-connect.mjs",
+      " M functions/_lib/creator-finance.mjs",
+      " M functions/_lib/creator-liability.mjs",
+      " M functions/_lib/creator-provider-finance.mjs",
+      " M functions/_lib/marketplace-policy.mjs",
+      " M functions/_lib/native-entitlements-d1.mjs",
+      " M functions/_lib/native-order-preparation.mjs",
+      " M functions/_lib/native-orders-d1.mjs",
+      " M functions/_lib/order-fulfillment.mjs",
+      " M functions/_lib/orders-pending.mjs",
+      " M functions/_lib/owner-orders.mjs",
+      " M functions/_lib/product-catalog-d1.mjs",
+      " M functions/_lib/product-publication.mjs",
+      " M functions/_lib/public-product-catalog.mjs",
+      " M functions/_lib/stripe-connect-sandbox.mjs",
+      " M functions/_lib/stripe-webhook.mjs",
+      " M owner/finance.html",
+      " M owner/orders.html",
+      " M package.json",
+      " M scripts/build-store.js",
+      " M scripts/test-account-auth.js",
+      " M scripts/test-cart-checkout.js",
+      " M scripts/test-checkout-idempotency.js",
+      " M scripts/test-creator-active-shelf-slots.js",
+      " M scripts/test-creator-agreement-draft.js",
+      " M scripts/test-creator-native-review-publication.js",
+      " M scripts/test-creator-native-submission-staging.js",
+      " M scripts/test-creator-open-rules-data.js",
+      " M scripts/test-forum-categories.js",
+      " M scripts/test-marketplace-architecture.js",
+      " M scripts/test-marketplace-pass10.js",
+      " M scripts/test-marketplace-pass3.js",
+      " M scripts/test-marketplace-pass4.js",
+      " M scripts/test-marketplace-pass7.js",
+      " M scripts/test-marketplace-pass8.js",
+      " M scripts/test-marketplace-pass9.js",
+      " M scripts/test-native-d1-delivery.js",
+      " M scripts/test-native-d1-entitlements.js",
+      " M scripts/test-native-d1-library.js",
+      " M scripts/test-native-d1-stripe-payments.js",
+      " M scripts/test-native-guest-notification-staging.js",
+      " M scripts/test-native-guest-purchase-claim.js",
+      " M scripts/test-owner-intake.js",
+      " M scripts/test-product-inactivity-shelf-expiration.js",
+      " M scripts/test-product-publication.js",
+      " M scripts/test-registration-hard-gate.js",
+      " M scripts/test-storefront-cart.js",
+      " M scripts/test-storefront-shared-cabinet.js",
+      "?? assets/js/creator-profile-catalog-rotation.js",
+      "?? assets/js/owner-founding25.js",
+      "?? docs/C2B-IMPLEMENTATION-REPORT.md",
+      "?? docs/ENGINEERING-FORENSICS-LEDGER.md",
+      "?? docs/FINANCIAL-ACCEPTANCE-REVIEW-C2D-CLOSEOUT.md",
+      "?? docs/LAUNCH-VERIFICATION-RESULT.json",
+      "?? docs/OPERATION-SCAVENGER-001-REPORT.md",
+      "?? docs/R4-ACCOUNT-THROTTLE-PROTECTION-REPORT.md",
+      "?? docs/STRIPE-UNDELIVERED-EVENT-RECOVERY.md",
+      "?? functions/_lib/customer-payment-methods.mjs",
+      "?? functions/_lib/customer-registration.mjs",
+      "?? functions/_lib/financial-csv.mjs",
+      "?? functions/_lib/founding25-owner.mjs",
+      "?? functions/_lib/stripe-order-fees.mjs",
+      "?? functions/api/account/payment-methods.js",
+      "?? functions/owner/api/founding25.js",
+      "?? migrations/074_native_creator_sale_policy_snapshots.sql",
+      "?? migrations/075_creator_commission_and_stripe_fee_reconciliation.sql",
+      "?? migrations/076_financial_classification_and_founding25_limit.sql",
+      "?? migrations/077_creator_account_capacity_privileges.sql",
+      "?? migrations/078_auth_rate_limit_cleanup_index.sql",
+      "?? migrations/079_customer_signup_and_saved_cards.sql",
+      "?? pnpm-lock.yaml",
+      "?? scripts/launch-test-observer.cjs",
+      "?? scripts/run-launch-verification.cjs",
+      "?? scripts/test-c2b-express-dashboard-and-csv.js",
+      "?? scripts/test-c2d-policy-upgrade-and-founding25.js",
+      "?? scripts/test-c3-capacity-privileges.js",
+      "?? scripts/test-creator-profile-catalog-rotation.js",
+      "?? scripts/test-customer-registration.js",
+      "?? scripts/test-native-creator-earnings.js",
+      "?? scripts/test-native-stripe-fee-reconciliation.js",
+      "?? scripts/test-paid-order-fulfillment-recovery.js",
+      "?? title-card/.hyperframes/agent-handoff.json",
+      "?? title-card/.hyperframes/artifacts/checks/88fef1ad-1706-4fd1-8f59-0c0d07443b76.json",
+      "?? title-card/.hyperframes/backup/2026-11-13T13-50-21-624Z-aW5kZXguaHRtbA",
+      "?? title-card/.hyperframes/backup/2026-11-13T13-50-24-009Z-aW5kZXguaHRtbA",
+      "?? title-card/.hyperframes/desktop-cta.json",
+      "?? title-card/.hyperframes/hf-ids-stamped.json",
+      "?? title-card/.hyperframes/history-id",
+      "?? title-card/.hyperframes/preview/7df6cfd744d5af8ac4b8ed4f6a6581ec.html",
+      "?? title-card/.hyperframes/render-outputs.json",
+      "?? title-card/.hyperframes/video-state.json",
+      "?? title-card/.thumbnails/v5_7c33081c7d3ebe54_c59de718cc6c6aa8_jpeg_source_index.html_1920x1080_1920x1080_1794577661392_0.00.jpg",
+      "?? title-card/.thumbnails/v5_7c33081c7d3ebe54_c59de718cc6c6aa8_jpeg_source_index.html_1920x1080_1920x1080_1794577824021_0.00.jpg",
+      "?? title-card/.thumbnails/v5_v3_7c33081c7d3ebe54_c59de718cc6c6aa8_jpeg_preview_index.html_1920x1080_240x135_1794577661392_2.50_f3f01738c4ceb607_0.jpg",
+      "?? title-card/.thumbnails/v5_v3_7c33081c7d3ebe54_c59de718cc6c6aa8_jpeg_preview_index.html_1920x1080_240x135_1794577661392_3.00.jpg",
+      "?? title-card/.thumbnails/v5_v3_7c33081c7d3ebe54_c59de718cc6c6aa8_jpeg_preview_index.html_1920x1080_240x135_1794577824021_2.50_f3f01738c4ceb607_0.jpg",
+      "?? title-card/.thumbnails/v5_v3_7c33081c7d3ebe54_c59de718cc6c6aa8_jpeg_preview_index.html_1920x1080_240x135_1794577824021_3.00.jpg",
+      "?? title-card/BRIEF.md",
+      "?? title-card/debug.log",
+      "?? title-card/hyperframes.json",
+      "?? title-card/index.html",
+      "?? title-card/package.json",
+      "?? title-card/renders/title-card_2026-11-13_08-49-40.meta.json",
+      "?? title-card/renders/title-card_2026-11-13_08-49-40.mp4",
+      "?? title-card/renders/title-card_2026-11-13_08-51-48.meta.json"
+    ],
+    "diffSha256": "8c9446e8927a8d597146c22b822250ab8e4323b4c1c84271bcbede096bf52eaa"
+  },
+  "environment": {
+    "platform": "win32",
+    "architecture": "x64",
+    "node": "v26.13.0",
+    "npm": "11.20.0",
+    "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+    "workingDirectory": "C:\\Users\\rvsaw\\Desktop\\Dr DM Workshop\\Tobacco-Road-Games",
+    "resources": "Local Node/SQLite fixtures and test-owned temporary directories. No Cloudflare remote bindings or production endpoints are used by this gate."
+  },
+  "suite": {
+    "aggregate": "npm test (including npm pretest lifecycle)",
+    "aggregateScriptCount": 53,
+    "expectedScripts": [
+      "scripts/test-operation-severance.js",
+      "scripts/test-product-catalog-d1.js",
+      "scripts/test-product-publication.js",
+      "scripts/test-public-product-catalog.js",
+      "scripts/test-public-product-assets.js",
+      "scripts/test-d1-public-storefront.js",
+      "scripts/test-d1-cart-pricing.js",
+      "scripts/test-native-d1-orders.js",
+      "scripts/test-native-d1-stripe-payments.js",
+      "scripts/test-native-d1-entitlements.js",
+      "scripts/test-native-d1-delivery.js",
+      "scripts/test-native-d1-library.js",
+      "scripts/test-native-d1-free-acquisition.js",
+      "scripts/test-native-guest-purchase-claim.js",
+      "scripts/test-free-download.js",
+      "scripts/test-owner-intake.js",
+      "scripts/test-owner-intake-ui.js",
+      "scripts/test-product-pdf-autofill.js",
+      "scripts/test-homepage-shelves.js",
+      "scripts/test-owner-homepage-d1.js",
+      "scripts/test-owner-homepage-editor.js",
+      "scripts/test-owner-pricing-d1.js",
+      "scripts/test-owner-pricing-editor.js",
+      "scripts/test-storefront-cart.js",
+      "scripts/test-cart-quote.js",
+      "scripts/test-orders-d1.js",
+      "scripts/test-cart-checkout.js",
+      "scripts/test-checkout-idempotency.js",
+      "scripts/test-stripe-webhook.js",
+      "scripts/test-secure-download.js",
+      "scripts/test-customer-delivery.js",
+      "scripts/test-staging-stripe-resend.js",
+      "scripts/test-office.js",
+      "scripts/test-email-provider.js",
+      "scripts/test-account-google-ui.js",
+      "scripts/test-account-auth.js",
+      "scripts/test-customer-registration.js",
+      "scripts/test-forum-profiles.js",
+      "scripts/test-forum-categories.js",
+      "scripts/test-forum-avatars.js",
+      "scripts/test-forum-topics.js",
+      "scripts/test-forum-replies.js",
+      "scripts/test-forum-moderation.js",
+      "scripts/test-forum-rate-limits.js",
+      "scripts/test-marketplace-architecture.js",
+      "scripts/test-marketplace-pass3.js",
+      "scripts/test-marketplace-pass4.js",
+      "scripts/test-marketplace-pass5.js",
+      "scripts/test-marketplace-pass6.js",
+      "scripts/test-marketplace-pass7.js",
+      "scripts/test-marketplace-pass8.js",
+      "scripts/test-marketplace-pass9.js",
+      "scripts/test-product-pdf-webp.js"
+    ],
+    "pretestScripts": [
+      "scripts/test-agency-legacy-continuity.js",
+      "scripts/test-pages-environment-isolation.js",
+      "scripts/test-pretest-suite.js",
+      "scripts/test-public-branding.js"
+    ],
+    "results": [
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-agency-legacy-continuity.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 1077
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-pages-environment-isolation.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 36
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-creator-publishing-sandbox.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 875
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-news-chiron.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 43
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-pretest-suite.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 1045
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-public-branding.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 180
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-operation-severance.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 425
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-product-catalog-d1.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 589
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-product-publication.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 831
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-public-product-catalog.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 616
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-public-product-assets.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 621
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-d1-public-storefront.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 665
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-d1-cart-pricing.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 812
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-d1-orders.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 805
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-d1-stripe-payments.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 900
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-d1-entitlements.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 875
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-d1-delivery.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 795
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-d1-library.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 844
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-d1-free-acquisition.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 900
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-native-guest-purchase-claim.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 939
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-free-download.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 41
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-owner-intake.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 1027
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-owner-intake-ui.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 785
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-product-pdf-autofill.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 114
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-homepage-shelves.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 65
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-owner-homepage-d1.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 849
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-owner-homepage-editor.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 10
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-owner-pricing-d1.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 775
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-owner-pricing-editor.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 233
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-storefront-cart.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 426
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-cart-quote.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 269
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-orders-d1.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 212
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-cart-checkout.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 390
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-checkout-idempotency.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 256
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-stripe-webhook.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 494
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-secure-download.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 384
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-customer-delivery.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 547
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-staging-stripe-resend.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 8
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-office.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 236
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-email-provider.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 34
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-account-google-ui.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 38
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-account-auth.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 760
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-customer-registration.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 1374
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-profiles.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 260
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-categories.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 254
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-avatars.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 287
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-topics.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 313
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-replies.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 308
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-moderation.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 316
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-rate-limits.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 381
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-architecture.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 16
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass3.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 240
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass4.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 266
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass5.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 9
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass6.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 873
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass7.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 79
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass8.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 309
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-marketplace-pass9.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 312
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-product-pdf-webp.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 12
+      }
+    ],
+    "commandResult": {
+      "command": "npm test",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    }
+  },
+  "recoveryChecks": [],
+  "focusedRegressions": [
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-product-publication.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 913
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-paid-order-fulfillment-recovery.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 910
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-registration-hard-gate.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 956
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-customer-registration.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 1426
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-creator-ownership-enforcement-sandbox.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 3270
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-store-kill-switch.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 875
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-native-creator-earnings.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 1010
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-native-stripe-fee-reconciliation.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 905
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-c2d-policy-upgrade-and-founding25.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 1418
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-c2b-express-dashboard-and-csv.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 333
+    },
+    {
+      "phase": "focused launch regressions",
+      "script": "scripts/test-c3-capacity-privileges.js",
+      "dependsOn": [],
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 961
+    }
+  ],
+  "forumSecurityIsolation": {
+    "policy": "Forum functionality and public navigation are supplementary. If the forum is enabled, existing authentication, privacy, ownership, rate-limit, moderation authorization, and cross-account isolation assertions remain mandatory. Existing forum tests mix feature and security assertions; all are retained and individually reported here.",
+    "results": [
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-profiles.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 260
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-categories.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 254
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-avatars.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 287
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-topics.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 313
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-replies.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 308
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-moderation.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 316
+      },
+      {
+        "phase": "npm test aggregate",
+        "script": "scripts/test-forum-rate-limits.js",
+        "status": "PASS",
+        "exitCode": 0,
+        "durationMs": 381
+      }
+    ]
+  },
+  "previousRuns": [
+    {
+      "generatedAt": "2026-11-18T15:57:58.588Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 6,
+        "failed": 4,
+        "skipped": 2,
+        "blocked": 54
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-creator-publishing-sandbox.js"
+        },
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-pretest-suite.js"
+        },
+        {
+          "phase": "focused launch regressions",
+          "check": "scripts/test-registration-hard-gate.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:08:58.406Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 14,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 49
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-public-product-catalog.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:12:03.993Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 19,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 44
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-native-d1-stripe-payments.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:13:56.898Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 20,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 43
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-native-d1-entitlements.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:15:29.022Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 24,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 39
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-native-guest-purchase-claim.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:16:27.058Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 26,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 37
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-owner-intake.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:17:56.508Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 34,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 29
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-storefront-cart.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:18:58.380Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 48,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 15
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-forum-categories.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:21:18.754Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 48,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 15
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-forum-categories.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:23:59.986Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 48,
+        "failed": 2,
+        "skipped": 2,
+        "blocked": 15
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-forum-categories.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:37:10.704Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 64,
+        "failed": 2,
+        "skipped": 0,
+        "blocked": 9
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-marketplace-architecture.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T16:38:50.060Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 66,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T17:13:09.234Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 60,
+        "failed": 7,
+        "skipped": 0,
+        "blocked": 50
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-product-publication.js"
+        },
+        {
+          "phase": "focused launch regressions",
+          "check": "scripts/test-product-publication.js"
+        },
+        {
+          "phase": "focused launch regressions",
+          "check": "scripts/test-paid-order-fulfillment-recovery.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T17:16:00.884Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 67,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T17:18:30.506Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 67,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T17:25:20.247Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 67,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T18:26:52.474Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 12,
+        "failed": 4,
+        "skipped": 0,
+        "blocked": 53
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-public-branding.js"
+        },
+        {
+          "phase": "focused launch regressions",
+          "check": "scripts/test-product-publication.js"
+        },
+        {
+          "phase": "focused launch regressions",
+          "check": "scripts/test-paid-order-fulfillment-recovery.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T18:28:58.456Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 64,
+        "failed": 4,
+        "skipped": 0,
+        "blocked": 4
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-marketplace-pass7.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T18:30:15.261Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 68,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T18:35:36.016Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 68,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T18:37:44.448Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 68,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T18:39:46.323Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 68,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T19:30:24.875Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 65,
+        "failed": 4,
+        "skipped": 0,
+        "blocked": 25
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-checkout-idempotency.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-18T19:32:50.145Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 69,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T19:41:19.953Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 69,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T20:39:42.806Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 70,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T21:04:04.854Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T21:07:58.819Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T21:23:33.192Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T21:25:23.833Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T21:40:06.931Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-18T21:43:22.448Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+      "counts": {
+        "passed": 71,
+        "failed": 0,
+        "skipped": 0,
+        "blocked": 1
+      },
+      "authoritativeFailure": false,
+      "failedChecks": []
+    },
+    {
+      "generatedAt": "2026-11-19T02:26:31.697Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 18,
+        "failed": 2,
+        "skipped": 0,
+        "blocked": 54
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-public-branding.js"
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-11-19T02:27:21.111Z",
+      "testedRevision": "8931f6018f8ca800481488dac9cd708c1047dde9",
+      "outcome": "FAIL",
+      "counts": {
+        "passed": 70,
+        "failed": 3,
+        "skipped": 0,
+        "blocked": 8
+      },
+      "authoritativeFailure": true,
+      "failedChecks": [
+        {
+          "phase": "npm test aggregate",
+          "check": "scripts/test-marketplace-pass3.js"
+        }
+      ]
+    }
+  ],
+  "focusedRegressionPolicy": "Focused regressions run in isolated processes after npm test. Each declares dependsOn; a check with any prerequisite that did not PASS is reported BLOCKED without execution. Current focused regressions declare no prerequisites and are independent of pretest. The npm test aggregate body remains BLOCKED by npm when pretest fails.",
+  "separateChecks": [
+    {
+      "id": "test:storefront-visual",
+      "command": "npm run test:storefront-visual",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 926,
+      "classification": "SEPARATE_VISUAL_OR_BROWSER_VERIFICATION"
+    },
+    {
+      "id": "test:owner-intake-browser",
+      "command": "npm run test:owner-intake-browser",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "error": null,
+      "durationMs": 2277,
+      "classification": "SEPARATE_VISUAL_OR_BROWSER_VERIFICATION"
+    },
+    {
+      "id": "test:creator-native-submission-staging",
+      "command": "npm run test:creator-native-submission-staging",
+      "status": "BLOCKED",
+      "reason": "Requires remote staging D1/R2 and Wrangler configuration; this run is restricted to isolated local resources."
+    }
+  ],
+  "nativeCreatorEarnings": {
+    "status": "RECORDED_AND_IDEMPOTENT_IN_ISOLATED_TESTS",
+    "launchBlocker": null,
+    "evidence": [
+      "functions/_lib/stripe-webhook.mjs::finalizeWebhookEvent writes native Creator sale snapshots and earnings ledger entries in the same D1 settlement batch.",
+      "functions/_lib/creator-finance.mjs::creatorSaleStatements uses immutable native Creator attribution and fee-policy snapshots, then the existing sale snapshot and idempotent earnings ledger.",
+      "scripts/test-native-creator-earnings.js verifies native Creator accounting; scripts/test-native-stripe-fee-reconciliation.js verifies versioned commission categories, Stripe fee retrieval/allocation, payout holds, duplicate recovery, refunds, disputes, Owner/Admin house treatment, and non-product fee splits; scripts/test-c2d-policy-upgrade-and-founding25.js verifies historical migration preservation and Owner-only capped assignment actions."
+    ],
+    "duplicateVerification": "Verified in isolated tests: concurrent and duplicate paid events produce one order, one sale snapshot and one sale earning per Creator-attributed order item. Existing legacy accounting remains on its original shared statements and idempotency key path."
+  },
+  "recommendedNextIntegration": {
+    "priority": "Production historical native-order accounting audit",
+    "reason": "Previously paid native D1 orders may predate immutable fee-policy snapshots. No production data was accessed, and the safe local repair helper deliberately refuses to invent terms for those orders.",
+    "scope": "Before third-party Creator launch, run an Owner-authorized read-only reconciliation of native paid orders, resolve historical fee terms from durable evidence, and separately authorize any backfill. No automated payouts or Creator transfers are included."
+  },
+  "testingCoverageAssessment": {
+    "playwright": "An existing Chromium browser check was run separately; use its recorded result and coverage to decide whether a reusable browser framework is justified.",
+    "axeCore": "No axe-based accessibility coverage was found in the inspected gate. Add axe-core only if the separate browser/keyboard acceptance review identifies an automation gap worth maintaining.",
+    "workersRuntime": "The local Node/SQLite suite does not validate Cloudflare Workers binding/runtime parity. Consider a minimal Workers Vitest/Miniflare test for specific D1/R2 runtime behaviors not represented by current fixtures; no new runtime test dependency is included in this gate."
+  },
+  "investigationFindings": {
+    "reportedFailureOne": {
+      "check": "scripts/test-registration-hard-gate.js",
+      "classification": "OUTDATED_TEST_CONTRACT",
+      "cause": "The assertion searched creator/index.html for creator-listings, but the approved route split assigns /creator/ to the public identity/profile surface and /creator-dashboard/ to the private Creator controls.",
+      "evidence": [
+        "AGENTS.md reusable storefront rendering standard",
+        "docs/PAGE-ARCHITECTURE.md Creator page ownership and approved 2026-11-17 furniture configuration",
+        "creator-dashboard/index.html contains id=creator-listings hidden"
+      ],
+      "resolution": "Changed only the test input path to creator-dashboard/index.html; no page markup or visual baseline changed."
+    },
+    "reportedFailureTwo": {
+      "check": "scripts/test-creator-native-review-publication.js (via scripts/test-creator-publishing-sandbox.js)",
+      "classification": "OUTDATED_TEST_CONTRACT",
+      "cause": "The test searched creator/index.html for the dashboard edit form, although the approved route split places the private edit form on /creator-dashboard/.",
+      "evidence": [
+        "docs/SITE-GEOGRAPHY.md route map",
+        "docs/PAGE-ARCHITECTURE.md Creator page ownership",
+        "creator-dashboard/index.html contains id=creator-edit-form and its approved helper text"
+      ],
+      "resolution": "Changed only the test input path to creator-dashboard/index.html; no Creator interface or visual baseline changed."
+    },
+    "additionalBaselineRepairs": [
+      "Public catalog list query was an application defect: it excluded automatic-visibility products even when their status makes them public. Query now mirrors the published visibility policy and still excludes retired products; scripts/test-public-product-catalog.js passes.",
+      "Native payment/entitlement/guest-claim test fixtures were incomplete for the C1 webhook contract: they lacked exact R2 delivery objects, and two used keys outside the required /delivery.pdf snapshot format. Fixtures now provide the exact objects and verify readiness/idempotency while retaining zero Creator earnings assertions.",
+      "Owner-intake and storefront-cart temporary build fixtures omitted index.html and creator-dashboard/index.html, now required by the canonical generator. Added those source inputs; both tests pass."
+    ],
+    "forumNavigationAssertion": {
+      "check": "scripts/test-forum-categories.js",
+      "classification": "OUTDATED_TEST_CONTRACT",
+      "cause": "Approved public navigation contains Explore, Support, Login/Signup, and Cart. Forum routes and functionality are independent of primary navigation.",
+      "resolution": "Corrected the assertion to verify the approved four-item navigation while retaining forum category, route, escaping, and privacy checks."
+    }
+  },
+  "stripeUndeliveredEventProcedure": {
+    "documentedIn": "docs/STRIPE-UNDELIVERED-EVENT-RECOVERY.md",
+    "status": "DOCUMENTED_OPERATOR_PROCEDURE"
+  },
+  "outcome": "PASS_WITH_SEPARATE_CHECKS_PENDING",
+  "counts": {
+    "passed": 73,
+    "failed": 0,
+    "skipped": 0,
+    "blocked": 1
+  },
+  "launchCriticalOutcome": "PASS",
+  "supplementaryForumOutcome": "PASS"
+}

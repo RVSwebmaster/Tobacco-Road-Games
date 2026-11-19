@@ -528,11 +528,13 @@ async function testPricingUpdateRequiresConfirmationForNonPaidSaleFields(publish
 
 async function testPricingUpdateBuildConsistency(publishScript) {
   const tempRoot = createTempRepo([
+    "index.html",
     "data/authors.js",
     "data/bb1-creator-ad-preview.json",
     "data/homepage-ad-preview.json",
     "data/homepage-news-preview.json",
     "data/products.json",
+    "creator-dashboard/index.html",
     "scripts/build-runtime-catalog.mjs",
     "scripts/build-store.js",
     "shared/pricing.js"
@@ -629,12 +631,14 @@ async function testPublishScriptNormalizesCartBuyUrl(publishScript) {
 
 async function testNewProductBuildAndSharedMap(publishScript) {
   const tempRoot = createTempRepo([
+    "index.html",
     "data/authors.js",
     "data/bb1-creator-ad-preview.json",
     "data/homepage-ad-preview.json",
     "data/homepage-news-preview.json",
     "data/product-intake-map.json",
     "data/products.json",
+    "creator-dashboard/index.html",
     "scripts/build-runtime-catalog.mjs",
     "scripts/build-store.js",
     "shared/pricing.js",

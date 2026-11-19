@@ -13,6 +13,12 @@ async function main() {
   const publication = await import(pathToFileURL(path.join(ROOT, "functions/_lib/product-publication.mjs")).href);
   const catalog = await import(pathToFileURL(path.join(ROOT, "functions/_lib/product-catalog-d1.mjs")).href);
   const auth = await import(pathToFileURL(path.join(ROOT, "functions/_lib/account-auth.mjs")).href);
+  const nativeOrders = await import(pathToFileURL(path.join(ROOT, "functions/_lib/native-orders-d1.mjs")).href);
+  const ownerOrders = await import(pathToFileURL(path.join(ROOT, "functions/_lib/owner-orders.mjs")).href);
+  const ownerOrdersPage = fs.readFileSync(path.join(ROOT, "owner/orders.html"), "utf8");
+  assert.match(ownerOrdersPage, /delivery-audit-button/, "Owner order recovery must expose the purchased-file audit.");
+  assert.match(ownerOrdersPage, /audit:'purchased-deliveries'/, "Owner UI must call the paginated exact-snapshot audit.");
+  assert.match(ownerOrdersPage, /no replacement was made/i, "Missing historical files must be reported without implying substitution.");
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON");
   for (const name of fs.readdirSync(path.join(ROOT, "migrations")).filter(n => n.endsWith(".sql")).sort()) {
@@ -116,15 +122,102 @@ async function main() {
   assert.equal(ownerProduct.publicationState, "published");
   assert.equal(ownerProduct.managedByUserId, "test-owner");
 
+  raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?, ?, 1, 'active', 'user', ?, ?)")
+    .run("test-buyer", "buyer@example.invalid", now, now);
+  const orderResult = await nativeOrders.createOrGetNativePendingOrder(db, {
+    checkoutAttemptId: "trgca_00000001-0000-4000-8000-000000000001",
+    checkoutRequestHash: "a".repeat(64),
+    createdAt: now,
+    currency: "USD",
+    customerEmail: "buyer@example.invalid",
+    customerEmailHash: "buyer-hash",
+    customerEmailNormalized: "buyer@example.invalid",
+    publicId: "TRG-TEST-PURCHASE-SNAPSHOT",
+    subtotalCents: 500,
+    totalCents: 500,
+    userId: "test-buyer"
+  }, [{
+    authorSlugsJson: "[]",
+    catalogRevision: ownerProduct.revision,
+    createdAt: now,
+    creatorFeeBasisPoints: 2000,
+    creatorFeePolicyEffectiveAt: now,
+    creatorFeePolicyReason: "standard",
+    creatorCommissionCategory: "standard",
+    creatorCommissionPolicyVersion: "legacy-marketplace-policy",
+    creatorFirstPublishedAt: ownerProduct.publishedAt,
+    creatorFixedFeeCents: 0,
+    creatorReserveDays: 14,
+    creatorFeePolicyId: null,
+    currency: ownerProduct.currency,
+    deliveryContentType: ownerProduct.deliveryContentType,
+    deliveryFilename: ownerProduct.deliveryFilename,
+    deliveryR2Key: ownerProduct.deliveryR2Key,
+    effectiveUnitPriceCents: 500,
+    lastUpdatedSnapshot: ownerProduct.updatedAt,
+    lineTotalCents: 500,
+    listPriceCents: 500,
+    minimumPriceCents: null,
+    nativeCreatorId: ownerProduct.creatorId,
+    nativeProductId: ownerProduct.id,
+    pricingModel: "fixed",
+    primaryAuthorSlug: "test-author",
+    productSlug: ownerProduct.slug,
+    productStatus: ownerProduct.status,
+    productTitleSnapshot: ownerProduct.title,
+    publicationState: "published",
+    quantity: 1,
+    suggestedPriceCents: null,
+    versionSnapshot: "1.0"
+  }]);
+  raw.prepare("UPDATE orders SET payment_status='paid',native_order_state='paid',paid_at=? WHERE id=?")
+    .run(now, orderResult.order.id);
   const updatedOwnerProduct = await publication.updatePublishedProduct(db, bucket, {
     slug: ownerProduct.slug,
     expectedRevision: ownerProduct.revision,
-    metadata: { ...viaRoute.metadata, title: "Product publication-owner-route revised" }
+    metadata: { ...viaRoute.metadata, title: "Product publication-owner-route revised" },
+    coverFile: new File([WEBP], "cover-v2.webp", { type: "image/webp" }),
+    pdfFile: new File([PDF, new TextEncoder().encode("Revision 2")], "delivery-v2.pdf", { type: "application/pdf" })
   }, { managingRole: "owner", managingUserId: "test-owner", nowMs: NOW_MS + 1000 });
   assert.equal(updatedOwnerProduct.title, "Product publication-owner-route revised");
   assert.equal(updatedOwnerProduct.revision, 2);
-  assert.equal(updatedOwnerProduct.coverR2Key, ownerProduct.coverR2Key);
-  assert.equal(updatedOwnerProduct.deliveryR2Key, ownerProduct.deliveryR2Key);
+  assert.notEqual(updatedOwnerProduct.coverR2Key, ownerProduct.coverR2Key);
+  assert.notEqual(updatedOwnerProduct.deliveryR2Key, ownerProduct.deliveryR2Key);
+  assert.ok(bucket.objects.has(ownerProduct.deliveryR2Key), "A purchase-referenced delivery object must survive product replacement.");
+  assert.ok(bucket.objects.has(updatedOwnerProduct.deliveryR2Key), "The current catalog must point at the replacement delivery object.");
+
+  const healthyAudit = await ownerOrders.handleOwnerOrdersRequest(new Request(
+    "https://example.test/owner/api/orders?audit=purchased-deliveries"
+  ), { TRG_ORDERS: db, TRG_PRODUCTS: bucket }, { nowMs: NOW_MS + 2000 });
+  assert.equal(healthyAudit.status, 200);
+  const healthyAuditBody = await healthyAudit.json();
+  assert.equal(healthyAuditBody.scanned, 1);
+  assert.equal(healthyAuditBody.missing.length, 0);
+  assert.equal(healthyAuditBody.availableCount, 1);
+
+  bucket.objects.delete(ownerProduct.deliveryR2Key);
+  const missingAudit = await ownerOrders.handleOwnerOrdersRequest(new Request(
+    "https://example.test/owner/api/orders?audit=purchased-deliveries"
+  ), { TRG_ORDERS: db, TRG_PRODUCTS: bucket }, { nowMs: NOW_MS + 3000 });
+  assert.equal(missingAudit.status, 200);
+  const missingAuditBody = await missingAudit.json();
+  assert.equal(missingAuditBody.missing.length, 1);
+  assert.equal(missingAuditBody.missing[0].deliveryKey, ownerProduct.deliveryR2Key,
+    "The audit must identify the exact missing purchase-time key.");
+  assert.equal(missingAuditBody.missing[0].version, "1.0");
+  assert.notEqual(missingAuditBody.missing[0].deliveryKey, updatedOwnerProduct.deliveryR2Key,
+    "The newer catalog asset must never be reported or silently substituted for the missing purchase snapshot.");
+  assert.equal(missingAuditBody.missing[0].status, "missing");
+
+  bucket.throwOnHead = true;
+  const unverifiedAudit = await ownerOrders.handleOwnerOrdersRequest(new Request(
+    "https://example.test/owner/api/orders?audit=purchased-deliveries"
+  ), { TRG_ORDERS: db, TRG_PRODUCTS: bucket }, { nowMs: NOW_MS + 4000 });
+  assert.equal(unverifiedAudit.status, 200);
+  const unverifiedAuditBody = await unverifiedAudit.json();
+  assert.equal(unverifiedAuditBody.missing.length, 0, "An R2 error must not be misreported as a confirmed missing object.");
+  assert.equal(unverifiedAuditBody.unverified.length, 1);
+  bucket.throwOnHead = false;
 
   raw.prepare("INSERT INTO users(id,email_normalized,role,status,created_at,updated_at) VALUES(?,?,?,?,?,?)")
     .run("test-admin", "admin@example.invalid", "admin", "active", now, now);
@@ -219,6 +312,18 @@ function d1(raw) {
         async all() { return { results: raw.prepare(sql).all(...values) }; },
         async run() { return { meta: { changes: Number(raw.prepare(sql).run(...values).changes) } }; }
       };
+    },
+    async batch(statements) {
+      raw.exec("BEGIN IMMEDIATE");
+      try {
+        const results = [];
+        for (const statement of statements) results.push(await statement.run());
+        raw.exec("COMMIT");
+        return results;
+      } catch (error) {
+        raw.exec("ROLLBACK");
+        throw error;
+      }
     }
   };
 }
@@ -228,7 +333,8 @@ function r2() {
   return {
     objects,
     failAfterPut: 0,
-    async head(key) { return objects.get(key) || null; },
+    throwOnHead: false,
+    async head(key) { if (this.throwOnHead) throw new Error("Simulated R2 head failure."); return objects.get(key) || null; },
     async put(key, bytes, options) {
       assert.equal(options.onlyIf?.get("if-none-match"), "*");
       if (options.onlyIf?.get("if-none-match") === "*" && objects.has(key)) return null;

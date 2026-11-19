@@ -125,7 +125,14 @@ async function main() {
     ORDER_ACCESS_SIGNING_SECRET: ACCESS_SECRET, PAYMENT_PIPELINE_STAGE: "staging",
     PUBLIC_SITE_ORIGIN: "https://example.test", RESEND_API_KEY: "re_task2pb_test",
     RESEND_DELIVERY_ENABLED: "true", RESEND_REPLY_TO: "support@example.test",
-    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db
+    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db,
+    TRG_PRODUCTS: {
+      async head(key) {
+        return ["catalog-publications/task2pa-fixed/delivery.pdf", "catalog-publications/task2pa-pwyw/delivery.pdf"].includes(key)
+          ? { size: PDF.byteLength }
+          : null;
+      }
+    }
   };
   const deliveryFetchImpl = async (_url, options) => {
     deliveryCalls.push({ body: String(options.body), key: options.headers["idempotency-key"] });

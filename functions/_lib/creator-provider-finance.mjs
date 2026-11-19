@@ -200,13 +200,22 @@ async function allocate(database, order, amount, priorAmount = 0) {
   const lines = await rows(
       database
         .prepare(
-          `SELECT oi.id order_item_id,oi.product_slug,oi.line_total_cents,s.creator_id,s.creator_net_cents,s.gross_cents FROM order_items oi LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id WHERE oi.order_id=? ORDER BY oi.id`,
+          `SELECT oi.id order_item_id,oi.product_slug,oi.line_total_cents,s.creator_id,s.creator_net_cents,s.gross_cents,s.account_category,
+             CASE WHEN COALESCE(s.account_category_verified,0)=1
+               THEN CASE WHEN s.account_category IN ('owner','admin') THEN 0 ELSE 1 END
+               WHEN EXISTS(SELECT 1 FROM creator_earnings_ledger l WHERE l.order_item_id=oi.id AND l.entry_type='sale_earning') THEN 1
+               ELSE 0 END creator_compensated
+           FROM order_items oi LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id WHERE oi.order_id=? ORDER BY oi.id`,
         )
         .bind(Number(order.id)),
     ),
-    total = lines.reduce((sum, line) => sum + Number(line.line_total_cents), 0);
-  if (!total || amount > total || priorAmount + amount > total)
+    productTotal = lines.reduce((sum, line) => sum + Number(line.line_total_cents), 0),
+    nonProduct = Number(order.total_cents) - productTotal,
+    total = Number(order.total_cents);
+  if (nonProduct < 0 || !total || amount > total || priorAmount + amount > total)
     throw new Error("Provider amount exceeds the original order total.");
+  if (nonProduct) lines.push({ order_item_id: 0, product_slug: null, line_total_cents: nonProduct,
+    creator_id: null, creator_net_cents: 0, gross_cents: nonProduct, account_category: "non_product", creator_compensated: 0 });
   if (!priorAmount) return allocateTotal(lines, amount, total);
   const before = allocateTotal(lines, priorAmount, total),
     after = allocateTotal(lines, priorAmount + amount, total),
@@ -227,7 +236,7 @@ function allocateTotal(lines, amount, total) {
   let remainder =
     amount - parts.reduce((sum, line) => sum + line.amountCents, 0);
   for (const line of [...parts].sort(
-    (a, b) => b.remainder - a.remainder || a.order_item_id - b.order_item_id,
+    (a, b) => b.remainder - a.remainder || Number(a.order_item_id || 0) - Number(b.order_item_id || 0),
   )) {
     if (!remainder) break;
     line.amountCents++;
@@ -286,6 +295,8 @@ async function reverseAllocations(
           eventId,
           createdAt,
         ),
+    );
+    if (Number(line.creator_compensated) === 1) statements.push(
       database
         .prepare(
           `INSERT INTO creator_earnings_ledger(creator_id,entry_type,amount_cents,currency,order_id,order_item_id,product_slug,available_at,payout_state,reason,idempotency_key,created_at) VALUES(?,?,?,?,?,?,?,?,?,'Stripe provider reversal',?,?)`,
@@ -324,7 +335,7 @@ function cumulativeAllocation(originalAmount, originalGross, cumulativeGross) {
 async function creatorTotals(lines) {
   const totals = new Map();
   for (const line of lines)
-    if (line.creator_id && line.amountCents)
+    if (line.creator_id && line.amountCents && Number(line.creator_compensated) === 1)
       totals.set(
         line.creator_id,
         (totals.get(line.creator_id) || 0) + line.amountCents,

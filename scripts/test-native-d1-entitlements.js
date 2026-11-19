@@ -30,7 +30,7 @@ async function main() {
     creatorId: "creator-rv-sawyer", publicationState: "published", status: "available-direct",
     buyMode: "cart", pricingModel: "fixed", priceCents: 600, currency: "USD",
     coverR2Key: "catalog-publications/task2i/cover.webp",
-    deliveryR2Key: "catalog-publications/task2i/private-delivery.pdf",
+    deliveryR2Key: "catalog-publications/task2i/fixed/delivery.pdf",
     deliveryFilename: "task2i.pdf", deliveryContentType: "application/pdf",
     metadata: { authors: ["RV Sawyer"], authorSlugs: ["rv-sawyer"], version: "2.1" }
   };
@@ -41,7 +41,7 @@ async function main() {
     ...productBase, id: "task2i-pwyw", slug: "task2i-pwyw", title: "Task 2I PWYW",
     status: "pay-what-you-want", pricingModel: "pwyw", priceCents: 900,
     minimumPriceCents: 300, suggestedPriceCents: 900,
-    deliveryR2Key: "catalog-publications/task2i/private-pwyw.pdf",
+    deliveryR2Key: "catalog-publications/task2i/pwyw/delivery.pdf",
     deliveryFilename: "task2i-pwyw.pdf", metadata: { ...productBase.metadata, version: "3.4" }
   }, { nowMs: NOW });
 
@@ -66,10 +66,12 @@ async function main() {
   assert.equal(order.payment_status, "paid");
   assert.equal(order.native_order_state, "paid");
   assert.equal(order.native_entitlement_status, "ready");
-  assert.equal(order.fulfillment_status, "pending", "Ownership must not activate native delivery.");
+  assert.equal(order.fulfillment_status, "ready", "Paid native delivery becomes ready only after the exact purchased objects are verified.");
 
   let owned = raw.prepare("SELECT * FROM native_product_entitlements WHERE order_id=? ORDER BY native_product_id").all(order.id);
   assert.equal(owned.length, 2, "One ownership entitlement is required for each purchased native product.");
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM download_entitlements WHERE order_id=?").get(order.id).n, 0,
+    "Native purchases must not use the legacy delivery-entitlement table.");
   assert.deepEqual(owned.map(row => row.native_product_id), ["task2i-fixed", "task2i-pwyw"]);
   for (const row of owned) {
     assert.equal(row.purchaser_user_id, BUYER.id);
@@ -227,7 +229,12 @@ async function deliver(webhook, db, event) {
   const body = JSON.stringify(event);
   return webhook.handleStripeWebhookRequest(new Request("https://example.test/api/stripe/webhook", {
     method: "POST", headers: { "stripe-signature": await signature(body) }, body
-  }), { PAYMENT_PIPELINE_STAGE: "staging", STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db }, { nowMs: NOW });
+  }), {
+    PAYMENT_PIPELINE_STAGE: "staging",
+    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
+    TRG_ORDERS: db,
+    TRG_PRODUCTS: { async head(key) { return key.endsWith("/delivery.pdf") ? { size: 64 } : null; } }
+  }, { nowMs: NOW });
 }
 
 async function signature(body) {

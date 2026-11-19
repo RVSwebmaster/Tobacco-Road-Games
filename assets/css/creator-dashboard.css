@@ -47,6 +47,15 @@ body:has(.creator-dashboard-shop-wall) .shelf-dressing {
   user-select: none;
 }
 
+/* The public Creator identity page swaps catalog artwork into the existing
+   framed poster aperture. The underlying Familiar image remains the frame. */
+.creator-profile-catalog-cover {
+  z-index: 3;
+  clip-path: inset(2.2% 11.6% 2%);
+  object-fit: contain;
+  background: #151515;
+}
+
 .creator-dashboard-open-rules-light-cover {
   position: absolute;
   top: 240px;

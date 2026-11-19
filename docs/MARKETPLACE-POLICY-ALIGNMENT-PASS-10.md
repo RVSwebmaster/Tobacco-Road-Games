@@ -36,3 +36,7 @@ Creator-tool denial now says seller registration is incomplete or restricted. Pu
 ## Deferred
 
 Production Preferred billing, automated Preferred expiry jobs, seller agreement/rights/AI fields, inactivity automation, coupons, Ad Credits, and advertising rotation remain for later passes. Production Connect and payouts remain disabled.
+
+### Supersession note — C3 capacity approval (2026-11-18)
+
+The 20/22 catalog allocations in this pass describe their historical implementation baseline and are superseded by the current approved 12/24 allocations, shelf limits, and Admin/Owner exceptions in `MARKETPLACE-POLICY-CANON.md` §2. Existing downgrade behavior remains: do not delete over-limit listings or customer records; block additional publication/placement until within current capacity.

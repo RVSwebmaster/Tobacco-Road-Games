@@ -1,6 +1,6 @@
 # TRG page architecture
 
-Last verified: 2026-11-17 against `scripts/build-store.js`, `scripts/build-pages-output.mjs`, `_redirects`, and `_routes.json`.
+Last verified: 2026-11-18 against `scripts/build-store.js`, `scripts/build-pages-output.mjs`, `_redirects`, and `_routes.json`.
 
 ## Storefront composition
 
@@ -13,6 +13,11 @@ Guest is the canonical storefront composition. `scripts/build-store.js` produces
 - `renderCreatorIdentityPage(guestLandingPage)` derives Creator from Guest, retains the shared cabinet composition, and applies the canonized Creator furniture, identity, navigation, library, framed right-bay poster, lighting overlay, and footer behavior.
 
 The frozen shared cabinet assets are `assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png`, `upper-cabinet-tablet.png`, and `upper-cabinet-mobile.png`. Guest and Customer continue to use these unchanged. Creator selects its approved role-scoped desktop, tablet, and mobile title-board variants, which remove the baked central mark and the two decorative potted plants while preserving the shared cabinet geometry. The approved Creator furniture configuration is the definitive design reference for the Creator Profile and Creator Dashboard surfaces; the framed right-bay poster uses the Guest wall-art treatment and Creator-only lighting overlay. Shared cabinet geometry belongs to the shared storefront styles, not duplicated role CSS. `assets/css/creator-dashboard.css` owns only Creator identity/navigation placement and the explicitly scoped Creator poster treatment; it must not fork common furniture rules.
+
+## Approved public navigation
+
+- **Verified 2026-11-18:** The public primary navigation contains exactly Explore (`/store/catalog/`), Support (`/support.html`), Login/Signup (`/account.html`), and Cart (`/store/cart/`). `PUBLIC_NAV_ITEMS` in `scripts/build-store.js` is the shared source for Guest and homepage navigation; the root, Support, and Account pages contain the same four links.
+- Community Forum remains available through its forum routes and APIs, but is not part of the approved public primary navigation. Its routes, access controls, privacy, and isolation remain separately testable.
 
 ## Runtime responsibilities
 
@@ -33,9 +38,12 @@ The frozen shared cabinet assets are `assets/images/storefront-shelf-dressing/up
 
 ## Approved and unfinished boundaries
 
+- **Customer account closeout — 2026-11-18:** The underlying registration, email verification, saved-card setup, account profile, and personal-library activation are **provisionally accepted for functionality** based on isolated regression results. This does not approve the current Customer account presentation. The `/account.html` Customer signup/profile interface is **visually rejected** and requires a complete redesign under Owner and Friday direction. Keep that redesign pending; do not treat the current account layout as a visual baseline. This rejection applies to the account interface, not the Guest-derived `/customer` storefront.
+- **Forum deferral — 2026-11-18:** Forum functionality is deferred until the marketplace is built and must not appear in the Customer experience. The current account source still contains a signed-in Forum Profile panel (`#forum-profile-panel` in `account.html`, wired by `assets/js/account.js`); removal/exclusion remains unfinished and must be addressed under the future Owner/Friday-directed Customer account redesign. No forum UI or access code was changed during end-of-day closeout.
+
 - **Approved:** RV approved the Guest and Creator visual screenshots for the shared cabinet baseline. The shared architecture was committed in `ae1af4a` (`Share canonical cabinet rendering with Creator`).
 - **Approved:** RV granted visual acceptance on 2026-11-17 for the Creator furniture configuration: responsive Creator title-board artwork, identity placement, removed plants/bookstops/Open Rules shelf and sign, Hurricane lantern placement, centered framed right-bay poster, shelf alignment, and restored overhead lighting. Guest and Customer remain unchanged.
-- **Outstanding:** Record and implement the automatic 45-second product-cover rotation on the Creator furniture display without interaction or configuration controls. No rotation control is part of the approved furniture design.
+- **Implemented 2026-11-18:** At RV's direction, the existing framed poster in the right side of the Creator title board on `/creator/` now displays and rotates covers from the selected Creator's published, publicly listed catalog every 45 seconds. The Familiar artwork remains the frame and empty/error fallback. Rotation pauses while the page is hidden and is disabled for reduced-motion preference. No controls or new display slot were added. `/creator-dashboard/`, `/authors/<slug>/`, the purchased-library shelves, other title-board elements, and Guest/Customer layouts remain unchanged.
 - **Verified locally:** `scripts/test-creator-open-rules-data.js` checks the Creator-only artwork, identity markup/profile behavior, framed poster and lighting layers, matching cabinet dimensions, and shared examination controls. It does not replace browser visual acceptance.
 
 The user-approved shared cabinet architecture is the baseline. A role-specific visual exception requires an explicit assignment and must not be introduced by copying or editing common furniture rules.

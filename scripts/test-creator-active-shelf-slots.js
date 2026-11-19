@@ -169,7 +169,7 @@ async function main() {
     const standardOverflowStatus = response.status;
     const standardOverflowBody = await response.json();
     assert.equal(standardOverflowStatus, 409);
-    assert.match(standardOverflowBody.error, /capacity is 20/i);
+    assert.match(standardOverflowBody.error, /capacity is 12/i);
     assertBlockedStateUnchanged(
       database,
       bucket,
@@ -226,7 +226,7 @@ async function main() {
     const preferredOverflowStatus = response.status;
     const preferredOverflowBody = await response.json();
     assert.equal(preferredOverflowStatus, 409);
-    assert.match(preferredOverflowBody.error, /capacity is 22/i);
+    assert.match(preferredOverflowBody.error, /capacity is 24/i);
     assertBlockedStateUnchanged(
       database,
       bucket,

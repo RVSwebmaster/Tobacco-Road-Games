@@ -47,3 +47,7 @@ Several optional legacy Creator scripts still encode the retired GitHub-dispatch
 ## Task 2O-B dependency
 
 Owner review can approve, reject, or request changes, but an approved Creator listing is not copied into the authoritative native `marketplace_products` table by Task 2O-A. Task 2O-B must map the approved immutable Creator listing and accepted private files into the Cloudflare-native publication transaction, retaining create-only R2 handling and explicit Owner authorization. Approval must remain distinct from public publication.
+
+### Capacity policy supersession — C3 (2026-11-18)
+
+This handoff's Standard 20 active / 1 PWYW note is historical. Current approved catalog/shelf allocations are Standard 12/6, Founding-25 and Premier 24/12, Admin unlimited/unlimited, and Owner unlimited/14. Existing customer entitlements and downgrade continuity remain unchanged.

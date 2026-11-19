@@ -1,4 +1,4 @@
-import { getProductById, getProductBySlug, listProducts, ProductCatalogError } from "./product-catalog-d1.mjs";
+import { getProductById, getProductBySlug, listProducts, ProductCatalogError, PUBLIC_LISTED_STATUSES } from "./product-catalog-d1.mjs";
 import { jsonResponse } from "./owner-runtime.mjs";
 
 const PUBLIC_METADATA = [
@@ -8,10 +8,7 @@ const PUBLIC_METADATA = [
   "playMode", "rulesComplexity"
 ];
 
-const LISTED_STATUSES = new Set([
-  "available-direct", "coming-soon", "free-download", "legacy-edition",
-  "pay-what-you-want", "preview-available", "revised-edition-pending"
-]);
+const LISTED_STATUSES = new Set(PUBLIC_LISTED_STATUSES);
 const PURCHASE_BUY_MODES = new Set(["cart", "free-download"]);
 // Automatic visibility preserves the legacy status-derived shelf behavior.
 // Explicit listing can shelve a preview-only product without making it purchasable.
@@ -44,7 +41,7 @@ export async function handlePublicCatalogRequest(request, env) {
     const status = params.get("status") || undefined;
     if (creatorId?.length > 160 || status?.length > 80) return jsonResponse({ error: "Catalog filter is invalid." }, 400);
     const products = await listProducts(env.TRG_ORDERS, {
-      creatorId, status, publicationState: "published", listingVisibility: "listed", limit, offset
+      creatorId, status, publicationState: "published", publicOnly: true, limit, offset
     });
     const publicProducts = [];
     const creators = new Map();

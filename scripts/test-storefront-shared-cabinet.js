@@ -68,7 +68,8 @@ assert.doesNotMatch(creator, /data-magical-bookshelf/, "Creator shelves do not i
 assert.doesNotMatch(creator, /shop-wall-row--merchandising|shop-wall-row--bric-a-brac/, "Creator identity page does not inherit lower merchandising sections");
 assert.equal((creator.match(/data-creator-library-books/g) || []).length, 2, "Creator personal library retains two ownership rows");
 assert.equal((creator.match(/class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row"/g) || []).length, 2, "Creator Open Rules cabinet retains both empty furniture rows");
-assert.match(creator, /class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster"[^>]+the-familiar-framed-poster\.png/, "Creator alone receives the framed Open Rules poster");
+assert.match(creator, /class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster"[^>]+the-familiar-framed-poster\.png/, "Creator Profile retains the framed poster fallback and frame");
+assert.match(creator, /data-creator-profile-catalog-cover/, "Creator Profile rotates only authored catalog covers in the existing poster frame");
 assert.match(creator, /class="creator-dashboard-open-rules-light-cover"/, "Creator alone receives the scoped light-effect cover");
 assert.doesNotMatch(guest, /creator-dashboard-open-rules-poster/, "Guest does not inherit the Creator poster");
 assert.doesNotMatch(customer, /creator-dashboard-open-rules-poster/, "Customer does not inherit the Creator poster");
@@ -79,5 +80,6 @@ assert.match(dashboard, /class="creator-dashboard-shop-wall"/, "Creator Dashboar
 assert.equal((dashboard.match(/shop-wall-fixed-cabinet/g) || []).length, 1, "Dashboard furniture is generated once through the shared renderer");
 assert.match(dashboard, /upper-cabinet-creator-desktop\.png\?v=creator-title-board3/, "Creator Dashboard uses the Creator cabinet artwork");
 assert.match(dashboard, /class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster"/, "Creator Dashboard uses the framed right-bay poster");
+assert.doesNotMatch(dashboard, /data-creator-profile-catalog-cover|creator-profile-catalog-rotation\.js/, "Private Creator Dashboard retains the static poster");
 
 console.log("Shared storefront cabinet architecture passed.");

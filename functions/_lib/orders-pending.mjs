@@ -272,6 +272,7 @@ export function resolvePendingOrderItems(requestItems, catalogMap, options = {})
       deliveryFilename: product.deliveryFilename || null,
       deliveryContentType: product.deliveryContentType || null,
       nativeCreatorId: product.nativeCreatorId || null,
+      firstPublishedAt: product.firstPublishedAt || null,
       productStatus: String(product.status || ""),
       publicationState: String(product.publicationState || ""),
       versionSnapshot: String(product.version || "").trim()

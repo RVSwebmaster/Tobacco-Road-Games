@@ -107,6 +107,9 @@
       .payout.eligible
       ? `Payout ready: up to ${money(finance.payout.maximumOrdinaryPayoutCents)} in $10 increments. ${money(finance.payout.ordinaryPayoutRemainderCents)} remains in Creator Balance.`
       : `Payout blocked: ${finance.payout.blockedReasons.join(" ")}`;
+    document.querySelector("#creator-connect-dashboard").hidden =
+      finance.payout.profile?.provider !== "stripe_connect" ||
+      !finance.payout.profile?.provider_account_reference;
     document.querySelector("#creator-payment-method-status").textContent =
       summary.registrationChecks?.paymentMethodReady
         ? "Payment method — Complete"
@@ -1240,6 +1243,25 @@
         await load();
       } catch (error) {
         output.textContent = error.message;
+      }
+    });
+  document
+    .querySelector("#creator-connect-dashboard")
+    .addEventListener("click", async () => {
+      const output = document.querySelector("#creator-connect-status"),
+        button = document.querySelector("#creator-connect-dashboard");
+      try {
+        button.disabled = true;
+        output.textContent = "Opening Stripe Express Dashboard…";
+        const result = await api("connect", {
+          action: "dashboard",
+          creatorId: currentCreatorId,
+        });
+        location.assign(result.dashboardUrl);
+      } catch (error) {
+        output.textContent = error.message;
+      } finally {
+        button.disabled = false;
       }
     });
   document

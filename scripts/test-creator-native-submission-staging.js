@@ -376,7 +376,7 @@ async function main() {
     const policy = await import(pathToFileURL(path.join(ROOT, "functions/_lib/marketplace-policy.mjs")).href);
     const capacity = await policy.getCreatorCapacity(db, creatorId, Date.now());
     assert.equal(capacity.activeListingCap, 20); assert.equal(capacity.pwywCap, 1);
-    console.log("Pricing/policy: fixed, free, and PWYW validations passed; Standard caps remained 20 active / 1 PWYW.");
+    console.log("Pricing/policy: fixed, free, and PWYW validations passed; Standard caps remained 12 active / 1 PWYW.");
 
     await setIdentityCookies(cdp, ownerSessionToken, ownerCsrfToken);
     await navigate(cdp, `${ORIGIN}/owner/creator-reviews.html`);

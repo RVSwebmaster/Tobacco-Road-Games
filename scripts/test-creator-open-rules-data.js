@@ -119,7 +119,11 @@ async function run({ user, search = "", items = [] }) {
   assert.equal((page.match(/guest-open-rules-row" aria-hidden="true">\s*<\/div>/g) || []).length, 2,
     "Creator Open Rules shelves retain their shelf rows without empty dark grid cards");
   assert.match(page, /class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster"[^>]+the-familiar-framed-poster\.png/,
-    "Creator Open Rules bay contains the requested framed poster");
+    "Creator Profile retains the approved framed poster as its static frame/fallback");
+  assert.match(page, /data-creator-profile-catalog-cover data-catalog-api="\/api\/catalog"/,
+    "Creator Profile can display published covers from its selected Creator catalog");
+  assert.match(page, /creator-profile-catalog-rotation\.js\?v=creator-catalog-cover-rotation1/,
+    "Creator Profile loads its scoped catalog-cover rotator");
   assert.match(page, /class="creator-dashboard-open-rules-light-overlay"/, 
     "Creator Open Rules bay restores the overhead light layer");
   assert.match(page, /class="creator-dashboard-open-rules-light-cover"/, 

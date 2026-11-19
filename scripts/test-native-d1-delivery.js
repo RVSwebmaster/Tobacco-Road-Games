@@ -178,6 +178,10 @@ async function paidFixture(nativeOrders, ownership, db, raw, product, userId) {
     subtotalCents: Number(product.priceCents), totalCents: Number(product.priceCents), userId
   }, [{
     authorSlugsJson: JSON.stringify(product.metadata.authorSlugs), catalogRevision: product.revision,
+    creatorFeeBasisPoints: 2000, creatorFeePolicyEffectiveAt: createdAt,
+    creatorFeePolicyReason: "standard", creatorCommissionCategory: "standard",
+    creatorCommissionPolicyVersion: "legacy-marketplace-policy", creatorFirstPublishedAt: product.publishedAt,
+    creatorFixedFeeCents: 0, creatorReserveDays: 14, creatorFeePolicyId: null,
     createdAt, currency: product.currency, deliveryContentType: product.deliveryContentType,
     deliveryFilename: product.deliveryFilename, deliveryR2Key: product.deliveryR2Key,
     effectiveUnitPriceCents: Number(product.priceCents), lastUpdatedSnapshot: product.updatedAt,

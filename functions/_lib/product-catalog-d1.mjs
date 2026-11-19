@@ -41,6 +41,10 @@ const STATUSES = [
   "legacy-not-for-sale", "pay-what-you-want", "preview-available",
   "preview-only", "revised-edition-pending", "retired"
 ];
+export const PUBLIC_LISTED_STATUSES = Object.freeze([
+  "available-direct", "coming-soon", "free-download", "legacy-edition",
+  "pay-what-you-want", "preview-available", "revised-edition-pending"
+]);
 const BUY_MODES = [
   "available-direct", "cart", "coming-soon", "fixed-price", "free-download",
   "manual-invoice", "pay-what-you-want", "preview-only", "retired"
@@ -96,7 +100,7 @@ export async function getProductBySlug(database, slug) {
   return fromRow(row);
 }
 
-export async function listProducts(database, { creatorId, publicationState, status, listingVisibility, limit = 50, offset = 0 } = {}) {
+export async function listProducts(database, { creatorId, publicationState, status, listingVisibility, publicOnly = false, limit = 50, offset = 0 } = {}) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 200) invalid("limit must be an integer from 1 to 200.");
   if (!Number.isInteger(offset) || offset < 0) invalid("offset must be a nonnegative integer.");
   const clauses = [];
@@ -104,12 +108,20 @@ export async function listProducts(database, { creatorId, publicationState, stat
   for (const [value, column, label] of [
     [creatorId, "creator_id", "creatorId"],
     [publicationState, "publication_state", "publicationState"],
-    [status, "status", "status"],
-    [listingVisibility, "storefront_visibility", "listingVisibility"]
+    [status, "status", "status"]
   ]) {
     if (value === undefined) continue;
     clauses.push(`${column}=?`);
     values.push(requiredText(value, label));
+  }
+  if (publicOnly) {
+    clauses.push(`((storefront_visibility='listed' AND status<>'retired' AND buy_mode<>'retired')
+      OR (storefront_visibility='automatic' AND status IN (${PUBLIC_LISTED_STATUSES.map(() => "?").join(",")})
+        AND buy_mode<>'retired'))`);
+    values.push(...PUBLIC_LISTED_STATUSES);
+  } else if (listingVisibility !== undefined) {
+    clauses.push("storefront_visibility=?");
+    values.push(requiredText(listingVisibility, "listingVisibility"));
   }
   const where = clauses.length ? ` WHERE ${clauses.join(" AND ")}` : "";
   const result = await database.prepare(`SELECT * FROM marketplace_products${where} ORDER BY slug LIMIT ? OFFSET ?`)

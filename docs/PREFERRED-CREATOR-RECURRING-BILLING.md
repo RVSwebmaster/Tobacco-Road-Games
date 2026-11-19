@@ -1,6 +1,6 @@
 # Preferred Creator external and recurring billing
 
-Preferred Creator is a paid service and community-leadership tier. It does not grant operator, moderation, ownership, governance, organic-ranking, or undisclosed advertising authority. Benefits remain the active 90/10 sale split, 22 active listings, five included active product-ad slots, and Preferred dashboard/notices treatment.
+Preferred Creator is a paid service tier. It does not grant operator, moderation, ownership, governance, organic-ranking, or undisclosed advertising authority. Current benefits use the Premier 95/5 financial classification, 24 active listings, 12 shelf slots, five included active product-ad slots, and Preferred dashboard/notices treatment. Historical transactions retain their sale-time terms.
 
 ## Plans and settlement
 
@@ -18,6 +18,6 @@ A failed installment records its attempt, failure state, retry time, outstanding
 
 Creators may correct the stored payment method, allow an idempotent scheduler retry, or explicitly cure the full installment with Creator Balance. They may mark a commitment do-not-renew; this does not erase its remaining installments. A new legally binding commitment is not created automatically at month 12. Annual renewal also requires explicit purchase authorization.
 
-Loss of Preferred changes only future behavior to Standard. Sale-time commission snapshots remain immutable, products are not deleted or automatically delisted for a 22-to-20 cap reduction, and additional activations remain subject to current capacity. Additional-Creator-identity coverage stays separate and additive.
+Loss of Preferred changes only future behavior to Standard. Sale-time commission snapshots remain immutable, products are not deleted or automatically delisted for the 24-to-12 catalog capacity reduction, and new activations remain subject to current capacity. Existing approved downgrade procedures remain in force. Additional-Creator-identity coverage stays separate and additive.
 
 Preferred coverage is non-refundable once begun except for a genuine TRG billing mistake or failed service delivery. Operator-approved corrections restore the original payment source and reverse corrected service revenue; coverage changes only when necessary to correct that error. Ordinary proration, change-of-mind refunds, early-termination penalties, debt collection, and automatic coverage unwind are not implemented. Production scheduling and production Stripe/refund activation remain disabled.

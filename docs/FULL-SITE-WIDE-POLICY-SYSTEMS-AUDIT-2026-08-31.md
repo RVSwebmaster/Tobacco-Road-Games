@@ -306,3 +306,7 @@ Required verification for this audit:
 ## Original audit disposition (historical; superseded above)
 
 The continuing Creator hard gate, Stripe Ad Credit service accounting, additional-identity billing, and Creator service-correction gaps were remediated after this audit. Coupon policy and the remaining legal and operational blockers still precede production readiness. Production must remain closed until those blockers are resolved and the remediated system passes the full suite plus direct negative authorization tests.
+
+### Capacity status supersession (2026-11-18)
+
+The 20/22 capacity statements in this historical audit describe an earlier policy and enforcement baseline. They are superseded by the Owner-approved allocations and server-side D1 transition guards recorded in `docs/MARKETPLACE-POLICY-CANON.md` §2 and the C3 implementation entry in `docs/PROJECT-STATE.md`. Do not use the older values for current capacity decisions.

@@ -166,6 +166,10 @@ async function paidNativeFixture(nativeOrders, ownership, db, raw, product) {
     subtotalCents: 725, totalCents: 725, userId: BUYER.id
   }, [{
     authorSlugsJson: '["rv-sawyer"]', catalogRevision: product.revision, createdAt: ISO,
+    creatorFeeBasisPoints: 2000, creatorFeePolicyEffectiveAt: ISO,
+    creatorFeePolicyReason: "standard", creatorCommissionCategory: "standard",
+    creatorCommissionPolicyVersion: "legacy-marketplace-policy", creatorFirstPublishedAt: product.publishedAt,
+    creatorFixedFeeCents: 0, creatorReserveDays: 14, creatorFeePolicyId: null,
     currency: "USD", deliveryContentType: product.deliveryContentType,
     deliveryFilename: product.deliveryFilename, deliveryR2Key: product.deliveryR2Key,
     effectiveUnitPriceCents: 725, lastUpdatedSnapshot: product.updatedAt, lineTotalCents: 725,
