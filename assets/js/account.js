@@ -76,6 +76,7 @@
   let googleInitialized = false;
   let googleInitializeAttempts = 0;
   let currentAccountEmailVerified = false;
+  let currentAccount = null;
   let pendingClaimCredential = "";
   let stripeInstance = null;
   let stripeElements = null;
@@ -88,6 +89,25 @@
     status.textContent = message;
     status.classList.toggle("discussion-status--error", error);
   };
+
+  function defaultLandingForAccount(user) {
+    if (!user || user.customerPrivilegesActive === false) return "";
+    if (user.accountClass === "customer") return "/customer";
+    return ({
+      creator: "/creator/",
+      founding25: "/founding-25-profile/",
+      premiumCreator: "/premium-creator-profile/",
+      admin: "/admin-profile/",
+      owner: "/owner-profile/",
+    })[user.accountClass] || "/customer";
+  }
+
+  function redirectToAccountLanding() {
+    const route = defaultLandingForAccount(currentAccount);
+    if (!route) return false;
+    window.location.assign(route);
+    return true;
+  }
 
   async function api(path, body = {}, options = {}) {
     const headers = { "content-type": "application/json" };
@@ -118,6 +138,7 @@
     }
     csrfToken = payload.csrfToken || "";
     if (!payload.authenticated) {
+      currentAccount = null;
       currentAccountEmailVerified = false;
       summary.textContent = "No account is signed in.";
       signout.hidden = true;
@@ -135,6 +156,7 @@
       return false;
     }
     summary.innerHTML = "";
+    currentAccount = payload.user;
     currentAccountEmailVerified = Boolean(payload.user.emailVerified);
     const customerPrivilegesActive = payload.user.customerPrivilegesActive !== false;
     const email = document.createElement("p");
@@ -566,13 +588,10 @@
       const form = event.currentTarget;
       const data = Object.fromEntries(new FormData(form));
       try {
-        const login = await api("/api/auth/login", data);
+        await api("/api/auth/login", data);
         form.reset();
         await refreshAccount();
-        if (login.user?.customerPrivilegesActive !== false) {
-          window.location.assign("/customer");
-          return;
-        }
+        if (redirectToAccountLanding()) return;
         setStatus("Signed in.");
       } catch (error) {
         setStatus(error.message, true);
@@ -720,14 +739,11 @@
 
   window.handleTrgGoogleCredential = async (credentialResponse) => {
     try {
-      const account = await api("/api/auth/google", {
+      await api("/api/auth/google", {
         credential: credentialResponse.credential,
       });
       await refreshAccount();
-      if (account.user?.customerPrivilegesActive !== false) {
-        window.location.assign("/customer");
-        return;
-      }
+      if (redirectToAccountLanding()) return;
       setStatus("Signed in with Google.");
     } catch (error) {
       setStatus(error.message, true);
@@ -1182,6 +1198,7 @@
     });
   if (window.__TRG_ACCOUNT_TEST__) {
     Object.assign(window.__TRG_ACCOUNT_TEST__, {
+      defaultLandingForAccount,
       initializeGoogle,
       scheduleGoogleInitialization,
     });

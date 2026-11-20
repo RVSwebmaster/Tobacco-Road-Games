@@ -194,6 +194,19 @@ async function testNoDuplicateWidgetInitialization() {
   assert.equal(harness.calls.renderButton.length, 1);
 }
 
+async function testAccountTierLandingRoutes() {
+  const { context } = createHarness({ google: makeGoogle });
+  await flushMicrotasks();
+  const route = context.window.__TRG_ACCOUNT_TEST__.defaultLandingForAccount;
+  assert.equal(route({ accountClass: "customer" }), "/customer");
+  assert.equal(route({ accountClass: "creator" }), "/creator/");
+  assert.equal(route({ accountClass: "founding25" }), "/founding-25-profile/");
+  assert.equal(route({ accountClass: "premiumCreator" }), "/premium-creator-profile/");
+  assert.equal(route({ accountClass: "admin" }), "/admin-profile/");
+  assert.equal(route({ accountClass: "owner" }), "/owner-profile/");
+  assert.equal(route({ accountClass: "customer", customerPrivilegesActive: false }), "");
+}
+
 async function testGoogleCallbackUsesTrgCsrfHeaderOnly() {
   const harness = createHarness({ google: makeGoogle });
   await flushMicrotasks();
@@ -225,6 +238,7 @@ async function testGuestClaimLinkIsCapturedWithoutLeakingInUrl() {
   await testMissingClientIdShowsUnavailable();
   await testGisScriptFailureShowsUnavailableAfterRetries();
   await testNoDuplicateWidgetInitialization();
+  await testAccountTierLandingRoutes();
   await testGoogleCallbackUsesTrgCsrfHeaderOnly();
   await testGuestClaimLinkIsCapturedWithoutLeakingInUrl();
   console.log("Account Google UI tests passed.");
