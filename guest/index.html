@@ -339,5 +339,24 @@
   <script src="/assets/js/news-chyron.js?v=20261024-news-feed1" defer></script>
   <script src="/assets/js/shelf-curios.js?v=20261002-shelf-curios1" defer></script>
   <script src="/assets/js/guest-product-preview.js?v=20261116-guest-book-examination7" defer></script>
+  <!-- Guest login popup -->
+  <link rel="stylesheet" href="/assets/css/guest-login.css?v=1">
+  <dialog class="guest-login" id="guest-login" aria-label="Log in to Tobacco Road Games">
+    <button class="guest-login__close" type="button" aria-label="Close login">×</button>
+    <span class="guest-login__avatar" aria-hidden="true"></span>
+    <form class="guest-login__form" method="post">
+      <label>Email <input type="email" name="email" autocomplete="username" required autofocus></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+      <div class="guest-login__options">
+        <label title="Remember your email on this browser"><input type="checkbox" name="remember"> Remember Me</label>
+        <a href="/account.html#forgot-form">Forgot Password?</a>
+      </div>
+      <p class="guest-login__error" role="alert" hidden></p>
+      <button class="guest-login__submit" type="submit">Login</button>
+      <p class="guest-login__signup">Don’t have an account? <a href="/account.html#register-form">Sign Up</a></p>
+    </form>
+  </dialog>
+  <script src="/assets/js/guest-login.js?v=1" defer></script>
+  <!-- End Guest login popup -->
 </body>
 </html>

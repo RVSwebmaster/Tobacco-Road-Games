@@ -196,6 +196,31 @@ body:has(.member-profile-shop-wall) .shelf-dressing {
   text-shadow: 0 1px 0 rgba(255, 235, 178, 0.42);
 }
 
+.member-profile-shop-wall .shop-wall-bay--identity > .member-tier-badge {
+  position: absolute;
+  z-index: 4;
+  top: 260px;
+  /* Center of the logo column in the existing two-column identity overlay. */
+  left: calc(41.666667% - 20px);
+  width: 142px;
+  height: auto;
+  transform: translateX(-50%) scale(1.1);
+  filter: drop-shadow(2px 5px 4px rgba(37, 17, 7, 0.62));
+  pointer-events: none;
+}
+
+.member-tier-badge[hidden] {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .member-profile-shop-wall .shop-wall-bay--identity > .member-tier-badge {
+    top: 188px;
+    left: calc(27.25% - 20px);
+    width: 76px;
+  }
+}
+
 /* The board artwork variant is desktop-only. Keep existing responsive artwork
    and Creator identity placement unchanged below the desktop breakpoint. */
 @media (max-width: 1023px) {
@@ -260,6 +285,11 @@ body:has(.member-profile-shop-wall) .shelf-dressing {
 }
 
 @media (max-width: 699px) {
+  .member-profile-shop-wall .shop-wall-bay--identity > .member-tier-badge {
+    top: 151px;
+    width: 105px;
+  }
+
   .creator-dashboard-open-rules-poster {
     top: 5%;
     left: 50%;

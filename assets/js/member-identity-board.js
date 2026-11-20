@@ -2,6 +2,15 @@
   const status = document.querySelector("[data-member-profile-status]");
   const profilePage = document.querySelector("[data-member-profile-page]");
   const profileHeading = document.querySelector("[data-member-profile-heading]");
+  const tierBadge = profilePage?.querySelector("[data-member-tier-badge]");
+  const tierBadgeFiles = new Map([
+    ["customer", "customer.png"],
+    ["creator", "creator.png"],
+    ["founding25", "founding-25.png"],
+    ["premiumCreator", "premium-creator.png"],
+    ["admin", "admin.png"],
+    ["owner", "owner.png"],
+  ]);
   const creatorDashboardLink = document.querySelector("[data-creator-dashboard-link]");
   const defaultTitle = document.title;
 
@@ -80,6 +89,11 @@
       initials.style.display = "none";
       initials.setAttribute("aria-hidden", "true");
       name.textContent = "";
+      if (tierBadge) {
+        tierBadge.hidden = true;
+        tierBadge.removeAttribute("src");
+        tierBadge.alt = "";
+      }
       if (profilePage) {
         document.title = defaultTitle;
         if (profileHeading) profileHeading.textContent = "Member Profile";
@@ -119,6 +133,12 @@
         const member = account.user;
         const accountClass = String(member.accountClass || "");
         const accountClassLabel = String(member.accountClassLabel || "Member");
+        const badgeFile = tierBadgeFiles.get(accountClass);
+        if (tierBadge && badgeFile) {
+          tierBadge.src = `/assets/images/member-tier-badges/${badgeFile}`;
+          tierBadge.alt = `${accountClassLabel} tier badge`;
+          tierBadge.hidden = false;
+        }
         const displayName = String(member?.displayName || "").trim();
         if (!displayName) {
           if (status) status.textContent = "A public display name is not available.";

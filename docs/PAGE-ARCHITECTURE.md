@@ -7,10 +7,13 @@ Last verified: 2026-11-20 against the Member Profile generator, recovered HTML e
 Guest is the canonical storefront composition. `scripts/build-store.js` produces the Guest page and uses its rendered result as the input for the role variants:
 
 - `renderGuestLandingShopWallMain()` assembles the Guest main area.
+- The Guest storefront opens a compact login dialog from Login/Signup. It uses the existing login endpoint and links to the account page for registration and password reset.
 - `renderStorefrontUpperCabinet()` owns the shared upper cabinet frame and frozen responsive cabinet artwork.
 - `renderGuestLibraryBay()`, `renderGuestOpenRulesBay()` / `renderRoleOpenRulesBay()`, `renderHomepageIdentityBay()`, and `renderHomepageShelfFixtures()` provide the corresponding shared or role-configured markup.
 - `renderCustomerLandingPage(guestLandingPage)` derives Customer from Guest and adds Customer-specific session, navigation, and library hooks.
+  The Pages middleware requires a valid session for `/customer` and redirects signed-out visitors to `/guest/`. The Profile link uses the account class returned by `/api/account/me` and the generator’s Profile route map. A successful logout returns the member to the public storefront at `https://tobaccoroadgames.com/`.
 - `renderMemberProfilePage(guestLandingPage, options)` is the canonical Member Profile Base renderer. It composes the approved Creator furniture from shared cabinet parts and generates the Customer, Creator, Founding-25, Premium Creator, Admin, and Owner Profile routes. Only the Creator route receives the Creator catalog-rotation script.
+- The shared Profile title board shows the supplied transparent tier badge for the authenticated account class returned by `/api/account/me`. All six badges use the approved Creator placement, size, and alignment beneath the TRG logo. Badge files live in `assets/images/member-tier-badges/`.
 
 The frozen shared cabinet assets are `assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png`, `upper-cabinet-tablet.png`, and `upper-cabinet-mobile.png`. Guest and Customer Storefront continue to use these unchanged. The six Member Profiles share the approved Creator-scoped desktop, tablet, and mobile title-board variants and the same rendered frame, shelves, identity board, emblem, lighting, and framed display. Their common presentation lives in `assets/css/member-profile.css`; `assets/css/creator-dashboard.css` imports this canonical stylesheet for the separate existing Dashboard. Furniture geometry remains in shared renderers and CSS, never in six role-specific page copies.
 

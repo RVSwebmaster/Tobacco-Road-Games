@@ -1,6 +1,6 @@
 # TRG Member Account Architecture
 
-Status: Approved account architecture, documented 2026-11-20. This is a product and authorization specification, not a claim that the described behavior is implemented or accepted.
+Status: Approved account architecture, documented 2026-11-20. Implementation and acceptance milestones are recorded in [Project State](PROJECT-STATE.md).
 
 This document is the authoritative source for member account navigation, Profiles, Dashboards, personal purchase-library display, and account-tier relationships. `docs/MARKETPLACE-POLICY-CANON.md` remains authoritative for marketplace policy outside those subjects; its former Premium/Preferred membership cadence and pricing language is superseded here.
 
@@ -9,7 +9,7 @@ This document is the authoritative source for member account navigation, Profile
 - All visitors enter through the public storefront.
 - After successful login, every account tier lands on the Customer Storefront at `/customer`.
 - The Account menu provides navigation to the logged-in member's own Profile, private Dashboard, and additional tools permitted by their privileges. It must not redirect members directly to a Profile or Dashboard after login.
-- The Customer Storefront's Account link opens the logged-in member's Profile.
+- The authenticated Customer Storefront's Profile link opens the logged-in member's Profile route based on their account class. Logout ends the session and returns the member to the public homepage at `https://tobaccoroadgames.com/`.
 
 ## Member Profiles
 
@@ -17,6 +17,7 @@ This document is the authoritative source for member account navigation, Profile
 - Keep the six existing HTML entry points temporarily: `customer-profile/index.html`, `creator/index.html`, `founding-25-profile/index.html`, `premium-creator-profile/index.html`, `admin-profile/index.html`, and `owner-profile/index.html`.
 - These HTML pages are temporary entry points. They may be retired only after the dynamically generated member-specific Profile system has passed functional and visual acceptance and each replacement route is accepted.
 - A Profile contains member identity, tier badge, biography, gaming interests, and applicable publishing information.
+- The approved tier badge uses one position beneath the TRG logo across all six classes. The signed-in member's account class selects the badge.
 - Information visibility depends on the logged-in viewer's privileges. Detailed field-by-field visibility rules remain unresolved.
 - Purchase-library shelves on a Profile always belong to the logged-in viewer, never to the person whose Profile is being visited.
 

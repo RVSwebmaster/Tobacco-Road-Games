@@ -3667,7 +3667,8 @@ body:has(.homepage-shop-wall) .site-nav.is-bracketing::after {
   opacity: 1;
 }
 
-body:has(.homepage-shop-wall) .site-header .site-nav a {
+body:has(.homepage-shop-wall) .site-header .site-nav a,
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout] {
   position: relative;
   z-index: 2;
   min-height: auto;
@@ -3682,14 +3683,22 @@ body:has(.homepage-shop-wall) .site-header .site-nav a {
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
 }
 
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout] {
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
 body:has(.homepage-shop-wall) .site-header .site-nav a:hover,
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:hover,
 body:has(.homepage-shop-wall) .site-header .site-nav a[aria-current="page"] {
   background: transparent;
   color: #140a05;
   box-shadow: none;
 }
 
-body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
+body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible,
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:focus-visible {
   background: transparent;
   color: #140a05;
   outline: 3px solid #251309;
@@ -6091,7 +6100,8 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     justify-content: flex-start;
   }
 
-  body:has(.homepage-shop-wall) .site-nav a {
+  body:has(.homepage-shop-wall) .site-nav a,
+  body:has(.homepage-shop-wall) .site-nav [data-customer-logout] {
     min-height: 34px;
     padding: 8px 9px;
     font-size: 0.792rem;

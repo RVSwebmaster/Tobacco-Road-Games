@@ -10,6 +10,19 @@ Last reconciled: 2026-11-20. This is a working-state record, not a deployment st
 - The Profile Base visual foundation remains accepted; authenticated privileges, persistent library display selection, and other functional behavior remain subject to their recorded acceptance gates. Cabinet artwork remains approved and unchanged.
 - Premium Creator monthly-or-annual membership is approved; exact prices and treatment of over-allocation after expiration remain unresolved. Profile visibility details and Customer poster-frame behavior also remain unresolved.
 
+## Guest and Customer Storefront sign-in and navigation — RV accepted 2026-11-20
+
+- **Approval baseline:** RV reviewed and accepted disposable isolated Preview deployment `14e1b333-3a0c-4017-bb82-b26f86b8e24f`. [Approved Preview](https://14e1b333.trg-member-tier-test-20261120.pages.dev/)
+- **Accepted Guest experience:** The compact Login/Signup popup opens over the Guest storefront, uses the existing login flow, and opens `/customer` after an active Customer signs in. Sign Up and Forgot Password use the existing account page. [Guest popup source](../assets/js/guest-login.js)
+- **Accepted Customer experience:** `/customer` requires a session. Its authenticated navigation shows Profile and Logout. Profile uses the signed-in member’s account class to select the destination. The isolated Customer test opened `/customer-profile/` and showed that member’s identity. Logout ends the session and redirects to `https://tobaccoroadgames.com/`. [Navigation source](../assets/js/progressive-navigation.js)
+- **Preservation:** Keep the approved appearance and behavior at this baseline unless RV specifically directs a change.
+
+## Member Profile tier badges — RV accepted 2026-11-20
+
+- **Approval baseline:** RV accepted the badge implementation and related account and Profile work in isolated Preview deployment `9d2a9f5e-59b3-4b01-ba64-9cce3ad8e2a0`. [Approved Preview](https://9d2a9f5e.trg-member-tier-test-20261120.pages.dev/)
+- **Accepted design:** All six supplied transparent tier badges use the Creator reference position, scale, alignment, and shadow beneath the TRG logo at desktop, tablet, and mobile widths. The authenticated account class selects the artwork. The existing cabinet, identity layout, and framed display remain the Profile baseline. [Profile architecture](PAGE-ARCHITECTURE.md)
+- **Verification scope:** The isolated Preview used real logins to check Customer, Creator, and Owner identity and routing at their respective checkpoints. Browser fixtures verified all six badge mappings and their shared placement. [Approved Creator placement reference](https://64e7bec1.trg-member-tier-test-20261120.pages.dev/)
+
 ## Operation Scavenger 001 — Creator catalog cover rotation — implemented locally 2026-11-18
 
 - **Approved scope:** RV specified the Creator Profile title-board's existing right-side Familiar poster frame as the rotating display. Only `/creator/` uses Creator-authored catalog covers there. The private `/creator-dashboard/`, `/authors/<slug>/`, purchased-library shelves, title-board artwork outside the poster aperture, and Guest/Customer pages remain unchanged.

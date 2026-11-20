@@ -30,6 +30,7 @@ const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
 const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
+const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1226,23 +1227,54 @@ function buildGuestLandingPage(products) {
     .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_EXAMINATION_CACHE_BUST}" defer></script>\n</body>`);
 
   const guestLandingPage = next.replace(/^[ \t]+$/gm, "");
-  writeFile("guest/index.html", guestLandingPage);
+  writeFile("guest/index.html", addGuestLoginPopup(guestLandingPage));
   writeFile("customer.html", renderCustomerLandingPage(guestLandingPage));
   return guestLandingPage;
 }
 
+function addGuestLoginPopup(page) {
+  return page.replace("</body>", `  <!-- Guest login popup -->
+  <link rel="stylesheet" href="/assets/css/guest-login.css?v=1">
+  <dialog class="guest-login" id="guest-login" aria-label="Log in to Tobacco Road Games">
+    <button class="guest-login__close" type="button" aria-label="Close login">×</button>
+    <span class="guest-login__avatar" aria-hidden="true"></span>
+    <form class="guest-login__form" method="post">
+      <label>Email <input type="email" name="email" autocomplete="username" required autofocus></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+      <div class="guest-login__options">
+        <label title="Remember your email on this browser"><input type="checkbox" name="remember"> Remember Me</label>
+        <a href="/account.html#forgot-form">Forgot Password?</a>
+      </div>
+      <p class="guest-login__error" role="alert" hidden></p>
+      <button class="guest-login__submit" type="submit">Login</button>
+      <p class="guest-login__signup">Don’t have an account? <a href="/account.html#register-form">Sign Up</a></p>
+    </form>
+  </dialog>
+  <script src="/assets/js/guest-login.js?v=1" defer></script>
+  <!-- End Guest login popup -->
+</body>`);
+}
+
+function withoutGuestLoginPopup(page) {
+  return page.replace(/^[ \t]*<!-- Guest login popup -->[\s\S]*?<!-- End Guest login popup -->\r?\n/m, "");
+}
+
 function renderCustomerLandingPage(guestLandingPage) {
+  guestLandingPage = withoutGuestLoginPopup(guestLandingPage);
+  const profileRoutes = Object.fromEntries(MEMBER_PROFILE_ROUTES.map(({ accountClass, route }) => [accountClass, route]));
   let customerPage = guestLandingPage
     .replace('class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo', 'class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo data-customer-storefront')
-    .replace('<nav class="site-nav" aria-label="Primary">', '<nav class="site-nav" aria-label="Primary" data-progressive-navigation>')
+    .replace('<nav class="site-nav" aria-label="Primary">', `<nav class="site-nav" aria-label="Primary" data-progressive-navigation data-member-profile-routes="${escapeAttribute(JSON.stringify(profileRoutes))}">`)
+    .replace('<a href="/account.html">Login/Signup</a>', "")
     .replace('class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading"', 'class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading" data-homepage-library')
     .replace('aria-label="Empty Guest personal library shelves"', 'aria-label="Your personal library shelves"')
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"')
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right"');
   if (customerPage === guestLandingPage) throw new Error("Customer storefront markers could not be added.");
   customerPage = customerPage
+    .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}-${CUSTOMER_NAV_CACHE_BUST}`)
     .replace(/<script src="\/assets\/js\/guest-product-preview\.js\?v=[^"]+" defer><\/script>/, `<script src="/assets/js/guest-product-preview.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>`)
-    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>\n</body>`);
+    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>\n</body>`);
   return customerPage;
 }
 
@@ -1256,7 +1288,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     throw new Error("Guest page is missing the shared storefront main or navigation.");
   }
 
-  let memberProfile = guestLandingPage
+  let memberProfile = withoutGuestLoginPopup(guestLandingPage)
     .replace("<title>Guest Landing Page | Tobacco Road Games</title>", "<title>Member Profile | Tobacco Road Games</title>")
     .replace('content="Browse and shop Tobacco Road Games as a Guest without creating an account."', 'content="Member profile and personal library for Tobacco Road Games."')
     .replace('<link rel="canonical" href="https://tobaccoroadgames.com/guest/">', `<link rel="canonical" href="https://tobaccoroadgames.com${canonicalPath}">`)
@@ -1269,7 +1301,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       pageAttributes: "data-member-profile-page",
       pageHeading: '<h1 class="member-profile-visually-hidden" data-member-profile-heading>Member Profile</h1>',
       libraryBay: renderGuestLibraryBay({ role: "member-profile" }),
-      identityBay: renderHomepageIdentityBay({ memberIdentity: true }),
+      identityBay: renderHomepageIdentityBay({ memberIdentity: true, memberTierBadge: true }),
       openRulesBay: renderRoleOpenRulesBay("member-profile", { rotateCatalogCovers: creatorCatalogRotation }),
       includeLowerContent: false,
       creatorTitleBoard: true
@@ -1277,7 +1309,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", '  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1">\n</head>')
+    .replace("</head>", '  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n</head>')
     .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer member-profile-footer"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>')
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
@@ -1285,7 +1317,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       '  <script src="/assets/js/homepage-shelves.js?v=creator-open-rules7" defer></script>',
       '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
-      '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1" defer></script>',
+      '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>',
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
     ].join("\n"));
@@ -1546,7 +1578,7 @@ function renderHomepageLibraryBay() {
         </section>`;
 }
 
-function renderHomepageIdentityBay({ memberIdentity = false } = {}) {
+function renderHomepageIdentityBay({ memberIdentity = false, memberTierBadge = false } = {}) {
   const identityBoard = memberIdentity;
   return `
         <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
@@ -1563,7 +1595,7 @@ function renderHomepageIdentityBay({ memberIdentity = false } = {}) {
               <span class="creator-dashboard-creator-initials" data-member-identity-initials hidden aria-hidden="true"></span>
               <span class="creator-dashboard-creator-name" data-member-identity-name></span>
             </div>
-          </div>` : ""}
+          </div>` : ""}${memberTierBadge ? '\n          <img class="member-tier-badge" data-member-tier-badge width="512" height="512" alt="" hidden>' : ""}
         </section>`;
 }
 
@@ -3737,4 +3769,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };
+module.exports = { addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };

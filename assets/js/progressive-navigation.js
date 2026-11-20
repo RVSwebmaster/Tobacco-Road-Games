@@ -1,6 +1,7 @@
 (() => {
   const nav = document.querySelector("[data-progressive-navigation]");
   if (!nav) return;
+  const customerStorefront = document.querySelector("[data-customer-storefront]");
 
   let libraryItems = [];
   let libraryRefreshTimer = 0;
@@ -9,8 +10,17 @@
     .then(async (response) => {
       const state = await response.json();
       if (!response.ok) throw new Error(state?.error?.message || "Navigation is unavailable.");
+      if (customerStorefront && !state.authenticated) {
+        location.replace("/guest/");
+        return;
+      }
       renderNavigation(state);
-      if (state.authenticated) await loadLibrary();
+      if (state.authenticated) {
+        await Promise.allSettled([
+          loadLibrary(),
+          ...(customerStorefront ? [loadProfileLink()] : [])
+        ]);
+      }
     })
     .catch(() => {
       // The server-rendered Guest navigation is the fail-closed fallback.
@@ -19,10 +29,17 @@
   function renderNavigation(state) {
     const cartCount = nav.querySelector("[data-cart-count]")?.textContent || "0";
     const items = Array.isArray(state.items) ? state.items : [];
-    nav.replaceChildren(...items.map((item) => {
+    const signedInCustomer = customerStorefront && state.authenticated &&
+      Array.isArray(state.levels) && state.levels.includes("customer") &&
+      !state.levels.some((level) => ["creator", "admin", "owner"].includes(level));
+    nav.replaceChildren(...items.flatMap((item) => {
+      if (customerStorefront && item.key === "account" && !signedInCustomer) {
+        return [createLogoutButton()];
+      }
       const link = document.createElement("a");
-      link.href = item.href;
-      if (new URL(item.href, location.origin).pathname === location.pathname) {
+      const customerAccount = signedInCustomer && item.key === "account";
+      link.href = customerAccount ? "/customer-profile/" : item.href;
+      if (new URL(link.href, location.origin).pathname === location.pathname) {
         link.setAttribute("aria-current", "page");
       }
       if (item.key === "cart") {
@@ -33,15 +50,61 @@
         badge.textContent = cartCount;
         link.append(badge);
       } else {
-        link.textContent = item.label;
+        link.textContent = customerAccount ? "Account" : item.label;
       }
-      return link;
+      if (customerAccount) return [link, createLogoutButton()];
+      return [link];
     }));
     nav.dataset.privilegeLevels = Array.isArray(state.levels) ? state.levels.join(" ") : "guest";
   }
 
+  function createLogoutButton() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.customerLogout = "";
+    button.textContent = "Logout";
+    button.addEventListener("click", () => logoutCustomer(button));
+    return button;
+  }
+
+  async function loadProfileLink() {
+    const response = await fetch("/api/account/me", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { accept: "application/json" }
+    });
+    if (!response.ok) return;
+    const account = await response.json();
+    const accountClass = account.user?.accountClass;
+    const routes = JSON.parse(nav.dataset.memberProfileRoutes || "{}");
+    if (!account.authenticated || !Object.hasOwn(routes, accountClass)) return;
+
+    const link = document.createElement("a");
+    link.href = routes[accountClass];
+    link.textContent = "Profile";
+    nav.querySelector("[data-customer-logout]")?.before(link);
+  }
+
+  async function logoutCustomer(button) {
+    button.disabled = true;
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
+      const result = await response.json();
+      if (!response.ok || result.ok !== true) throw new Error("Logout failed.");
+      location.replace("https://tobaccoroadgames.com/");
+    } catch {
+      button.disabled = false;
+      window.alert("Logout could not be completed. Please try again.");
+    }
+  }
+
   async function loadLibrary() {
-    if (document.querySelector("[data-customer-storefront]")) {
+    if (customerStorefront) {
       await loadCustomerLibrary();
       return;
     }
