@@ -11,6 +11,8 @@ Last verified: 2026-11-19 against the Owner-accepted staging deployment `0fba318
 - **Member Dashboard:** A distinct operational surface for account tasks. It is not another name for a Profile and does not inherit Profile identity as its page title.
 - **Account class:** The class returned from the authenticated account and existing D1 records. Static Profile routes do not grant an account class or privileges.
 
+The approved account navigation, Profile, Dashboard, library ownership, and tier definitions are maintained in [Member Account Architecture](MEMBER-ACCOUNT-ARCHITECTURE.md). This nomenclature record defines page terms and acceptance state; it does not duplicate that architecture specification.
+
 ## Acceptance state — 2026-11-19
 
 - **Visual foundation: ACCEPTED** on staging deployment `0fba318d-75ba-48a2-b61a-cbdb250c33c9`.

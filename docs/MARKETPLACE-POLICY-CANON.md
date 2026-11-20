@@ -1,6 +1,6 @@
 # Tobacco Road Games Marketplace Policy Canon
 
-Status: Canonical business policy, updated through verified-purchase, refund, fraud, Creator-requested payout, commission/processing-fee, and Creator capacity approval (2026-11-18)
+Status: Canonical business policy, updated through verified-purchase, refund, fraud, Creator-requested payout, commission/processing-fee, Creator capacity approval (2026-11-18), and Member Account Architecture supersession (2026-11-20)
 
 Implementation baseline: `8eeb799 Remove public AI philosophy statement`
 Audience: internal product, policy, and engineering work
@@ -20,34 +20,29 @@ Seller registration is onboarding, not an application or artistic merit review. 
 
 No AI-use disclosure is required in seller registration, the Creator Agreement, listing declarations, creator profiles, or marketplace compliance review. TRG does not police production-method ideology.
 
-## 2. Fees, catalog capacity, and Preferred Creator
+## 2. Fees, catalog capacity, and Premium Creator
+
+Member account tiers, Premium Creator membership cadence and pricing status, and Founding-25 publishing allocations are governed by [Member Account Architecture](MEMBER-ACCOUNT-ARCHITECTURE.md). The 2026-11-20 approved architecture supersedes the former annual-only Premium/Preferred purchase term and the `$20/month` / `$200/year` prices below; Premium Creator may be purchased monthly or annually, and exact prices remain unresolved. Existing marketplace capacity, advertising, commission, and payment-handling policy below remains in force only where it does not conflict with that architecture. Treatment of catalog titles above the applicable allocation after membership expiration is unresolved under the architecture and must not be inferred from the historical overage rule below.
 
 There are no listing fees. TRG earns revenue when creators earn revenue.
 
-| Account | Active catalog capacity | Public shelf allocation | Included active public product ads | PWYW capacity | Dashboard sponsorships |
+| Account | Active catalog capacity | Creator public publishing shelf allocation | Included active public product ads | PWYW capacity | Dashboard sponsorships |
 |---|---:|---:|---:|---:|---|
 | Standard / Free Creator | 12 | 6 | 1 | 1 | One outside-vendor banner placement |
 | Founding-25 | 24 | 12 | Same rules as applicable Creator account | Unchanged | Same rules as applicable Creator account |
-| Premier Creator (active paid Preferred term) | 24 | 12 | 5 | 2 | None |
+| Premium Creator (active paid membership) | 24 | 12 | 5 | 2 | None |
 | Admin | Unlimited | Unlimited | Existing promotional policy | Existing PWYW policy | Existing promotional policy |
 | Owner | Unlimited | 14 | Existing promotional policy | Existing PWYW policy | Owner status grants no scarce promotional priority |
 
-Draft, paused, and inactive listings do not consume active catalog capacity. Catalog capacity is distinct from shelf allocation: only active, published, listed products consume shelf slots. Existing approved downgrade procedures remain unchanged. A privilege change does not delete products, transaction records, or customer entitlements; an overage remains visible and blocks additions or new shelf placement until capacity is available.
+Draft, paused, and inactive listings do not consume active catalog capacity. Catalog capacity is distinct from display selection: active catalog titles and member-selected Profile/Storefront Library display slots are separate concepts. A privilege change does not delete products, transaction records, or customer entitlements. The handling of Premium Creator catalog over-allocation at membership expiration is unresolved; do not apply the historical overage behavior below to that case until decided.
 
-Preferred Creator is a paid service tier, not a merit or performance status. It has no sales requirement or arbitrary cutoff. It is sold as one annual term through either:
+Premium Creator is a paid membership tier, not a merit or performance status. Membership may be purchased monthly or annually. Exact prices and subscription-expiration over-allocation behavior are unresolved in the Member Account Architecture and must not be inferred here.
 
-- $20 per month for a 12-month commitment; or
-- $200 paid upfront for the year.
+Premium Creator benefits include the 24 active catalog titles and 12 publishing display titles shown above, five active public product ads, no outside-vendor creator-dashboard ad, and additional promotional consideration where applicable. For sales under `owner-approved-commission-v1` (effective 2026-11-18), an active paid Premium Creator membership receives a 95/5 Creator/TRG split. Preferred and Premier are historical service/classification terminology; neither term grants a paid membership or any entitlement to a Creator who does not otherwise qualify. Earlier sales retain their sale-time terms. Marketplace-wide holiday and special promotions remain available to all creators.
 
-The monthly choice is payment cadence for the annual commitment, not a seasonal month-to-month subscription. Cancellation stops renewal; benefits last through the paid or committed term.
+One seller registration includes one primary Creator account/profile free. Additional Creator accounts are available for genuinely separate public identities or brands at $10 per month or $100 per year prepaid per additional account. Each is a separate marketplace identity with its own profile and ordinary account-level entitlements. Premium membership fees apply in addition when an additional account is Premium. Additional identities are an account-management option and anti-gaming control, not a promoted growth product; aliases must not multiply free catalog, ad, PWYW, promotional, or other account-level benefits.
 
-A missed monthly installment has a settled grace period of seven calendar days. The commitment remains in force and Preferred benefits remain provisionally active during grace while Stripe retry/remediation or an explicit full Creator Balance cure may occur. After day seven, continued nonpayment suspends Preferred benefits and future activity uses Standard benefits and commission rules; the installment obligation and 12-month commitment remain outstanding, and prior sale snapshots and historical records remain unchanged.
-
-Preferred benefits include Premier's 24 active listings and 12 shelf slots, five active public product ads, no outside-vendor creator-dashboard ad, and additional promotional consideration where applicable. For sales under `owner-approved-commission-v1` (effective 2026-11-18), an active paid Preferred term is classified as Premier for commission and receives a 95/5 Creator/TRG split. Preferred is historical service terminology; this mapping does not grant a paid term, Premier benefits, or any other entitlement to a Creator who does not already qualify. Earlier sales retain their sale-time terms. Marketplace-wide holiday and special promotions remain available to all creators.
-
-One seller registration includes one primary Creator account/profile free. Additional Creator accounts are available for genuinely separate public identities or brands at $10 per month or $100 per year prepaid per additional account. Each is a separate marketplace identity with its own profile and ordinary account-level entitlements. Preferred fees apply in addition when an additional account is Preferred. Additional identities are an account-management option and anti-gaming control, not a promoted growth product; aliases must not multiply free catalog, ad, PWYW, promotional, or other account-level benefits.
-
-Every primary or additional, Free or Preferred Creator account must maintain a valid Stripe-hosted payment method. It may support marketplace purchases, Ad Credits, Preferred billing, additional-account fees, and future creator-side paid services. TRG stores only safe provider references and basic display metadata such as card brand and last four where appropriate, never raw payment credentials.
+Every primary or additional, Free or Premium Creator account must maintain a valid Stripe-hosted payment method. It may support marketplace purchases, Ad Credits, Premium membership, additional-account fees, and future creator-side paid services. TRG stores only safe provider references and basic display metadata such as card brand and last four where appropriate, never raw payment credentials.
 
 ## 3. Historical marketplace revenue splits
 
@@ -68,7 +63,7 @@ TRG may run marketplace-wide events that voluntarily reduce TRG’s share, inclu
 
 ## 3A. Owner-approved commission and processing-fee policy — effective 2026-11-18
 
-For transactions using policy version `owner-approved-commission-v1`, Creator shares are: Standard Creator 90%; Owner-assigned Founding-25 95%; Premier Creator 95%. An active paid Preferred service term resolves to the Premier commission classification for future transactions; the terminology change does not grant or extend the service term or its nonfinancial benefits. Owner-owned product revenue is 100% house revenue. Admin-owned product revenue is 100% TRG revenue, with no Creator compensation. “Founding-25” is an explicit, audited Owner assignment, separate from Preferred/Premier service status; the historical Founding Creator badge does not confer this financial category. At most 25 distinct assignments may remain active or reserved at once. Assignment/revocation affects future transactions only; revocation does not automatically assign a released place to another Creator.
+For transactions using policy version `owner-approved-commission-v1`, Creator shares are: Standard Creator 90%; Owner-assigned Founding-25 95%; Premium Creator 95%. An active paid Premium Creator membership receives the Premium commission classification for future transactions; it does not confer or extend Founding-25 status. Owner-owned product revenue is 100% house revenue. Admin-owned product revenue is 100% TRG revenue, with no Creator compensation. “Founding-25” is an explicit, audited Owner assignment, separate from Premium membership; the historical Founding Creator badge does not confer this financial category. At most 25 distinct assignments may remain active or reserved at once. Assignment/revocation affects future transactions only; revocation does not automatically assign a released place to another Creator.
 
 The split is calculated from each item's product amount in integer minor units using the immutable order-item category and policy-version snapshots. A superseded fixed per-line charge is zero under this version. Existing transaction snapshots and historical ledger entries retain their original terms.
 
@@ -84,11 +79,11 @@ Ordinary creator ads promote an individual product, bundle, sale, or other eligi
 
 TRG supplies rotation capacity, specifications, examples, upload guidance, and validation/preview tooling. Creators create and upload their own compliant ads and associate them with eligible products. TRG is not an advertising, design, or copywriting agency.
 
-Standard creators receive one simultaneously active product ad; Preferred creators receive five. Creators may prepare creative for every eligible listing and change which ads occupy their slots. No tier promises impressions, frequency, clicks, sales, conversions, or a fixed interval.
+Standard creators receive one simultaneously active product ad; Premium Creators receive five. Creators may prepare creative for every eligible listing and change which ads occupy their slots. No tier promises impressions, frequency, clicks, sales, conversions, or a fixed interval.
 
 ## 5. Dashboard sponsorships
 
-A Free Creator dashboard contains one clearly labeled outside-vendor sponsorship banner in the public banner’s general top position, using the same calm fade behavior. It does not show internal creator-product advertising. Preferred dashboards are ad-free.
+A Free Creator dashboard contains one clearly labeled outside-vendor sponsorship banner in the public banner’s general top position, using the same calm fade behavior. It does not show internal creator-product advertising. Premium Creator dashboards are ad-free.
 
 Dashboard inventory is targeted sponsorship, not low-quality generic display advertising. Suitable sponsors provide legitimate goods or services useful to game creators, publishers, manufacturers, or sellers—for example printing, POD, dice, conventions, fulfillment, creative software and services, licensed stock art, crowdfunding, accounting, shipping, or packaging.
 
@@ -118,13 +113,13 @@ Listings do not expire arbitrarily while commercially active.
 
 After 12 consecutive months without qualifying activity, the listing enters an inactivity-warning state and the creator receives dashboard and email notice. A 30-day grace period follows. During grace, the creator may leave it alone, promote it, coupon it, revise it, or create qualifying activity. TRG does not police a creator’s legitimate self-purchase; a legitimate sale is a sale.
 
-With no qualifying activity by the end of grace, the listing becomes inactive: it leaves the active catalog and ad rotation, becomes unavailable for new sales, stops consuming active capacity, and remains visible in the creator dashboard. Historical buyers retain all legitimate orders, entitlements, and access. The creator may immediately use the freed capacity for another eligible product. The inactivity-delisted product must remain off sale for at least one full calendar month before reactivation. Reactivation then requires available capacity, current files and pricing, and ordinary marketplace compliance. It never restarts the launch split. Preferred status gives no inactivity exemption.
+With no qualifying activity by the end of grace, the listing becomes inactive: it leaves the active catalog and ad rotation, becomes unavailable for new sales, stops consuming active capacity, and remains visible in the creator dashboard. Historical buyers retain all legitimate orders, entitlements, and access. The creator may immediately use the freed capacity for another eligible product. The inactivity-delisted product must remain off sale for at least one full calendar month before reactivation. Reactivation then requires available capacity, current files and pricing, and ordinary marketplace compliance. It never restarts the launch split. Premium Creator status gives no inactivity exemption.
 
 ## 9. Free and Pay What You Want products
 
 A true $0 acquisition never uses Stripe. It records the acquisition as appropriate and creates account/library entitlement where applicable through the legitimate secure-delivery mechanism.
 
-PWYW products require a creator-set suggested price and count toward active catalog capacity. Standard creators may have one active PWYW product; Preferred creators may have two. A $0 choice follows free acquisition; an amount above $0 uses normal Stripe payment and applies the marketplace percentage to the amount actually paid. Switching between fixed-price and PWYW never restarts the launch period.
+PWYW products require a creator-set suggested price and count toward active catalog capacity. Standard creators may have one active PWYW product; Premium Creators may have two. A $0 choice follows free acquisition; an amount above $0 uses normal Stripe payment and applies the marketplace percentage to the amount actually paid. Switching between fixed-price and PWYW never restarts the launch period.
 
 ## 10. Fairness principle
 
@@ -176,7 +171,7 @@ The following findings describe the named historical baseline and are retained f
 
 1. Add the settled customer and Creator registration fields with explicit public/private projections.
 2. Add versioned Creator Agreement acceptance and product-level rights/representation declarations, with no AI disclosure.
-3. Model a legal seller’s free primary Creator identity and separately billed additional identities; compose additional-account and Preferred fees without multiplying free benefits.
+3. Model a legal seller’s free primary Creator identity and separately billed additional identities; compose additional-account and Premium membership fees without multiplying free benefits.
 4. Add safe Stripe payment-method readiness and enforce it for all Creator accounts; require valid Connect readiness before paid publication.
 5. Implement the six-month operational audit and reasonable cure workflow separately from product inactivity.
 6. Complete annual and year-to-date downloadable business records while retaining monthly statements.
@@ -184,7 +179,7 @@ The following findings describe the named historical baseline and are retained f
 
 ## 15. Remaining intentionally unsettled matters
 
-Do not invent final counsel-approved legal boilerplate, data-retention periods, advertiser rate card, sponsor inventory cap, production Connect/payout execution, detailed Preferred event mechanics beyond settled benefits, or any unannounced brand expansion. The business-level Creator Agreement draft and six-month audit cure workflow now exist; their counsel-finalized legal terms and production scheduling remain separate operational approvals. AI disclosure is settled as not required and must not be reintroduced indirectly.
+Do not invent final counsel-approved legal boilerplate, data-retention periods, advertiser rate card, sponsor inventory cap, production Connect/payout execution, Premium membership prices, or any unannounced brand expansion. The business-level Creator Agreement draft and six-month audit cure workflow now exist; their counsel-finalized legal terms and production scheduling remain separate operational approvals. AI disclosure is settled as not required and must not be reintroduced indirectly.
 
 ## 16. Verified purchases and durable ownership
 
@@ -198,7 +193,7 @@ Subjective dislike, perceived poor quality, changed expectations, and buyer’s 
 
 Refunds reverse the original sale-time Creator and Tobacco Road Games shares. Actual provider refund/dispute costs follow responsibility without markup. Tobacco Road Games absorbs ordinary customer payment fraud and costs, except Creator-caused fraud, unauthorized material, or material misrepresentation is allocated to the Creator; Tobacco Road Games-caused losses remain with Tobacco Road Games. Open disputed funds are held.
 
-Creator-facing service purchases—including Preferred fees, additional-identity fees, and Ad Credit packages—are non-refundable once service or entitlement begins, except to correct a genuine Tobacco Road Games billing mistake or service-delivery failure. Change of mind, non-use, voluntary inactivity, unused benefits, and lack of advertising results are not refund grounds. Approved TRG-caused corrections restore the original payment source, reverse only the corrected canonical service revenue, preserve the original purchase and audit history, and adjust coverage or service capacity only as necessary to correct the error. There is no ordinary proration.
+Creator-facing service purchases—including Premium membership fees, additional-identity fees, and Ad Credit packages—are non-refundable once service or entitlement begins, except to correct a genuine Tobacco Road Games billing mistake or service-delivery failure. Change of mind, non-use, voluntary inactivity, unused benefits, and lack of advertising results are not refund grounds. Approved TRG-caused corrections restore the original payment source, reverse only the corrected canonical service revenue, preserve the original purchase and audit history, and adjust coverage or service capacity only as necessary to correct the error. There is no ordinary proration.
 
 Unused Ad Credits do not expire, are not cash-equivalent, cannot be transferred or redeemed for money, and are not refundable merely because they remain unused. Redeemed credits begin the settled 30-day slot period; removing or swapping an ad and receiving no clicks or sales do not create refund rights. A genuine TRG-caused slot-delivery failure may be corrected through restored service time/capacity or, when appropriate, an operator-approved refund.
 

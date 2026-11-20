@@ -14,6 +14,8 @@ Guest is the canonical storefront composition. `scripts/build-store.js` produces
 
 The frozen shared cabinet assets are `assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png`, `upper-cabinet-tablet.png`, and `upper-cabinet-mobile.png`. Guest and Customer Storefront continue to use these unchanged. The six Member Profiles share the approved Creator-scoped desktop, tablet, and mobile title-board variants and the same rendered frame, shelves, identity board, emblem, lighting, and framed display. Their common presentation lives in `assets/css/member-profile.css`; `assets/css/creator-dashboard.css` imports this canonical stylesheet for the separate existing Dashboard. Furniture geometry remains in shared renderers and CSS, never in six role-specific page copies.
 
+Approved account navigation, Profile and Dashboard responsibilities, viewer-specific information visibility, personal library ownership, and tier relationships are defined in [Member Account Architecture](MEMBER-ACCOUNT-ARCHITECTURE.md). Those decisions document target behavior; they do not establish implementation or functional acceptance. The six HTML files and routes remain temporary entry points until an accepted dynamic replacement exists.
+
 ## Approved public navigation
 
 - **Verified 2026-11-18:** The public primary navigation contains exactly Explore (`/store/catalog/`), Support (`/support.html`), Login/Signup (`/account.html`), and Cart (`/store/cart/`). `PUBLIC_NAV_ITEMS` in `scripts/build-store.js` is the shared source for Guest and homepage navigation; the root, Support, and Account pages contain the same four links.
