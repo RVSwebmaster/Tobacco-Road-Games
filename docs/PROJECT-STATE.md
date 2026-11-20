@@ -5,6 +5,7 @@ Last reconciled: 2026-11-20. This is a working-state record, not a deployment st
 ## Member account architecture — approved and documented 2026-11-20
 
 - `docs/MEMBER-ACCOUNT-ARCHITECTURE.md` is the authoritative specification for account navigation, shared member Profiles, private Dashboards, personal purchase-library display, and tier relationships. The specification records approved target behavior; no application implementation or functional acceptance is claimed by this documentation update.
+- **Approved login destination — 2026-11-20:** All authenticated account tiers land on `/customer`. Member-specific Profile, Dashboard, and privilege-appropriate tools belong in the Account menu. The Dashboard and full Account menu behavior remain unaccepted until implemented and tested.
 - The six Profile HTML pages remain temporary entry points at their existing routes. Retiring them requires a dynamically generated member-specific replacement to pass functional and visual acceptance.
 - The Profile Base visual foundation remains accepted; authenticated privileges, persistent library display selection, and other functional behavior remain subject to their recorded acceptance gates. Cabinet artwork remains approved and unchanged.
 - Premium Creator monthly-or-annual membership is approved; exact prices and treatment of over-allocation after expiration remain unresolved. Profile visibility details and Customer poster-frame behavior also remain unresolved.

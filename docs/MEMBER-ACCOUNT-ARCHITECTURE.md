@@ -7,8 +7,9 @@ This document is the authoritative source for member account navigation, Profile
 ## Account navigation
 
 - All visitors enter through the public storefront.
-- Login identifies the member's privileges and redirects them to the default landing page for their account type.
-- Customers land on the Customer Storefront. Its Account link opens the member's Profile.
+- After successful login, every account tier lands on the Customer Storefront at `/customer`.
+- The Account menu provides navigation to the logged-in member's own Profile, private Dashboard, and additional tools permitted by their privileges. It must not redirect members directly to a Profile or Dashboard after login.
+- The Customer Storefront's Account link opens the logged-in member's Profile.
 
 ## Member Profiles
 

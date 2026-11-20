@@ -199,11 +199,11 @@ async function testAccountTierLandingRoutes() {
   await flushMicrotasks();
   const route = context.window.__TRG_ACCOUNT_TEST__.defaultLandingForAccount;
   assert.equal(route({ accountClass: "customer" }), "/customer");
-  assert.equal(route({ accountClass: "creator" }), "/creator/");
-  assert.equal(route({ accountClass: "founding25" }), "/founding-25-profile/");
-  assert.equal(route({ accountClass: "premiumCreator" }), "/premium-creator-profile/");
-  assert.equal(route({ accountClass: "admin" }), "/admin-profile/");
-  assert.equal(route({ accountClass: "owner" }), "/owner-profile/");
+  assert.equal(route({ accountClass: "creator" }), "/customer");
+  assert.equal(route({ accountClass: "founding25" }), "/customer");
+  assert.equal(route({ accountClass: "premiumCreator" }), "/customer");
+  assert.equal(route({ accountClass: "admin" }), "/customer");
+  assert.equal(route({ accountClass: "owner" }), "/customer");
   assert.equal(route({ accountClass: "customer", customerPrivilegesActive: false }), "");
 }
 

@@ -92,14 +92,7 @@
 
   function defaultLandingForAccount(user) {
     if (!user || user.customerPrivilegesActive === false) return "";
-    if (user.accountClass === "customer") return "/customer";
-    return ({
-      creator: "/creator/",
-      founding25: "/founding-25-profile/",
-      premiumCreator: "/premium-creator-profile/",
-      admin: "/admin-profile/",
-      owner: "/owner-profile/",
-    })[user.accountClass] || "/customer";
+    return "/customer";
   }
 
   function redirectToAccountLanding() {
