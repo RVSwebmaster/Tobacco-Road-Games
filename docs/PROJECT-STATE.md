@@ -1,6 +1,6 @@
 # TRG project state
 
-Last reconciled: 2026-11-19. This is a working-state record, not a deployment status page.
+Last reconciled: 2026-11-20. This is a working-state record, not a deployment status page.
 
 ## Operation Scavenger 001 — Creator catalog cover rotation — implemented locally 2026-11-18
 
@@ -60,6 +60,8 @@ Last reconciled: 2026-11-19. This is a working-state record, not a deployment st
 - **Functional acceptance pending:** authenticated member identity/class behavior, privileges, persistent library selection, and live catalog cover changes. No persistent member shelf-selection source exists; shelves remain empty rather than presenting arbitrary purchases. Do not describe these features as functionally accepted.
 - **Rollback:** successful pre-acceptance staging deployment `1ae9665a-56d4-4297-8d63-2e3e00310c7d` remains available.
 - **GitHub recovery:** implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` on `recovery/trg-member-profile-base-v1`; annotated tag `trg-member-profile-base-v1` points to that commit.
+- **Temporary entry points — verified 2026-11-20:** The six Profile HTML files and their existing routes remain in place as temporary entry points to `renderMemberProfilePage()`. A dynamically generated member-specific Profile system is a future proposal; retire an entry point or route only after its replacement passes functional and visual acceptance. The recovery integration did not remove or redirect any Profile route.
+- **Development integration — verified locally 2026-11-20:** `development` fast-forwarded from `c0c9f22` to documentation closeout `c255970`; implementation commit `56436e3` and its approved tag remain intact. No push or deployment occurred. The generator completed, and focused Profile, Pages build, Creator cover, shared-cabinet, and final storefront-visual regressions passed.
 
 ## Purchased delivery continuity repair — implemented locally 2026-11-18
 
