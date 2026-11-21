@@ -73,6 +73,7 @@ function testRealPreviewMarkup() {
 async function testBestSellerService() {
   const modulePath = pathToFileURL(path.join(ROOT, "functions", "_lib", "homepage-shelves.mjs")).href + "?test=homepage-shelves";
   const service = await import(modulePath);
+  const configurationModule = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "homepage-config-d1.mjs")).href);
   let capturedSql = "";
   let capturedBindings = [];
   const database = {
@@ -116,7 +117,13 @@ async function testBestSellerService() {
   assert.match(capturedSql, /NOT LIKE '%test%'/);
   assert.equal(capturedBindings[1], 43, "Best Sellers query must cap the homepage shelf at 43 products.");
 
-  const openRulesCatalog = service.OPEN_RULES_LIBRARY_PRODUCT_IDS.map((id, index) => runtimeProduct(id, 0, {
+  const upperOpenRulesIds = Array.from({ length: 12 }, (_, index) => `open-rules-upper-${index + 1}`);
+  const lowerOpenRulesIds = [];
+  const openRulesIds = [...upperOpenRulesIds, ...lowerOpenRulesIds];
+  const openRulesConfiguration = configurationModule.defaultHomepageConfiguration();
+  openRulesConfiguration.shelves.openRulesLibraryUpper.productIds = upperOpenRulesIds;
+  openRulesConfiguration.shelves.openRulesLibraryLower.productIds = lowerOpenRulesIds;
+  const openRulesCatalog = openRulesIds.map((id, index) => runtimeProduct(id, 0, {
     id,
     buyMode: "preview-only",
     priceLabel: "",
@@ -129,22 +136,26 @@ async function testBestSellerService() {
     status: "preview-only",
     metadata: { openRulesEligible: true, pageCount: 12 }
   }));
-  const selected = service.selectOpenRulesLibraryProducts(openRulesCatalog);
-  assert.deepEqual(selected.map((product) => product.id), service.OPEN_RULES_LIBRARY_PRODUCT_IDS,
-    "The Open Rules shelf must use only the twelve approved D1 identities in their editorial order.");
+  const selected = service.selectOpenRulesLibraryProducts(openRulesCatalog, openRulesIds);
+  assert.deepEqual(selected.map((product) => product.id), openRulesIds,
+    "The Open Rules selector preserves the configured upper-then-lower product order.");
   assert.ok(selected.every((product) => product.priceLabel === "Preview Only"));
   assert.ok(selected.every((product) => product.cover.endsWith("/cover.webp")));
-  const separateShelves = await service.getOpenRulesLibraryShelves(database, openRulesCatalog);
-  assert.deepEqual(separateShelves.upper.map((product) => product.id), service.OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS,
-    "All current Open Rules publications should occupy the independent upper shelf.");
+  const configuredShelves = { upper: upperOpenRulesIds, lower: lowerOpenRulesIds };
+  const separateShelves = await service.getOpenRulesLibraryShelves(database, openRulesCatalog, configuredShelves);
+  assert.deepEqual(separateShelves.upper.map((product) => product.id), upperOpenRulesIds,
+    "The upper shelf follows its own configured product order.");
   assert.deepEqual(separateShelves.lower, [],
-    "The independent lower shelf should remain available for future publications.");
+    "The independently configured lower shelf remains empty when no products are assigned.");
   assert.equal(service.OPEN_RULES_LIBRARY_SHELF_CAPACITY, 18);
-  assert.ok(service.OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS.length <= service.OPEN_RULES_LIBRARY_SHELF_CAPACITY);
-  assert.ok(service.OPEN_RULES_LIBRARY_LOWER_PRODUCT_IDS.length <= service.OPEN_RULES_LIBRARY_SHELF_CAPACITY);
-  const openRulesResult = await service.getHomepageShelves(database, { catalog: openRulesCatalog });
+  assert.ok(upperOpenRulesIds.length <= service.OPEN_RULES_LIBRARY_SHELF_CAPACITY);
+  assert.ok(lowerOpenRulesIds.length <= service.OPEN_RULES_LIBRARY_SHELF_CAPACITY);
+  const openRulesResult = await service.getHomepageShelves(database, {
+    catalog: openRulesCatalog,
+    configuration: openRulesConfiguration
+  });
   assert.deepEqual(openRulesResult.shelves.openRulesLibraryUpper.products.map((product) => product.id),
-    service.OPEN_RULES_LIBRARY_UPPER_PRODUCT_IDS);
+    upperOpenRulesIds);
   assert.deepEqual(openRulesResult.shelves.openRulesLibraryLower.products, []);
 }
 
@@ -168,6 +179,32 @@ function testClientWiring() {
   const openRules = fs.readFileSync(path.join(ROOT, "assets", "js", "open-rules-library.js"), "utf8");
   const preview = fs.readFileSync(path.join(ROOT, "assets", "js", "guest-product-preview.js"), "utf8");
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
+  const redirects = fs.readFileSync(path.join(ROOT, "_redirects"), "utf8");
+  const dashboard = fs.readFileSync(path.join(ROOT, "temp-creator", "index.html"), "utf8");
+  assert.match(redirects, /^\/creator-dashboard\/\s+\/temp-creator\/\s+302\s*$/m,
+    "The legacy Creator Dashboard route redirects to the current Dashboard.");
+  assert.match(dashboard, /<link rel="stylesheet" href="\/styles\.css"\s*\/>/,
+    "The current Creator Dashboard loads the shared site stylesheet.");
+  assert.match(dashboard, /\/assets\/js\/creator-dashboard\.js\?v=/,
+    "The current Creator Dashboard loads its dashboard runtime.");
+  assert.doesNotMatch(dashboard, /assets\/css\/creator-dashboard\.css/,
+    "The current Dashboard does not depend on the retired compatibility stylesheet.");
+  for (const route of [
+    "customer-profile", "creator", "founding-25-profile", "premium-creator-profile", "admin-profile", "owner-profile"
+  ]) {
+    const profile = fs.readFileSync(path.join(ROOT, route, "index.html"), "utf8");
+    assert.match(profile, /href="\/assets\/css\/member-profile\.css(?:\?v=[^"]+)?"/,
+      `${route} uses the shared Member Profile stylesheet directly.`);
+  }
+  for (const [label, pagePath] of [["Guest", "guest/index.html"], ["Customer", "customer.html"]]) {
+    const page = fs.readFileSync(path.join(ROOT, pagePath), "utf8");
+    assert.match(page, /href="\/styles\.css(?:\?v=[^"]+)?"/,
+      `${label} loads the shared stylesheet that presents Open Rules shelves.`);
+    assert.match(page, /src="\/assets\/js\/open-rules-library\.js\?v=[^"]+" defer/,
+      `${label} loads the shared Open Rules book renderer.`);
+    assert.match(page, /src="\/assets\/js\/homepage-shelves\.js\?v=[^"]+" defer/,
+      `${label} loads the shelf hydration runtime.`);
+  }
   assert.match(client, /\/api\/homepage-shelves/);
   assert.ok(routes.include.includes("/api/homepage-shelves"), "The public homepage shelf Function must be included in Pages routing.");
   assert.match(client, /slice\(0, 43\)/);
@@ -178,10 +215,11 @@ function testClientWiring() {
   assert.match(client, /openRulesLibraryUpper/);
   assert.match(client, /openRulesLibraryLower/);
   assert.match(client, /TRGOpenRulesLibrary/);
-  assert.match(openRules, /function createOpenRulesSpine\(product\)/);
-  assert.match(openRules, /function createGuestOpenRulesBook\(product, baseWidth\)/);
+  assert.match(openRules, /function createOpenRulesShelfBook\(product, position = 0, baseWidth = 12\)/);
+  assert.match(openRules, /const heights = \[79, 86, 72\]/);
   assert.match(openRules, /products?\.metadata/);
-  assert.match(client, /hydrateGuestOpenRulesShelf/);
+  assert.match(client, /buildOpenRulesShelfBooks/);
+  assert.match(client, /createOpenRulesShelfBook/);
   assert.match(openRules, /homepage-open-rules-book__rotation/);
   assert.match(openRules, /--book-angle/, "Shelf books must use the rendered rotation angle.");
   assert.match(openRules, /panel\.className = "product-book__spine-art"/);
@@ -190,10 +228,10 @@ function testClientWiring() {
   assert.match(openRules, /credit\.className = "product-book__spine-credit"/);
   const styles = fs.readFileSync(path.join(ROOT, "styles.css"), "utf8");
   assert.match(styles, /\.shop-wall-library-books > \.homepage-open-rules-book[\s\S]*?--open-rules-spine-width/);
-  const creatorStyles = fs.readFileSync(path.join(ROOT, "assets", "css", "creator-dashboard.css"), "utf8");
-  assert.match(creatorStyles, /\.creator-dashboard-open-rules-bay \.homepage-open-rules-book:hover[\s\S]*?translateY\(-10px\)/);
-  assert.match(creatorStyles, /\.creator-dashboard-open-rules-bay \.shop-wall-library-books[\s\S]*?overflow: visible/);
-  assert.match(creatorStyles, /\.creator-dashboard-open-rules-bay \.homepage-open-rules-book__rotation[\s\S]*?overflow: visible/);
+  assert.match(styles, /\.homepage-open-rules-book:hover[\s\S]*?translateY\(-10px\)/);
+  assert.match(styles, /height: var\(--mock-book-height, 82%\)/);
+  assert.match(openRules, /function fitSpineTitle\(title\)[\s\S]*?const available = title\.clientHeight;[\s\S]*?const content = title\.scrollHeight;[\s\S]*?--open-rules-title-scale/);
+  assert.match(styles, /\.homepage-open-rules-book__product \.product-book__spine-title[\s\S]*?white-space: nowrap;[\s\S]*?scaleY\(var\(--open-rules-title-scale, 1\)\)[\s\S]*?text-overflow: clip;/);
   assert.match(preview, /guestPreviewBound/);
   assert.match(preview, /realProductLink/);
   assert.match(preview, /trg:homepage-shelves-updated/);

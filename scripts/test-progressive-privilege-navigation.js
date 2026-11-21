@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 const { pathToFileURL } = require("node:url");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -18,16 +19,55 @@ async function main() {
   await assertOwnerDocumentBootstrap(ownerBootstrap.attachOwnerSessionForDocument);
   assertHomepageIntegration();
   assertProtectedRoutesRemainProtected();
-  assertCreatorSessionBootstrapScope();
+  await assertCreatorSessionBootstrapBehavior();
   console.log("Progressive privilege navigation tests passed.");
 }
 
-function assertCreatorSessionBootstrapScope() {
-  const middleware = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8");
-  assert.match(middleware, /pathname\.startsWith\("\/owner"\) \|\| pathname\.startsWith\("\/creator"\)/,
-    "Owner Access must bootstrap the shared TRG session for the Creator workspace too.");
-  assert.match(middleware, /return usesOwnerSessionBootstrap \? ownerResponse\(response, context\) : response/,
-    "The Creator document response must receive the same session bootstrap as the Owner document.");
+async function assertCreatorSessionBootstrapBehavior() {
+  const source = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8")
+    .replace(/^import .*;\s*$/gm, "")
+    .replace("export async function onRequest(context)", "async function onRequest(context)")
+    + "\nglobalThis.trgOnRequest = onRequest;";
+  const bootstrappedPaths = [];
+  const sandbox = {
+    URL,
+    Request,
+    Response,
+    Headers,
+    isMarketplaceWriteDisabled: () => false,
+    marketplaceWriteDisabledResponse: () => new Response("writes disabled", { status: 503 }),
+    handleOfficeMiddleware: async () => new Response("office"),
+    readStoreState: async () => ({ available: false }),
+    isPublicStorePage: () => false,
+    maintenanceResponse: () => new Response("maintenance"),
+    getSessionFromRequest: async () => ({ valid: true }),
+    attachOwnerSessionForDocument: async (response, request) => {
+      const pathname = new URL(request.url).pathname;
+      bootstrappedPaths.push(pathname);
+      const headers = new Headers(response.headers);
+      headers.set("x-test-owner-session-bootstrap", pathname);
+      return new Response(response.body, { status: response.status, headers });
+    }
+  };
+  vm.runInNewContext(source, sandbox, { filename: "functions/_middleware.js" });
+  const request = (pathname) => new Request(`https://staging.example${pathname}`);
+  const creatorResponse = await sandbox.trgOnRequest({
+    request: request("/creator/"),
+    env: {},
+    next: async () => new Response("Creator document", { headers: { "content-type": "text/html" } })
+  });
+  assert.equal(creatorResponse.headers.get("x-test-owner-session-bootstrap"), "/creator/",
+    "The Creator Profile response receives the shared session bootstrap.");
+  assert.equal(await creatorResponse.text(), "Creator document");
+
+  const customerResponse = await sandbox.trgOnRequest({
+    request: request("/customer"),
+    env: {},
+    next: async () => new Response("Customer document", { headers: { "content-type": "text/plain" } })
+  });
+  assert.equal(customerResponse.headers.has("x-test-owner-session-bootstrap"), false,
+    "Customer storefront requests do not use the Owner/Creator document bootstrap.");
+  assert.deepEqual(bootstrappedPaths, ["/creator/"], "Only the Creator Profile request invoked the bootstrap in this check.");
 }
 
 async function assertOwnerDocumentBootstrap(attach) {

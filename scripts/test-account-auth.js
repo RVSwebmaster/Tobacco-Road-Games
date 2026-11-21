@@ -9,6 +9,10 @@ const MIGRATION = [
   "007_shared_accounts.sql",
   "008_token_claim_markers.sql"
 ].map((file) => fs.readFileSync(path.join(ROOT, "migrations", file), "utf8")).join("\n");
+const FOCUSED_ACCOUNT_PROFILE_MIGRATION = fs.readFileSync(
+  path.join(ROOT, "ops", "releases", "account-profile-072", "account-profile-072.sql"),
+  "utf8"
+);
 const ORIGIN = "https://tobaccoroadgames.com";
 const TEST_OPTIONS = Object.freeze({
   disableRateLimit: true,
@@ -734,6 +738,16 @@ async function testTokenStorageAndRateLimits(auth) {
 function createEnv(options = {}) {
   const raw = new DatabaseSync(":memory:");
   raw.exec(MIGRATION);
+  raw.exec(`
+    CREATE TABLE marketplace_creators (id TEXT PRIMARY KEY);
+    CREATE TABLE user_account_profiles (
+      user_id TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL DEFAULT '',
+      avatar_url TEXT NOT NULL DEFAULT '',
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+  raw.exec(FOCUSED_ACCOUNT_PROFILE_MIGRATION);
   const env = {
     GOOGLE_CLIENT_ID: "google-client-id",
     RESEND_API_KEY: options.resendApiKey ?? "re_test",
