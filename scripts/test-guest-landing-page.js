@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { isOpenRulesProduct, renderGuestLibraryBay, renderGuestOpenRulesBay } = require("./build-store.js");
+const { isOpenRulesProduct, renderGuestLibraryBay, renderGuestOpenRulesBay, renderCustomerLandingPage } = require("./build-store.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
@@ -16,7 +16,21 @@ const outputBuilder = read("scripts/build-pages-output.mjs");
 const nav = guest.match(/<nav class="site-nav" aria-label="Primary">([\s\S]*?)<\/nav>/)?.[1] || "";
 const navLabels = [...nav.matchAll(/<a [^>]*>([\s\S]*?)<\/a>/g)].map((match) => match[1].replace(/<span[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
 assert.deepEqual(navLabels, ["Explore", "Support", "Login/Signup", "Cart"]);
-assert.equal(customer, guest, "The Customer baseline must exactly match the current Guest page.");
+assert.notEqual(customer, guest, "Customer adds authenticated navigation and library wiring to the shared Guest source.");
+assert.equal(customer, renderCustomerLandingPage(guest), "Customer output must be generated from the approved Guest source.");
+assert.match(customer, /data-customer-storefront/);
+assert.match(customer, /data-progressive-navigation/);
+assert.match(customer, /data-homepage-library/);
+assert.match(customer, /progressive-navigation\.js/);
+assert.doesNotMatch(customer, /href="\/account\.html">Login\/Signup/);
+const openRulesSection = (page) => page.match(/<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/)?.[0] || "";
+assert.equal(openRulesSection(customer), openRulesSection(guest), "Customer keeps the same Open Rules shelf markup as Guest.");
+const merchandisingSection = (page) => {
+  const start = page.indexOf('<section class="shop-wall-row shop-wall-row--merchandising"');
+  const end = page.indexOf("</main>", start);
+  return start >= 0 && end >= 0 ? page.slice(start, end) : "";
+};
+assert.equal(merchandisingSection(customer), merchandisingSection(guest), "Customer-specific hooks leave lower merchandising unchanged.");
 assert.match(nav, /href="\/store\/catalog\/"[^>]*>Explore<\/a>/);
 assert.match(nav, /href="\/support\.html"[^>]*>Support<\/a>/);
 assert.match(nav, /href="\/account\.html"[^>]*>Login\/Signup<\/a>/);
@@ -27,7 +41,8 @@ assert.doesNotMatch(guest, /data-progressive-navigation|data-homepage-library|\/
 assert.match(guest, /data-magical-bookshelf-demo/);
 assert.match(guest, /\/assets\/js\/magical-bookshelf\.js/);
 assert.equal((guest.match(/data-magical-bookshelf(?:\s|>)/g) || []).length, 7);
-assert.equal((guest.match(/data-magical-book(?:\s|>)/g) || []).length, 36);
+assert.equal((guest.match(/data-magical-book(?:\s|>)/g) || []).length, 0,
+  "Guest begins with empty Open Rules rows; the shelf API supplies eligible books at runtime.");
 assert.equal((guest.match(/data-magical-direction="outer-inward"/g) || []).length, 3);
 assert.doesNotMatch(guest, /data-magical-bookshelf-replay/);
 assert.match(guest, /Your shelves look a little bare\.<br>Log in or sign up to make them your own\./);
@@ -40,9 +55,9 @@ assert.equal((guestLibrary.match(/guest-library-empty-row/g) || []).length, 2);
 assert.match(guest, /id="open-rules-library-heading"/);
 assert.match(guest, /data-library-start-position="1"/);
 assert.match(guest, /data-library-start-position="19"/);
-assert.match(builder, /products\.slice\(0, 18\), 1/);
-assert.match(builder, /products\.slice\(18, 36\), 19/);
-assert.match(builder, /\.slice\(0, 36\)/);
+assert.match(builder, /function renderGuestOpenRulesBay\(\)\s*\{\s*return renderRoleOpenRulesBay\("guest"\)/);
+assert.match(builder, /const renderShelf = \(startPosition, shelfOrder\)/);
+assert.match(builder, /data-library-start-position="\$\{startPosition\}"/);
 assert.equal(isOpenRulesProduct({ publisher: "Tobacco Road Games", authorSlugs: ["rv-sawyer"] }), false, "TRG publication or RV Sawyer authorship alone must not classify a product as Open Rules.");
 assert.equal(isOpenRulesProduct({ openRulesEligible: true, publisher: "Tobacco Road Games", authorSlugs: ["rv-sawyer"] }), true, "Explicit Open Rules eligibility should classify the product.");
 assert.equal(isOpenRulesProduct({ openRulesEligible: false }), false, "Explicit false must stay out of Open Rules.");
@@ -60,11 +75,12 @@ assert.match(guest, /\/assets\/js\/cart\.js/);
 assert.match(guest, /\/assets\/js\/storefront\.js/);
 assert.match(guest, /\/assets\/js\/news-chyron\.js/);
 assert.match(guest, /\/assets\/js\/shelf-curios\.js/);
-assert.match(guest, /\/assets\/js\/magical-bookshelf\.js\?v=20261112-cover-first-preview1/);
-assert.match(guest, /\/assets\/css\/guest-landing\.css\?v=20261112-cover-first-preview1/);
-assert.match(guest, /\/assets\/js\/guest-product-preview\.js\?v=20261112-cover-first-preview1/);
-assert.match(builder, /GUEST_FEATURE_CACHE_BUST = "20261112-cover-first-preview1"/);
-assert.match(builder, /guest-product-preview\.js\?v=\$\{GUEST_FEATURE_CACHE_BUST\}/);
+assert.match(guest, /\/assets\/js\/magical-bookshelf\.js\?v=20261116-open-rules-master-shelf2/);
+assert.match(guest, /\/assets\/css\/guest-landing\.css\?v=20261116-guest-examination-close1/);
+assert.match(guest, /\/assets\/js\/guest-product-preview\.js\?v=20261116-guest-book-examination7/);
+assert.match(builder, /GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2"/);
+assert.match(builder, /GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7"/);
+assert.match(builder, /guest-product-preview\.js\?v=\$\{GUEST_EXAMINATION_CACHE_BUST\}/);
 
 assert.doesNotMatch(homepage, /data-guest-landing|guest-library-sign/);
 assert.doesNotMatch(guestCss, /(^|\n)\s*(\.homepage-shop-wall|\.shop-wall-)/m);
@@ -94,46 +110,16 @@ assert.match(guestMagic, /isTextEntryTarget\(event\.target\)/);
 assert.match(guestMagic, /prefers-reduced-motion: reduce/);
 assert.match(outputBuilder, /"guest"/);
 
-const mockProduct = (index) => ({
-  slug: `open-rule-${index}`,
-  title: `Open Rule ${index}`,
-  authors: ["Tobacco Road Games"],
-  publisher: "Tobacco Road Games",
-  status: "available-direct",
-  statusLabel: "Available Direct",
-  saleActive: false,
-  format: ["PDF"],
-  url: `/store/products/open-rule-${index}/`,
-  assetSet: { cover: `/covers/open-rule-${index}.webp` },
-  priceType: "fixed-price",
-  priceTypeLabel: "Fixed Price",
-  priceCents: 100,
-  effectivePriceCents: 100,
-  currency: "USD",
-  shortDescription: "Sandbox open rule.",
-  subtitle: "",
-  tags: [],
-  authorSlugs: ["rv-sawyer"]
-});
-const openRules = renderGuestOpenRulesBay(Array.from({ length: 40 }, (_, index) => mockProduct(index + 1)));
-const positions = [...openRules.matchAll(/data-library-position="(\d+)"/g)].map((match) => Number(match[1]));
-assert.deepEqual(positions, Array.from({ length: 36 }, (_, index) => index + 1));
-assert.equal(positions.length, 36);
-assert.equal((openRules.match(/data-mock-open-rule/g) || []).length, 0);
-
-const emptyOpenRules = renderGuestOpenRulesBay([]);
-const emptyPositions = [...emptyOpenRules.matchAll(/data-library-position="(\d+)"/g)].map((match) => Number(match[1]));
-assert.deepEqual(emptyPositions, Array.from({ length: 36 }, (_, index) => index + 1));
-assert.equal((emptyOpenRules.match(/data-mock-open-rule="true"/g) || []).length, 36);
-assert.doesNotMatch(emptyOpenRules, /href=|data-product-id=/);
-
-const partialOpenRules = renderGuestOpenRulesBay([mockProduct(1), mockProduct(2)]);
-assert.equal((partialOpenRules.match(/data-mock-open-rule="true"/g) || []).length, 34);
-assert.match(partialOpenRules, /data-library-position="1" data-magical-book class="bookshelf-book/);
-assert.match(partialOpenRules, /data-library-position="2" data-magical-book class="bookshelf-book/);
-assert.match(partialOpenRules, /data-library-position="3" data-magical-book data-mock-open-rule="true"/);
-
-assert.equal((guest.match(/data-mock-open-rule="true"/g) || []).length, 36);
+const openRules = renderGuestOpenRulesBay();
+assert.equal((openRules.match(/guest-open-rules-books/g) || []).length, 2);
+assert.doesNotMatch(openRules, /data-magical-book(?:\s|>)|data-mock-open-rule|href=|data-product-id=/,
+  "Open Rules books are hydrated from the shelf API, not generated as placeholder products.");
+assert.equal((guest.match(/data-mock-open-rule="true"/g) || []).length, 0);
+assert.equal((customer.match(/data-mock-open-rule="true"/g) || []).length, 0);
+assert.equal((guest.match(/class="bookshelf-grid shop-wall-books guest-open-rules-books"[^>]*><\/div>/g) || []).length, 2,
+  "Guest starts with two empty Open Rules shelf rows.");
+assert.equal((customer.match(/class="bookshelf-grid shop-wall-books guest-open-rules-books"[^>]*><\/div>/g) || []).length, 2,
+  "Customer starts with the same two empty Open Rules shelf rows.");
 assert.doesNotMatch(guest.match(/<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/)?.[0] || "", /data-product-id=/);
 assert.match(guestCss, /\.guest-landing-page \.guest-open-rules-mock-book/);
 assert.match(guestCss, /--guest-library-book-width:\s*min\(clamp\(11px, 1\.35vw, 22px\), calc\(\(100% - 17px\) \/ 18\)\)/);

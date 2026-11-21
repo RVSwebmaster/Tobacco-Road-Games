@@ -20,13 +20,13 @@ async function main() {
     for (const relativePath of builder.publicDirectories) {
       assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing public directory: ${relativePath}`);
     }
-    const preservedCreator = fs.readFileSync(path.join(outputDirectory, "temp-creator", "index.html"), "utf8");
-    assert.match(preservedCreator, /creator-dashboard\.js\?v=/, "Preserved Creator dashboard runtime is missing");
-    assert.match(preservedCreator, /id="creator-pdf-intake"/, "Preserved Creator PDF Intake is missing");
-    const blankCreator = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
-    assert.match(blankCreator, /<h1[^>]*>Creator Dashboard<\/h1>/, "Blank Creator Dashboard title is missing");
-    assert.match(blankCreator, /href="\/temp-creator\/"/, "Blank Creator Dashboard fallback link is missing");
-    assert.doesNotMatch(blankCreator, /id="creator-pdf-intake"/, "Blank Creator Dashboard must not contain PDF Intake");
+    const creatorDashboard = fs.readFileSync(path.join(outputDirectory, "temp-creator", "index.html"), "utf8");
+    assert.match(creatorDashboard, /creator-dashboard\.js\?v=/, "Creator Dashboard runtime is missing from its actual route.");
+    assert.match(creatorDashboard, /id="creator-pdf-intake"/, "Creator PDF Intake is missing from the Dashboard.");
+    const creatorProfile = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
+    assert.match(creatorProfile, /<title>Member Profile \| Tobacco Road Games<\/title>/, "The /creator/ route must be the shared Creator Profile.");
+    assert.match(creatorProfile, /data-member-profile-page/);
+    assert.doesNotMatch(creatorProfile, /id="creator-pdf-intake"/, "Creator publishing controls belong on the Dashboard, not the Profile.");
     for (const relativePath of builder.excludedPublicFiles) {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `excluded file was copied: ${relativePath}`);
     }
@@ -35,10 +35,24 @@ async function main() {
     }
     const generatedGuest = fs.readFileSync(path.join(outputDirectory, "guest", "index.html"), "utf8");
     const generatedCustomer = fs.readFileSync(path.join(outputDirectory, "customer.html"), "utf8");
-    assert.equal(generatedCustomer, generatedGuest, "Pages output must include the identical Customer baseline.");
-    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261112-cover-first-preview1/);
-    assert.match(generatedGuest, /guest-landing\.css\?v=20261112-cover-first-preview1/);
-    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261112-cover-first-preview1/);
+    assert.match(generatedCustomer, /data-customer-storefront/);
+    assert.match(generatedCustomer, /data-progressive-navigation/);
+    assert.match(generatedCustomer, /data-homepage-library/);
+    assert.doesNotMatch(generatedCustomer, /href="\/account\.html">Login\/Signup/);
+    const section = (page, pattern) => page.match(pattern)?.[0] || "";
+    const openRulesPattern = /<section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay"[\s\S]*?<\/section>/;
+    assert.equal(section(generatedCustomer, openRulesPattern), section(generatedGuest, openRulesPattern),
+      "The Customer Open Rules shelf remains shared with Guest.");
+    const merchandising = (page) => {
+      const start = page.indexOf('<section class="shop-wall-row shop-wall-row--merchandising"');
+      const end = page.indexOf("</main>", start);
+      return start >= 0 && end >= 0 ? page.slice(start, end) : "";
+    };
+    assert.equal(merchandising(generatedCustomer), merchandising(generatedGuest),
+      "Customer-specific navigation and library hooks must not alter lower merchandising.");
+    assert.match(generatedGuest, /magical-bookshelf\.js\?v=20261116-open-rules-master-shelf2/);
+    assert.match(generatedGuest, /guest-landing\.css\?v=20261116-guest-examination-close1/);
+    assert.match(generatedGuest, /guest-product-preview\.js\?v=20261116-guest-book-examination7/);
     assert.doesNotMatch(generatedGuest, /data-magical-bookshelf-replay/);
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "guest-product-preview.js")), "Guest preview runtime is missing from Pages output");
     assert.ok(fs.existsSync(path.join(outputDirectory, "assets", "js", "homepage-shelves.js")), "Homepage shelf runtime is missing from Pages output");
