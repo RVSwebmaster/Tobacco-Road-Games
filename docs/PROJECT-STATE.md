@@ -2,6 +2,11 @@
 
 Last reconciled: 2026-11-20. This is a working-state record, not a deployment status page.
 
+## Focused production account and Profile release — reconciled and rehearsed 2026-11-20
+
+- The [release recipe](../ops/releases/account-profile-072/README.md) reconstructs the approved source from production revision `a0758e3`, the recovered live fixes, and the approved account/Profile changes. It regenerates the storefront and six Profile entry points. The full `development` tree includes other work outside this release.
+- The focused SQL passed a local rehearsal over migrations 001–072. The rehearsal verified login, Profile routing for six tiers, logout, and Open Rules shelf behavior. Production remains on the existing deployment and schema 072.
+
 ## Member account architecture — approved and documented 2026-11-20
 
 - `docs/MEMBER-ACCOUNT-ARCHITECTURE.md` is the authoritative specification for account navigation, shared member Profiles, private Dashboards, personal purchase-library display, and tier relationships. The specification records approved target behavior; no application implementation or functional acceptance is claimed by this documentation update.
