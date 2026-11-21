@@ -3,6 +3,7 @@ import { isMarketplaceWriteDisabled, marketplaceWriteDisabledResponse } from "./
 import { readStoreState } from "./_lib/store-state.mjs";
 import { isPublicStorePage, maintenanceResponse } from "./_lib/store-maintenance.mjs";
 import { attachOwnerSessionForDocument } from "./_lib/owner-session-bootstrap.mjs";
+import { getSessionFromRequest } from "./_lib/account-auth.mjs";
 
 export async function onRequest(context) {
   const pathname = new URL(context.request.url).pathname;
@@ -11,6 +12,9 @@ export async function onRequest(context) {
   }
   if (new URL(context.request.url).pathname.startsWith("/office")) {
     return handleOfficeMiddleware(context);
+  }
+  if (isCustomerStorefront(pathname) && !(await getSessionFromRequest(context.request, context.env)).valid) {
+    return noStoreDocument(Response.redirect(new URL("/guest/", context.request.url), 302));
   }
   if (isPublicStorePage(pathname)) {
     const storeState = await readStoreState(context.env);
@@ -45,8 +49,12 @@ function ownerResponse(response, context) {
 function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 
 function shouldNeverReuseDocument(pathname) {
-  return pathname === "/" || pathname === "/index.html" || pathname === "/customer.html" ||
+  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) ||
     pathname === "/guest/" || pathname === "/guest/index.html" || pathname.startsWith("/creator");
+}
+
+function isCustomerStorefront(pathname) {
+  return pathname === "/customer" || pathname === "/customer/" || pathname === "/customer.html";
 }
 
 function noStoreDocument(response) {

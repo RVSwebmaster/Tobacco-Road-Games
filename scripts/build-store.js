@@ -22,12 +22,26 @@ const HOMEPAGE_BB1_AD_PREVIEW = JSON.parse(fs.readFileSync(path.join(ROOT, "data
 const HOMEPAGE_NEWS_PREVIEW = [];
 const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
-const GUEST_FEATURE_CACHE_BUST = "20261112-cover-first-preview1";
-const HOMEPAGE_SHELVES_CACHE_BUST = "20261114-balanced-monster-guide3";
-const PROGRESSIVE_NAV_CACHE_BUST = "20261114-open-rules-books2";
+const GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2";
+const HOMEPAGE_SHELVES_CACHE_BUST = "20261116-open-rules-master-shelf4";
+const PROGRESSIVE_NAV_CACHE_BUST = "20261116-open-rules-master-shelf1";
+const STOREFRONT_STYLES_CACHE_BUST = "20261116-open-rules-spine-title-fit2";
+const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
+const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
+const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
+const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
+const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
+const MEMBER_PROFILE_ROUTES = Object.freeze([
+  { accountClass: "customer", route: "/customer-profile/" },
+  { accountClass: "creator", route: "/creator/" },
+  { accountClass: "founding25", route: "/founding-25-profile/" },
+  { accountClass: "premiumCreator", route: "/premium-creator-profile/" },
+  { accountClass: "admin", route: "/admin-profile/" },
+  { accountClass: "owner", route: "/owner-profile/" },
+]);
 const CREATOR_TEMPLATES = new Set(["bookshelf", "catalog"]);
 const PUBLIC_NAV_ITEMS = Object.freeze([
   { key: "explore", href: "/store/catalog/", label: "Explore" },
@@ -130,8 +144,7 @@ function main() {
     writeFile(`store/products/${product.slug}/index.html`, renderProductPage(product, publicCatalogProducts, authorLookup));
   }
 
-  buildHomepage(publicCatalogProducts, indexes, bundleRules);
-  buildGuestLandingPage(publicCatalogProducts);
+  buildFocusedPages(publicCatalogProducts);
   buildAccountPage();
   buildStaticPublicPage("support.html", "");
 
@@ -1172,8 +1185,8 @@ function buildHomepage(products, indexes, bundleRules) {
     .replace(mainPattern, renderHomepageShopWallMain(products).trimStart())
     .replace(footerPattern, "")
     .replace(scriptPattern, "\n");
-  next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${PROGRESSIVE_NAV_CACHE_BUST}`);
-  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules3" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
+  next = next.replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}`);
+  const homepageScripts = `\n  <script src="/assets/js/progressive-navigation.js?v=${PROGRESSIVE_NAV_CACHE_BUST}" defer></script>\n  <script src="/assets/js/cart.js?v=${CACHE_BUST}" defer></script>\n  <script src="/assets/js/storefront.js?v=${STOREFRONT_CACHE_BUST}" defer></script>\n  <script src="/assets/js/open-rules-library.js?v=${OPEN_RULES_LIBRARY_CACHE_BUST}" defer></script>\n  <script src="/assets/js/homepage-shelves.js?v=${HOMEPAGE_SHELVES_CACHE_BUST}" defer></script>\n  <script src="/assets/js/news-chyron.js?v=${NEWS_CHYRON_CACHE_BUST}" defer></script>\n  <script src="/assets/js/shelf-curios.js?v=${SHELF_CURIO_CACHE_BUST}" defer></script>`;
   next = homepageScriptsPattern.test(next)
     ? next.replace(homepageScriptsPattern, `${homepageScripts}\n`)
     : next.replace("</body>", `${homepageScripts}\n</body>`);
@@ -1189,7 +1202,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=shared-open-rules3" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_FEATURE_CACHE_BUST}">\n`;
+  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=${OPEN_RULES_LIBRARY_CACHE_BUST}" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_EXAMINATION_STYLE_CACHE_BUST}">\n`;
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
@@ -1199,14 +1212,110 @@ function buildGuestLandingPage(products) {
     .replace(mainPattern, `\n${renderGuestLandingShopWallMain(products)}\n`)
     .replace(/\s*<script src="\/assets\/js\/open-rules-library\.js\?v=[^"]+" defer><\/script>/, "")
     .replace(/^\s*<script src="\/assets\/js\/progressive-navigation\.js\?v=[^"]+" defer><\/script>\r?\n/m, "")
-    .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_FEATURE_CACHE_BUST}" defer></script>\n</body>`);
+    .replace("</body>", `  <script src="/assets/js/guest-product-preview.js?v=${GUEST_EXAMINATION_CACHE_BUST}" defer></script>\n</body>`);
 
   const guestLandingPage = next.replace(/^[ \t]+$/gm, "");
-  writeFile("guest/index.html", guestLandingPage);
-  writeFile("customer.html", guestLandingPage);
+  writeFile("guest/index.html", addGuestLoginPopup(guestLandingPage));
+  writeFile("customer.html", renderCustomerLandingPage(guestLandingPage));
+  return guestLandingPage;
 }
 
-function renderGuestLandingShopWallMain(products) {
+function addGuestLoginPopup(page) {
+  return page.replace("</body>", `  <!-- Guest login popup -->
+  <link rel="stylesheet" href="/assets/css/guest-login.css?v=1">
+  <dialog class="guest-login" id="guest-login" aria-label="Log in to Tobacco Road Games">
+    <button class="guest-login__close" type="button" aria-label="Close login">×</button>
+    <span class="guest-login__avatar" aria-hidden="true"></span>
+    <form class="guest-login__form" method="post">
+      <label>Email <input type="email" name="email" autocomplete="username" required autofocus></label>
+      <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+      <div class="guest-login__options">
+        <label title="Remember your email on this browser"><input type="checkbox" name="remember"> Remember Me</label>
+        <a href="/account.html#forgot-form">Forgot Password?</a>
+      </div>
+      <p class="guest-login__error" role="alert" hidden></p>
+      <button class="guest-login__submit" type="submit">Login</button>
+      <p class="guest-login__signup">Don’t have an account? <a href="/account.html#register-form">Sign Up</a></p>
+    </form>
+  </dialog>
+  <script src="/assets/js/guest-login.js?v=1" defer></script>
+  <!-- End Guest login popup -->
+</body>`);
+}
+
+function withoutGuestLoginPopup(page) {
+  return page.replace(/^[ \t]*<!-- Guest login popup -->[\s\S]*?<!-- End Guest login popup -->\r?\n/m, "");
+}
+
+function renderCustomerLandingPage(guestLandingPage) {
+  guestLandingPage = withoutGuestLoginPopup(guestLandingPage);
+  const profileRoutes = Object.fromEntries(MEMBER_PROFILE_ROUTES.map(({ accountClass, route }) => [accountClass, route]));
+  let customerPage = guestLandingPage
+    .replace('class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo', 'class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo data-customer-storefront')
+    .replace('<nav class="site-nav" aria-label="Primary">', `<nav class="site-nav" aria-label="Primary" data-progressive-navigation data-member-profile-routes="${escapeAttribute(JSON.stringify(profileRoutes))}">`)
+    .replace('<a href="/account.html">Login/Signup</a>', "")
+    .replace('class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading"', 'class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading" data-homepage-library')
+    .replace('aria-label="Empty Guest personal library shelves"', 'aria-label="Your personal library shelves"')
+    .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"')
+    .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right"');
+  if (customerPage === guestLandingPage) throw new Error("Customer storefront markers could not be added.");
+  customerPage = customerPage
+    .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}-${CUSTOMER_NAV_CACHE_BUST}`)
+    .replace(/<script src="\/assets\/js\/guest-product-preview\.js\?v=[^"]+" defer><\/script>/, `<script src="/assets/js/guest-product-preview.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>`)
+    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>\n</body>`);
+  return customerPage;
+}
+
+function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-profile/", creatorCatalogRotation = false } = {}) {
+  if (typeof guestLandingPage !== "string" || !guestLandingPage.trim()) {
+    throw new Error("Member Profile generation requires the rendered Guest page.");
+  }
+  const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>/;
+  const navPattern = /<nav class="site-nav" aria-label="Primary"[^>]*>[\s\S]*?<\/nav>/;
+  if (!mainPattern.test(guestLandingPage) || !navPattern.test(guestLandingPage)) {
+    throw new Error("Guest page is missing the shared storefront main or navigation.");
+  }
+
+  let memberProfile = withoutGuestLoginPopup(guestLandingPage)
+    .replace("<title>Guest Landing Page | Tobacco Road Games</title>", "<title>Member Profile | Tobacco Road Games</title>")
+    .replace('content="Browse and shop Tobacco Road Games as a Guest without creating an account."', 'content="Member profile and personal library for Tobacco Road Games."')
+    .replace('<link rel="canonical" href="https://tobaccoroadgames.com/guest/">', `<link rel="canonical" href="https://tobaccoroadgames.com${canonicalPath}">`)
+    .replace(/<body>/, '<body class="view-section member-profile-page">')
+    .replace('</head>', '  <meta name="robots" content="noindex,nofollow">\n</head>')
+    .replace(navPattern, '<nav class="site-nav" aria-label="Member Profile navigation"><span class="creator-menu-placeholder">Menu</span></nav>')
+    .replace(mainPattern, renderGuestLandingShopWallMain([], {
+      pageClass: "member-profile-shop-wall",
+      pageId: "member-profile",
+      pageAttributes: "data-member-profile-page",
+      pageHeading: '<h1 class="member-profile-visually-hidden" data-member-profile-heading>Member Profile</h1>',
+      libraryBay: renderGuestLibraryBay({ role: "member-profile" }),
+      identityBay: renderHomepageIdentityBay({ memberIdentity: true, memberTierBadge: true }),
+      openRulesBay: renderRoleOpenRulesBay("member-profile", { rotateCatalogCovers: creatorCatalogRotation }),
+      includeLowerContent: false,
+      creatorTitleBoard: true
+    }))
+    .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
+    .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
+    .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
+    .replace("</head>", '  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n</head>')
+    .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer member-profile-footer"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>')
+    .replace("</body>", [
+      '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
+      '  <script src="/assets/js/open-rules-library.js?v=shared-open-rules6" defer></script>',
+      '  <script src="/assets/js/homepage-shelves.js?v=creator-open-rules7" defer></script>',
+      '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
+      '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
+      '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>',
+      ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
+      "</body>"
+    ].join("\n"));
+  if (!memberProfile.includes('data-member-profile-page') || !memberProfile.includes('member-profile-footer')) {
+    throw new Error("Member Profile configuration could not be applied to the shared Guest page.");
+  }
+  return memberProfile.replace(/^[ \t]+$/gm, "");
+}
+
+function renderGuestLandingShopWallMain(products, options = {}) {
   const eligible = products.filter((product) => ["available-direct", "pay-what-you-want", "free-download"].includes(product.status));
   const newThisWeek = selectNewThisWeek(eligible);
   const bestSellers = [];
@@ -1216,22 +1325,16 @@ function renderGuestLandingShopWallMain(products) {
   const fallbackFeatured = (designated || chooseFeaturedProduct(eligible.filter((product) => !product.authorSlugs?.includes("rv-sawyer"))))?.authorSlugs?.find((slug) => slug !== "rv-sawyer");
   const featuredCreator = configuredCreator || fallbackFeatured;
   const featuredProducts = featuredCreator ? eligible.filter(product => product.authorSlugs?.includes(featuredCreator)) : [];
-  const openRules = eligible.filter(isOpenRulesProduct).slice(0, 36);
+  const pageId = options.pageId || "top";
+  const pageClass = options.pageClass ? ` ${options.pageClass}` : "";
+  const pageAttributes = options.pageAttributes || "data-guest-landing data-magical-bookshelf-demo";
+  const pageHeading = options.pageHeading || "";
+  const includeLowerContent = options.includeLowerContent !== false;
 
-  return `    <main id="top" class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo aria-labelledby="homepage-shop-wall-heading">
-      <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
-      <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
-        <picture class="shop-wall-cabinet-art" aria-hidden="true">
-          <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1">
-          <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1">
-          <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
-        </picture>
-        ${renderGuestLibraryBay()}
-        ${renderHomepageIdentityBay()}
-        ${renderGuestOpenRulesBay(openRules)}
-        ${renderHomepageShelfFixtures()}
-      </section>
-      </div>
+  return `    <main id="${pageId}" class="homepage-shop-wall shelf-storefront guest-landing-page${pageClass}" ${pageAttributes} aria-labelledby="homepage-shop-wall-heading">
+      ${pageHeading}
+      ${renderStorefrontUpperCabinet(options)}
+      ${includeLowerContent ? `
       ${renderHomepageBricABracShelf({ sumo: true })}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
@@ -1240,50 +1343,81 @@ function renderGuestLandingShopWallMain(products) {
         ${renderHomepageBricABracShelf()}
         ${renderHomepageProductBay({ title: "BEST SELLERS", id: "best-sellers-wall-heading", products: bestSellers, liveShelf: "best-sellers", singleShelf: true, wallArt: [{ src: "/assets/michael-jordan-framed-jersey.png", alt: "Framed Michael Jordan North Carolina number 23 jersey on the shelf back wall" }, { src: "/assets/call-of-cthulhu-framed-poster.png", alt: "Framed Call of Cthulhu poster on the shelf back wall", placement: "center" }, { src: "/assets/krispy-kreme-framed-sign.png", alt: "Framed Krispy Kreme Doughnuts sign on the shelf back wall", placement: "right" }], magicalShelfOrder: 7, magicalDirection: "outer-inward" })}
       </section>
-      ${renderHomepageNewsChyron()}
+      ${renderHomepageNewsChyron()}` : ""}
     </main>`;
 }
 
-function renderGuestLibraryBay() {
+function renderStorefrontUpperCabinet(options = {}) {
+  const creatorTitleBoard = options.creatorTitleBoard === true;
+  const mobileCabinet = creatorTitleBoard
+    ? "/assets/images/storefront-shelf-dressing/upper-cabinet-creator-mobile.png?v=creator-title-board3"
+    : "/assets/images/storefront-shelf-dressing/upper-cabinet-mobile.png?v=20261004-frozen1";
+  const tabletCabinet = creatorTitleBoard
+    ? "/assets/images/storefront-shelf-dressing/upper-cabinet-creator-tablet.png?v=creator-title-board3"
+    : "/assets/images/storefront-shelf-dressing/upper-cabinet-tablet.png?v=20261004-frozen1";
+  const desktopCabinet = creatorTitleBoard
+    ? "/assets/images/storefront-shelf-dressing/upper-cabinet-creator-desktop.png?v=creator-title-board3"
+    : "/assets/images/storefront-shelf-dressing/upper-cabinet-desktop.png?v=20261004-frozen1";
+  return `<div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
+      <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
+        <picture class="shop-wall-cabinet-art" aria-hidden="true">
+          <source media="(max-width: 699px)" srcset="${mobileCabinet}">
+          <source media="(max-width: 1023px)" srcset="${tabletCabinet}">
+          <img src="${desktopCabinet}" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
+        </picture>
+        ${options.libraryBay ?? renderGuestLibraryBay()}
+        ${options.identityBay ?? renderHomepageIdentityBay()}
+        ${options.openRulesBay ?? renderGuestOpenRulesBay()}
+        ${renderHomepageShelfFixtures()}
+      </section>
+      </div>`;
+}
+
+function renderGuestLibraryBay({ role = "guest" } = {}) {
+  const memberProfile = role === "member-profile" || role === "creator";
+  const upperShelfAttributes = memberProfile
+    ? "data-member-library-books"
+    : 'data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"';
+  const lowerShelfAttributes = memberProfile
+    ? "data-member-library-books"
+    : 'data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"';
   return `
-        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay" aria-labelledby="your-library-heading">
+        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay${memberProfile ? " creator-dashboard-library-bay" : ""}" aria-labelledby="your-library-heading"${memberProfile ? ' data-member-library-bay' : ""}>
           ${renderShopWallPlaque("YOUR LIBRARY", "your-library-heading")}
-          <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Empty Guest personal library shelves">
+          <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="${memberProfile ? "Your personal library shelves" : "Empty Guest personal library shelves"}">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right">
-                <p class="guest-library-sign">Your shelves look a little bare.<br>Log in or sign up to make them your own.</p>
-              </div>
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" ${upperShelfAttributes}>${memberProfile ? "" : '<p class="guest-library-sign">Your shelves look a little bare.<br>Log in or sign up to make them your own.</p>'}</div>
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"></div>
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" ${lowerShelfAttributes}></div>
             </div>
           </div>
         </section>`;
 }
 
-function renderGuestOpenRulesBay(products) {
-  const renderMockBook = (position) => {
-    const height = 72 + ((position * 7) % 21);
-    return `<span class="guest-open-rules-mock-book guest-open-rules-mock-book--tone-${((position - 1) % 6) + 1}" data-library-position="${position}" data-magical-book data-mock-open-rule="true" style="--mock-book-height:${height}%" aria-hidden="true"><span class="guest-open-rules-mock-book__label">OPEN RULES</span></span>`;
-  };
-  const renderShelf = (shelfProducts, startPosition, shelfOrder) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" data-library-start-position="${startPosition}">
-                <div class="bookshelf-grid shop-wall-books guest-open-rules-books" data-magical-bookshelf data-magical-shelf-order="${shelfOrder}" data-magical-direction="right-to-left" style="--shelf-items:18">${Array.from({ length: 18 }, (_, index) => {
-                  const position = startPosition + index;
-                  const product = shelfProducts[index];
-                  return product
-                    ? renderBookshelfBook(product, { withDataset: true, centerExamination: true, guestPreview: true }).replace('class="bookshelf-book', `data-library-position="${position}" data-magical-book class="bookshelf-book`)
-                    : renderMockBook(position);
-                }).join("")}</div>
+function renderGuestOpenRulesBay() {
+  return renderRoleOpenRulesBay("guest");
+}
+
+function renderRoleOpenRulesBay(role, { rotateCatalogCovers = false } = {}) {
+  const memberProfile = role === "member-profile" || role === "creator";
+  const posterMarkup = !memberProfile ? "" : rotateCatalogCovers
+    ? '<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false"><img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster creator-profile-catalog-cover" src="/assets/the-familiar-framed-poster.png" data-creator-profile-catalog-cover data-catalog-api="/api/catalog" alt="" aria-hidden="true" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>'
+    : '<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="Framed The Familiar poster on the Open Rules Library back wall" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>';
+  const renderShelf = (startPosition, shelfOrder) => `<div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row"${memberProfile ? ' aria-hidden="true"' : ` data-library-start-position="${startPosition}"`}>
+                ${memberProfile ? "" : `<div class="bookshelf-grid shop-wall-books guest-open-rules-books" data-magical-bookshelf data-magical-shelf-order="${shelfOrder}" data-magical-direction="right-to-left" style="--shelf-items:18"></div>`}
               </div>`;
   return `
-        <section class="shop-wall-bay shop-wall-bay--products guest-open-rules-bay" aria-labelledby="open-rules-library-heading">
+        <section class="shop-wall-bay shop-wall-bay--products${memberProfile ? " creator-dashboard-open-rules-bay" : " guest-open-rules-bay"}" aria-labelledby="open-rules-library-heading">
           <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
           <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
             <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
-              ${renderShelf(products.slice(0, 18), 1, 3)}
+              ${memberProfile ? '<span class="creator-dashboard-open-rules-light-cover" aria-hidden="true"></span>' : ""}
+              ${posterMarkup}
+              ${renderShelf(1, 3)}
             </div>
             <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
-              ${renderShelf(products.slice(18, 36), 19, 4)}
+              ${renderShelf(19, 4)}
             </div>
           </div>
         </section>`;
@@ -1423,16 +1557,24 @@ function renderHomepageLibraryBay() {
         </section>`;
 }
 
-function renderHomepageIdentityBay() {
+function renderHomepageIdentityBay({ memberIdentity = false, memberTierBadge = false } = {}) {
+  const identityBoard = memberIdentity;
   return `
         <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
           <div class="shop-wall-identity-space">
             <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
-          </div>
-          <div class="shop-wall-identity-sign" aria-hidden="true">
+          </div>${identityBoard ? "" : `<div class="shop-wall-identity-sign" aria-hidden="true">
             <img src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=20261003-golden-d20-1" alt="" loading="eager" decoding="async">
             <p class="shop-wall-identity-title"><span>Tobacco Road</span><span>Games</span></p>
-          </div>
+          </div>`}
+          ${identityBoard ? `<div class="creator-dashboard-identity-overlay" aria-label="Member identity">
+            <img class="creator-dashboard-trg-emblem" src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=creator-title-board1" alt="Tobacco Road Games emblem" loading="eager" decoding="async">
+            <div id="creator-identity" class="creator-dashboard-creator-identity" data-member-identity-board hidden>
+              <img class="creator-dashboard-creator-image" data-member-identity-image alt="" loading="eager" decoding="async" hidden />
+              <span class="creator-dashboard-creator-initials" data-member-identity-initials hidden aria-hidden="true"></span>
+              <span class="creator-dashboard-creator-name" data-member-identity-name></span>
+            </div>
+          </div>` : ""}${memberTierBadge ? '\n          <img class="member-tier-badge" data-member-tier-badge width="512" height="512" alt="" hidden>' : ""}
         </section>`;
 }
 
@@ -3606,4 +3748,18 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderHomepageShopWallMain, renderGuestLandingShopWallMain, renderGuestLibraryBay, renderGuestOpenRulesBay, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel };
+function buildFocusedPages(publicCatalogProducts = loadProducts(buildAuthorLookup(loadAuthors())).filter(isCatalogBrowsable)) {
+  buildHomepage(publicCatalogProducts);
+  const guestLandingPage = buildGuestLandingPage(publicCatalogProducts);
+  for (const profile of MEMBER_PROFILE_ROUTES) {
+    const output = profile.route === "/creator/"
+      ? "creator/index.html"
+      : `${profile.route.slice(1)}index.html`;
+    writeFile(output, renderMemberProfilePage(guestLandingPage, {
+      canonicalPath: profile.route,
+      creatorCatalogRotation: profile.accountClass === "creator",
+    }));
+  }
+}
+
+module.exports = { buildFocusedPages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };

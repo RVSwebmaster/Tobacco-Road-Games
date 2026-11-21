@@ -451,6 +451,10 @@ h4 {
   outline: none;
 }
 
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
 .button--primary {
   color: var(--button-text);
   background: var(--accent);
@@ -1167,6 +1171,7 @@ h4 {
   left: 0;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
   overflow: hidden;
   backface-visibility: hidden;
   border: 1px solid rgba(242, 216, 170, 0.28);
@@ -1176,14 +1181,14 @@ h4 {
 
 .product-book__front {
   border-radius: 4px 9px 9px 4px;
-  transform: translateZ(calc(var(--book-depth, 18px) / 2));
+  transform: translateZ(calc(var(--book-depth, 18px) / 2 - var(--book-face-inset, 0px)));
 }
 
 .product-book__back {
   display: grid;
   place-items: center;
   border-radius: 9px 4px 4px 9px;
-  transform: rotateY(180deg) translateZ(calc(var(--book-depth, 18px) / 2));
+  transform: rotateY(180deg) translateZ(calc(var(--book-depth, 18px) / 2 - var(--book-face-inset, 0px)));
 }
 
 .product-book__front .product-cover,
@@ -3662,7 +3667,8 @@ body:has(.homepage-shop-wall) .site-nav.is-bracketing::after {
   opacity: 1;
 }
 
-body:has(.homepage-shop-wall) .site-header .site-nav a {
+body:has(.homepage-shop-wall) .site-header .site-nav a,
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout] {
   position: relative;
   z-index: 2;
   min-height: auto;
@@ -3677,14 +3683,22 @@ body:has(.homepage-shop-wall) .site-header .site-nav a {
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
 }
 
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout] {
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
 body:has(.homepage-shop-wall) .site-header .site-nav a:hover,
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:hover,
 body:has(.homepage-shop-wall) .site-header .site-nav a[aria-current="page"] {
   background: transparent;
   color: #140a05;
   box-shadow: none;
 }
 
-body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
+body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible,
+body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:focus-visible {
   background: transparent;
   color: #140a05;
   outline: 3px solid #251309;
@@ -5455,6 +5469,25 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     0 0 1px rgba(15, 7, 3, 0.48);
 }
 
+/* One shelf item and one hover target for the Guest, Customer, and Creator
+   Open Rules libraries. The creator shelf supplies the same per-book width. */
+.homepage-open-rules-book {
+  position: relative;
+  align-self: flex-end;
+  flex: 0 0 var(--open-rules-spine-width, var(--guest-library-book-width, 12px));
+  width: var(--open-rules-spine-width, var(--guest-library-book-width, 12px));
+  min-width: var(--open-rules-spine-width, var(--guest-library-book-width, 12px));
+  max-width: var(--open-rules-spine-width, var(--guest-library-book-width, 12px));
+  height: var(--mock-book-height, 82%);
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 2px 2px 0 0;
+  background: #1a110b;
+  text-decoration: none;
+  pointer-events: auto;
+  transition: transform 200ms ease, filter .3s ease, z-index 0s 200ms;
+}
+
 .homepage-open-rules-book__rotation {
   position: absolute;
   z-index: 1;
@@ -5485,7 +5518,7 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 .homepage-open-rules-book__product .product-book__front img {
-  object-fit: fill;
+  object-fit: contain;
 }
 
 .homepage-open-rules-book__product .product-book__spine-art {
@@ -5530,6 +5563,10 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   font-size: clamp(7px, calc(var(--open-rules-spine-width, 12px) * 0.72), 12px);
   font-weight: 700;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  transform: scaleY(var(--open-rules-title-scale, 1));
+  transform-origin: center;
+  text-overflow: clip;
 }
 
 .homepage-open-rules-book__product .product-book__spine-credit {
@@ -5540,14 +5577,90 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
 }
 
 /* Keep the shared Open Rules book itself as the hover target on every shelf. */
-.shop-wall-library-books > .homepage-open-rules-book:hover {
+.homepage-open-rules-book:hover,
+.guest-open-rules-mock-book:hover {
   transform: perspective(700px) translateY(-10px) translateZ(28px) scale(1.06);
   filter: drop-shadow(0 10px 8px rgba(10, 5, 2, .62)) !important;
   z-index: 3;
 }
 
+.guest-open-rules-examination-placeholder {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.guest-open-rules-real-book.is-examining,
+.guest-open-rules-real-book.is-examining:hover {
+  position: fixed !important;
+  z-index: 10000 !important;
+  overflow: visible !important;
+  transform: translate3d(var(--guest-examine-x, 0), var(--guest-examine-y, 0), 0) scale(var(--guest-examine-scale, 1));
+  transform-origin: center;
+  filter: drop-shadow(0 22px 22px rgba(0, 0, 0, .72)) !important;
+  transition: transform 1.5s cubic-bezier(.16, .72, .18, 1), filter .25s ease;
+  cursor: pointer;
+}
+
+.guest-open-rules-real-book.is-examining.is-enlarging {
+  transition-duration: 800ms;
+  transition-timing-function: cubic-bezier(.2, .8, .2, 1);
+}
+
+.guest-open-rules-real-book.is-examining.is-returning {
+  transition-duration: 1.5s;
+  transition-timing-function: cubic-bezier(.16, .72, .18, 1);
+}
+
+.guest-open-rules-examination-close {
+  position: fixed;
+  z-index: 10001;
+  display: grid;
+  width: clamp(38px, 9vw, 46px);
+  height: clamp(38px, 9vw, 46px);
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgba(255, 233, 190, .92);
+  border-radius: 50%;
+  background: rgba(28, 14, 8, .94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .7), inset 0 0 0 1px rgba(118, 73, 33, .9);
+  color: #fff1cf;
+  font: 700 30px/1 Arial, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.guest-open-rules-examination-close:hover,
+.guest-open-rules-examination-close:focus-visible {
+  background: #6c3216;
+  outline: 3px solid #fff1cf;
+  outline-offset: 2px;
+}
+
+.guest-open-rules-examination-close[hidden] {
+  display: none;
+}
+
+.guest-open-rules-real-book.is-examining .homepage-open-rules-book__rotation {
+  overflow: visible;
+  perspective: 1100px;
+}
+
+.guest-open-rules-real-book.is-examining .homepage-open-rules-book__product {
+  transition: transform 1.5s cubic-bezier(.16, .72, .18, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .shop-wall-library-books > .homepage-open-rules-book:hover {
+  .guest-open-rules-real-book.is-examining,
+  .guest-open-rules-real-book.is-examining .homepage-open-rules-book__product {
+    transition-duration: .01ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homepage-open-rules-book:hover,
+  .guest-open-rules-mock-book:hover {
     transform: none;
   }
 }
@@ -5558,54 +5671,6 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
   max-width: calc(var(--guest-library-book-width) * var(--open-rules-spine-ratio, 1));
   background: #1a110b;
   pointer-events: auto;
-}
-
-.guest-open-rules-real-book__link {
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  display: block;
-  overflow: hidden;
-  border-radius: inherit;
-  color: inherit;
-  text-decoration: none;
-}
-
-.guest-open-rules-real-book__cover {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: calc(100% * 887 / 203);
-  max-width: none;
-  height: 100%;
-  object-fit: fill;
-  transform: translateX(-50%);
-}
-
-.guest-open-rules-real-book__title,
-.guest-open-rules-real-book__publisher {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  overflow: hidden;
-  color: #f4dda0;
-  text-shadow: 0 1px 1px #160a04, 0 0 2px #160a04;
-  transform: translateX(-50%);
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-}
-
-.guest-open-rules-real-book__title {
-  top: 7%;
-  max-height: 74%;
-  font: 700 clamp(5px, .42vw, 9px)/1 Georgia, "Times New Roman", serif;
-}
-
-.guest-open-rules-real-book__publisher {
-  bottom: 7%;
-  max-height: 34%;
-  color: #d9bb72;
-  font: 600 clamp(4px, .31vw, 6px)/1 "Trebuchet MS", "Segoe UI", Arial, sans-serif;
 }
 
 /* Dressing occupies only the existing inner-edge niches, outside book flow.
@@ -6035,7 +6100,8 @@ body:has(.homepage-shop-wall) .site-header .site-nav a:focus-visible {
     justify-content: flex-start;
   }
 
-  body:has(.homepage-shop-wall) .site-nav a {
+  body:has(.homepage-shop-wall) .site-nav a,
+  body:has(.homepage-shop-wall) .site-nav [data-customer-logout] {
     min-height: 34px;
     padding: 8px 9px;
     font-size: 0.792rem;

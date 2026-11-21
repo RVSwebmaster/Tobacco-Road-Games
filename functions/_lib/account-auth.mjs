@@ -1,3 +1,4 @@
+import { resolveMemberProfileAccess } from "./member-profile-access.mjs";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { scryptAsync } from "@noble/hashes/scrypt";
 import { EmailProviderError, createEmailProvider, isEmailDeliveryConfigured } from "./email-provider.mjs";
@@ -75,11 +76,21 @@ export async function handleAccountMeRequest(request, env) {
       "set-cookie": buildAccountCsrfCookie(csrfToken)
     });
   }
+  const profile = await env.TRG_ORDERS.prepare(
+    "SELECT display_name, avatar_url FROM user_account_profiles WHERE user_id=?"
+  ).bind(session.user.id).first();
+  const memberAccess = await resolveMemberProfileAccess(env.TRG_ORDERS, session.user);
   return json({
     authenticated: true,
     csrfToken: session.csrfToken,
     googleClientId: publicGoogleClientId(env),
-    user: publicUser(session.user)
+    user: {
+      ...publicUser(session.user),
+      customerPrivilegesActive: await customerPrivilegesActive(env.TRG_ORDERS, session.user.id),
+      displayName: profile?.display_name || "",
+      avatarUrl: profile?.avatar_url || "",
+      ...memberAccess
+    }
   }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.rawSessionToken, session.csrfToken)
   });
@@ -164,7 +175,7 @@ export async function loginAccount(request, env, options = {}) {
     return generic();
   }
   const session = await createSession(db, user, options);
-  return json({ ok: true, user: publicUser(user) }, 200, {
+  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: await customerPrivilegesActive(db, user.id) } }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
 }
@@ -226,7 +237,7 @@ export async function loginWithGoogle(request, env, options = {}) {
   }
 
   const session = await createSession(db, user, options);
-  return json({ ok: true, user: publicUser(user) }, 200, {
+  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: await customerPrivilegesActive(db, user.id) } }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
 }
@@ -853,4 +864,10 @@ function fromBase64Url(value) {
 
 function escapeHtml(value) {
   return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+// A member without a new registration state keeps the production-072 access policy.
+export async function customerPrivilegesActive(db, userId) {
+  const state = await db.prepare("SELECT state FROM customer_registration_states WHERE user_id=?").bind(userId).first();
+  return !state || state.state === "active";
 }

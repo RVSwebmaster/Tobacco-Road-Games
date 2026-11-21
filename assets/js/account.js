@@ -512,8 +512,12 @@
       const form = event.currentTarget;
       const data = Object.fromEntries(new FormData(form));
       try {
-        await api("/api/auth/login", data);
+        const result = await api("/api/auth/login", data);
         form.reset();
+        if (result.user?.customerPrivilegesActive === true) {
+          window.location.assign("/customer");
+          return;
+        }
         await refreshAccount();
         setStatus("Signed in.");
       } catch (error) {
@@ -641,9 +645,13 @@
 
   window.handleTrgGoogleCredential = async (credentialResponse) => {
     try {
-      await api("/api/auth/google", {
+      const result = await api("/api/auth/google", {
         credential: credentialResponse.credential,
       });
+      if (result.user?.customerPrivilegesActive === true) {
+        window.location.assign("/customer");
+        return;
+      }
       await refreshAccount();
       setStatus("Signed in with Google.");
     } catch (error) {

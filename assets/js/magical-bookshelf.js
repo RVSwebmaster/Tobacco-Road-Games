@@ -276,6 +276,43 @@
       runner.start();
     };
 
+    const revealShelfBooks = (shelf) => {
+      const books = orderBooksByDirection(
+        Array.from(shelf?.querySelectorAll?.("[data-magical-book], .bookshelf-book, .shop-wall-stock-spine, .shop-wall-sale-spine, .shop-wall-hero-book") || []),
+        shelf?.dataset?.magicalDirection
+      );
+      if (!books.length) return;
+      books.forEach((book) => {
+        book.classList.add("is-magical-pending");
+        book.classList.remove("is-magical-revealed");
+      });
+      if (!desktopQuery.matches || reducedMotionQuery.matches) {
+        books.forEach((book) => { book.classList.remove("is-magical-pending"); book.classList.add("is-magical-revealed"); });
+        return;
+      }
+      const steps = buildRevealPlan([books]);
+      let sequenceIndex = 0;
+      createSequenceRunner({
+        steps,
+        intervalMs: DEFAULT_INTERVAL_MS,
+        revealStep(step) {
+          const group = step.bookIndexes.map((index) => books[index]).filter(Boolean);
+          group.forEach((book) => { book.classList.remove("is-magical-pending"); book.classList.add("is-magical-revealed"); });
+          addEffect(shelf, group, sequenceIndex++);
+        },
+        revealAll() { books.forEach((book) => { book.classList.remove("is-magical-pending"); book.classList.add("is-magical-revealed"); }); },
+        clearEffects: removeEffects,
+        schedule: windowRef.setTimeout.bind(windowRef),
+        cancel: windowRef.clearTimeout.bind(windowRef),
+      }).start();
+    };
+
+    documentRef.addEventListener("trg:homepage-shelves-updated", (event) => {
+      if (!String(event.detail?.shelf || "").startsWith("openRulesLibrary")) return;
+      const shelf = event.detail?.row;
+      if (shelf) revealShelfBooks(shelf);
+    });
+
     if (replay && isStagingPreviewHost(windowRef.location.hostname)) {
       replay.hidden = false;
       replay.addEventListener("click", play);
@@ -295,7 +332,7 @@
 
     setPending();
     windowRef.requestAnimationFrame(play);
-    return { play, runner, shelves };
+    return { play, runner, shelves, revealShelfBooks };
   }
 
   return {

@@ -1,4 +1,4 @@
-import { getSessionFromRequest } from "./account-auth.mjs";
+import { customerPrivilegesActive, getSessionFromRequest } from "./account-auth.mjs";
 import {
   createDownloadCredential,
   createNativeDownloadCredential,
@@ -16,6 +16,9 @@ export async function handleAccountLibraryRequest(request, env = {}, options = {
     return json({ error: { code: "not_authenticated", message: "Sign in to view My Library." } }, 401);
   }
   const database = options.database || env.TRG_ORDERS;
+  if (!(await customerPrivilegesActive(database, session.user.id))) {
+    return json({ error: { code: "customer_registration_incomplete", message: "Customer access is pending." } }, 403);
+  }
   const secret = String(options.downloadSigningSecret || env.DOWNLOAD_SIGNING_SECRET || "");
   const canSign = isDownloadSigningSecretConfigured(secret);
   const owned = new Map();

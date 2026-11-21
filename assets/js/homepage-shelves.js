@@ -70,38 +70,72 @@
     return stock;
   }
 
-  function hydrateGuestOpenRulesShelf(row, products) {
+  function buildOpenRulesShelfBooks(row, products) {
     const shelfProducts = products.slice(0, 18);
-    const baseWidth = Number.parseFloat(getComputedStyle(row).getPropertyValue("--guest-library-book-width")) || 12;
-    row.style.setProperty("--shelf-items", "18");
-    row.replaceChildren(...shelfProducts.map((product) => openRules.createGuestOpenRulesBook(product, baseWidth)));
-    return true;
+    const shelfWidth = Number(row.getBoundingClientRect?.().width) || 0;
+    const viewportWidth = Number(window.innerWidth) || shelfWidth || 800;
+    const preferredWidth = Math.min(22, Math.max(11, viewportWidth * 0.0135));
+    const baseWidth = shelfWidth > 17 ? Math.min(preferredWidth, (shelfWidth - 17) / 18) : preferredWidth;
+    return {
+      baseWidth,
+      books: shelfProducts.map((product, index) =>
+        openRules.createOpenRulesShelfBook(product, index, baseWidth))
+    };
   }
 
-  function hydrateOpenRulesLibrary(upperPayload = {}, lowerPayload = {}) {
+  function validOpenRulesShelf(payload) {
+    return Boolean(payload && typeof payload === "object" && !Array.isArray(payload)
+      && typeof payload.visible === "boolean"
+      && typeof payload.managed === "boolean"
+      && (!payload.managed || (Array.isArray(payload.products) && payload.products.every((product) =>
+        product && typeof product === "object" && !Array.isArray(product)
+        && typeof product.title === "string" && product.title.trim()
+        && typeof product.slug === "string" && product.slug.trim()
+        && typeof product.fullUrl === "string" && product.fullUrl.trim()))));
+  }
+
+  function hydrateOpenRulesLibrary(upperPayload, lowerPayload) {
     const bay = document.querySelector('[aria-labelledby="open-rules-library-heading"]');
     if (!bay) return false;
-    const upperProducts = Array.isArray(upperPayload.products) ? upperPayload.products.slice(0, 18) : [];
-    const lowerProducts = Array.isArray(lowerPayload.products) ? lowerPayload.products.slice(0, 18) : [];
+    if (!validOpenRulesShelf(upperPayload) || !validOpenRulesShelf(lowerPayload)) return false;
+    const upperProducts = upperPayload.managed ? upperPayload.products.slice(0, 18) : [];
+    const lowerProducts = lowerPayload.managed ? lowerPayload.products.slice(0, 18) : [];
     const visible = upperPayload.visible !== false || lowerPayload.visible !== false;
+    const guestRows = Array.from(bay.querySelectorAll(".guest-open-rules-books"));
+    const rows = guestRows.length === 2
+      ? guestRows
+      : Array.from(bay.querySelectorAll("[data-fill-library], [data-creator-open-rules-books]"));
+    if (rows.length !== 2) return false;
+    if (rows.some((row) => !row)) return false;
+    let prepared;
+    try {
+      prepared = [[rows[0], upperPayload, upperProducts], [rows[1], lowerPayload, lowerProducts]]
+        .filter(([, payload]) => payload.managed)
+        .map(([row, payload, products]) => ({ row, payload, products, ...buildOpenRulesShelfBooks(row, products) }));
+    } catch {
+      return false;
+    }
     bay.hidden = !visible;
     if (!visible) return true;
-    const guestRows = Array.from(bay.querySelectorAll(".guest-open-rules-books"));
-    if (guestRows.length === 2) {
-      if (upperPayload.managed) hydrateGuestOpenRulesShelf(guestRows[0], upperProducts);
-      if (lowerPayload.managed) hydrateGuestOpenRulesShelf(guestRows[1], lowerProducts);
-    }
-    const rows = Array.from(bay.querySelectorAll("[data-fill-library], [data-creator-open-rules-books]"));
-    if (guestRows.length !== 2 && rows.length !== 2) return false;
-    [[rows[0], upperPayload, upperProducts], [rows[1], lowerPayload, lowerProducts]].forEach(([row, payload, products]) => {
-      if (!row || !payload.managed) return;
-      const render = () => row.replaceChildren(...products.map(openRules.createOpenRulesSpine));
-      render();
+    for (const { row, baseWidth, books, products } of prepared) {
+      row.style.setProperty("--guest-library-book-width", `${baseWidth}px`);
+      row.style.setProperty("--shelf-items", "18");
+      row.replaceChildren(...books);
+      const render = () => {
+        try {
+          const updated = buildOpenRulesShelfBooks(row, products);
+          row.style.setProperty("--guest-library-book-width", `${updated.baseWidth}px`);
+          row.replaceChildren(...updated.books);
+          document.dispatchEvent(new CustomEvent("trg:homepage-shelves-updated", {
+            detail: { shelf: "openRulesLibrary", row, count: updated.books.length }
+          }));
+        } catch { /* Keep the last successfully rendered shelf on resize errors. */ }
+      };
       if (typeof ResizeObserver === "function") new ResizeObserver(render).observe(row.parentElement);
       else window.addEventListener("resize", render);
-    });
-    for (const [shelf, products] of [["openRulesLibraryUpper", upperProducts], ["openRulesLibraryLower", lowerProducts]]) {
-      document.dispatchEvent(new CustomEvent("trg:homepage-shelves-updated", { detail: { shelf, count: products.length } }));
+    }
+    for (const [shelfIndex, [shelf, products]] of [["openRulesLibraryUpper", upperProducts], ["openRulesLibraryLower", lowerProducts]].entries()) {
+      document.dispatchEvent(new CustomEvent("trg:homepage-shelves-updated", { detail: { shelf, row: rows[shelfIndex], count: products.length } }));
     }
     return true;
   }
@@ -167,7 +201,10 @@
   }
 
   function hydratePayload(payload) {
+    if (!payload || typeof payload !== "object" || payload.unavailable === true) return;
     if (payload?.shelves) {
+      if (!validOpenRulesShelf(payload.shelves.openRulesLibraryUpper)
+        || !validOpenRulesShelf(payload.shelves.openRulesLibraryLower)) return;
       hydrateOpenRulesLibrary(payload.shelves.openRulesLibraryUpper, payload.shelves.openRulesLibraryLower);
       for (const key of Object.keys(SHELVES)) hydrateShelf(key, payload.shelves[key]);
       return;
@@ -177,7 +214,7 @@
 
   window.TRGHomepageShelves = Object.freeze({ hydrateBestSellers, hydrateOpenRulesLibrary, hydratePayload, hydrateShelf });
   if (document.querySelector(".creator-dashboard-open-rules-bay")) return;
-  fetch("/api/homepage-shelves", { cache: "no-store", credentials: "same-origin" })
+  fetch("/api/homepage-shelves", { cache: "default", credentials: "same-origin" })
     .then((response) => response.ok ? response.json() : { bestSellers: [] })
     .then(hydratePayload)
     .catch(() => {})
