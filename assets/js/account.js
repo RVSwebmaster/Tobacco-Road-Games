@@ -2,7 +2,6 @@
   const status = document.querySelector("#account-status");
   const summary = document.querySelector("#account-summary");
   const signout = document.querySelector("#signout-button");
-  const resend = document.querySelector("#resend-verification-button");
   const accountAccessPanel = document.querySelector("#account-access-panel");
   const accountSessionPanel = document.querySelector("#account-session-panel");
   const accountViewPanels = {
@@ -131,7 +130,6 @@
       if (accountSessionPanel) accountSessionPanel.hidden = true;
       summary.textContent = "No account is signed in.";
       signout.hidden = true;
-      resend.hidden = true;
       if (forumPanel) forumPanel.hidden = true;
       if (libraryPanel) libraryPanel.hidden = true;
       if (accountProfilePanel) accountProfilePanel.hidden = true;
@@ -149,13 +147,8 @@
     currentAccountEmailVerified = Boolean(payload.user.emailVerified);
     const email = document.createElement("p");
     email.textContent = `Signed in as ${payload.user.email}`;
-    const verified = document.createElement("p");
-    verified.textContent = payload.user.emailVerified
-      ? "Email verified."
-      : "Email not verified yet.";
-    summary.append(email, verified);
+    summary.append(email);
     signout.hidden = false;
-    resend.hidden = payload.user.emailVerified;
     if (forumPanel) {
       forumPanel.hidden = false;
       refreshForumProfile(payload.user.emailVerified).catch((error) => {
@@ -558,7 +551,7 @@
         await api("/api/auth/register", data);
         form.reset();
         await refreshAccount();
-        setStatus("Account created. Check your email to verify the address.");
+        setStatus("Account created. You can sign in now.");
       } catch (error) {
         setStatus(error.message, true);
       }
@@ -588,15 +581,6 @@
       csrfToken = "";
       await refreshAccount();
       setStatus("Signed out.");
-    } catch (error) {
-      setStatus(error.message, true);
-    }
-  });
-
-  resend?.addEventListener("click", async () => {
-    try {
-      const payload = await api("/api/auth/resend-verification", {});
-      setStatus(payload.message || "Verification email sent.");
     } catch (error) {
       setStatus(error.message, true);
     }

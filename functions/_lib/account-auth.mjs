@@ -127,7 +127,6 @@ export async function registerAccount(request, env, options = {}) {
     updated_at: now
   };
   const passwordHash = await hashPassword(password, options.passwordHashOptions);
-  const verification = await prepareEmailVerificationToken(db, user.id, options);
   const session = await prepareSession(db, user, options);
 
   try {
@@ -140,11 +139,10 @@ export async function registerAccount(request, env, options = {}) {
         INSERT INTO password_credentials (user_id, password_hash, created_at, updated_at)
         VALUES (?, ?, ?, ?)
       `).bind(user.id, passwordHash, now, now),
-      verification.statement,
       db.prepare(`
         INSERT INTO customer_registration_states (user_id, state, activated_at, created_at, updated_at)
-        VALUES (?, 'pending', NULL, ?, ?)
-      `).bind(user.id, now, now),
+        VALUES (?, 'active', ?, ?, ?)
+      `).bind(user.id, now, now, now),
       session.statement
     ]);
   } catch {
@@ -160,39 +158,9 @@ export async function registerAccount(request, env, options = {}) {
     }, 503);
   }
 
-  // Resend and D1 cannot share a transaction. If delivery fails, compensate
-  // by deleting every row created for this new identity, including its
-  // pending session, so the same email can retry as a fresh registration.
-  try {
-    await sendVerificationEmail(request, env, user, verification.token, options);
-  } catch {
-    try {
-      await db.batch([
-        db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM customer_registration_states WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM password_credentials WHERE user_id = ?").bind(user.id),
-        db.prepare("DELETE FROM users WHERE id = ?").bind(user.id)
-      ]);
-    } catch {
-      return json({
-        error: {
-          code: "registration_cleanup_failed",
-          message: "We couldn't finish registration safely. Please contact support before trying again."
-        }
-      }, 500);
-    }
-    return json({
-      error: {
-        code: "verification_delivery_failed",
-        message: "We couldn't send the verification email. Please try again."
-      }
-    }, 503);
-  }
-
   return json({
     ok: true,
-    message: "Account created. Check your email to verify the address before signing in.",
+    message: "Account created. You can sign in now.",
     user: publicUser(user)
   }, 201, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
@@ -222,19 +190,11 @@ export async function loginAccount(request, env, options = {}) {
   if (!credential || !(await verifyPassword(password, credential.password_hash))) {
     return generic();
   }
-  if (user.email_verified !== 1) {
-    return json({
-      error: {
-        code: "email_verification_required",
-        message: "Verify your email address before signing in."
-      }
-    }, 403);
-  }
   if (!(await customerPrivilegesActive(db, user.id))) {
     return json({
       error: {
         code: "customer_registration_pending",
-        message: "Your Customer account is not active yet. Verify your email address to continue."
+        message: "Your Customer account is not active yet. Contact support for help."
       }
     }, 403);
   }
@@ -863,18 +823,7 @@ function escapeHtml(value) {
   return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-// Verified legacy accounts without a state row retain their existing access;
-// newly registered Customers always carry an explicit pending/active state.
 export async function customerPrivilegesActive(db, userId) {
-  const state = await db.prepare(`
-    SELECT u.email_verified, registration.state
-    FROM users u
-    LEFT JOIN customer_registration_states registration ON registration.user_id = u.id
-    WHERE u.id = ?
-  `).bind(userId).first();
-  return Boolean(
-    state
-      && state.email_verified === 1
-      && (!state.state || state.state === "active")
-  );
+  const user = await db.prepare("SELECT status FROM users WHERE id = ?").bind(userId).first();
+  return user?.status === "active";
 }

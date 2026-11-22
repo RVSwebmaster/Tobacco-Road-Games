@@ -15,7 +15,7 @@ function assertNativeAccountMarkup() {
   assert.match(page, /data-account-view="register"[^>]*>Sign Up<\/a>/);
   assert.match(page, /data-account-view="forgot"[^>]*>Forgot Password\?/);
   assert.match(page, /data-account-view="signin"[^>]*>Back to Sign In<\/a>/);
-  assert.match(page, /id="resend-verification-button"/);
+  assert.doesNotMatch(page, /resend-verification/i, "Resend verification is not part of the Customer account flow.");
   assert.match(page, /id="signout-button"/);
   assert.doesNotMatch(script, /Google|google|\/api\/auth\/google/i);
   for (const endpoint of [
@@ -23,7 +23,6 @@ function assertNativeAccountMarkup() {
     "/api/auth/register",
     "/api/auth/request-password-reset",
     "/api/auth/verify-email",
-    "/api/auth/resend-verification",
     "/api/auth/reset-password",
     "/api/auth/logout",
   ]) assert.ok(script.includes(endpoint), `Missing native account action: ${endpoint}`);
@@ -45,7 +44,7 @@ function createElement(id) {
 
 async function testAccountViewNavigation() {
   const ids = [
-    "account-status", "account-summary", "signout-button", "resend-verification-button",
+    "account-status", "account-summary", "signout-button",
     "account-access-panel", "account-session-panel", "account-signin-panel",
     "account-register-panel", "account-forgot-panel",
   ];
