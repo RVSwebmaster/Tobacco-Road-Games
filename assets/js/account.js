@@ -3,6 +3,13 @@
   const summary = document.querySelector("#account-summary");
   const signout = document.querySelector("#signout-button");
   const resend = document.querySelector("#resend-verification-button");
+  const accountAccessPanel = document.querySelector("#account-access-panel");
+  const accountSessionPanel = document.querySelector("#account-session-panel");
+  const accountViewPanels = {
+    signin: document.querySelector("#account-signin-panel"),
+    register: document.querySelector("#account-register-panel"),
+    forgot: document.querySelector("#account-forgot-panel"),
+  };
   const resetPanel = document.querySelector("#reset-panel");
   const resetForm = document.querySelector("#reset-form");
   const forumPanel = document.querySelector("#forum-profile-panel");
@@ -67,16 +74,31 @@
   let preparedAvatar = null;
   let previewObjectUrl = "";
   let csrfToken = "";
-  let googleInitialized = false;
-  let googleInitializeAttempts = 0;
   let currentAccountEmailVerified = false;
   let pendingClaimCredential = "";
-  const maxGoogleInitializeAttempts = 20;
 
   const setStatus = (message, error = false) => {
     status.textContent = message;
     status.classList.toggle("discussion-status--error", error);
   };
+
+  function showAccountView(view) {
+    if (!Object.hasOwn(accountViewPanels, view)) return;
+    for (const [name, panel] of Object.entries(accountViewPanels)) {
+      if (panel) panel.hidden = name !== view;
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest?.("[data-account-view]");
+    if (!link) return;
+    event.preventDefault();
+    showAccountView(link.dataset.accountView);
+    setStatus("");
+    const firstField = accountViewPanels[link.dataset.accountView]?.querySelector("input");
+    firstField?.focus();
+  });
+  showAccountView("signin");
 
   async function api(path, body = {}, options = {}) {
     const headers = { "content-type": "application/json" };
@@ -102,12 +124,11 @@
       credentials: "same-origin",
     });
     const payload = await response.json();
-    if (payload.googleClientId) {
-      window.TRG_GOOGLE_CLIENT_ID = payload.googleClientId;
-    }
     csrfToken = payload.csrfToken || "";
     if (!payload.authenticated) {
       currentAccountEmailVerified = false;
+      if (accountAccessPanel) accountAccessPanel.hidden = false;
+      if (accountSessionPanel) accountSessionPanel.hidden = true;
       summary.textContent = "No account is signed in.";
       signout.hidden = true;
       resend.hidden = true;
@@ -118,10 +139,12 @@
       setStatus(
         pendingClaimCredential
           ? "Sign in or create an account with the same email used for the purchase. Verify the email before claiming."
-          : "Choose Google, sign in, or create a Tobacco Road Games account.",
+          : "Sign in or create a Tobacco Road Games account.",
       );
       return;
     }
+    if (accountAccessPanel) accountAccessPanel.hidden = true;
+    if (accountSessionPanel) accountSessionPanel.hidden = false;
     summary.innerHTML = "";
     currentAccountEmailVerified = Boolean(payload.user.emailVerified);
     const email = document.createElement("p");
@@ -643,72 +666,6 @@
     );
   }
 
-  window.handleTrgGoogleCredential = async (credentialResponse) => {
-    try {
-      const result = await api("/api/auth/google", {
-        credential: credentialResponse.credential,
-      });
-      if (result.user?.customerPrivilegesActive === true) {
-        window.location.assign("/customer");
-        return;
-      }
-      await refreshAccount();
-      setStatus("Signed in with Google.");
-    } catch (error) {
-      setStatus(error.message, true);
-    }
-  };
-
-  function initializeGoogle() {
-    if (googleInitialized) return true;
-    const clientId =
-      document.documentElement.dataset.googleClientId ||
-      window.TRG_GOOGLE_CLIENT_ID ||
-      "";
-    const unavailable = document.querySelector("#google-unavailable");
-    const control = document.querySelector("#google-signin-control");
-    if (!clientId) {
-      if (unavailable) unavailable.hidden = false;
-      return false;
-    }
-    if (!window.google?.accounts?.id) {
-      googleInitializeAttempts += 1;
-      if (
-        googleInitializeAttempts >= maxGoogleInitializeAttempts &&
-        unavailable
-      ) {
-        unavailable.hidden = false;
-      }
-      return false;
-    }
-    if (unavailable) unavailable.hidden = true;
-    if (control) control.innerHTML = "";
-    window.google.accounts.id.initialize({
-      callback: window.handleTrgGoogleCredential,
-      client_id: clientId,
-    });
-    window.google.accounts.id.renderButton(control, {
-      size: "large",
-      text: "continue_with",
-      theme: "outline",
-      type: "standard",
-    });
-    googleInitialized = true;
-    return true;
-  }
-
-  function scheduleGoogleInitialization() {
-    if (initializeGoogle()) return;
-    if (
-      googleInitializeAttempts < maxGoogleInitializeAttempts &&
-      (document.documentElement.dataset.googleClientId ||
-        window.TRG_GOOGLE_CLIENT_ID ||
-        "")
-    ) {
-      window.setTimeout(scheduleGoogleInitialization, 250);
-    }
-  }
-
   async function refreshRegistrationPanels() {
     accountProfilePanel.hidden = false;
     const profile = await fetch("/api/account/profile", {
@@ -922,21 +879,11 @@
     }
   });
 
-  window.addEventListener("load", () =>
-    window.setTimeout(scheduleGoogleInitialization, 100),
-  );
   refreshAccount()
     .then(() => {
-      scheduleGoogleInitialization();
       return handleUrlTokens();
     })
     .catch(() => {
       setStatus("Account service is not available yet.", true);
     });
-  if (window.__TRG_ACCOUNT_TEST__) {
-    Object.assign(window.__TRG_ACCOUNT_TEST__, {
-      initializeGoogle,
-      scheduleGoogleInitialization,
-    });
-  }
 })();

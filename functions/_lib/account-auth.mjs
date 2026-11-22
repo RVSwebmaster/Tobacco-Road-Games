@@ -1,5 +1,4 @@
 import { resolveMemberProfileAccess } from "./member-profile-access.mjs";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { scryptAsync } from "@noble/hashes/scrypt";
 import { EmailProviderError, createEmailProvider, isEmailDeliveryConfigured } from "./email-provider.mjs";
 
@@ -10,7 +9,6 @@ const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const RESET_TTL_MS = 60 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMITS = Object.freeze({
-  google: 20,
   login: 10,
   password_reset: 6,
   register: 6,
@@ -19,14 +17,10 @@ const RATE_LIMITS = Object.freeze({
 const INPUT_LIMITS = Object.freeze({
   csrfToken: 128,
   email: 254,
-  googleCredential: 8192,
   jsonBodyBytes: 16 * 1024,
   password: 256,
   token: 128
 });
-const GOOGLE_ISSUERS = new Set(["https://accounts.google.com", "accounts.google.com"]);
-const GOOGLE_JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
-
 export async function handleAccountAuthRequest(request, env, options = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api\/auth\/?/, "").replace(/\/+$/g, "");
@@ -43,8 +37,6 @@ export async function handleAccountAuthRequest(request, env, options = {}) {
       return registerAccount(request, env, options);
     case "login":
       return loginAccount(request, env, options);
-    case "google":
-      return loginWithGoogle(request, env, options);
     case "logout":
       return logoutAccount(request, env);
     case "verify-email":
@@ -70,7 +62,6 @@ export async function handleAccountMeRequest(request, env) {
     return json({
       authenticated: false,
       csrfToken,
-      googleClientId: publicGoogleClientId(env),
       user: null
     }, 200, {
       "set-cookie": buildAccountCsrfCookie(csrfToken)
@@ -83,7 +74,6 @@ export async function handleAccountMeRequest(request, env) {
   return json({
     authenticated: true,
     csrfToken: session.csrfToken,
-    googleClientId: publicGoogleClientId(env),
     user: {
       ...publicUser(session.user),
       customerPrivilegesActive: await customerPrivilegesActive(env.TRG_ORDERS, session.user.id),
@@ -126,26 +116,84 @@ export async function registerAccount(request, env, options = {}) {
     return json({ error: { code: "duplicate_email", message: "An account with that email already exists." } }, 409);
   }
 
-  const user = { id: randomId(), email, now };
+  const user = {
+    id: randomId(),
+    email_normalized: email,
+    email_verified: 0,
+    email_verified_at: null,
+    status: "active",
+    role: "user",
+    created_at: now,
+    updated_at: now
+  };
   const passwordHash = await hashPassword(password, options.passwordHashOptions);
-  await db.batch([
-    db.prepare(`
-      INSERT INTO users (id, email_normalized, email_verified, status, role, created_at, updated_at)
-      VALUES (?, ?, 0, 'active', 'user', ?, ?)
-    `).bind(user.id, email, now, now),
-    db.prepare(`
-      INSERT INTO password_credentials (user_id, password_hash, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
-    `).bind(user.id, passwordHash, now, now)
-  ]);
-  const loaded = await getUserById(db, user.id);
-  const verification = await createEmailVerificationToken(db, user.id, options);
-  await sendVerificationEmail(request, env, loaded, verification.token, options);
-  const session = await createSession(db, loaded, options);
+  const verification = await prepareEmailVerificationToken(db, user.id, options);
+  const session = await prepareSession(db, user, options);
+
+  try {
+    await db.batch([
+      db.prepare(`
+        INSERT INTO users (id, email_normalized, email_verified, status, role, created_at, updated_at)
+        VALUES (?, ?, 0, 'active', 'user', ?, ?)
+      `).bind(user.id, email, now, now),
+      db.prepare(`
+        INSERT INTO password_credentials (user_id, password_hash, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(user.id, passwordHash, now, now),
+      verification.statement,
+      db.prepare(`
+        INSERT INTO customer_registration_states (user_id, state, activated_at, created_at, updated_at)
+        VALUES (?, 'pending', NULL, ?, ?)
+      `).bind(user.id, now, now),
+      session.statement
+    ]);
+  } catch {
+    const duplicate = await getUserByEmail(db, email).catch(() => null);
+    if (duplicate) {
+      return json({ error: { code: "duplicate_email", message: "An account with that email already exists." } }, 409);
+    }
+    return json({
+      error: {
+        code: "registration_failed",
+        message: "We couldn't finish creating the account. Please try again."
+      }
+    }, 503);
+  }
+
+  // Resend and D1 cannot share a transaction. If delivery fails, compensate
+  // by deleting every row created for this new identity, including its
+  // pending session, so the same email can retry as a fresh registration.
+  try {
+    await sendVerificationEmail(request, env, user, verification.token, options);
+  } catch {
+    try {
+      await db.batch([
+        db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(user.id),
+        db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
+        db.prepare("DELETE FROM customer_registration_states WHERE user_id = ?").bind(user.id),
+        db.prepare("DELETE FROM password_credentials WHERE user_id = ?").bind(user.id),
+        db.prepare("DELETE FROM users WHERE id = ?").bind(user.id)
+      ]);
+    } catch {
+      return json({
+        error: {
+          code: "registration_cleanup_failed",
+          message: "We couldn't finish registration safely. Please contact support before trying again."
+        }
+      }, 500);
+    }
+    return json({
+      error: {
+        code: "verification_delivery_failed",
+        message: "We couldn't send the verification email. Please try again."
+      }
+    }, 503);
+  }
+
   return json({
     ok: true,
-    message: "Account created. Check your email to verify the address.",
-    user: publicUser(loaded)
+    message: "Account created. Check your email to verify the address before signing in.",
+    user: publicUser(user)
   }, 201, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
@@ -174,70 +222,24 @@ export async function loginAccount(request, env, options = {}) {
   if (!credential || !(await verifyPassword(password, credential.password_hash))) {
     return generic();
   }
+  if (user.email_verified !== 1) {
+    return json({
+      error: {
+        code: "email_verification_required",
+        message: "Verify your email address before signing in."
+      }
+    }, 403);
+  }
+  if (!(await customerPrivilegesActive(db, user.id))) {
+    return json({
+      error: {
+        code: "customer_registration_pending",
+        message: "Your Customer account is not active yet. Verify your email address to continue."
+      }
+    }, 403);
+  }
   const session = await createSession(db, user, options);
-  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: await customerPrivilegesActive(db, user.id) } }, 200, {
-    "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
-  });
-}
-
-export async function loginWithGoogle(request, env, options = {}) {
-  const parsed = await readJson(request);
-  if (!parsed.ok) return parsed.response;
-  const body = parsed.body;
-  const credentialField = readBoundedField(body, "credential", INPUT_LIMITS.googleCredential);
-  const bodyCsrfField = readBoundedField(body, "csrfToken", INPUT_LIMITS.csrfToken);
-  const headerCsrfField = readBoundedString(request.headers.get("x-csrf-token") || "", INPUT_LIMITS.csrfToken);
-  const cookieCsrfField = readBoundedString(readCookie(request, ACCOUNT_CSRF_COOKIE), INPUT_LIMITS.csrfToken);
-  if (!credentialField.ok || !bodyCsrfField.ok || !headerCsrfField.ok || !cookieCsrfField.ok) return inputRejected();
-  const csrfToken = bodyCsrfField.value || headerCsrfField.value;
-  const csrfCookie = cookieCsrfField.value;
-  if (!csrfToken || !csrfCookie || csrfToken !== csrfCookie) {
-    return json({ error: { code: "csrf_rejected", message: "This account request could not be verified." } }, 403);
-  }
-  const db = requireDb(env);
-  if (!(await allowRateLimit(db, request, "google", "gis", options))) {
-    return json({ error: { code: "rate_limited", message: "Too many Google sign-in attempts. Please wait and try again." } }, 429);
-  }
-
-  const verified = await verifyGoogleCredential(credentialField.value, env, options.google);
-  if (!verified.valid) {
-    return json({ error: { code: verified.code, message: "Google sign-in could not be verified." } }, 401);
-  }
-  if (!verified.emailVerified) {
-    return json({ error: { code: "google_email_unverified", message: "Google has not verified this email address." } }, 403);
-  }
-
-  const now = nowIso(options);
-  let identity = await db.prepare(`
-    SELECT i.user_id, u.*
-    FROM user_identities i JOIN users u ON u.id = i.user_id
-    WHERE i.provider = 'google' AND i.provider_subject = ?
-  `).bind(verified.subject).first();
-
-  let user = identity || null;
-  if (!user) {
-    const existing = await getUserByEmail(db, verified.email);
-    if (existing?.email_verified === 1) {
-      user = existing;
-    } else if (!existing) {
-      const userId = randomId();
-      await db.prepare(`
-        INSERT INTO users (id, email_normalized, email_verified, email_verified_at, status, role, created_at, updated_at)
-        VALUES (?, ?, 1, ?, 'active', 'user', ?, ?)
-      `).bind(userId, verified.email, now, now, now).run();
-      user = await getUserById(db, userId);
-    } else {
-      return json({ error: { code: "google_signin_unavailable", message: "Google sign-in could not be completed. Use another sign-in method or contact support." } }, 409);
-    }
-
-    await db.prepare(`
-      INSERT INTO user_identities (id, user_id, provider, provider_subject, email_normalized, created_at, updated_at)
-      VALUES (?, ?, 'google', ?, ?, ?, ?)
-    `).bind(randomId(), user.id, verified.subject, verified.email, now, now).run();
-  }
-
-  const session = await createSession(db, user, options);
-  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: await customerPrivilegesActive(db, user.id) } }, 200, {
+  return json({ ok: true, user: { ...publicUser(user), customerPrivilegesActive: true } }, 200, {
     "set-cookie": buildSessionCookieHeaders(session.sessionToken, session.csrfToken)
   });
 }
@@ -284,6 +286,14 @@ export async function verifyEmail(request, env, options = {}) {
         SELECT user_id FROM email_verification_tokens
         WHERE token_hash = ? AND claim_marker = ?
       )
+    `).bind(now, now, tokenHash, claimMarker),
+    db.prepare(`
+      UPDATE customer_registration_states
+      SET state = 'active', activated_at = COALESCE(activated_at, ?), updated_at = ?
+      WHERE user_id = (
+        SELECT user_id FROM email_verification_tokens
+        WHERE token_hash = ? AND claim_marker = ?
+      ) AND state = 'pending'
     `).bind(now, now, tokenHash, claimMarker)
   ]);
   if (affectedRows(results[0]) !== 1 || affectedRows(results[1]) !== 1) {
@@ -380,36 +390,6 @@ export async function resetPassword(request, env, options = {}) {
   return json({ ok: true, message: "Password reset complete. Sign in with the new password." });
 }
 
-export async function verifyGoogleCredential(credential, env = {}, options = {}) {
-  const clientId = String(env.GOOGLE_CLIENT_ID || options.clientId || "").trim();
-  if (!clientId) {
-    return { valid: false, code: "google_not_configured" };
-  }
-  try {
-    const verifier = options.jwtVerify || jwtVerify;
-    const keyLike = options.keyLike || GOOGLE_JWKS;
-    const { payload } = await verifier(credential, keyLike, {
-      audience: clientId,
-      issuer: [...GOOGLE_ISSUERS]
-    });
-    const subject = String(payload.sub || "");
-    const email = normalizeEmail(payload.email);
-    if (!subject) return { valid: false, code: "google_subject_missing" };
-    if (!isEmail(email)) return { valid: false, code: "google_email_missing" };
-    return {
-      valid: true,
-      email,
-      emailVerified: payload.email_verified === true,
-      subject
-    };
-  } catch (error) {
-    const message = String(error?.message || "");
-    if (/\b(aud|audience)\b/i.test(message)) return { valid: false, code: "google_wrong_audience" };
-    if (/\b(exp|expired)\b/i.test(message)) return { valid: false, code: "google_token_expired" };
-    return { valid: false, code: "google_signature_invalid" };
-  }
-}
-
 export async function hashPassword(password, options = {}) {
   const salt = options.salt || randomBytes(16);
   const N = options.N || 16384;
@@ -492,6 +472,15 @@ export async function getSessionFromRequest(request, env, options = {}) {
   };
 }
 
+export async function getCustomerSessionFromRequest(request, env, options = {}) {
+  const session = await getSessionFromRequest(request, env, options);
+  if (!session.valid) return session;
+  if (!(await customerPrivilegesActive(requireDb(env), session.user.id))) {
+    return { valid: false, reason: "customer_access_pending" };
+  }
+  return session;
+}
+
 export async function validateSessionCsrf(request, session) {
   const submitted = String(request.headers.get("x-csrf-token") || "");
   if (submitted.length > INPUT_LIMITS.csrfToken || session.csrfToken.length > INPUT_LIMITS.csrfToken) return { valid: false };
@@ -538,25 +527,37 @@ export async function establishAccessOwnerSession(env, email, options = {}) {
 }
 
 async function createSession(db, user, options = {}) {
+  const session = await prepareSession(db, user, options);
+  await session.statement.run();
+  return session;
+}
+
+async function prepareSession(db, user, options = {}) {
   const sessionToken = randomToken();
   const csrfToken = randomToken();
   const now = nowIso(options);
   const expires = new Date(nowMs(options) + SESSION_TTL_SECONDS * 1000).toISOString();
-  await db.prepare(`
+  const statement = db.prepare(`
     INSERT INTO sessions (id, user_id, token_hash, csrf_token_hash, created_at, expires_at, last_seen_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(randomId(), user.id, await hashToken(sessionToken), await hashToken(csrfToken), now, expires, now).run();
-  return { csrfToken, sessionToken };
+  `).bind(randomId(), user.id, await hashToken(sessionToken), await hashToken(csrfToken), now, expires, now);
+  return { csrfToken, sessionToken, statement };
 }
 
 async function createEmailVerificationToken(db, userId, options = {}) {
+  const verification = await prepareEmailVerificationToken(db, userId, options);
+  await verification.statement.run();
+  return { token: verification.token };
+}
+
+async function prepareEmailVerificationToken(db, userId, options = {}) {
   const token = randomToken();
   const now = nowIso(options);
-  await db.prepare(`
+  const statement = db.prepare(`
     INSERT INTO email_verification_tokens (id, user_id, token_hash, created_at, expires_at)
     VALUES (?, ?, ?, ?, ?)
-  `).bind(randomId(), userId, await hashToken(token), now, new Date(nowMs(options) + VERIFY_TTL_MS).toISOString()).run();
-  return { token };
+  `).bind(randomId(), userId, await hashToken(token), now, new Date(nowMs(options) + VERIFY_TTL_MS).toISOString());
+  return { statement, token };
 }
 
 async function createPasswordResetToken(db, userId, options = {}) {
@@ -636,10 +637,6 @@ function publicUser(user) {
     role: user.role,
     status: user.status
   };
-}
-
-function publicGoogleClientId(env) {
-  return String(env.GOOGLE_CLIENT_ID || "").trim();
 }
 
 function requireDb(env) {
@@ -866,8 +863,18 @@ function escapeHtml(value) {
   return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-// A member without a new registration state keeps the production-072 access policy.
+// Verified legacy accounts without a state row retain their existing access;
+// newly registered Customers always carry an explicit pending/active state.
 export async function customerPrivilegesActive(db, userId) {
-  const state = await db.prepare("SELECT state FROM customer_registration_states WHERE user_id=?").bind(userId).first();
-  return !state || state.state === "active";
+  const state = await db.prepare(`
+    SELECT u.email_verified, registration.state
+    FROM users u
+    LEFT JOIN customer_registration_states registration ON registration.user_id = u.id
+    WHERE u.id = ?
+  `).bind(userId).first();
+  return Boolean(
+    state
+      && state.email_verified === 1
+      && (!state.state || state.state === "active")
+  );
 }

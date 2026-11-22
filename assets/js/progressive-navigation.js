@@ -96,7 +96,10 @@
       });
       const result = await response.json();
       if (!response.ok || result.ok !== true) throw new Error("Logout failed.");
-      location.replace("https://tobaccoroadgames.com/");
+      const logoutDestination = location.hostname.endsWith(".pages.dev")
+        ? new URL("/guest/", location.origin).href
+        : "https://tobaccoroadgames.com/";
+      location.replace(logoutDestination);
     } catch {
       button.disabled = false;
       window.alert("Logout could not be completed. Please try again.");

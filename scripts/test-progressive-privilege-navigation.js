@@ -18,6 +18,8 @@ async function main() {
   await assertHandler(handler.handleProgressiveNavigationRequest);
   await assertOwnerDocumentBootstrap(ownerBootstrap.attachOwnerSessionForDocument);
   assertHomepageIntegration();
+  await assertCustomerLibraryUsesSharedOpenRulesBinding();
+  await assertCustomerLogoutStaysInStaging();
   assertProtectedRoutesRemainProtected();
   await assertCreatorSessionBootstrapBehavior();
   console.log("Progressive privilege navigation tests passed.");
@@ -40,7 +42,7 @@ async function assertCreatorSessionBootstrapBehavior() {
     readStoreState: async () => ({ available: false }),
     isPublicStorePage: () => false,
     maintenanceResponse: () => new Response("maintenance"),
-    getSessionFromRequest: async () => ({ valid: true }),
+    getCustomerSessionFromRequest: async () => ({ valid: true }),
     attachOwnerSessionForDocument: async (response, request) => {
       const pathname = new URL(request.url).pathname;
       bootstrappedPaths.push(pathname);
@@ -219,6 +221,221 @@ function assertHomepageIntegration() {
   assert.ok(routes.include.includes("/api/navigation"), "Pages Functions must route the navigation endpoint.");
   assert.match(client, /prepareAuthenticatedGuestLibrary/);
   assert.match(styles, /\.homepage-library-book[\s\S]*?pointer-events:\s*auto;/);
+}
+
+async function assertCustomerLibraryUsesSharedOpenRulesBinding() {
+  const sharedLibrarySource = read("assets/js/open-rules-library.js");
+  const navigationSource = read("assets/js/progressive-navigation.js");
+  const customerPage = read("customer.html");
+  const sharedLibraryScript = customerPage.indexOf("/assets/js/open-rules-library.js");
+  const navigationScript = customerPage.indexOf("/assets/js/progressive-navigation.js");
+  assert.ok(sharedLibraryScript >= 0 && navigationScript > sharedLibraryScript,
+    "Customer loads the shared Open Rules library before progressive navigation.");
+
+  const makeElement = (tagName = "div") => ({
+    tagName: tagName.toUpperCase(),
+    dataset: Object.create(null),
+    attributes: Object.create(null),
+    children: [],
+    classList: { remove() {} },
+    style: { setProperty() {} },
+    textContent: "",
+    href: "",
+    setAttribute(name, value) { this.attributes[name] = String(value); },
+    removeAttribute(name) { delete this.attributes[name]; },
+    addEventListener() {},
+    append(...children) {
+      for (const child of children) {
+        this.children.push(child);
+        if (child && typeof child === "object") child.parentNode = this;
+      }
+    },
+    replaceChildren(...children) {
+      this.children = [];
+      this.append(...children);
+    },
+    before(child) {
+      const parent = this.parentNode;
+      if (!parent) return;
+      const index = parent.children.indexOf(this);
+      if (index < 0) return;
+      parent.children.splice(index, 0, child);
+      child.parentNode = parent;
+    },
+    getBoundingClientRect() { return { width: 640 }; }
+  });
+
+  const cartCount = makeElement("span");
+  cartCount.dataset.cartCount = "";
+  cartCount.textContent = "0";
+  const nav = makeElement("nav");
+  nav.dataset.memberProfileRoutes = JSON.stringify({ customer: "/customer-profile/" });
+  nav.append(cartCount);
+  nav.querySelector = (selector) => {
+    if (selector === "[data-cart-count]") {
+      return nav.children.find((child) => Object.hasOwn(child.dataset, "cartCount")) || null;
+    }
+    if (selector === "[data-customer-logout]") {
+      return nav.children.find((child) => Object.hasOwn(child.dataset, "customerLogout")) || null;
+    }
+    return null;
+  };
+
+  const row = makeElement("div");
+  const shelves = makeElement("div");
+  shelves.setAttribute = (name, value) => { shelves.attributes[name] = String(value); };
+  const bay = makeElement("section");
+  bay.querySelector = (selector) => selector === ".shop-wall-shelves--library" ? shelves : null;
+  bay.querySelectorAll = (selector) => selector === "[data-customer-library-row]" ? [row] : [];
+  row.querySelector = () => null;
+
+  const events = [];
+  const document = {
+    querySelector(selector) {
+      if (selector === "[data-progressive-navigation]") return nav;
+      if (selector === "[data-customer-storefront]") return makeElement("main");
+      if (selector === "[data-customer-storefront] .guest-library-bay[data-homepage-library]") return bay;
+      return null;
+    },
+    querySelectorAll(selector) {
+      return selector === "[data-customer-storefront] [data-customer-library-row]" ? [row] : [];
+    },
+    createElement: makeElement,
+    dispatchEvent(event) { events.push(event); }
+  };
+
+  const libraryCalls = [];
+  const sandbox = {
+    document,
+    URL,
+    location: {
+      origin: "https://example.test",
+      pathname: "/customer",
+      replace() {}
+    },
+    window: { innerWidth: 1280 },
+    CustomEvent: class TestCustomEvent {
+      constructor(type, options) { this.type = type; this.detail = options.detail; }
+    },
+    fetch: async (url) => {
+      if (url === "/api/navigation") {
+        return { ok: true, json: async () => ({
+          authenticated: true,
+          levels: ["guest", "customer"],
+          items: [{ key: "account", href: "/account.html", label: "Login/Signup" }]
+        }) };
+      }
+      if (url === "/api/account/library") {
+        return { ok: true, json: async () => ({ items: [{
+          productId: "owned-book",
+          productTitle: "Owned Book",
+          creator: "Test Creator",
+          coverImage: "/assets/owned-book.webp",
+          downloadUrl: "/account.html#library-panel"
+        }] }) };
+      }
+      if (url === "/api/account/me") {
+        return { ok: true, json: async () => ({ authenticated: true, user: { accountClass: "customer" } }) };
+      }
+      throw new Error(`Unexpected Customer navigation request: ${url}`);
+    }
+  };
+
+  vm.runInNewContext(sharedLibrarySource, sandbox, { filename: "assets/js/open-rules-library.js" });
+  const sharedLibrary = sandbox.window.TRGOpenRulesLibrary;
+  assert.ok(Object.isFrozen(sharedLibrary), "The shared Open Rules API is published as a frozen window object.");
+  assert.equal(typeof sharedLibrary.createOpenRulesShelfBook, "function");
+  assert.equal(Object.hasOwn(sandbox, "openRules"), false, "No bare openRules global is supplied to the Customer page.");
+  assert.equal(Object.hasOwn(sandbox.window, "openRules"), false, "The shared API is not aliased as window.openRules.");
+  sandbox.window.TRGOpenRulesLibrary = Object.freeze({
+    ...sharedLibrary,
+    createOpenRulesShelfBook(product, position, baseWidth) {
+      libraryCalls.push({ product, position, baseWidth });
+      return makeElement("a");
+    }
+  });
+
+  vm.runInNewContext(navigationSource, sandbox, { filename: "assets/js/progressive-navigation.js" });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(libraryCalls.length, 1,
+    "Authenticated Customer library rendering calls the shared Open Rules book factory.");
+  assert.equal(libraryCalls[0].product.slug, "owned-book");
+  assert.equal(libraryCalls[0].position, 0);
+  assert.equal(row.children.length, 1);
+  assert.equal(row.children[0].className, "shop-wall-library-books");
+  assert.equal(row.children[0].children.length, 1);
+  assert.equal(events[0]?.detail.count, 1);
+}
+
+async function assertCustomerLogoutStaysInStaging() {
+  const source = read("assets/js/progressive-navigation.js");
+
+  async function logoutFrom(origin) {
+    const listeners = new Map();
+    const replacements = [];
+    const nav = {
+      dataset: { memberProfileRoutes: JSON.stringify({ customer: "/customer-profile/" }) },
+      children: [],
+      querySelector(selector) {
+        if (selector === "[data-cart-count]") return this.children.find((child) => child.dataset.cartCount !== undefined) || null;
+        if (selector === "[data-customer-logout]") return this.children.find((child) => child.dataset.customerLogout !== undefined) || null;
+        return null;
+      },
+      replaceChildren(...children) { this.children = children; },
+    };
+    const makeElement = () => ({
+      dataset: {},
+      children: [],
+      addEventListener(type, listener) { listeners.set(type, listener); },
+      append(...children) { this.children.push(...children); },
+      setAttribute() {},
+      before(child) { nav.children.splice(nav.children.indexOf(this), 0, child); },
+    });
+    const location = {
+      origin,
+      hostname: new URL(origin).hostname,
+      pathname: "/customer",
+      replace(url) { replacements.push(url); },
+    };
+    const sandbox = {
+      URL,
+      document: {
+        querySelector(selector) {
+          if (selector === "[data-progressive-navigation]") return nav;
+          if (selector === "[data-customer-storefront]") return {};
+          return null;
+        },
+        createElement: makeElement,
+      },
+      location,
+      window: { alert(message) { throw new Error(message); } },
+      fetch: async (url) => {
+        if (url === "/api/navigation") return { ok: true, json: async () => ({
+          authenticated: true,
+          levels: ["guest", "customer"],
+          items: [{ key: "account", href: "/account.html", label: "Login/Signup" }],
+        }) };
+        if (url === "/api/account/library") return { ok: true, json: async () => ({ items: [] }) };
+        if (url === "/api/account/me") return { ok: true, json: async () => ({ authenticated: true, user: { accountClass: "customer" } }) };
+        if (url === "/api/auth/logout") return { ok: true, json: async () => ({ ok: true }) };
+        throw new Error(`Unexpected logout test request: ${url}`);
+      },
+    };
+    vm.runInNewContext(source, sandbox, { filename: "assets/js/progressive-navigation.js" });
+    await new Promise((resolve) => setImmediate(resolve));
+    const logout = nav.children.find((child) => child.dataset.customerLogout !== undefined);
+    assert.ok(logout, "Authenticated Customer navigation includes Logout.");
+    await listeners.get("click")();
+    assert.deepEqual(replacements, [
+      new URL(origin).hostname.endsWith(".pages.dev")
+        ? `${origin}/guest/`
+        : "https://tobaccoroadgames.com/",
+    ]);
+  }
+
+  await logoutFrom("https://staging.tobacco-road-games-staging.pages.dev");
+  await logoutFrom("https://tobaccoroadgames.com");
 }
 
 function assertPublicHeaders(renderPublicNavigation) {

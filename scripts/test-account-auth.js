@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 const { pathToFileURL } = require("node:url");
+const vm = require("node:vm");
 
 const ROOT = path.resolve(__dirname, "..");
 const MIGRATION = [
@@ -25,14 +26,14 @@ async function main() {
   await testPasswordHashing(auth);
   await testInputLimits(auth);
   await testResendConfigurationContract(auth);
+  await testRegistrationFailureAtomicity(auth);
   await testRegistrationLoginSessionLogout(auth);
   await testAccessOwnerBridge(auth);
   await testEmailVerification(auth);
   await testPasswordReset(auth);
   await testTokenReplayRaces(auth);
   await testTokenClaimRollback(auth);
-  await testGoogleLoginValidationAndLinking(auth);
-  await testCsrfRejection(auth);
+  await testNoExternalIdentityProvider(auth);
   await testTokenStorageAndRateLimits(auth);
   assertAccountPageAndRoutes();
   assertNoAuthBoundaryChanges();
@@ -117,25 +118,6 @@ async function testInputLimits(auth) {
   }), {}, TEST_OPTIONS);
   assert.equal(response.status, 400, "Oversized email fields should be rejected before normalization or database lookup.");
 
-  const googleEnv = createEnv();
-  let jwtVerifyCalled = false;
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "x".repeat(8193),
-    csrfToken: "trg-csrf"
-  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), googleEnv, {
-    ...TEST_OPTIONS,
-    google: {
-      clientId: "google-client-id",
-      jwtVerify: async () => {
-        jwtVerifyCalled = true;
-        throw new Error("JWT verifier should not run for oversized credentials.");
-      }
-    }
-  });
-  assert.equal(response.status, 400, "Oversized Google credentials should be rejected.");
-  assert.equal(jwtVerifyCalled, false, "Oversized Google credentials must be rejected before JWT verification.");
-  assert.equal(googleEnv.TRG_ORDERS.prepareCount, 0, "Oversized Google credentials must be rejected before database work.");
-
   const tokenEnv = createEnv();
   response = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", {
     token: "x".repeat(129)
@@ -150,15 +132,6 @@ async function testInputLimits(auth) {
   }), tokenEnv, TEST_OPTIONS);
   assert.equal(response.status, 400, "Oversized reset tokens should be rejected.");
   assert.equal(tokenEnv.TRG_ORDERS.prepareCount, 0, "Oversized reset tokens must be rejected before database lookup.");
-
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "valid",
-    csrfToken: "x".repeat(129)
-  }, { cookie: `trg_account_csrf=${"x".repeat(129)}`, "x-csrf-token": "x".repeat(129) }), createEnv(), {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf-limit@example.com", email_verified: true, sub: "csrf-limit" } }) }
-  });
-  assert.equal(response.status, 400, "Oversized Google account CSRF tokens should be rejected.");
 
   const resendEnv = createEnv();
   response = await auth.resendVerification(new Request(`${ORIGIN}/api/auth/resend-verification`, {
@@ -196,44 +169,26 @@ async function testInputLimits(auth) {
   }), createEnv(), TEST_OPTIONS);
   assert.equal(response.status, 410, "Maximum-length verification tokens should reach the normal invalid-token path.");
 
-  let maxCredentialJwtCalled = false;
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "x".repeat(8192),
-    csrfToken: "c".repeat(128)
-  }, { cookie: `trg_account_csrf=${"c".repeat(128)}`, "x-csrf-token": "c".repeat(128) }), createEnv(), {
-    ...TEST_OPTIONS,
-    google: {
-      clientId: "google-client-id",
-      jwtVerify: async () => {
-        maxCredentialJwtCalled = true;
-        throw new Error("signature verification failed");
-      }
-    }
-  });
-  assert.equal(response.status, 401, "Maximum-length Google credentials should reach the normal verification path.");
-  assert.equal(maxCredentialJwtCalled, true, "Maximum-length Google credentials should not be rejected by size checks.");
+
 }
 
 async function testResendConfigurationContract(auth) {
-  await assert.rejects(
-    auth.registerAccount(jsonRequest("/api/auth/register", {
-      email: "missing-resend@example.com",
+  for (const [email, options] of [
+    ["missing-resend@example.com", { omitEmailProvider: true, resendApiKey: "", resendReplyTo: "reply@example.com" }],
+    ["missing-reply@example.com", { omitEmailProvider: true, resendApiKey: "re_test", resendReplyTo: "" }]
+  ]) {
+    const env = createEnv(options);
+    const response = await auth.registerAccount(jsonRequest("/api/auth/register", {
+      email,
       password: "ValidPassphrase!23",
       passwordConfirmation: "ValidPassphrase!23"
-    }), createEnv({ omitEmailProvider: true, resendApiKey: "", resendReplyTo: "reply@example.com" }), TEST_OPTIONS),
-    (error) => error?.code === "account_email_not_configured",
-    "Missing RESEND_API_KEY should fail closed with a clear email-provider configuration error."
-  );
-
-  await assert.rejects(
-    auth.registerAccount(jsonRequest("/api/auth/register", {
-      email: "missing-reply@example.com",
-      password: "ValidPassphrase!23",
-      passwordConfirmation: "ValidPassphrase!23"
-    }), createEnv({ omitEmailProvider: true, resendApiKey: "re_test", resendReplyTo: "" }), TEST_OPTIONS),
-    (error) => error?.code === "account_email_not_configured",
-    "Missing RESEND_REPLY_TO should fail closed with a clear email-provider configuration error."
-  );
+    }), env, TEST_OPTIONS);
+    assert.equal(response.status, 503, "Missing Resend configuration should fail cleanly before account creation.");
+    assert.equal((await response.json()).error.code, "verification_delivery_failed");
+    for (const table of ["users", "password_credentials", "email_verification_tokens", "customer_registration_states", "sessions"]) {
+      assert.equal(await countRows(env.TRG_ORDERS, table), 0, `Missing Resend configuration must not persist ${table} rows.`);
+    }
+  }
 
   const env = createEnv({ omitEmailProvider: true, resendApiKey: "re_test", resendReplyTo: "reply@example.com" });
   let sentPayload = null;
@@ -261,6 +216,41 @@ async function testResendConfigurationContract(auth) {
   assert.match(docs, /RESEND_FROM_EMAIL` is not used/, "Account documentation should clarify that RESEND_FROM_EMAIL is not part of this contract.");
 }
 
+async function testRegistrationFailureAtomicity(auth) {
+  const env = createEnv();
+  let deliveryAttempts = 0;
+  env.emailProvider = {
+    messages: [],
+    async send(message, options) {
+      deliveryAttempts += 1;
+      if (deliveryAttempts === 1) throw new Error("Simulated Resend delivery failure.");
+      this.messages.push({ message, options });
+      return { id: "email_retry_succeeded", status: "accepted" };
+    }
+  };
+  const registration = {
+    email: "retry-registration@example.com",
+    password: "ValidPassphrase!23",
+    passwordConfirmation: "ValidPassphrase!23"
+  };
+
+  let response = await auth.registerAccount(jsonRequest("/api/auth/register", registration), env, TEST_OPTIONS);
+  assert.equal(response.status, 503, "A failed verification-email delivery should fail registration cleanly.");
+  assert.equal((await response.json()).error.code, "verification_delivery_failed");
+  assert.equal(getCookies(response).length, 0, "Failed registration must not issue session cookies.");
+  for (const table of ["users", "password_credentials", "email_verification_tokens", "customer_registration_states", "sessions"]) {
+    assert.equal(await countRows(env.TRG_ORDERS, table), 0, `Failed delivery must leave no ${table} rows.`);
+  }
+
+  response = await auth.registerAccount(jsonRequest("/api/auth/register", registration), env, TEST_OPTIONS);
+  assert.equal(response.status, 201, "The same email must register successfully on an immediate retry.");
+  assert.equal(await countRows(env.TRG_ORDERS, "users"), 1);
+  assert.equal(await countRows(env.TRG_ORDERS, "password_credentials"), 1);
+  assert.equal(await countRows(env.TRG_ORDERS, "email_verification_tokens"), 1);
+  assert.equal(await countRows(env.TRG_ORDERS, "customer_registration_states"), 1);
+  assert.equal(await countRows(env.TRG_ORDERS, "sessions"), 1);
+}
+
 async function testRegistrationLoginSessionLogout(auth) {
   const env = createEnv();
   let response = await auth.handleAccountMeRequest(new Request(`${ORIGIN}/api/account/me`), env);
@@ -278,7 +268,15 @@ async function testRegistrationLoginSessionLogout(auth) {
   payload = await response.json();
   assert.equal(payload.user.email, "player@example.com");
   assert.equal(payload.user.emailVerified, false);
+  const memberId = payload.user.id;
   assert.equal(env.emailProvider.messages.length, 1, "Registration should send verification email.");
+  const credential = await env.TRG_ORDERS.prepare("SELECT password_hash FROM password_credentials WHERE user_id = ?").bind(memberId).first();
+  assert.match(credential.password_hash, /^scrypt\$/);
+  const verificationRows = await env.TRG_ORDERS.prepare("SELECT COUNT(*) AS count FROM email_verification_tokens WHERE user_id = ?").bind(memberId).first();
+  assert.equal(Number(verificationRows.count), 1, "Registration should persist one verification token.");
+  let registrationState = await env.TRG_ORDERS.prepare("SELECT state, activated_at FROM customer_registration_states WHERE user_id = ?").bind(memberId).first();
+  assert.equal(registrationState.state, "pending", "Registration should persist an explicit pending state.");
+  assert.equal(registrationState.activated_at, null);
   const cookies = getCookies(response);
   assert.ok(cookies.some((cookie) => cookie.startsWith("__Host-trg_session=")), "Registration should create a session cookie.");
   assert.ok(cookies.every((cookie) => /Secure/.test(cookie)), "Account cookies should be Secure.");
@@ -299,11 +297,26 @@ async function testRegistrationLoginSessionLogout(auth) {
   }), env, TEST_OPTIONS);
   assert.equal(response.status, 400, "Invalid password should be rejected.");
 
+  const registrationCookie = cookieHeaderFrom(cookies);
+  assert.equal(await auth.customerPrivilegesActive(env.TRG_ORDERS, memberId), false, "Pending, unverified registrations must not have Customer privileges.");
+  let customerSession = await auth.getCustomerSessionFromRequest(new Request(`${ORIGIN}/customer`, {
+    headers: { cookie: registrationCookie }
+  }), env, TEST_OPTIONS);
+  assert.equal(customerSession.valid, false, "A pending registration session must not open the Customer Storefront.");
+  const pendingStorefront = await requestCustomerStorefront(auth, env, registrationCookie);
+  assert.equal(pendingStorefront.response.status, 302, "The middleware must redirect a pending account away from /customer.");
+  assert.equal(new URL(pendingStorefront.response.headers.get("location")).pathname, "/guest/");
+  assert.equal(pendingStorefront.nextCalled, false, "Pending accounts must not reach the Customer document handler.");
+
+  const sessionsBeforeDeniedLogin = await countRows(env.TRG_ORDERS, "sessions");
   response = await auth.loginAccount(jsonRequest("/api/auth/login", {
     email: "player@example.com",
     password: "ValidPassphrase!23"
   }), env, TEST_OPTIONS);
-  assert.equal(response.status, 200, "Valid native login should sign in.");
+  assert.equal(response.status, 403, "A correct password must not sign in an unverified Customer.");
+  assert.equal((await response.json()).error.code, "email_verification_required");
+  assert.equal(getCookies(response).length, 0, "Denied unverified login must not issue session cookies.");
+  assert.equal(await countRows(env.TRG_ORDERS, "sessions"), sessionsBeforeDeniedLogin, "Denied unverified login must not create a session.");
 
   response = await auth.loginAccount(jsonRequest("/api/auth/login", {
     email: "player@example.com",
@@ -312,6 +325,21 @@ async function testRegistrationLoginSessionLogout(auth) {
   assert.equal(response.status, 401, "Invalid native login should be rejected generically.");
   payload = await response.json();
   assert.equal(payload.error.code, "invalid_login");
+
+  const verificationToken = tokenFromLastEmail(env, "verify");
+  response = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: verificationToken }), env, TEST_OPTIONS);
+  assert.equal(response.status, 200, "Successful verification should activate the pending account.");
+  registrationState = await env.TRG_ORDERS.prepare("SELECT state, activated_at FROM customer_registration_states WHERE user_id = ?").bind(memberId).first();
+  assert.equal(registrationState.state, "active");
+  assert.ok(registrationState.activated_at, "Activation should record its timestamp.");
+  assert.equal(await auth.customerPrivilegesActive(env.TRG_ORDERS, memberId), true);
+  customerSession = await auth.getCustomerSessionFromRequest(new Request(`${ORIGIN}/customer`, {
+    headers: { cookie: registrationCookie }
+  }), env, TEST_OPTIONS);
+  assert.equal(customerSession.valid, true, "The registration session should gain Customer access after verification.");
+  const activeStorefront = await requestCustomerStorefront(auth, env, registrationCookie);
+  assert.equal(activeStorefront.response.status, 200, "Verified active accounts may open /customer.");
+  assert.equal(activeStorefront.nextCalled, true);
 
   const loginCookies = getCookies(await auth.loginAccount(jsonRequest("/api/auth/login", {
     email: "player@example.com",
@@ -336,16 +364,26 @@ async function testRegistrationLoginSessionLogout(auth) {
 
 async function testEmailVerification(auth) {
   const env = createEnv();
-  await auth.registerAccount(jsonRequest("/api/auth/register", {
+  const registration = await auth.registerAccount(jsonRequest("/api/auth/register", {
     email: "verify@example.com",
     password: "ValidPassphrase!23",
     passwordConfirmation: "ValidPassphrase!23"
   }), env, TEST_OPTIONS);
+  assert.equal(registration.status, 201);
   const token = tokenFromLastEmail(env, "verify");
+  const pendingUser = await env.TRG_ORDERS.prepare("SELECT id, email_verified FROM users WHERE email_normalized = ?").bind("verify@example.com").first();
+  const pendingState = await env.TRG_ORDERS.prepare("SELECT state FROM customer_registration_states WHERE user_id = ?").bind(pendingUser.id).first();
+  assert.equal(pendingUser.email_verified, 0);
+  assert.equal(pendingState.state, "pending");
+  assert.equal(await auth.customerPrivilegesActive(env.TRG_ORDERS, pendingUser.id), false);
   let response = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token }), env, TEST_OPTIONS);
   assert.equal(response.status, 200, "Valid verification token should verify email.");
   let user = await env.TRG_ORDERS.prepare("SELECT * FROM users WHERE email_normalized = ?").bind("verify@example.com").first();
   assert.equal(user.email_verified, 1);
+  const activeState = await env.TRG_ORDERS.prepare("SELECT state, activated_at FROM customer_registration_states WHERE user_id = ?").bind(user.id).first();
+  assert.equal(activeState.state, "active", "Verification must promote pending Customer registration.");
+  assert.ok(activeState.activated_at);
+  assert.equal(await auth.customerPrivilegesActive(env.TRG_ORDERS, user.id), true);
 
   response = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token }), env, TEST_OPTIONS);
   assert.equal(response.status, 410, "Reused verification token should be rejected.");
@@ -370,6 +408,10 @@ async function testPasswordReset(auth) {
     password: "ValidPassphrase!23",
     passwordConfirmation: "ValidPassphrase!23"
   }), env, TEST_OPTIONS);
+  const verificationResponse = await auth.verifyEmail(jsonRequest("/api/auth/verify-email", {
+    token: tokenFromLastEmail(env, "verify")
+  }), env, TEST_OPTIONS);
+  assert.equal(verificationResponse.status, 200);
   let response = await auth.requestPasswordReset(jsonRequest("/api/auth/request-password-reset", {
     email: "reset@example.com"
   }), env, TEST_OPTIONS);
@@ -439,6 +481,9 @@ async function testTokenReplayRaces(auth) {
     password: "OriginalPassphrase!23",
     passwordConfirmation: "OriginalPassphrase!23"
   }), resetEnv, TEST_OPTIONS);
+  await auth.verifyEmail(jsonRequest("/api/auth/verify-email", {
+    token: tokenFromLastEmail(resetEnv, "verify")
+  }), resetEnv, TEST_OPTIONS);
   const loginCookies = getCookies(await auth.loginAccount(jsonRequest("/api/auth/login", {
     email: "race-reset@example.com",
     password: "OriginalPassphrase!23"
@@ -487,7 +532,7 @@ async function testTokenClaimRollback(auth) {
     passwordConfirmation: "ValidPassphrase!23"
   }), verifyEnv, TEST_OPTIONS);
   const verifyToken = tokenFromLastEmail(verifyEnv, "verify");
-  verifyEnv.TRG_ORDERS.failBatchStatement = 2;
+  verifyEnv.TRG_ORDERS.failBatchStatement = 3;
   await assert.rejects(
     auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: verifyToken }), verifyEnv, TEST_OPTIONS),
     /Simulated dependent statement failure/
@@ -495,6 +540,8 @@ async function testTokenClaimRollback(auth) {
   verifyEnv.TRG_ORDERS.failBatchStatement = 0;
   let user = await verifyEnv.TRG_ORDERS.prepare("SELECT email_verified FROM users WHERE email_normalized = ?").bind("rollback-verify@example.com").first();
   assert.equal(user.email_verified, 0, "Dependent verification failure must not leave the user verified.");
+  const registrationState = await verifyEnv.TRG_ORDERS.prepare("SELECT state FROM customer_registration_states WHERE user_id = (SELECT id FROM users WHERE email_normalized = ?)").bind("rollback-verify@example.com").first();
+  assert.equal(registrationState.state, "pending", "A failed promotion must leave Customer registration pending.");
   let tokenRow = await verifyEnv.TRG_ORDERS.prepare("SELECT used_at, claim_marker FROM email_verification_tokens").first();
   assert.equal(tokenRow.used_at, null, "Dependent verification failure must roll back token consumption.");
   assert.equal(tokenRow.claim_marker, null, "Dependent verification failure must roll back the claim marker.");
@@ -504,6 +551,9 @@ async function testTokenClaimRollback(auth) {
     email: "rollback-reset@example.com",
     password: "OriginalPassphrase!23",
     passwordConfirmation: "OriginalPassphrase!23"
+  }), resetEnv, TEST_OPTIONS);
+  await auth.verifyEmail(jsonRequest("/api/auth/verify-email", {
+    token: tokenFromLastEmail(resetEnv, "verify")
   }), resetEnv, TEST_OPTIONS);
   await auth.loginAccount(jsonRequest("/api/auth/login", {
     email: "rollback-reset@example.com",
@@ -537,166 +587,21 @@ async function testTokenClaimRollback(auth) {
   assert.equal(Number(activeSessions.count), 2, "Dependent reset failure must not revoke existing sessions.");
 }
 
-async function testGoogleLoginValidationAndLinking(auth) {
+async function testNoExternalIdentityProvider(auth) {
   const env = createEnv();
-  const googleRequest = (credential = "valid") => jsonRequest("/api/auth/google", {
-    credential
-  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" });
-
-  let response = await auth.loginWithGoogle(googleRequest(), env, {
-    ...TEST_OPTIONS,
-    google: {
-      clientId: "google-client-id",
-      jwtVerify: async (_credential, _key, verifyOptions) => {
-        assert.equal(verifyOptions.audience, "google-client-id");
-        return { payload: { email: "google@example.com", email_verified: true, sub: "google-sub-1" } };
-      }
-    }
-  });
-  assert.equal(response.status, 200, "Valid Google login should sign in.");
-  assert.equal(await countRows(env.TRG_ORDERS, "users"), 1);
-  assert.equal(await countRows(env.TRG_ORDERS, "user_identities"), 1);
-
-  response = await auth.loginWithGoogle(googleRequest("bad-signature"), createEnv(), {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => { throw new Error("signature verification failed"); } }
-  });
-  assert.equal(response.status, 401, "Invalid Google signature should be rejected.");
-  assert.equal((await response.json()).error.code, "google_signature_invalid");
-
-  response = await auth.loginWithGoogle(googleRequest("wrong-audience"), createEnv(), {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => { throw new Error("unexpected aud claim value"); } }
-  });
-  assert.equal((await response.json()).error.code, "google_wrong_audience");
-
-  response = await auth.loginWithGoogle(googleRequest("expired"), createEnv(), {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => { throw new Error("JWT expired"); } }
-  });
-  assert.equal((await response.json()).error.code, "google_token_expired");
-
-  response = await auth.loginWithGoogle(googleRequest("unverified"), createEnv(), {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "unverified@example.com", email_verified: false, sub: "sub" } }) }
-  });
-  assert.equal(response.status, 403, "Unverified Google email should be rejected.");
-
-  const linkedEnv = createEnv();
-  await auth.registerAccount(jsonRequest("/api/auth/register", {
-    email: "link@example.com",
-    password: "ValidPassphrase!23",
-    passwordConfirmation: "ValidPassphrase!23"
-  }), linkedEnv, TEST_OPTIONS);
-  await auth.verifyEmail(jsonRequest("/api/auth/verify-email", { token: tokenFromLastEmail(linkedEnv, "verify") }), linkedEnv, TEST_OPTIONS);
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "link",
-    csrfToken: "trg-csrf"
-  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), linkedEnv, {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "link@example.com", email_verified: true, sub: "google-linked-sub" } }) }
-  });
-  assert.equal(response.status, 200, "Verified matching Google email should link to existing account.");
-  assert.equal(await countRows(linkedEnv.TRG_ORDERS, "users"), 1, "Identity linking must not duplicate a verified TRG account.");
-  const identity = await linkedEnv.TRG_ORDERS.prepare("SELECT * FROM user_identities").first();
-  assert.equal(identity.provider_subject, "google-linked-sub");
-
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "already-linked",
-    csrfToken: "trg-csrf"
-  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), linkedEnv, {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "link@example.com", email_verified: true, sub: "google-linked-sub" } }) }
-  });
-  assert.equal(response.status, 200, "An already-linked Google identity should sign in normally.");
-  assert.equal(await countRows(linkedEnv.TRG_ORDERS, "users"), 1, "Already-linked Google sign-in must not create a duplicate user.");
-  assert.equal(await countRows(linkedEnv.TRG_ORDERS, "user_identities"), 1, "Already-linked Google sign-in must not create a duplicate identity.");
-
-  const captureEnv = createEnv();
-  await auth.registerAccount(jsonRequest("/api/auth/register", {
-    email: "capture@example.com",
-    password: "AttackerPassphrase!23",
-    passwordConfirmation: "AttackerPassphrase!23"
-  }), captureEnv, TEST_OPTIONS);
-  const sessionCountBeforeBlockedGoogle = await countRows(captureEnv.TRG_ORDERS, "sessions");
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "capture",
-    csrfToken: "trg-csrf"
-  }, { cookie: "trg_account_csrf=trg-csrf", "x-csrf-token": "trg-csrf" }), captureEnv, {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "capture@example.com", email_verified: true, sub: "google-capture-sub" } }) }
-  });
-  assert.equal(response.status, 409, "A verified Google email must not link to an unverified native account.");
-  const capturePayload = await response.json();
-  assert.equal(capturePayload.error.code, "google_signin_unavailable");
-  assert.doesNotMatch(capturePayload.error.message, /unverified|exists|password|native|capture@example\.com/i, "Google failure should not expose unnecessary account details.");
-  assert.equal(await countRows(captureEnv.TRG_ORDERS, "users"), 1, "Blocked Google sign-in must not create a duplicate user.");
-  assert.equal(await countRows(captureEnv.TRG_ORDERS, "user_identities"), 0, "Blocked Google sign-in must not attach a Google identity.");
-  assert.equal(await countRows(captureEnv.TRG_ORDERS, "sessions"), sessionCountBeforeBlockedGoogle, "Blocked Google sign-in must not create an authenticated session.");
-  assert.equal(getCookies(response).filter((cookie) => cookie.startsWith("__Host-trg_session=")).length, 0, "Blocked Google sign-in must not set a session cookie.");
-  const credential = await captureEnv.TRG_ORDERS.prepare("SELECT password_hash FROM password_credentials").first();
-  assert.equal(await auth.verifyPassword("AttackerPassphrase!23", credential.password_hash), true, "Blocked Google sign-in must not alter the native credential.");
-
-  response = await auth.loginAccount(jsonRequest("/api/auth/login", {
-    email: "capture@example.com",
-    password: "AttackerPassphrase!23"
-  }), captureEnv, TEST_OPTIONS);
-  assert.equal(response.status, 200, "The original unverified native credential remains only a native sign-in, not a Google-captured account.");
-  assert.equal(await countRows(captureEnv.TRG_ORDERS, "user_identities"), 0, "Native sign-in after blocked Google linking must still have no Google identity attached.");
-}
-
-async function testCsrfRejection(auth) {
-  const env = createEnv();
-  let response = await auth.handleAccountAuthRequest(new Request(`${ORIGIN}/api/auth/register`, {
-    body: JSON.stringify({
-      email: "csrf@example.com",
-      password: "ValidPassphrase!23",
-      passwordConfirmation: "ValidPassphrase!23"
-    }),
+  const csrfResponse = await auth.handleAccountAuthRequest(new Request(ORIGIN + "/api/auth/register", {
+    body: JSON.stringify({ email: "csrf@example.com", password: "ValidPassphrase!23", passwordConfirmation: "ValidPassphrase!23" }),
     headers: { "content-type": "application/json", origin: "https://evil.example" },
     method: "POST"
   }), env, TEST_OPTIONS);
-  assert.equal(response.status, 403, "Cross-origin account mutation should be rejected.");
+  assert.equal(csrfResponse.status, 403, "Cross-origin account mutation should be rejected.");
 
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "valid",
-    csrfToken: "one"
-  }, { cookie: "trg_account_csrf=two", "x-csrf-token": "one" }), env, {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf@example.com", email_verified: true, sub: "sub" } }) }
-  });
-  assert.equal(response.status, 403, "Google account CSRF mismatch should be rejected.");
-
-  let jwtVerifyCalled = false;
-  response = await auth.loginWithGoogle(jsonRequest("/api/auth/google", {
-    credential: "valid"
-  }), env, {
-    ...TEST_OPTIONS,
-    google: {
-      clientId: "google-client-id",
-      jwtVerify: async () => {
-        jwtVerifyCalled = true;
-        return { payload: { email: "csrf@example.com", email_verified: true, sub: "sub" } };
-      }
-    }
-  });
-  assert.equal(response.status, 403, "Missing Google account CSRF should be rejected.");
-  assert.equal(jwtVerifyCalled, false, "Missing Google account CSRF should be rejected before credential verification.");
-
-  response = await auth.handleAccountAuthRequest(new Request(`${ORIGIN}/api/auth/google`, {
-    body: JSON.stringify({ credential: "valid" }),
-    headers: {
-      "content-type": "application/json",
-      cookie: "trg_account_csrf=trg-csrf",
-      origin: "https://evil.example",
-      "x-csrf-token": "trg-csrf"
-    },
+  const googleResponse = await auth.handleAccountAuthRequest(new Request(ORIGIN + "/api/auth/google", {
+    body: JSON.stringify({ credential: "unused" }),
+    headers: { "content-type": "application/json", origin: ORIGIN },
     method: "POST"
-  }), env, {
-    ...TEST_OPTIONS,
-    google: { clientId: "google-client-id", jwtVerify: async () => ({ payload: { email: "csrf@example.com", email_verified: true, sub: "sub" } }) }
-  });
-  assert.equal(response.status, 403, "Forged cross-origin Google login should be rejected.");
+  }), env, TEST_OPTIONS);
+  assert.equal(googleResponse.status, 404, "The Google sign-in endpoint must not exist in the native account system.");
 }
 
 async function testTokenStorageAndRateLimits(auth) {
@@ -749,7 +654,6 @@ function createEnv(options = {}) {
   `);
   raw.exec(FOCUSED_ACCOUNT_PROFILE_MIGRATION);
   const env = {
-    GOOGLE_CLIENT_ID: "google-client-id",
     RESEND_API_KEY: options.resendApiKey ?? "re_test",
     RESEND_REPLY_TO: options.resendReplyTo ?? "reply@example.com",
     TRG_ORDERS: d1(raw, options),
@@ -859,6 +763,37 @@ async function countRows(db, table) {
   return Number(row.count || 0);
 }
 
+async function requestCustomerStorefront(auth, env, cookie) {
+  const source = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8")
+    .replace(/^import .*;\s*$/gm, "")
+    .replace("export async function onRequest(context)", "async function onRequest(context)")
+    + "\nglobalThis.testOnRequest = onRequest;";
+  const sandbox = {
+    URL,
+    Headers,
+    Response,
+    getCustomerSessionFromRequest: auth.getCustomerSessionFromRequest,
+    isMarketplaceWriteDisabled: () => false,
+    marketplaceWriteDisabledResponse: () => new Response("writes disabled", { status: 503 }),
+    handleOfficeMiddleware: async () => new Response("office"),
+    readStoreState: async () => ({ available: false }),
+    isPublicStorePage: () => false,
+    maintenanceResponse: () => new Response("maintenance"),
+    attachOwnerSessionForDocument: async (response) => response
+  };
+  vm.runInNewContext(source, sandbox, { filename: "functions/_middleware.js" });
+  let nextCalled = false;
+  const response = await sandbox.testOnRequest({
+    request: new Request(`${ORIGIN}/customer`, { headers: { cookie } }),
+    env,
+    next: async () => {
+      nextCalled = true;
+      return new Response("Customer document", { headers: { "content-type": "text/plain" } });
+    }
+  });
+  return { nextCalled, response };
+}
+
 async function canLogin(auth, env, email, password) {
   const response = await auth.loginAccount(jsonRequest("/api/auth/login", { email, password }), env, TEST_OPTIONS);
   return response.status === 200;
@@ -877,17 +812,22 @@ function assertNoAuthBoundaryChanges() {
 
 function assertAccountPageAndRoutes() {
   const accountPage = fs.readFileSync(path.join(ROOT, "account.html"), "utf8");
-  assert.match(accountPage, /Continue with Google/, "Account page should offer Google sign-in.");
-  assert.match(accountPage, /Create a Tobacco Road Games account/, "Account page should offer native registration.");
-  assert.match(accountPage, /Sign in with a Tobacco Road Games account/, "Account page should offer native sign-in.");
-  assert.match(accountPage, /Forgot password/, "Account page should offer password reset.");
+  assert.doesNotMatch(accountPage, /Google|google|accounts\.google/i, "Account page must use only native TRG authentication.");
+  assert.match(accountPage, /id="signin-form"/, "Account page should offer native sign-in.");
+  assert.match(accountPage, /id="register-form"/, "Account page should offer native registration.");
+  assert.match(accountPage, /id="forgot-form"/, "Account page should offer password reset.");
+  assert.match(accountPage, /id="reset-form"/, "Account page should accept a reset token and new password.");
+  assert.match(accountPage, /data-account-view="register"/, "Account page should link to Sign Up.");
+  assert.match(accountPage, /data-account-view="forgot"/, "Account page should link to Forgot Password.");
   assert.match(accountPage, /Sign Out/i, "Account page should offer sign-out.");
-  assert.doesNotMatch(accountPage, /Google (?:profile )?(?:photo|avatar)/i, "Account page must not expose Google profile photos or avatars.");
   const accountScript = fs.readFileSync(path.join(ROOT, "assets", "js", "account.js"), "utf8");
-  assert.match(accountScript, /\/api\/auth\/google/, "Account script should submit Google credentials to the account API.");
+  assert.doesNotMatch(accountScript, /\/api\/auth\/google|Google|google/i, "Account script must not load or submit external identity credentials.");
   assert.match(accountScript, /\/api\/account\/me/, "Account script should load account state from the account API.");
+  assert.match(accountScript, /data-account-view/, "Account access panels should have working navigation.");
   assert.doesNotMatch(accountScript, /rewrite|autofix/i, "Account UI must not add rewriting-style behavior.");
   assert.doesNotMatch(accountScript, /credentialResponse\.(?:picture|photo)|payload\.picture/i, "Account UI must not import Google profile imagery.");
+  const middleware = fs.readFileSync(path.join(ROOT, "functions", "_middleware.js"), "utf8");
+  assert.match(middleware, /getCustomerSessionFromRequest/, "The Customer Storefront route must enforce verified, active Customer access.");
 
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/api/auth/*"), "Cloudflare routes should include account auth functions.");

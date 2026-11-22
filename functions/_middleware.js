@@ -3,7 +3,7 @@ import { isMarketplaceWriteDisabled, marketplaceWriteDisabledResponse } from "./
 import { readStoreState } from "./_lib/store-state.mjs";
 import { isPublicStorePage, maintenanceResponse } from "./_lib/store-maintenance.mjs";
 import { attachOwnerSessionForDocument } from "./_lib/owner-session-bootstrap.mjs";
-import { getSessionFromRequest } from "./_lib/account-auth.mjs";
+import { getCustomerSessionFromRequest } from "./_lib/account-auth.mjs";
 
 export async function onRequest(context) {
   const pathname = new URL(context.request.url).pathname;
@@ -13,7 +13,7 @@ export async function onRequest(context) {
   if (new URL(context.request.url).pathname.startsWith("/office")) {
     return handleOfficeMiddleware(context);
   }
-  if (isCustomerStorefront(pathname) && !(await getSessionFromRequest(context.request, context.env)).valid) {
+  if (isCustomerStorefront(pathname) && !(await getCustomerSessionFromRequest(context.request, context.env)).valid) {
     return noStoreDocument(Response.redirect(new URL("/guest/", context.request.url), 302));
   }
   if (isPublicStorePage(pathname)) {

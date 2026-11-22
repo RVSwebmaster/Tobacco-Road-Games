@@ -9,7 +9,6 @@
   <link rel="canonical" href="https://tobaccoroadgames.com/account.html">
   <link rel="icon" type="image/png" href="assets/logo.png?v=20260717a">
   <link rel="stylesheet" href="styles.css?v=20260731a">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -27,37 +26,28 @@
 
     <main>
       <section class="account-page store-section" aria-labelledby="account-heading">
-        <div class="section-heading">
+        <div class="section-heading account-page__heading">
           <p class="section-heading__kicker">Customer account</p>
-          <h1 id="account-heading">Account / My Library</h1>
-          <p>Sign in with Google or use a Tobacco Road Games email/password account. Your public forum identity stays separate from your private account.</p>
+          <h1 id="account-heading">Your Tobacco Road Games Account</h1>
+          <p>Sign in or create a native account to manage your purchases and member profile. Your public forum identity stays separate from your private account.</p>
         </div>
 
         <p id="account-status" class="discussion-status" role="status" aria-live="polite">Checking account status...</p>
 
-        <div class="account-grid">
-          <section class="account-card" aria-labelledby="google-heading">
-            <h2 id="google-heading">Continue with Google</h2>
-            <p>Use Google Identity Services for sign-in. Google is optional; it is not required to use a Tobacco Road Games account.</p>
-            <div id="google-signin-control" class="google-signin-control"></div>
-            <button type="button" class="button button--secondary" id="google-unavailable" hidden>Google sign-in unavailable</button>
-          </section>
-
-          <section class="account-card" aria-labelledby="signin-heading">
-            <h2 id="signin-heading">Sign in with a Tobacco Road Games account</h2>
+        <div class="account-access" id="account-access-panel">
+          <section class="account-card account-auth-card" id="account-signin-panel" aria-labelledby="signin-heading">
+            <h2 id="signin-heading">Sign In</h2>
             <form id="signin-form" class="account-form">
-              <label>Email <input name="email" type="email" autocomplete="email" required></label>
+              <label>Email <input name="email" type="email" autocomplete="username" required></label>
               <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
               <button type="submit" class="button button--primary">Sign In</button>
             </form>
-            <form id="forgot-form" class="account-form account-form--compact">
-              <label>Forgot password email <input name="email" type="email" autocomplete="email"></label>
-              <button type="submit" class="button button--secondary">Forgot Password</button>
-            </form>
+            <div class="account-auth-links"><a href="#forgot-password" data-account-view="forgot">Forgot Password?</a></div>
+            <p class="account-auth-switch">New to Tobacco Road Games? <a href="#sign-up" data-account-view="register">Sign Up</a></p>
           </section>
 
-          <section class="account-card" aria-labelledby="create-heading">
-            <h2 id="create-heading">Create a Tobacco Road Games account</h2>
+          <section class="account-card account-auth-card" id="account-register-panel" aria-labelledby="create-heading" hidden>
+            <h2 id="create-heading">Create Your Account</h2>
             <form id="register-form" class="account-form">
               <label>Email <input name="email" type="email" autocomplete="email" required></label>
               <label>Password <input name="password" type="password" autocomplete="new-password" required></label>
@@ -65,14 +55,25 @@
               <p class="account-help">Use at least 12 characters with uppercase, lowercase, number, and symbol.</p>
               <button type="submit" class="button button--primary">Create Account</button>
             </form>
+            <p class="account-auth-switch">Already have an account? <a href="#sign-in" data-account-view="signin">Sign In</a></p>
           </section>
 
-          <section class="account-card account-card--session" aria-labelledby="session-heading">
-            <h2 id="session-heading">Current account</h2>
-            <div id="account-summary" class="account-summary">No account is signed in.</div>
-            <button type="button" class="button button--secondary" id="resend-verification-button" hidden>Resend verification email</button>
-            <button type="button" class="button button--secondary" id="signout-button" hidden>Sign Out</button>
+          <section class="account-card account-auth-card" id="account-forgot-panel" aria-labelledby="forgot-heading" hidden>
+            <h2 id="forgot-heading">Reset Your Password</h2>
+            <p>Enter the email address for your account. If it exists, we’ll send a secure reset link.</p>
+            <form id="forgot-form" class="account-form">
+              <label>Email <input name="email" type="email" autocomplete="email" required></label>
+              <button type="submit" class="button button--primary">Send Reset Link</button>
+            </form>
+            <p class="account-auth-switch"><a href="#sign-in" data-account-view="signin">Back to Sign In</a></p>
           </section>
+        </div>
+
+        <section class="account-card account-card--session" id="account-session-panel" aria-labelledby="session-heading" hidden>
+          <h2 id="session-heading">Your Account</h2>
+          <div id="account-summary" class="account-summary">No account is signed in.</div>
+          <button type="button" class="button button--secondary" id="resend-verification-button" hidden>Resend verification email</button>
+          <button type="button" class="button button--secondary" id="signout-button" hidden>Sign Out</button>
         </div>
 
         <section class="account-card" id="account-profile-panel" hidden><h2>Private Account Profile</h2><p>These details are private account data and are not shown on your public Creator or forum profile.</p><form id="account-profile-form" class="account-form"><label>Real/legal name <input name="legalName" maxlength="160"></label><label>Birthday (optional) <input name="birthday" type="date"></label><label>Phone (optional) <input name="phone" maxlength="40"></label><label>Public display name (optional) <input name="displayName" maxlength="80"></label><label>Public avatar URL (optional) <input name="avatarUrl"></label><label><input name="accountNotices" type="checkbox"> Receive account notices</label><button class="button button--secondary">Save Account Profile</button></form><p id="account-profile-status" role="status"></p></section>
@@ -127,7 +128,7 @@
             <p class="section-heading__kicker">Public forum identity</p>
             <h2 id="forum-profile-heading">Create Forum Profile</h2>
           </div>
-          <p id="forum-profile-privacy">Your account email, Google identity, sign-in method, and other private account details will never appear on your public profile.</p>
+          <p id="forum-profile-privacy">Your account email, sign-in method, and other private account details will never appear on your public profile.</p>
           <p id="forum-profile-verification" class="discussion-status" hidden>Verify your account email before creating a forum profile.</p>
           <form id="forum-profile-form" class="account-form">
             <section class="forum-avatar-editor" id="forum-avatar-editor" hidden aria-labelledby="forum-avatar-heading">

@@ -2489,6 +2489,45 @@ h4 {
   gap: 20px;
 }
 
+.account-page__heading {
+  text-align: center;
+}
+
+.account-access,
+.account-card--session {
+  width: min(100%, 540px);
+  margin-inline: auto;
+}
+
+.account-auth-card {
+  gap: 18px;
+  border-color: rgba(232, 194, 126, 0.4);
+  background: linear-gradient(145deg, rgba(78, 43, 23, 0.96), rgba(27, 18, 13, 0.96));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28), inset 0 1px rgba(255, 227, 172, 0.12);
+}
+
+.account-auth-card h2 {
+  text-align: center;
+}
+
+.account-auth-card .button {
+  width: 100%;
+}
+
+.account-auth-links {
+  text-align: right;
+}
+
+.account-auth-switch {
+  text-align: center;
+}
+
+.account-auth-card a {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-underline-offset: 0.18em;
+}
+
 .account-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

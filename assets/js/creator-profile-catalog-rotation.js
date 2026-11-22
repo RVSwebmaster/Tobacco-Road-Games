@@ -1,4 +1,7 @@
 (() => {
+  // Keep the feature dormant until a production build explicitly opts in after Owner acceptance.
+  if (document.documentElement?.dataset?.enableCreatorCatalogRotation !== "owner-approved") return;
+
   const cover = document.querySelector("[data-creator-profile-catalog-cover]");
   if (!cover || typeof window.fetch !== "function") return;
 
