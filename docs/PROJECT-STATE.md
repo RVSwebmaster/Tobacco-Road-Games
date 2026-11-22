@@ -1,6 +1,15 @@
 # TRG project state
 
-Last reconciled: 2026-11-20. This is a working-state record, not a deployment status page.
+Last reconciled: 2026-11-22. Dated sections below retain their historical project records; the current repository and deployment facts are summarized here.
+
+## Current Git and production state — verified 2026-11-22
+
+- Canonical ongoing development is `development @ 477eab187726ced1245ee3b75610aac49072b3cc`, pushed and matching `origin/development` at this checkpoint.
+- The current production source is `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6` on `release/account-profile-2026-11-21`, matching `origin/release/account-profile-2026-11-21`. Production deployment `cdad3de6-b4da-47e2-b639-f3aca1a6646b` reports that source SHA and `dirty=false`; the release record is `ops/releases/records/auth-no-email-2026-11-22.json`.
+- `origin/main` is `233aa0ce52080736c709ed3664f7de813cff45d7` at this checkpoint. Cloudflare's deployment branch label `main` does not mean that `origin/main` is the deployed source; use the full SHA and release record. `main` and `staging` remain Pages branch selectors.
+- Native Customer registration and login work without email verification or an email provider. The isolated staging and production smoke accounts were removed after verification. The storefront remains **CLOSED**.
+- The SHA-gated Preview → staging → production pipeline is recorded in [the release guide](../ops/release/README.md). The previous dirty Preview deployment `9d2a9f5e` is a historical visual snapshot, not an approval for the authentication release SHA. Future promotions require a clean Preview deployment and approval tied to the exact release SHA and manifest.
+- The Member Profile Base recovery closeout commit `c255970883c2e4403837cd64b57ff8ff52bfacd4` is incorporated in development history. The original accepted implementation remains protected by tag `trg-member-profile-base-v1` at `56436e3582c0d0fe4949be218ae606ebb7e09ac7`.
 
 ## Focused production account and Profile release — reconciled and rehearsed 2026-11-20
 
@@ -24,7 +33,7 @@ Last reconciled: 2026-11-20. This is a working-state record, not a deployment st
 
 ## Member Profile tier badges — RV accepted 2026-11-20
 
-- **Approval baseline:** RV accepted the badge implementation and related account and Profile work in isolated Preview deployment `9d2a9f5e-59b3-4b01-ba64-9cce3ad8e2a0`. [Approved Preview](https://9d2a9f5e.trg-member-tier-test-20261120.pages.dev/)
+- **Historical visual approval:** RV accepted the badge appearance and related Profile UI at isolated Preview deployment `9d2a9f5e-59b3-4b01-ba64-9cce3ad8e2a0`. Cloudflare later reported that deployment as dirty with source prefix `c01626d`; it is not a clean release approval for authentication commit `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6`. [Historical Preview](https://9d2a9f5e.trg-member-tier-test-20261120.pages.dev/)
 - **Accepted design:** All six supplied transparent tier badges use the Creator reference position, scale, alignment, and shadow beneath the TRG logo at desktop, tablet, and mobile widths. The authenticated account class selects the artwork. The existing cabinet, identity layout, and framed display remain the Profile baseline. [Profile architecture](PAGE-ARCHITECTURE.md)
 - **Verification scope:** The isolated Preview used real logins to check Customer, Creator, and Owner identity and routing at their respective checkpoints. Browser fixtures verified all six badge mappings and their shared placement. [Approved Creator placement reference](https://64e7bec1.trg-member-tier-test-20261120.pages.dev/)
 
@@ -56,7 +65,9 @@ Last reconciled: 2026-11-20. This is a working-state record, not a deployment st
 - **Boundaries:** Tests used in-memory SQLite. No production D1 access/migration, deployment, new dependency, external service, or commit occurred.
 - **Implementation report:** `docs/R4-ACCOUNT-THROTTLE-PROTECTION-REPORT.md` contains the full implementation and acceptance evidence.
 
-## Source-control checkpoint
+## Historical source-control checkpoint — 2026-11-17
+
+The following branch and worktree details are point-in-time recovery notes from November 17, 2026, not the current Git status. See the current-state section above before using them.
 
 - Canonical repository: `C:\Users\rvsaw\Desktop\Dr DM Workshop\Tobacco-Road-Games`.
 - Active development branch: `codex/operation-severance-task1`.
@@ -85,7 +96,7 @@ Last reconciled: 2026-11-20. This is a working-state record, not a deployment st
 - **Visual acceptance:** ACCEPTED on staging deployment `0fba318d-75ba-48a2-b61a-cbdb250c33c9`. Chrome verified all six routes, generic signed-out Profile title, shared identity runtime, and approved responsive artwork references. Route responses and cabinet/identity assets returned successfully. This records visual acceptance only.
 - **Functional acceptance pending:** authenticated member identity/class behavior, privileges, persistent library selection, and live catalog cover changes. No persistent member shelf-selection source exists; shelves remain empty rather than presenting arbitrary purchases. Do not describe these features as functionally accepted.
 - **Rollback:** successful pre-acceptance staging deployment `1ae9665a-56d4-4297-8d63-2e3e00310c7d` remains available.
-- **GitHub recovery:** implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` on `recovery/trg-member-profile-base-v1`; annotated tag `trg-member-profile-base-v1` points to that commit.
+- **GitHub recovery:** accepted implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` is preserved by annotated tag `trg-member-profile-base-v1` and development history. The recovery branch was retired after its closeout was incorporated into development on 2026-11-22.
 - **Temporary entry points — verified 2026-11-20:** The six Profile HTML files and their existing routes remain in place as temporary entry points to `renderMemberProfilePage()`. A dynamically generated member-specific Profile system is a future proposal; retire an entry point or route only after its replacement passes functional and visual acceptance. The recovery integration did not remove or redirect any Profile route.
 - **Development integration — verified locally 2026-11-20:** `development` fast-forwarded from `c0c9f22` to documentation closeout `c255970`; implementation commit `56436e3` and its approved tag remain intact. No push or deployment occurred. The generator completed, and focused Profile, Pages build, Creator cover, shared-cabinet, and final storefront-visual regressions passed.
 

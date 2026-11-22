@@ -18,4 +18,4 @@ The approved account navigation, Profile, Dashboard, library ownership, and tier
 - **Visual foundation: ACCEPTED** on staging deployment `0fba318d-75ba-48a2-b61a-cbdb250c33c9`.
 - **Six routes: VERIFIED:** `/customer-profile/`, `/creator/`, `/founding-25-profile/`, `/premium-creator-profile/`, `/admin-profile/`, and `/owner-profile/`.
 - **Functional acceptance pending:** authenticated identity and account-class behavior, account privileges, persistent library selection, and live Creator cover rotation. Persistent library selection is not implemented; the account library API reports purchases without a saved member shelf-selection source, so shelves remain empty rather than guessing.
-- **GitHub recovery:** implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` on branch `recovery/trg-member-profile-base-v1`; annotated tag `trg-member-profile-base-v1` points to that commit.
+- **GitHub recovery:** implementation commit `56436e3582c0d0fe4949be218ae606ebb7e09ac7` remains preserved by annotated tag `trg-member-profile-base-v1` and development history. The temporary recovery branch was retired after closeout integration on 2026-11-22.
