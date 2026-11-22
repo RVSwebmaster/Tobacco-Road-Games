@@ -4,7 +4,7 @@ Last reconciled: 2026-11-22. Dated sections below retain their historical projec
 
 ## Current Git and production state — verified 2026-11-22
 
-- Canonical ongoing development is `development @ 477eab187726ced1245ee3b75610aac49072b3cc`, pushed and matching `origin/development` at this checkpoint.
+- Canonical ongoing development is the `development` branch, pushed and matching `origin/development`; its exact current SHA is verified from Git rather than duplicated here.
 - The current production source is `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6` on `release/account-profile-2026-11-21`, matching `origin/release/account-profile-2026-11-21`. Production deployment `cdad3de6-b4da-47e2-b639-f3aca1a6646b` reports that source SHA and `dirty=false`; the release record is `ops/releases/records/auth-no-email-2026-11-22.json`.
 - `origin/main` is `233aa0ce52080736c709ed3664f7de813cff45d7` at this checkpoint. Cloudflare's deployment branch label `main` does not mean that `origin/main` is the deployed source; use the full SHA and release record. `main` and `staging` remain Pages branch selectors.
 - Native Customer registration and login work without email verification or an email provider. The isolated staging and production smoke accounts were removed after verification. The storefront remains **CLOSED**.
