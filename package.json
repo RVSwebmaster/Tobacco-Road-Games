@@ -29,6 +29,7 @@
     "test:operation-severance": "node scripts/test-operation-severance.js",
     "test:progressive-navigation": "node scripts/test-progressive-privilege-navigation.js",
     "test:pages-environment-isolation": "node scripts/test-pages-environment-isolation.js",
+    "test:release-pipeline": "node scripts/test-release-pipeline.js",
     "test:product-catalog-d1": "node scripts/test-product-catalog-d1.js",
     "test:product-publication": "node scripts/test-product-publication.js",
     "test:admin-publication-import": "node scripts/test-admin-publication-import.js",
@@ -76,7 +77,14 @@
     "verify:launch": "node scripts/run-launch-verification.cjs",
     "test:free-download": "node scripts/test-free-download.js",
     "test:homepage-shelves": "node scripts/test-homepage-shelves.js",
-    "test:open-rules-production-promotion": "node scripts/test-open-rules-production-promotion.js"
+    "test:open-rules-production-promotion": "node scripts/test-open-rules-production-promotion.js",
+    "release:build": "node scripts/release-pipeline.mjs build",
+    "release:verify-artifact": "node scripts/release-pipeline.mjs verify-artifact",
+    "release:check-environment": "node scripts/release-pipeline.mjs check-environment",
+    "release:check-promotion": "node scripts/release-pipeline.mjs check-promotion",
+    "release:approve-preview": "node scripts/release-pipeline.mjs approve-preview",
+    "release:record": "node scripts/release-pipeline.mjs finalize-record",
+    "release:verify": "node scripts/test-release-pipeline.js && node scripts/test-progressive-privilege-navigation.js && node scripts/test-pages-build-output.js && node scripts/test-pages-environment-isolation.js && node scripts/test-storefront-visual-alignment.js"
   },
   "repository": {
     "type": "git",
