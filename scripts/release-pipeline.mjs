@@ -227,6 +227,12 @@ export function validateMigrationReceipt(receipt, target, manifest) {
   return { ok: errors.length === 0, errors };
 }
 
+export function validateManifestHash(manifest) {
+  if (!manifest || typeof manifest !== "object" || typeof manifest.manifestSha256 !== "string") return false;
+  const { manifestSha256, ...body } = manifest;
+  return hashJson(body) === manifestSha256;
+}
+
 export function hashDirectory(directory) {
   const files = collectFiles(directory);
   return hashJson(files);
@@ -381,6 +387,7 @@ function verifyArtifact(releaseId) {
   const sourceRoot = path.resolve(REPOSITORY_ROOT, manifest.artifact.sourceRoot);
   const outputDirectory = path.resolve(REPOSITORY_ROOT, manifest.artifact.pagesOutput);
   const errors = [];
+  if (!validateManifestHash(manifest)) errors.push("Release manifest content does not match its SHA-256 fingerprint.");
   if (!sourceRoot.startsWith(`${releaseRoot}${path.sep}`) || !outputDirectory.startsWith(`${sourceRoot}${path.sep}`)) errors.push("Release artifact paths escaped the ignored release workspace.");
   if (hashDirectory(outputDirectory) !== manifest.pagesOutputSha256) errors.push("Pages output hash differs from the release manifest.");
   if (hashJson(collectFiles(path.join(sourceRoot, "functions"))) !== manifest.functionsSourceSha256) errors.push("Pages Functions source hash differs from the release manifest.");
@@ -577,6 +584,7 @@ function runFinalizeRecord(argv) {
     releaseSha: verified.manifest.commitSha,
     releaseBranch: verified.manifest.releaseBranch,
     manifestSha256: verified.manifest.manifestSha256,
+    releaseManifest: verified.manifest,
     build: {
       createdAt: verified.manifest.createdAt,
       buildCommand: verified.manifest.buildCommand,

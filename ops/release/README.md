@@ -8,6 +8,8 @@ Use a pushed release commit as the only source for a release:
 
 The commit tested in Preview, staging, and production must be the same full Git SHA. A changed commit requires a new build and new Owner approval. A release must have no tracked working-tree changes and its release branch must exist on `origin` before any deployment.
 
+Create a release branch from the approved baseline and bring in only the changes selected for that release. Development may continue independently; do not merge all of `development` into a release branch unless every included change is approved for that release.
+
 The current Preview acceptance project is `trg-member-tier-test-20261120`, branch `test`. Both its Preview and Production Pages configurations are restricted to isolated D1 `6248efe2-c96d-457e-b705-376cf5485c04`; it has no R2 bindings and its public origin is its own `pages.dev` host. Its production branch is the guard branch `trg-member-tier-production-guard`. Do not mistake the earlier dirty Preview deployment `9d2a9f5e` for a clean release approval: it identifies a dirty artifact and a different source SHA from the authentication release.
 
 ## Build and promotion commands

@@ -144,6 +144,10 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, approval, stagingAttestation }).ok, false, "missing rollback deployment must block production");
 
   const manifest = { commitSha: sha, releaseId: "pipeline-test", sourceOutputSha256: "a".repeat(64) };
+  const manifestBody = { schemaVersion: 1, ...manifest };
+  const hashedManifest = { ...manifestBody, manifestSha256: crypto.createHash("sha256").update(JSON.stringify(manifestBody)).digest("hex") };
+  assert.equal(pipeline.validateManifestHash(hashedManifest), true, "Manifest hash should verify against the exact manifest body.");
+  assert.equal(pipeline.validateManifestHash({ ...hashedManifest, releaseId: "tampered" }), false, "Manifest edits must invalidate the stored manifest hash.");
   const deployment = { Environment: "Preview", Branch: "test", Source: sha.slice(0, 7) };
   const marker = { commitSha: sha, releaseId: "pipeline-test", sourceOutputSha256: manifest.sourceOutputSha256 };
   assert.equal(pipeline.validateDeploymentRecord({ target: "preview", manifest, deployment, publicMarker: marker }).ok, true, "Exact Preview deployment and full-SHA marker should pass.");
