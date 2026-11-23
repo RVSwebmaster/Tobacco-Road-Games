@@ -72,36 +72,38 @@ binding = "TRG_PRODUCTS"
 bucket_name = "trg-products"
 `;
 
-  const previewToml = `name = "trg-member-tier-test-20261120"
+  const previewToml = `name = "tobacco-road-games-acceptance"
 [vars]
-MARKETPLACE_WRITE_POLICY = "enabled"
 NATIVE_GUEST_CHECKOUT_MODE = "disabled"
 NATIVE_GUEST_CLAIM_MODE = "disabled"
-NATIVE_LIVE_CHECKOUT_MODE = "disabled"
 PAYMENT_PIPELINE_STAGE = "staging"
-PUBLIC_SITE_ORIGIN = "https://trg-member-tier-test-20261120.pages.dev"
+PUBLIC_SITE_ORIGIN = "https://tobacco-road-games-acceptance.pages.dev"
 RESEND_DELIVERY_ENABLED = "false"
 [[d1_databases]]
 binding = "TRG_ORDERS"
-database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
+database_id = "2fff6e72-4e41-47e7-b497-992dadcab3d6"
+[[r2_buckets]]
+binding = "TRG_PRODUCTS"
+bucket_name = "trg-products-acceptance"
 [env.production.vars]
-MARKETPLACE_WRITE_POLICY = "enabled"
 NATIVE_GUEST_CHECKOUT_MODE = "disabled"
 NATIVE_GUEST_CLAIM_MODE = "disabled"
-NATIVE_LIVE_CHECKOUT_MODE = "disabled"
 PAYMENT_PIPELINE_STAGE = "staging"
-PUBLIC_SITE_ORIGIN = "https://trg-member-tier-test-20261120.pages.dev"
+PUBLIC_SITE_ORIGIN = "https://tobacco-road-games-acceptance.pages.dev"
 RESEND_DELIVERY_ENABLED = "false"
 [[env.production.d1_databases]]
 binding = "TRG_ORDERS"
-database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
+database_id = "2fff6e72-4e41-47e7-b497-992dadcab3d6"
+[[env.production.r2_buckets]]
+binding = "TRG_PRODUCTS"
+bucket_name = "trg-products-acceptance"
 `;
 
   assert.equal(pipeline.validateEnvironmentConfig(previewToml, "preview").ok, true, "isolated Preview map should pass");
   assert.equal(pipeline.validateEnvironmentConfig(stagingToml, "staging").ok, true, "staging map should pass");
   assert.equal(pipeline.validateEnvironmentConfig(productionToml, "production").ok, true, "production map should pass");
 
-  const previewWithProdD1 = previewToml.replace("6248efe2-c96d-457e-b705-376cf5485c04", "7e2cd675-a6f1-4fac-bbc9-03485a806c26");
+  const previewWithProdD1 = previewToml.replace("2fff6e72-4e41-47e7-b497-992dadcab3d6", "7e2cd675-a6f1-4fac-bbc9-03485a806c26");
   assert.equal(pipeline.validateEnvironmentConfig(previewWithProdD1, "preview").ok, false, "Preview cannot bind production D1");
   const previewWithProdR2 = `${previewToml}\n[[env.production.r2_buckets]]\nbinding = "TRG_PRODUCTS"\nbucket_name = "trg-products"\n`;
   assert.equal(pipeline.validateEnvironmentConfig(previewWithProdR2, "preview").ok, false, "Preview cannot bind production R2");
@@ -118,6 +120,12 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   assert.equal(pipeline.validateEnvironmentConfig(`${stagingToml}\n[[env.production.r2_buckets]]\nbinding = "EXTRA"\nbucket_name = "unexpected"\n`, "staging").ok, false, "unexpected binding must fail closed");
 
   assert.notEqual(environments.preview.deploymentBranch, environments.preview.projectProductionBranch, "Preview release branch must remain distinct from the production guard branch.");
+  assert.equal(environments.preview.projectName, "tobacco-road-games-acceptance", "Preview must use the verified isolated acceptance project.");
+  assert.equal(environments.preview.deploymentBranch, "acceptance", "Preview must use the branch verified in the acceptance project.");
+  assert.deepEqual(environments.preview.bindings.preview.d1, { TRG_ORDERS: "2fff6e72-4e41-47e7-b497-992dadcab3d6" });
+  assert.deepEqual(environments.preview.bindings.preview.r2, { TRG_PRODUCTS: "trg-products-acceptance" });
+  assert.deepEqual(environments.preview.bindings.production, { d1: { TRG_ORDERS: "2fff6e72-4e41-47e7-b497-992dadcab3d6" }, r2: { TRG_PRODUCTS: "trg-products-acceptance" } }, "the acceptance project's production guard must also remain isolated");
+  assert.doesNotMatch(JSON.stringify(environments.preview), /trg-member-tier-test-20261120|7e2cd675-a6f1-4fac-bbc9-03485a806c26|trg-products"|d92594e8-a45c-4f84-8f48-7c3aeba17f29|trg-products-staging/i, "active Preview map must not refer to the missing target or production/staging resources");
   assert.equal(environments.staging.deploymentBranch, environments.staging.projectProductionBranch, "Staging promotion must use its configured production branch.");
   assert.equal(environments.production.deploymentBranch, environments.production.projectProductionBranch, "Production promotion must use its configured production branch.");
   const focusedMigration = migrationLedger.migrations.find((entry) => entry.id === "account-profile-072");
@@ -136,7 +144,7 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: true, candidateDescendsFromDevelopment: false, lineageException: { type: "reconciliation", reason: "Friday-approved source reconciliation recorded in release evidence." } }).ok, true, "documented reconciliation exception should be explicit and machine-readable");
   assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: false, candidateDescendsFromDevelopment: true, lineageException: { type: "emergency", reason: "Emergency source fix with recorded incident and approval." } }).ok, false, "an emergency candidate exception must not waive development-to-main reconciliation");
 
-  const approval = { approved: true, commitSha: sha, deploymentId: "preview-id", previewUrl: "https://preview.trg-member-tier-test-20261120.pages.dev", manifestSha256: manifestSha };
+  const approval = { approved: true, commitSha: sha, deploymentId: "preview-id", previewUrl: "https://preview.tobacco-road-games-acceptance.pages.dev", manifestSha256: manifestSha };
   const stagingAttestation = {
     passed: true,
     commitSha: sha,
@@ -163,7 +171,7 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   const hashedManifest = { ...manifestBody, manifestSha256: crypto.createHash("sha256").update(JSON.stringify(manifestBody)).digest("hex") };
   assert.equal(pipeline.validateManifestHash(hashedManifest), true, "Manifest hash should verify against the exact manifest body.");
   assert.equal(pipeline.validateManifestHash({ ...hashedManifest, releaseId: "tampered" }), false, "Manifest edits must invalidate the stored manifest hash.");
-  const deployment = { Environment: "Preview", Branch: "test", Source: sha.slice(0, 7) };
+  const deployment = { Environment: "Preview", Branch: "acceptance", Source: sha.slice(0, 7) };
   const marker = { commitSha: sha, releaseId: "pipeline-test", sourceOutputSha256: manifest.sourceOutputSha256 };
   assert.equal(pipeline.validateDeploymentRecord({ target: "preview", manifest, deployment, publicMarker: marker }).ok, true, "Exact Preview deployment and full-SHA marker should pass.");
   assert.equal(pipeline.validateDeploymentRecord({ target: "preview", manifest, deployment: { ...deployment, Environment: "Production" }, publicMarker: marker }).ok, false, "Wrong deployment classification must fail.");

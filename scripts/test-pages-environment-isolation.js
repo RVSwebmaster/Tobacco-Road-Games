@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, "..");
 const PRODUCTION_D1_ID = "7e2cd675-a6f1-4fac-bbc9-03485a806c26";
 const STAGING_D1_ID = "d92594e8-a45c-4f84-8f48-7c3aeba17f29";
 const ACCEPTANCE_D1_ID = "2fff6e72-4e41-47e7-b497-992dadcab3d6";
+const ACCEPTANCE_R2_BUCKET = "trg-products-acceptance";
 
 async function main() {
   const config = read("ops/production/wrangler.pages.toml");
@@ -40,6 +41,19 @@ async function main() {
     assert.match(nonProduction, /PAYMENT_PIPELINE_STAGE\s*=\s*"staging"/);
     assert.match(nonProduction, /NATIVE_LIVE_CHECKOUT_MODE\s*=\s*"disabled"/);
   }
+
+  const releaseEnvironments = JSON.parse(read("ops/release/environments.json"));
+  assert.equal(releaseEnvironments.preview.projectName, "tobacco-road-games-acceptance");
+  assert.equal(releaseEnvironments.preview.deploymentBranch, "acceptance");
+  assert.equal(releaseEnvironments.preview.bindings.preview.d1.TRG_ORDERS, ACCEPTANCE_D1_ID);
+  assert.equal(releaseEnvironments.preview.bindings.preview.r2.TRG_PRODUCTS, ACCEPTANCE_R2_BUCKET);
+  assert.equal(releaseEnvironments.preview.bindings.production.d1.TRG_ORDERS, ACCEPTANCE_D1_ID);
+  assert.equal(releaseEnvironments.preview.bindings.production.r2.TRG_PRODUCTS, ACCEPTANCE_R2_BUCKET);
+  assert.notEqual(releaseEnvironments.preview.bindings.preview.d1.TRG_ORDERS, PRODUCTION_D1_ID);
+  assert.notEqual(releaseEnvironments.preview.bindings.preview.d1.TRG_ORDERS, STAGING_D1_ID);
+  assert.notEqual(releaseEnvironments.preview.bindings.preview.r2.TRG_PRODUCTS, "trg-products");
+  assert.notEqual(releaseEnvironments.preview.bindings.preview.r2.TRG_PRODUCTS, "trg-products-staging");
+  assert.doesNotMatch(JSON.stringify(releaseEnvironments.preview), /trg-member-tier-test-20261120/);
 
   const policy = await import(pathToFileURL(path.join(ROOT, "functions/_lib/preview-write-policy.mjs")).href);
   assert.equal(policy.isMarketplaceWriteDisabled(

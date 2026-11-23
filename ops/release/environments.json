@@ -1,38 +1,34 @@
 {
   "schemaVersion": 1,
   "preview": {
-    "projectName": "trg-member-tier-test-20261120",
-    "deploymentBranch": "test",
+    "projectName": "tobacco-road-games-acceptance",
+    "deploymentBranch": "acceptance",
     "deploymentEnvironment": "Preview",
-    "projectProductionBranch": "trg-member-tier-production-guard",
-    "publicOrigin": "https://trg-member-tier-test-20261120.pages.dev",
+    "projectProductionBranch": "codex/operation-severance-task1",
+    "publicOrigin": "https://tobacco-road-games-acceptance.pages.dev",
     "bindings": {
       "preview": {
-        "d1": { "TRG_ORDERS": "6248efe2-c96d-457e-b705-376cf5485c04" },
-        "r2": {}
+        "d1": { "TRG_ORDERS": "2fff6e72-4e41-47e7-b497-992dadcab3d6" },
+        "r2": { "TRG_PRODUCTS": "trg-products-acceptance" }
       },
       "production": {
-        "d1": { "TRG_ORDERS": "6248efe2-c96d-457e-b705-376cf5485c04" },
-        "r2": {}
+        "d1": { "TRG_ORDERS": "2fff6e72-4e41-47e7-b497-992dadcab3d6" },
+        "r2": { "TRG_PRODUCTS": "trg-products-acceptance" }
       }
     },
     "vars": {
       "preview": {
-        "MARKETPLACE_WRITE_POLICY": "enabled",
         "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
         "NATIVE_GUEST_CLAIM_MODE": "disabled",
-        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
         "PAYMENT_PIPELINE_STAGE": "staging",
-        "PUBLIC_SITE_ORIGIN": "https://trg-member-tier-test-20261120.pages.dev",
+        "PUBLIC_SITE_ORIGIN": "https://tobacco-road-games-acceptance.pages.dev",
         "RESEND_DELIVERY_ENABLED": "false"
       },
       "production": {
-        "MARKETPLACE_WRITE_POLICY": "enabled",
         "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
         "NATIVE_GUEST_CLAIM_MODE": "disabled",
-        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
         "PAYMENT_PIPELINE_STAGE": "staging",
-        "PUBLIC_SITE_ORIGIN": "https://trg-member-tier-test-20261120.pages.dev",
+        "PUBLIC_SITE_ORIGIN": "https://tobacco-road-games-acceptance.pages.dev",
         "RESEND_DELIVERY_ENABLED": "false"
       }
     }
