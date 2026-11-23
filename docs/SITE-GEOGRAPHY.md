@@ -1,6 +1,6 @@
 # TRG site geography
 
-Status verified 2026-11-23 against the canonical repository and the Phase 3A reconstruction candidate.
+Status verified 2026-11-23 against canonical Git and live production deployment `ced34184-fd94-44bc-a9c8-53861774cede`. The post-reconciliation audit records production/runtime differences in [POST-RECONCILIATION-AUDIT-2026-11-23.md](POST-RECONCILIATION-AUDIT-2026-11-23.md).
 
 ## Canonical source locations
 
@@ -22,7 +22,8 @@ The production-connected workspace is `C:\Users\rvsaw\Desktop\Dr DM Workshop\Tob
 | `/` and `/guest/` | Guest storefront from `scripts/build-store.js`; root rewrite is in `_redirects` | Public guest storefront; Login/Signup opens the approved compact login popup |
 | `/customer` | `customer.html`, generated from Guest by `renderCustomerLandingPage()` | Session-protected Customer Storefront; signed-out requests redirect to `/guest/` |
 | `/customer-profile/`, `/creator/`, `/founding-25-profile/`, `/premium-creator-profile/`, `/admin-profile/`, `/owner-profile/` | `renderMemberProfilePage()` | Six retained temporary HTML entry points over the shared Member Profile Base |
-| `/creator-dashboard/` | `templates/creator-dashboard.html` plus `buildCreatorDashboardPage()` | Canonical Creator Dashboard route; the former `/temp-creator/` path redirects here |
+| `/creator-dashboard/` | `templates/creator-dashboard.html` plus `buildCreatorDashboardPage()` | Canonical route in development. Live production currently redirects it to `/temp-creator/`; correct and verify through a later release. |
+| `/temp-creator/` | Production legacy Dashboard page; development redirect in `_redirects` | Still serves the Dashboard in production. Development redirects it to `/creator-dashboard/`; retain until the production replacement is verified. |
 | `/authors/<slug>/` | Author page generator | Public author pages, distinct from member Profiles |
 
 The Profile routes remain until a dynamically populated member-specific replacement is approved. The shared Profile renderer and approved cabinet artwork are preserved; no route retirement or furniture redesign is part of Phase 3A.

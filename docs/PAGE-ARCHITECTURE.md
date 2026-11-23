@@ -1,6 +1,6 @@
 # TRG page architecture
 
-Status verified 2026-11-23 against the current production baseline and the Phase 3A candidate.
+Status verified 2026-11-23 against the current production baseline and canonical development. Live route differences and readiness findings are recorded in [POST-RECONCILIATION-AUDIT-2026-11-23.md](POST-RECONCILIATION-AUDIT-2026-11-23.md).
 
 ## Storefront and account navigation
 
@@ -17,7 +17,7 @@ The Profile shelf belongs to the logged-in viewer. No active persistent shelf-se
 
 ## Creator Dashboard
 
-`/creator-dashboard/` is a distinct Dashboard surface, separate from a Profile. Its template is `templates/creator-dashboard.html`; the generator inserts shared approved Creator furniture. `assets/js/creator-dashboard.js` owns Dashboard behavior, including PDF intake draft persistence checks. `assets/css/creator-dashboard.css` is a compatibility import of `assets/css/member-profile.css`, not a second furniture implementation. `/temp-creator/` is only a legacy redirect.
+`/creator-dashboard/` is a distinct Dashboard surface, separate from a Profile. In development its template is `templates/creator-dashboard.html`; the generator inserts shared approved Creator furniture. `assets/js/creator-dashboard.js` owns Dashboard behavior, including PDF intake draft persistence checks. `assets/css/creator-dashboard.css` is a compatibility import of `assets/css/member-profile.css`, not a second furniture implementation. **Production is not yet route-aligned:** `/creator-dashboard/` redirects to `/temp-creator/`, which serves the Dashboard; development reverses that mapping. Keep the temporary production path until a separately verified release makes `/creator-dashboard/` canonical live.
 
 ## Boundaries
 

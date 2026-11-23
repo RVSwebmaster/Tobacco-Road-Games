@@ -1,6 +1,6 @@
 # TRG project state
 
-Status updated 2026-11-23 for Phase 6 structural closeout. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work. Current SHAs are read from Git refs rather than duplicated here. See [the reconciliation closeout record](RECONCILIATION-CLOSEOUT-2026-11-23.md) for preservation anchors, migration dispositions, and final structural verification.
+Status updated 2026-11-23 for Phase 6 structural closeout and the post-reconciliation audit. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work. Current SHAs are read from Git refs rather than duplicated here. See [the reconciliation closeout record](RECONCILIATION-CLOSEOUT-2026-11-23.md) for preservation anchors, migration dispositions, and final structural verification, and [the post-reconciliation audit](POST-RECONCILIATION-AUDIT-2026-11-23.md) for the launch-readiness inventory and verified live differences.
 
 ## Git and production truth
 
@@ -19,6 +19,7 @@ Status updated 2026-11-23 for Phase 6 structural closeout. `main` is the live pr
 - Main retains native email/password authentication without a verification gate or required mail provider; Customer access requires a valid session.
 - The accepted Guest login popup, authenticated Customer navigation, Profile link, Logout flow, and logout destination are in the production baseline.
 - The six Profile entry points and accepted shared Profile/cabinet/badge implementation remain present. Creator Dashboard is separate at `/creator-dashboard/`.
+- **Production route discrepancy (verified 2026-11-23):** live `/creator-dashboard/` redirects to `/temp-creator/`, which serves the Dashboard. Canonical development uses `/creator-dashboard/` and redirects `/temp-creator/` to it. Do not describe the production route as corrected until a release is deployed and verified.
 - Store is **CLOSED**. No Phase 3A work changes that state.
 
 ## Deferred and shelved boundaries
