@@ -266,10 +266,10 @@ $deployOutput = & npx @deployArgs 2>&1
 if ($LASTEXITCODE -ne 0) { $deployOutput | ForEach-Object { Write-Host $_ }; throw "Cloudflare Pages deployment failed." }
 $deployOutput | ForEach-Object { Write-Host $_ }
 $deployText = $deployOutput | Out-String
-$urlPattern = 'https://[a-z0-9-]+\.' + [regex]::Escape($targetConfig.projectName) + '\.pages\.dev'
-$urlMatch = [regex]::Matches($deployText, $urlPattern)
-if ($urlMatch.Count -eq 0) { throw "Deployment completed without a Pages URL in Wrangler output." }
-$deploymentUrl = $urlMatch[$urlMatch.Count - 1].Value
+$urlPattern = 'https://[a-f0-9]{8}\.' + [regex]::Escape($targetConfig.projectName) + '\.pages\.dev'
+$urlMatch = [regex]::Match($deployText, $urlPattern)
+if (-not $urlMatch.Success) { throw "Deployment completed without an immutable Pages URL in Wrangler output." }
+$deploymentUrl = $urlMatch.Value
 
 $deploymentListOutput = & npx wrangler pages deployment list --project-name $targetConfig.projectName --environment $wranglerEnvironment --cwd $sourceRoot --json
 if ($LASTEXITCODE -ne 0) { throw "Deployment completed but its Cloudflare metadata could not be read." }
