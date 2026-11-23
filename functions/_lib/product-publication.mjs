@@ -153,7 +153,7 @@ export async function publishProduct(database, bucket, { metadata, coverFile, ba
   const deliveryKey = `catalog-publications/${attemptId}/delivery.pdf`;
   let candidate;
   try {
-    candidate = validateProductInput({ ...metadata, metadata: { ...(metadata.metadata || {}), publicationAttemptId: attemptId }, managedByUserId: options.managingUserId || null, publicationState: "published",
+    candidate = validateProductInput({ ...metadata, listingVisibility: metadata.listingVisibility || "listed", metadata: { ...(metadata.metadata || {}), publicationAttemptId: attemptId }, managedByUserId: options.managingUserId || null, publicationState: "published",
       publishedAt: new Date(options.nowMs ?? Date.now()).toISOString(),
       coverR2Key: coverKey, backCoverR2Key: backCoverKey, deliveryR2Key: deliveryKey,
       deliveryFilename: pdf.normalizedFilename, deliveryContentType: pdf.contentType });

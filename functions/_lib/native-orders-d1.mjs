@@ -132,6 +132,25 @@ function prepareOrderInsert(database, order) {
 }
 
 function prepareItemInsert(database, publicId, item) {
+  const hasCreatorSaleSnapshots = item.lineTotalCents > 0;
+  const snapshotColumns = hasCreatorSaleSnapshots ? `,
+      creator_first_published_at_snapshot,creator_fee_basis_points_snapshot,
+      creator_fixed_fee_cents_snapshot,creator_reserve_days_snapshot,
+      creator_fee_policy_reason_snapshot,creator_fee_policy_id_snapshot,
+      creator_fee_policy_effective_at_snapshot,creator_commission_category_snapshot,
+      creator_commission_policy_version_snapshot` : "";
+  const snapshotPlaceholders = hasCreatorSaleSnapshots ? ",?,?,?,?,?,?,?,?,?" : "";
+  const snapshotValues = hasCreatorSaleSnapshots ? [
+    item.creatorFirstPublishedAt,
+    item.creatorFeeBasisPoints,
+    item.creatorFixedFeeCents,
+    item.creatorReserveDays,
+    item.creatorFeePolicyReason,
+    item.creatorFeePolicyId,
+    item.creatorFeePolicyEffectiveAt,
+    item.creatorCommissionCategory,
+    item.creatorCommissionPolicyVersion
+  ] : [];
   return database.prepare(`
     INSERT INTO order_items(
       order_id,product_slug,product_title_snapshot,primary_author_slug,
@@ -141,15 +160,10 @@ function prepareItemInsert(database, publicId, item) {
       pricing_model_snapshot,selected_price_cents,minimum_price_cents_snapshot,
       suggested_price_cents_snapshot,publication_state_snapshot,
       product_status_snapshot,delivery_r2_key_snapshot,
-      delivery_filename_snapshot,delivery_content_type_snapshot,
-      creator_first_published_at_snapshot,creator_fee_basis_points_snapshot,
-      creator_fixed_fee_cents_snapshot,creator_reserve_days_snapshot,
-      creator_fee_policy_reason_snapshot,creator_fee_policy_id_snapshot,
-      creator_fee_policy_effective_at_snapshot,creator_commission_category_snapshot,
-      creator_commission_policy_version_snapshot
+      delivery_filename_snapshot,delivery_content_type_snapshot${snapshotColumns}
     ) VALUES(
       (SELECT id FROM orders WHERE public_id=?),?,?,?,?,?,?,?,?,?,?,?,?,
-      'native_d1',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+      'native_d1',?,?,?,?,?,?,?,?,?,?,?,?${snapshotPlaceholders}
     )
   `).bind(
     publicId,
@@ -177,15 +191,7 @@ function prepareItemInsert(database, publicId, item) {
     item.deliveryR2Key,
     item.deliveryFilename,
     item.deliveryContentType,
-    item.creatorFirstPublishedAt,
-    item.creatorFeeBasisPoints,
-    item.creatorFixedFeeCents,
-    item.creatorReserveDays,
-    item.creatorFeePolicyReason,
-    item.creatorFeePolicyId,
-    item.creatorFeePolicyEffectiveAt,
-    item.creatorCommissionCategory,
-    item.creatorCommissionPolicyVersion
+    ...snapshotValues
   );
 }
 

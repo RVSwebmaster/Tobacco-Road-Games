@@ -341,6 +341,20 @@ function database() {
   for (const name of fs.readdirSync(path.join(ROOT, "migrations")).filter(name => name.endsWith(".sql")).sort()) {
     raw.exec(fs.readFileSync(path.join(ROOT, "migrations", name), "utf8"));
   }
+  for (const name of [
+    "creator_first_published_at_snapshot",
+    "creator_fee_basis_points_snapshot",
+    "creator_fixed_fee_cents_snapshot",
+    "creator_reserve_days_snapshot",
+    "creator_fee_policy_reason_snapshot",
+    "creator_fee_policy_id_snapshot",
+    "creator_fee_policy_effective_at_snapshot",
+    "creator_commission_category_snapshot",
+    "creator_commission_policy_version_snapshot"
+  ]) raw.exec(`ALTER TABLE order_items DROP COLUMN ${name}`);
+  const remainingSnapshotColumns = raw.prepare("PRAGMA table_info(order_items)").all()
+    .filter(column => /_snapshot$/.test(column.name) && column.name.startsWith("creator_")).map(column => column.name);
+  assert.deepEqual(remainingSnapshotColumns, [], "Free acquisition test schema must omit deferred Creator sale snapshot columns.");
   return { raw, db: d1(raw) };
 }
 function d1(raw) {

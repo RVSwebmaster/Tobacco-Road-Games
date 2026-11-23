@@ -38,6 +38,7 @@ async function main() {
     attemptId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", nowMs: NOW_MS
   });
   assert.equal(published.publicationState, "published");
+  assert.equal(published.listingVisibility, "listed", "Owner publication must make a public listing explicitly visible.");
   assert.equal(published.revision, 1);
   assert.equal(published.coverR2Key, "catalog-publications/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/cover.webp");
   assert.equal(published.deliveryR2Key, "catalog-publications/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/delivery.pdf");
@@ -120,6 +121,7 @@ async function main() {
   assert.equal(ownerPayload.storefrontUrl, "/store/products/publication-owner-route/");
   const ownerProduct = await catalog.getProductBySlug(db, "publication-owner-route");
   assert.equal(ownerProduct.publicationState, "published");
+  assert.equal(ownerProduct.listingVisibility, "listed", "Owner intake must explicitly list newly published products by default.");
   assert.equal(ownerProduct.managedByUserId, "test-owner");
 
   raw.prepare("INSERT INTO users(id,email_normalized,email_verified,status,role,created_at,updated_at) VALUES(?, ?, 1, 'active', 'user', ?, ?)")

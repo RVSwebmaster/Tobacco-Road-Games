@@ -18,7 +18,7 @@ async function main() {
   const base = { creatorId: "creator-rv-sawyer", status: "pay-what-you-want", buyMode: "cart",
     pricingModel: "pwyw", priceCents: 500, suggestedPriceCents: 500, minimumPriceCents: 0 };
   await catalog.createProduct(db, { ...base, id: "public-item", slug: "public-item", title: "Public Item",
-    publicationState: "published", coverR2Key: "catalog-publications/one/cover.webp",
+    publicationState: "published", listingVisibility: "listed", coverR2Key: "catalog-publications/one/cover.webp",
     backCoverR2Key: "catalog-publications/one/back-cover.webp",
     deliveryR2Key: "catalog-publications/one/delivery.pdf", deliveryFilename: "secret.pdf",
     deliveryContentType: "application/pdf", metadata: { authors: ["RV Sawyer"],
