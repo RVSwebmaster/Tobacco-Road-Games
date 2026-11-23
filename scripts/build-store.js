@@ -1138,8 +1138,8 @@ function renderStorefrontCatalogEntry({ products, indexes }) {
 function renderStorefrontBackRoom() {
   return `
         <section class="store-section storefront-back-room" id="back-room" aria-labelledby="back-room-heading">
-          <div class="section-heading"><p class="section-heading__kicker">Back room</p><h2 id="back-room-heading">Community and Creator resources</h2><p>Current routes for discussion, Creator tools, announcements, and support.</p></div>
-          <nav class="browse-card-grid" aria-label="Back room links"><a class="browse-card" href="/forum"><strong>Community</strong><span>Players, Creators, and conversation.</span></a><a class="browse-card" href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a class="browse-card" href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a class="browse-card" href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a></nav>
+          <div class="section-heading"><p class="section-heading__kicker">Back room</p><h2 id="back-room-heading">Creator and support resources</h2><p>Routes for Creator tools, announcements, and customer support.</p></div>
+          <nav class="browse-card-grid" aria-label="Creator and support links"><a class="browse-card" href="/creator/"><strong>Creator Resources</strong><span>Registration, tools, and agreements.</span></a><a class="browse-card" href="/support.html"><strong>Help &amp; Contact</strong><span>Customer support and accessibility help.</span></a><a class="browse-card" href="/#about"><strong>About Tobacco Road Games</strong><span>Our shop, principles, and open roads.</span></a></nav>
         </section>`;
 }
 
@@ -3785,4 +3785,4 @@ function buildFocusedPages(publicCatalogProducts = loadProducts(buildAuthorLooku
   }
 }
 
-module.exports = { buildFocusedPages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };
+module.exports = { buildFocusedPages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderStorefrontBackRoom, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };

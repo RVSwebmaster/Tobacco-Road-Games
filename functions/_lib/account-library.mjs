@@ -61,38 +61,36 @@ export async function handleAccountLibraryRequest(request, env = {}, options = {
     }
   }
 
-  if (session.user.email_verified === 1) {
-    const nativeRows = await loadNativeRows(database, session.user.id);
-    for (const row of nativeRows) {
-      const key = libraryKey(row.product_slug_snapshot || row.native_product_id);
-      if (owned.get(key)?.kind === "native") continue;
-      let credential = "";
-      if (canSign && row.download_reference && row.entitlement_status === "active") {
-        credential = await createNativeDownloadCredential(row, secret, { nowMs: options.nowMs });
-      }
-      const encodedCredential = credential ? encodeURIComponent(credential) : "";
-      owned.set(key, { kind: "native", item: {
-        coverImage: row.current_cover_r2_key && credential
-          ? `/api/account/library-cover?credential=${encodedCredential}`
-          : "",
-        creator: row.creator_display_name || creatorFallback(row.author_slugs_json),
-        creatorId: row.native_creator_id,
-        creatorSlug: row.creator_slug || firstAuthorSlug(row.author_slugs_json),
-        currentLastUpdated: row.current_updated_at || "",
-        currentVersion: "",
-        downloadAvailable: row.entitlement_status === "active",
-        downloadUrl: credential ? `/store/download?credential=${encodedCredential}` : "",
-        orderReference: row.public_id,
-        paymentDescription: paymentDescription(row.payment_source),
-        productId: row.native_product_id,
-        productTitle: row.product_title_snapshot,
-        purchaseAmountCents: integerOrNull(row.selected_price_cents_snapshot),
-        purchaseCurrency: String(row.currency_snapshot || "").toUpperCase(),
-        purchaseDate: row.acquired_at || row.created_at,
-        purchasedLastUpdated: row.last_updated_snapshot,
-        purchasedVersion: row.version_snapshot,
-      } });
+  const nativeRows = await loadNativeRows(database, session.user.id);
+  for (const row of nativeRows) {
+    const key = libraryKey(row.product_slug_snapshot || row.native_product_id);
+    if (owned.get(key)?.kind === "native") continue;
+    let credential = "";
+    if (canSign && row.download_reference && row.entitlement_status === "active") {
+      credential = await createNativeDownloadCredential(row, secret, { nowMs: options.nowMs });
     }
+    const encodedCredential = credential ? encodeURIComponent(credential) : "";
+    owned.set(key, { kind: "native", item: {
+      coverImage: row.current_cover_r2_key && credential
+        ? `/api/account/library-cover?credential=${encodedCredential}`
+        : "",
+      creator: row.creator_display_name || creatorFallback(row.author_slugs_json),
+      creatorId: row.native_creator_id,
+      creatorSlug: row.creator_slug || firstAuthorSlug(row.author_slugs_json),
+      currentLastUpdated: row.current_updated_at || "",
+      currentVersion: "",
+      downloadAvailable: row.entitlement_status === "active",
+      downloadUrl: credential ? `/store/download?credential=${encodedCredential}` : "",
+      orderReference: row.public_id,
+      paymentDescription: paymentDescription(row.payment_source),
+      productId: row.native_product_id,
+      productTitle: row.product_title_snapshot,
+      purchaseAmountCents: integerOrNull(row.selected_price_cents_snapshot),
+      purchaseCurrency: String(row.currency_snapshot || "").toUpperCase(),
+      purchaseDate: row.acquired_at || row.created_at,
+      purchasedLastUpdated: row.last_updated_snapshot,
+      purchasedVersion: row.version_snapshot,
+    } });
   }
 
   const items = [...owned.values()]

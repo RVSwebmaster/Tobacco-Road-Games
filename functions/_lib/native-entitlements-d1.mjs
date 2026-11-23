@@ -238,7 +238,7 @@ export function isNativeEntitlementOwnedBySession(entitlement, session) {
   return Boolean(
     entitlement
       && session?.valid === true
-      && session.user?.email_verified === 1
+      && session.user?.id
       && entitlement.status === "active"
       && entitlement.order_payment_status === "paid"
       && ["paid", "free_acquired"].includes(entitlement.order_native_state)

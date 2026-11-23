@@ -24,6 +24,7 @@ The production-connected workspace is `C:\Users\rvsaw\Desktop\Dr DM Workshop\Tob
 | `/customer-profile/`, `/creator/`, `/founding-25-profile/`, `/premium-creator-profile/`, `/admin-profile/`, `/owner-profile/` | `renderMemberProfilePage()` | Six retained temporary HTML entry points over the shared Member Profile Base |
 | `/creator-dashboard/` | `templates/creator-dashboard.html` plus `buildCreatorDashboardPage()` | Canonical route in development. Live production currently redirects it to `/temp-creator/`; correct and verify through a later release. |
 | `/temp-creator/` | Production legacy Dashboard page; development redirect in `_redirects` | Still serves the Dashboard in production. Development redirects it to `/creator-dashboard/`; retain until the production replacement is verified. |
+| `/forum/` and `/api/forum/*` | Preserved Forum route/API implementation | Deferred. Phase 1 working draft removes Customer Account and storefront Back Room Forum entry points; routes and backend remain preserved. |
 | `/authors/<slug>/` | Author page generator | Public author pages, distinct from member Profiles |
 
 The Profile routes remain until a dynamically populated member-specific replacement is approved. The shared Profile renderer and approved cabinet artwork are preserved; no route retirement or furniture redesign is part of Phase 3A.

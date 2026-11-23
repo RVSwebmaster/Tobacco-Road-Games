@@ -11,10 +11,10 @@ export async function assertVerifiedPurchaseIdentity(
   { session, emailHash, nowMs = Date.now() } = {},
 ) {
   if (session?.user) {
-    if (Number(session.user.email_verified) !== 1)
+    if (session.valid !== true || !session.user.id)
       throw policyError(
-        "verified_email_required",
-        "Verify your account email before completing this acquisition.",
+        "authenticated_account_required",
+        "Sign in to your account before completing this acquisition.",
       );
     return {
       kind: "account",

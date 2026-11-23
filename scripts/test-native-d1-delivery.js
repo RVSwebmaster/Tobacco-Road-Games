@@ -22,7 +22,7 @@ async function main() {
   const { raw, db } = database();
   for (const user of [BUYER, OTHER]) {
     raw.prepare(`INSERT INTO users(id,email_normalized,email_verified,email_verified_at,status,role,created_at,updated_at)
-      VALUES(?,?,1,?,'active','user',?,?)`).run(user.id, user.email, ISO, ISO, ISO);
+      VALUES(?,?,0,NULL,'active','user',?,?)`).run(user.id, user.email, ISO, ISO);
   }
   const product = await catalog.createProduct(db, productInput({
     id: "task2j-native", slug: "task2j-native", title: "Task 2J Native",
@@ -52,6 +52,12 @@ async function main() {
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.deepEqual(new Uint8Array(await response.arrayBuffer()), PDF_BYTES);
   assert.deepEqual(bucket.requestedKeys, [product.deliveryR2Key]);
+  const anonymousBucket = createBucket(product.deliveryR2Key);
+  response = await download.handleAuthorizedDownload(request(), env(db, anonymousBucket), {
+    accountSession: { valid: false }, nowMs: NOW + 1000
+  });
+  assert.equal(response.status, 403);
+  assert.deepEqual(anonymousBucket.requestedKeys, [], "An unauthenticated request must not reach the product bucket.");
   assert.equal(raw.prepare("SELECT successful_download_count FROM native_product_entitlements WHERE id=?").get(entitlement.id).successful_download_count, 1);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM native_download_attempts WHERE entitlement_id=?").get(entitlement.id).n, 1);
   assert.equal(raw.prepare("SELECT fulfillment_status FROM orders WHERE id=?").get(fixture.order.id).fulfillment_status, "fulfilled");
@@ -180,6 +186,10 @@ async function paidFixture(nativeOrders, ownership, db, raw, product, userId) {
     authorSlugsJson: JSON.stringify(product.metadata.authorSlugs), catalogRevision: product.revision,
     createdAt, currency: product.currency, deliveryContentType: product.deliveryContentType,
     deliveryFilename: product.deliveryFilename, deliveryR2Key: product.deliveryR2Key,
+    creatorFeeBasisPoints: 2000, creatorFeePolicyReason: "test_standard",
+    creatorFeePolicyEffectiveAt: createdAt, creatorCommissionCategory: "standard",
+    creatorCommissionPolicyVersion: "test-policy-v1", creatorFirstPublishedAt: null,
+    creatorFixedFeeCents: 0, creatorReserveDays: 0,
     effectiveUnitPriceCents: Number(product.priceCents), lastUpdatedSnapshot: product.updatedAt,
     lineTotalCents: Number(product.priceCents), listPriceCents: Number(product.priceCents),
     minimumPriceCents: null, nativeCreatorId: product.creatorId, nativeProductId: product.id,
@@ -208,7 +218,7 @@ function productInput(overrides) {
   };
 }
 function session(user) {
-  return { valid: true, user: { email_normalized: user.email, email_verified: 1, id: user.id, status: "active" } };
+  return { valid: true, user: { email_normalized: user.email, email_verified: 0, id: user.id, role: "user", status: "active" } };
 }
 function env(db, bucket) { return { DOWNLOAD_SIGNING_SECRET: SECRET, TRG_ORDERS: db, TRG_PRODUCTS: bucket }; }
 function createBucket(expectedKey, options = {}) {

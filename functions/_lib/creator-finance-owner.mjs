@@ -7,7 +7,7 @@ import {
   reconcileCreatorFinance,
   setCreatorLedgerHold,
 } from "./creator-finance.mjs";
-import { OWNER_ACTOR_ID } from "./owner-runtime.mjs";
+import { authorizeOwnerFinanceRequest } from "./owner-finance-auth.mjs";
 import {
   getCreatorPayoutStatus,
   getOperatorPayoutReadiness,
@@ -57,6 +57,9 @@ export async function handleCreatorFinanceOwnerRequest(
   env = {},
   options = {},
 ) {
+  const authorization = await authorizeOwnerFinanceRequest(request, env, options);
+  if (authorization.response) return authorization.response;
+  const actorId = authorization.session.user.id;
   const db = options.database || env.TRG_ORDERS;
   if (request.method === "GET") {
     const creatorId = new URL(request.url).searchParams.get("creator");
@@ -105,7 +108,7 @@ export async function handleCreatorFinanceOwnerRequest(
   }
   if (request.method !== "POST")
     return json({ error: "Use GET or POST." }, 405);
-  const auth = { username: OWNER_ACTOR_ID };
+  const auth = { username: actorId };
   let body = {};
   try {
     body = await request.json();

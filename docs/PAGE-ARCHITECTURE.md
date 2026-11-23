@@ -8,6 +8,7 @@ Status verified 2026-11-23 against the current production baseline and canonical
 - Guest Login/Signup opens the compact approved login popup, which uses native TRG authentication. Successful login lands at `/customer`.
 - `/customer` is a session-protected Customer Storefront. Authenticated navigation keeps Account, Profile, and Logout actions; Profile routing follows the authenticated account class. Logout uses the existing server flow and returns to the public site. Signed-out requests do not receive Customer access.
 - Registration and login are native email/password. Normal Customer access does not require email verification or an email provider. Password recovery remains a separate email-dependent flow and is not required for login.
+- Forum remains deferred infrastructure. The current Phase 1 working draft removes Forum links and profile panels from the Customer Account and storefront Back Room while retaining Forum routes and backend code; this draft is not yet committed or deployed.
 
 ## Shared Member Profile Base
 

@@ -2599,10 +2599,6 @@ h4 {
   outline-offset: 2px;
 }
 
-.account-card--forum {
-  width: min(100%, 760px);
-}
-
 .account-optional {
   color: var(--muted);
   font-weight: 400;

@@ -11,8 +11,11 @@ import {
 } from "../../_lib/creator-payout-readiness.mjs";
 import { reconcileCreatorFinance } from "../../_lib/creator-finance.mjs";
 import { listCreatorClosures } from "../../_lib/creator-closure.mjs";
+import { authorizeOwnerFinanceRequest } from "../../_lib/owner-finance-auth.mjs";
 
 export async function onRequestGet({ request, env }) {
+  const authorization = await authorizeOwnerFinanceRequest(request, env);
+  if (authorization.response) return authorization.response;
   const url = new URL(request.url),
     creatorId = url.searchParams.get("creator"),
     reference = url.searchParams.get("reference");

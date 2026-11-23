@@ -138,8 +138,7 @@ async function main() {
     [BUYER, products.paid, 0, 409, "native_zero_value_required", {}],
     [BUYER, products.paused, 0, 400, "native_free_product_unavailable", {}],
     [BUYER, products.ineligible, 0, 400, "native_free_product_unavailable", {}],
-    [null, products.recovery, 0, 403, "verified_account_required", {}],
-    [UNVERIFIED, products.recovery, 0, 403, "verified_account_required", {}],
+    [null, products.recovery, 0, 403, "authenticated_account_required", {}],
     [BUYER, products.recovery, 0, 403, "csrf_rejected", { origin: "https://evil.example" }]
   ]) {
     invocation = call(user, product.slug, amount, nextAttempt(), requestOptions);
@@ -149,6 +148,15 @@ async function main() {
     assert.equal(body.code, expectedCode);
   }
   assert.equal(count(raw, "orders"), rejectedBefore, "Rejected free acquisitions must not create orders.");
+
+  invocation = call(UNVERIFIED, products.recovery.slug, 0);
+  response = await invocation.response;
+  body = await response.json();
+  assert.equal(response.status, 201, JSON.stringify(body), "An authenticated Customer may acquire a free title before email verification.");
+  assert.equal(raw.prepare("SELECT email_verified FROM users WHERE id=?").get(UNVERIFIED.id).email_verified, 0);
+  order = orderByAttempt(raw, invocation.attempt);
+  assertFreeOrder(order);
+  assert.equal(raw.prepare("SELECT purchaser_user_id FROM native_product_entitlements WHERE order_id=?").get(order.id).purchaser_user_id, UNVERIFIED.id);
 
   const mismatchAttempt = nextAttempt();
   response = await acquire.handleNativeFreeAcquisitionRequest(

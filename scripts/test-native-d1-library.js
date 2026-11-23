@@ -71,11 +71,12 @@ async function main() {
   response = await library.handleAccountLibraryRequest(libraryRequest(OTHER.token), env, { nowMs: NOW, sessionOptions: { nowMs: NOW } });
   assert.equal((await response.json()).items.length, 0);
 
-  raw.prepare("UPDATE users SET email_verified=0,email_verified_at=NULL WHERE id=?").run(BUYER.id);
   response = await library.handleAccountLibraryRequest(buyerRequest(), env, { nowMs: NOW, sessionOptions: { nowMs: NOW } });
-  assert.equal((await response.json()).items.some(item => item.productId === product.id), false,
-    "A session without a verified identity must not receive native ownership links.");
-  raw.prepare("UPDATE users SET email_verified=1,email_verified_at=? WHERE id=?").run(ISO, BUYER.id);
+  assert.equal((await response.json()).items.some(item => item.productId === product.id), true,
+    "An authenticated Customer with an unverified email retains native ownership links.");
+  assert.equal(raw.prepare("SELECT email_verified FROM users WHERE id=?").get(BUYER.id).email_verified, 0);
+  response = await library.handleAccountLibraryRequest(libraryRequest(""), env, { nowMs: NOW, sessionOptions: { nowMs: NOW } });
+  assert.equal(response.status, 401, "An unauthenticated visitor must not receive a Customer library.");
 
   const coverUrl = new URL(nativeItem.coverImage, "https://example.test").toString();
   response = await covers.handleAccountLibraryCoverRequest(ownedRequest(coverUrl, BUYER.token), env, { nowMs: NOW, accountSessionOptions: { nowMs: NOW } });
@@ -168,6 +169,10 @@ async function paidNativeFixture(nativeOrders, ownership, db, raw, product) {
     authorSlugsJson: '["rv-sawyer"]', catalogRevision: product.revision, createdAt: ISO,
     currency: "USD", deliveryContentType: product.deliveryContentType,
     deliveryFilename: product.deliveryFilename, deliveryR2Key: product.deliveryR2Key,
+    creatorFeeBasisPoints: 2000, creatorFeePolicyReason: "test_standard",
+    creatorFeePolicyEffectiveAt: ISO, creatorCommissionCategory: "standard",
+    creatorCommissionPolicyVersion: "test-policy-v1", creatorFirstPublishedAt: null,
+    creatorFixedFeeCents: 0, creatorReserveDays: 0,
     effectiveUnitPriceCents: 725, lastUpdatedSnapshot: product.updatedAt, lineTotalCents: 725,
     listPriceCents: 725, minimumPriceCents: null, nativeCreatorId: product.creatorId,
     nativeProductId: product.id, pricingModel: "fixed", primaryAuthorSlug: "rv-sawyer",
@@ -203,7 +208,7 @@ function seedLegacy(raw, userId, slug, title, key, filename) {
 
 async function seedUser(raw, auth, user) {
   raw.prepare(`INSERT INTO users(id,email_normalized,email_verified,email_verified_at,status,role,created_at,updated_at)
-    VALUES(?,?,1,?,'active','user',?,?)`).run(user.id, user.email, ISO, ISO, ISO);
+    VALUES(?,?,0,NULL,'active','user',?,?)`).run(user.id, user.email, ISO, ISO);
   raw.prepare(`INSERT INTO sessions(id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at)
     VALUES(?,?,?,?,?,?,?)`).run(`${user.id}-session`, user.id, await auth.hashToken(user.token),
     await auth.hashToken(`${user.id}-csrf`), ISO, "2027-10-30T20:00:00.000Z", ISO);

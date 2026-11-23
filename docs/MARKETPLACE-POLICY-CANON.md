@@ -174,7 +174,7 @@ Do not invent final counsel-approved legal boilerplate, data-retention periods, 
 
 ## 16. Verified purchases and durable ownership
 
-Every paid, Free, or PWYW-at-$0 acquisition requires a verified email. A signed-in customer uses the verified account email without redundant verification. A guest verifies the checkout email through a short-lived challenge but is never required to create an account. Orders and entitlements retain the verified-email association for delivery, recovery, support, later account claim, and fraud protection. Anonymous acquisition is not permitted.
+An authenticated Customer may complete paid, Free, or PWYW-at-$0 acquisitions without verifying the account email. A guest verifies the checkout email through a short-lived challenge but is never required to create an account. Orders and entitlements retain the purchase email association for delivery, recovery, support, later account claim, and fraud protection. Anonymous acquisition is not permitted.
 
 The marketplace prevents an ordinary repeat purchase of a durable digital product when ownership is established through the account or verified email. Existing owners are directed to My Library or order recovery and retain repeat-download access.
 
@@ -188,7 +188,7 @@ Creator-facing service purchases—including Preferred fees, additional-identity
 
 Unused Ad Credits do not expire, are not cash-equivalent, cannot be transferred or redeemed for money, and are not refundable merely because they remain unused. Redeemed credits begin the settled 30-day slot period; removing or swapping an ad and receiving no clicks or sales do not create refund rights. A genuine TRG-caused slot-delivery failure may be corrected through restored service time/capacity or, when appropriate, an operator-approved refund.
 
-Confirmed fraudulent customers may have accounts suspended and verified-email purchase access blocked. Guest fraud blocks use the verified email. IP, session, device, network, and provider signals are supporting evidence rather than permanent identity by themselves. Blocks are internal, auditable, and reversible by an operator.
+Confirmed fraudulent customers may have accounts suspended or account-associated purchase access blocked. Guest fraud blocks use the verified checkout email. IP, session, device, network, and provider signals are supporting evidence rather than permanent identity by themselves. Blocks are internal, auditable, and reversible by an operator.
 
 ## 18. Creator balances and requested payouts
 

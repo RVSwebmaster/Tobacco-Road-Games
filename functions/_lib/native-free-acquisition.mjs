@@ -54,8 +54,8 @@ export async function handleNativeFreeAcquisitionRequest(request, env = {}, opti
   const session = options.accountSession === undefined
     ? await getSessionFromRequest(request, env, options.accountSessionOptions || {})
     : options.accountSession;
-  if (!session?.valid || session.user?.email_verified !== 1) {
-    return jsonResponse({ code: "verified_account_required", error: "Sign in with a verified account to acquire this product." }, 403);
+  if (!session?.valid || !session.user?.id) {
+    return jsonResponse({ code: "authenticated_account_required", error: "Sign in to acquire this product." }, 403);
   }
 
   let order = await getPreparedOrderByCheckoutAttempt(database, checkoutAttemptId);

@@ -109,12 +109,12 @@ function d1(raw) {
 
 function assertNavigationAndRoutes() {
   const build = fs.readFileSync(path.join(ROOT, "scripts", "build-store.js"), "utf8");
-  assert.match(build, /href: "\/forum", label: "Community Forum"/, "Generated public and store navigation must include Community Forum.");
+  assert.doesNotMatch(build, /href: "\/forum", label: "Community Forum"/, "Deferred Forum must not be exposed by the storefront generator.");
   const account = fs.readFileSync(path.join(ROOT, "account.html"), "utf8");
-  assert.match(account, /href="\/forum">Community Forum<\/a>/, "Account navigation must include Community Forum.");
+  assert.doesNotMatch(account, /href="\/forum"|forum-profile-panel|forum-profile-form/i, "The account experience must not expose Forum navigation or profile controls.");
   for (const page of ["index.html", "support.html"]) {
     const source = fs.readFileSync(path.join(ROOT, page), "utf8");
-    assert.match(source, /href="\/forum">Community Forum<\/a>/, `${page} navigation must include Community Forum.`);
+    assert.doesNotMatch(source, /href="\/forum">Community Forum<\/a>/, `${page} must not expose the deferred Forum entry point.`);
   }
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   assert.ok(routes.include.includes("/forum/member/*") && routes.include.includes("/api/forum/*"));

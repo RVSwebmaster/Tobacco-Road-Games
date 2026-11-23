@@ -100,7 +100,7 @@ export async function handleNativeOrderPreparationRequest(request, env = {}, opt
   if (!options.skipIdentityChecks) {
     try {
       if (session?.user && String(session.user.email || session.user.email_normalized || "").toLowerCase() !== email.normalized) {
-        const error = new Error("Use the verified email address on your signed-in account.");
+        const error = new Error("Use the email address on your signed-in account.");
         error.code = "account_email_mismatch";
         throw error;
       }

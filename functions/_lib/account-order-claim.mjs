@@ -9,7 +9,6 @@ export async function handleAccountOrderClaimRequest(request, env = {}, options 
   const session = await getSessionFromRequest(request, env, options.sessionOptions || {});
   if (!session.valid) return denied("Sign in to recover a purchase.", 401);
   if (!validateSameOriginRequest(request) || !(await validateSessionCsrf(request, session)).valid) return denied("The recovery request could not be verified.", 403);
-  if (Number(session.user.email_verified) !== 1) return denied("Verify your account email before recovering a purchase.", 403);
   const body = await readJson(request);
   const credential = String(body?.credential || "").trim();
   if (!credential || credential.length > 2048) return denied();

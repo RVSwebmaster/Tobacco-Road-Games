@@ -71,7 +71,7 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
   }
   const customerEmailHash = await createCustomerEmailHash(email.normalized, emailHashSecret);
   if (customerEmailHash !== order.customer_email_hash) {
-    return jsonResponse({ code: "order_identity_mismatch", error: "The verified customer identity does not match this order." }, 403);
+    return jsonResponse({ code: "order_identity_mismatch", error: "The signed-in customer identity does not match this order." }, 403);
   }
   const session = options.accountSession === undefined
     ? await optionalAccountSession(request, env, options)
@@ -90,7 +90,7 @@ export async function handleNativeStripePaymentRequest(request, env = {}, option
         throw error;
       }
       if (session?.user && String(session.user.email || session.user.email_normalized || "").toLowerCase() !== email.normalized) {
-        const error = new Error("Use the verified email address on your signed-in account.");
+        const error = new Error("Use the email address on your signed-in account.");
         error.code = "account_email_mismatch";
         throw error;
       }

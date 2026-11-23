@@ -24,13 +24,13 @@ async function main() {
   const { raw, db } = database();
   raw.exec("UPDATE runtime_settings SET setting_value='OPEN' WHERE setting_key='store_state'");
   raw.prepare(`INSERT INTO users(id,email_normalized,email_verified,email_verified_at,status,role,created_at,updated_at)
-    VALUES(?,?,1,?,'active','user',?,?)`).run(BUYER.id, BUYER.email, ISO, ISO, ISO);
+    VALUES(?,?,0,NULL,'active','user',?,?)`).run(BUYER.id, BUYER.email, ISO, ISO);
 
   const productBase = {
     creatorId: "creator-rv-sawyer", publicationState: "published", status: "available-direct",
     buyMode: "cart", pricingModel: "fixed", priceCents: 600, currency: "USD",
     coverR2Key: "catalog-publications/task2i/cover.webp",
-    deliveryR2Key: "catalog-publications/task2i/private-delivery.pdf",
+    deliveryR2Key: "catalog-publications/task2i-fixed/delivery.pdf",
     deliveryFilename: "task2i.pdf", deliveryContentType: "application/pdf",
     metadata: { authors: ["RV Sawyer"], authorSlugs: ["rv-sawyer"], version: "2.1" }
   };
@@ -41,8 +41,16 @@ async function main() {
     ...productBase, id: "task2i-pwyw", slug: "task2i-pwyw", title: "Task 2I PWYW",
     status: "pay-what-you-want", pricingModel: "pwyw", priceCents: 900,
     minimumPriceCents: 300, suggestedPriceCents: 900,
-    deliveryR2Key: "catalog-publications/task2i/private-pwyw.pdf",
+    deliveryR2Key: "catalog-publications/task2i-pwyw/delivery.pdf",
     deliveryFilename: "task2i-pwyw.pdf", metadata: { ...productBase.metadata, version: "3.4" }
+  }, { nowMs: NOW });
+  await catalog.createProduct(db, {
+    ...productBase, id: "task2i-unpaid", slug: "task2i-unpaid", title: "Task 2I Unpaid",
+    deliveryR2Key: "catalog-publications/task2i-unpaid/delivery.pdf"
+  }, { nowMs: NOW });
+  await catalog.createProduct(db, {
+    ...productBase, id: "task2i-recovery", slug: "task2i-recovery", title: "Task 2I Recovery",
+    deliveryR2Key: "catalog-publications/task2i-recovery/delivery.pdf"
   }, { nowMs: NOW });
 
   const purchase = await prepareOrder(preparation, db, [
@@ -66,7 +74,7 @@ async function main() {
   assert.equal(order.payment_status, "paid");
   assert.equal(order.native_order_state, "paid");
   assert.equal(order.native_entitlement_status, "ready");
-  assert.equal(order.fulfillment_status, "pending", "Ownership must not activate native delivery.");
+  assert.equal(order.fulfillment_status, "ready", "The test bucket confirms delivery objects are present before entitlements become usable.");
 
   let owned = raw.prepare("SELECT * FROM native_product_entitlements WHERE order_id=? ORDER BY native_product_id").all(order.id);
   assert.equal(owned.length, 2, "One ownership entitlement is required for each purchased native product.");
@@ -111,11 +119,7 @@ async function main() {
   assert.equal(owned.find(row => row.native_product_id === "task2i-fixed").selected_price_cents_snapshot, 600);
   assert.equal(owned.find(row => row.native_product_id === "task2i-fixed").catalog_revision_snapshot, 1);
 
-  const unavailable = await catalog.getProductById(db, "task2i-fixed");
-  await catalog.updateProduct(db, unavailable.id, { publicationState: "published" }, {
-    expectedRevision: unavailable.revision, nowMs: NOW + 2500
-  });
-  const unpaid = await prepareOrder(preparation, db, [{ slug: "task2i-fixed", quantity: 1 }]);
+  const unpaid = await prepareOrder(preparation, db, [{ slug: "task2i-unpaid", quantity: 1 }]);
   let grant = await entitlements.grantNativePaidOrderEntitlements(db, unpaid.order.id, { nowMs: NOW });
   assert.equal(grant.result, "order_not_paid");
   raw.prepare("UPDATE orders SET payment_status='expired',native_order_state='canceled',fulfillment_status='canceled' WHERE id=?").run(unpaid.order.id);
@@ -127,11 +131,7 @@ async function main() {
   assert.equal(grant.result, "order_not_paid");
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM native_product_entitlements WHERE order_id IN (?,?)").get(unpaid.order.id, failed).n, 0);
 
-  const recoveryProduct = await catalog.getProductById(db, "task2i-pwyw");
-  await catalog.updateProduct(db, recoveryProduct.id, { publicationState: "published" }, {
-    expectedRevision: recoveryProduct.revision, nowMs: NOW + 3000
-  });
-  const recovery = await prepareOrder(preparation, db, [{ slug: "task2i-pwyw", quantity: 1, amountCents: 800 }]);
+  const recovery = await prepareOrder(preparation, db, [{ slug: "task2i-recovery", quantity: 1 }]);
   await payOrder(payment, db, recovery, stripeHarness(`cs_test_task2i_recovery_${++sequence}`));
   const recoveryOrder = orderByAttempt(raw, recovery.attempt);
   const recoveryEvent = stripeEvent(recoveryOrder, "evt_task2i_recovery");
@@ -172,9 +172,9 @@ async function prepareOrder(preparation, db, items) {
       checkoutAttemptId: attempt, email: BUYER.email, emailConfirmation: BUYER.email, items
     })
   }), { ORDER_EMAIL_HASH_SECRET: EMAIL_SECRET, TRG_ORDERS: db }, {
-    accountSession: { user: { email: BUYER.email, id: BUYER.id } }, includeNative: true, now: NOW,
+    accountSession: { valid: true, user: { email: BUYER.email, email_verified: 0, id: BUYER.id, role: "user", status: "active" } }, includeNative: true, now: NOW,
     publicIdGenerator: () => `TRG-TASK2I-${String(sequence).padStart(4, "0")}`,
-    skipIdentityChecks: true
+    skipIdentityChecks: false
   });
   const body = await response.json();
   assert.equal(response.status, 201, JSON.stringify(body));
@@ -191,8 +191,8 @@ function payOrder(payment, db, fixture, stripe) {
     CHECKOUT_ACCESS_COOKIE_SECRET: COOKIE_SECRET, ORDER_EMAIL_HASH_SECRET: EMAIL_SECRET,
     PAYMENT_PIPELINE_STAGE: "staging", STRIPE_SECRET_KEY: "sk_test_task2i", TRG_ORDERS: db
   }, {
-    accountSession: { user: { email: BUYER.email, id: BUYER.id } }, now: NOW,
-    skipIdentityChecks: true, stripeFetchImpl: stripe.fetch
+    accountSession: { valid: true, user: { email: BUYER.email, email_verified: 0, id: BUYER.id, role: "user", status: "active" } }, now: NOW,
+    skipIdentityChecks: false, stripeFetchImpl: stripe.fetch
   });
 }
 
@@ -227,7 +227,7 @@ async function deliver(webhook, db, event) {
   const body = JSON.stringify(event);
   return webhook.handleStripeWebhookRequest(new Request("https://example.test/api/stripe/webhook", {
     method: "POST", headers: { "stripe-signature": await signature(body) }, body
-  }), { PAYMENT_PIPELINE_STAGE: "staging", STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db }, { nowMs: NOW });
+  }), { PAYMENT_PIPELINE_STAGE: "staging", STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db, TRG_PRODUCTS: { head: async () => ({}) } }, { nowMs: NOW });
 }
 
 async function signature(body) {

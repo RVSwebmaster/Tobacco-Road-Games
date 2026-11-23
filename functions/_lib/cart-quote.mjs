@@ -131,7 +131,7 @@ export async function handleCartQuoteRequest(request, options = {}) {
 
   const nativeFreeAcquisition = hasNative && !hasLegacy && quotedItems.length > 0
     && unavailableItems.length === 0 && subtotalCents === 0;
-  // A signed-in, verified customer may use native paid checkout even while the
+  // A signed-in customer may use native paid checkout even while the
   // separately gated guest-purchase path remains disabled. The checkout
   // endpoint repeats identity and availability validation before it creates an
   // order; this only keeps the cart UI from incorrectly blocking that path.
@@ -139,7 +139,7 @@ export async function handleCartQuoteRequest(request, options = {}) {
   if (hasNative && !hasLegacy && quotedItems.length > 0 && unavailableItems.length === 0 && subtotalCents > 0 && options.env) {
     try {
       const session = await getSessionFromRequest(request, options.env);
-      authenticatedNativeCheckout = Boolean(session?.valid && session?.user && Number(session.user.email_verified) === 1);
+      authenticatedNativeCheckout = Boolean(session?.valid && session?.user?.id);
     } catch {
       authenticatedNativeCheckout = false;
     }

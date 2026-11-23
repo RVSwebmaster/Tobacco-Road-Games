@@ -125,7 +125,7 @@ async function main() {
     ORDER_ACCESS_SIGNING_SECRET: ACCESS_SECRET, PAYMENT_PIPELINE_STAGE: "staging",
     PUBLIC_SITE_ORIGIN: "https://example.test", RESEND_API_KEY: "re_task2pb_test",
     RESEND_DELIVERY_ENABLED: "true", RESEND_REPLY_TO: "support@example.test",
-    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db
+    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db, TRG_PRODUCTS: { head: async () => ({}) }
   };
   const deliveryFetchImpl = async (_url, options) => {
     deliveryCalls.push({ body: String(options.body), key: options.headers["idempotency-key"] });
@@ -172,6 +172,8 @@ async function main() {
 
   await seedUser(raw, auth, { id: "task2pa-buyer", email: EMAIL, token: "task2pa-buyer-token", csrf: "task2pa-buyer-csrf" });
   await seedUser(raw, auth, { id: "task2pa-other", email: "other-task2pa@example.test", token: "task2pa-other-token", csrf: "task2pa-other-csrf" });
+  assert.equal(raw.prepare("SELECT email_verified FROM users WHERE id='task2pa-buyer'").get().email_verified, 0,
+    "A signed-in Customer can recover a matching purchase without verifying email.");
   const orderAccess = await access.ensureActiveOrderAccessCredential(db, order, ACCESS_SECRET, {
     expiresAt: new Date(NOW + 30 * 86400000).toISOString(), nowMs: NOW
   });
@@ -278,7 +280,7 @@ async function main() {
 
   assert.throws(() => raw.prepare("UPDATE native_product_entitlements SET purchaser_user_id='task2pa-other' WHERE order_id=?").run(order.id), /not authorized/);
   raw.close();
-  console.log("Native guest purchase notification and verified account-claim tests passed.");
+  console.log("Native guest purchase notification and unverified account-claim tests passed.");
 }
 
 function baseEnv(db) {
@@ -320,7 +322,7 @@ async function webhookRequest(order) {
 
 async function seedUser(raw, auth, user) {
   raw.prepare(`INSERT INTO users(id,email_normalized,email_verified,email_verified_at,status,role,created_at,updated_at)
-    VALUES(?,?,1,?,'active','user',?,?)`).run(user.id, user.email, ISO, ISO, ISO);
+    VALUES(?,?,0,NULL,'active','user',?,?)`).run(user.id, user.email, ISO, ISO);
   raw.prepare(`INSERT INTO sessions(id,user_id,token_hash,csrf_token_hash,created_at,expires_at,last_seen_at)
     VALUES(?,?,?,?,?,?,?)`).run(`${user.id}-session`, user.id, await auth.hashToken(user.token), await auth.hashToken(user.csrf), ISO,
     new Date(NOW + 86400000).toISOString(), ISO);

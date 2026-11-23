@@ -11,24 +11,6 @@
   };
   const resetPanel = document.querySelector("#reset-panel");
   const resetForm = document.querySelector("#reset-form");
-  const forumPanel = document.querySelector("#forum-profile-panel");
-  const forumForm = document.querySelector("#forum-profile-form");
-  const forumHeading = document.querySelector("#forum-profile-heading");
-  const forumHandle = document.querySelector("#forum-handle");
-  const forumHandleStatus = document.querySelector("#forum-handle-status");
-  const forumProfileStatus = document.querySelector("#forum-profile-status");
-  const forumVerification = document.querySelector(
-    "#forum-profile-verification",
-  );
-  const forumSubmit = document.querySelector("#forum-profile-submit");
-  const avatarEditor = document.querySelector("#forum-avatar-editor");
-  const avatarPreview = document.querySelector("#forum-avatar-preview");
-  const avatarHandle = document.querySelector("#forum-avatar-handle");
-  const avatarFile = document.querySelector("#forum-avatar-file");
-  const avatarUpload = document.querySelector("#forum-avatar-upload");
-  const avatarDelete = document.querySelector("#forum-avatar-delete");
-  const avatarStatus = document.querySelector("#forum-avatar-status");
-  const avatarPresets = document.querySelector("#forum-avatar-presets");
   const libraryPanel = document.querySelector("#library-panel");
   const libraryStatus = document.querySelector("#library-status");
   const libraryList = document.querySelector("#library-list");
@@ -70,10 +52,7 @@
       "#creator-identity-management",
     ),
     creatorIdentityList = document.querySelector("#creator-identity-list");
-  let preparedAvatar = null;
-  let previewObjectUrl = "";
   let csrfToken = "";
-  let currentAccountEmailVerified = false;
   let pendingClaimCredential = "";
 
   const setStatus = (message, error = false) => {
@@ -125,18 +104,16 @@
     const payload = await response.json();
     csrfToken = payload.csrfToken || "";
     if (!payload.authenticated) {
-      currentAccountEmailVerified = false;
       if (accountAccessPanel) accountAccessPanel.hidden = false;
       if (accountSessionPanel) accountSessionPanel.hidden = true;
       summary.textContent = "No account is signed in.";
       signout.hidden = true;
-      if (forumPanel) forumPanel.hidden = true;
       if (libraryPanel) libraryPanel.hidden = true;
       if (accountProfilePanel) accountProfilePanel.hidden = true;
       if (creatorRegistrationPanel) creatorRegistrationPanel.hidden = true;
       setStatus(
         pendingClaimCredential
-          ? "Sign in or create an account with the same email used for the purchase. Verify the email before claiming."
+          ? "Sign in or create an account with the same email used for the purchase."
           : "Sign in or create a Tobacco Road Games account.",
       );
       return;
@@ -144,18 +121,10 @@
     if (accountAccessPanel) accountAccessPanel.hidden = true;
     if (accountSessionPanel) accountSessionPanel.hidden = false;
     summary.innerHTML = "";
-    currentAccountEmailVerified = Boolean(payload.user.emailVerified);
     const email = document.createElement("p");
     email.textContent = `Signed in as ${payload.user.email}`;
     summary.append(email);
     signout.hidden = false;
-    if (forumPanel) {
-      forumPanel.hidden = false;
-      refreshForumProfile(payload.user.emailVerified).catch((error) => {
-        forumProfileStatus.textContent = error.message;
-        forumProfileStatus.classList.add("discussion-status--error");
-      });
-    }
     refreshLibrary().catch((error) => {
       if (libraryStatus) libraryStatus.textContent = error.message;
     });
@@ -164,7 +133,7 @@
         accountProfileStatus.textContent = error.message;
     });
     if (pendingClaimCredential) {
-      presentPendingClaim(payload.user.emailVerified);
+      presentPendingClaim();
     } else {
       setStatus("Account loaded.");
     }
@@ -297,230 +266,6 @@
     }
   });
 
-  async function refreshForumProfile(emailVerified) {
-    const response = await fetch("/api/forum/profile/me", {
-      credentials: "same-origin",
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok)
-      throw new Error(
-        payload?.error?.message || "Your forum profile could not be loaded.",
-      );
-    const profile = payload.profile;
-    forumVerification.hidden = emailVerified || Boolean(profile);
-    if (profile) {
-      forumHeading.textContent = "Your Forum Profile";
-      forumHandle.value = profile.handle;
-      forumHandle.readOnly = true;
-      forumHandle.required = false;
-      forumHandleStatus.textContent = `Public profile: /forum/member/${profile.handle}`;
-      forumForm.elements.displayName.value = profile.displayName || "";
-      forumForm.elements.biography.value = profile.biography || "";
-      forumSubmit.textContent = "Save Profile";
-      forumSubmit.disabled = false;
-      forumForm.dataset.mode = "edit";
-      avatarEditor.hidden = false;
-      avatarHandle.textContent = `@${profile.handle}`;
-      avatarPreview.src =
-        profile.avatarUrl || "/assets/logo.png?v=forum-avatar-default";
-      avatarDelete.hidden = !profile.avatarUrl;
-      avatarPresets
-        ?.querySelectorAll('input[name="avatarPreset"]')
-        .forEach((input) => {
-          input.checked = input.value === profile.avatarPresetId;
-        });
-    } else {
-      forumHeading.textContent = "Create Forum Profile";
-      forumHandle.value = "";
-      forumHandle.readOnly = false;
-      forumHandle.required = true;
-      forumHandleStatus.textContent = "";
-      forumForm.elements.displayName.value = "";
-      forumForm.elements.biography.value = "";
-      forumSubmit.textContent = "Create Forum Profile";
-      forumSubmit.disabled = !emailVerified;
-      forumForm.dataset.mode = "create";
-      avatarEditor.hidden = true;
-    }
-  }
-
-  avatarFile?.addEventListener("change", async () => {
-    preparedAvatar = null;
-    avatarUpload.disabled = true;
-    const file = avatarFile.files?.[0];
-    if (!file) return;
-    if (file.size > 1024 * 1024) {
-      setAvatarStatus("Choose an image no larger than 1 MiB.", true);
-      return;
-    }
-    try {
-      preparedAvatar = await prepareAvatar(file);
-      if (!preparedAvatar || preparedAvatar.size > 1024 * 1024) {
-        preparedAvatar = null;
-        throw new Error("prepared avatar too large");
-      }
-      if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
-      previewObjectUrl = URL.createObjectURL(preparedAvatar);
-      avatarPreview.src = previewObjectUrl;
-      avatarUpload.disabled = false;
-      setAvatarStatus("Preview ready. Upload to save this avatar.");
-    } catch {
-      setAvatarStatus(
-        "That image could not be prepared. Choose a PNG, JPEG, or WebP image.",
-        true,
-      );
-    }
-  });
-
-  avatarUpload?.addEventListener("click", async () => {
-    if (!preparedAvatar) return;
-    try {
-      await avatarApi("POST", preparedAvatar);
-      preparedAvatar = null;
-      avatarFile.value = "";
-      avatarUpload.disabled = true;
-      await refreshForumProfile(true);
-      setAvatarStatus("Forum avatar updated.");
-    } catch (error) {
-      setAvatarStatus(error.message, true);
-    }
-  });
-
-  avatarPresets?.addEventListener("change", async (event) => {
-    const input = event.target.closest('input[name="avatarPreset"]');
-    if (!input) return;
-    try {
-      await avatarApi("POST", null, { presetId: input.value });
-      preparedAvatar = null;
-      avatarFile.value = "";
-      avatarUpload.disabled = true;
-      await refreshForumProfile(true);
-      setAvatarStatus("Built-in forum avatar selected.");
-    } catch (error) {
-      await refreshForumProfile(true);
-      setAvatarStatus(error.message, true);
-    }
-  });
-
-  avatarDelete?.addEventListener("click", async () => {
-    try {
-      await avatarApi("DELETE");
-      preparedAvatar = null;
-      avatarFile.value = "";
-      avatarUpload.disabled = true;
-      await refreshForumProfile(true);
-      setAvatarStatus("Default forum avatar restored.");
-    } catch (error) {
-      setAvatarStatus(error.message, true);
-    }
-  });
-
-  async function avatarApi(method, blob, jsonBody) {
-    const headers = {};
-    if (csrfToken) headers["x-csrf-token"] = csrfToken;
-    if (blob) headers["content-type"] = blob.type;
-    if (jsonBody) headers["content-type"] = "application/json";
-    const response = await fetch("/api/forum/profile/avatar", {
-      body: jsonBody ? JSON.stringify(jsonBody) : blob || undefined,
-      credentials: "same-origin",
-      headers,
-      method,
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok)
-      throw new Error(
-        payload?.error?.message || "The avatar request could not be completed.",
-      );
-    return payload;
-  }
-
-  async function prepareAvatar(file) {
-    const image = await loadImage(file);
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
-    const context = canvas.getContext("2d", { alpha: true });
-    const size = Math.min(image.naturalWidth, image.naturalHeight);
-    const left = (image.naturalWidth - size) / 2;
-    const top = (image.naturalHeight - size) / 2;
-    context.drawImage(image, left, top, size, size, 0, 0, 256, 256);
-    return (
-      (await canvasBlob(canvas, "image/webp", 0.9)) ||
-      (await canvasBlob(canvas, "image/png"))
-    );
-  }
-
-  function loadImage(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const image = new Image();
-      image.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(image);
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("invalid image"));
-      };
-      image.src = url;
-    });
-  }
-
-  function canvasBlob(canvas, type, quality) {
-    return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
-  }
-
-  function setAvatarStatus(message, error = false) {
-    avatarStatus.textContent = message;
-    avatarStatus.classList.toggle("discussion-status--error", error);
-  }
-
-  let availabilityRequest = 0;
-  forumHandle?.addEventListener("input", async () => {
-    if (forumHandle.readOnly) return;
-    const requestId = ++availabilityRequest;
-    const handle = forumHandle.value;
-    if (!handle) {
-      forumHandleStatus.textContent = "";
-      return;
-    }
-    const response = await fetch(
-      `/api/forum/handle-availability?handle=${encodeURIComponent(handle)}`,
-      { credentials: "same-origin" },
-    );
-    const payload = await response.json().catch(() => ({}));
-    if (requestId !== availabilityRequest) return;
-    forumHandleStatus.textContent = payload.available
-      ? "That handle is available. Final availability is checked when you create the profile."
-      : payload?.error?.message || "That handle is not available.";
-    forumHandleStatus.classList.toggle(
-      "discussion-status--error",
-      !payload.available,
-    );
-  });
-
-  forumForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
-    const editing = event.currentTarget.dataset.mode === "edit";
-    if (editing) delete data.handle;
-    try {
-      const payload = await api("/api/forum/profile", data, {
-        method: editing ? "PATCH" : "POST",
-      });
-      forumProfileStatus.textContent = editing
-        ? "Forum profile saved."
-        : "Forum profile created.";
-      forumProfileStatus.classList.remove("discussion-status--error");
-      await refreshForumProfile(true);
-      if (payload.profile)
-        forumHandleStatus.textContent = `Public profile: /forum/member/${payload.profile.handle}`;
-    } catch (error) {
-      forumProfileStatus.textContent = error.message;
-      forumProfileStatus.classList.add("discussion-status--error");
-    }
-  });
-
   document
     .querySelector("#signin-form")
     ?.addEventListener("submit", async (event) => {
@@ -609,10 +354,10 @@
       sessionStorage.setItem("trg.pendingPurchaseClaim", claim);
       url.searchParams.delete("claim");
       history.replaceState(null, "", url.toString());
-      presentPendingClaim(currentAccountEmailVerified);
+      presentPendingClaim();
     } else {
       pendingClaimCredential = sessionStorage.getItem("trg.pendingPurchaseClaim") || "";
-      if (pendingClaimCredential) presentPendingClaim(currentAccountEmailVerified);
+      if (pendingClaimCredential) presentPendingClaim();
     }
     if (verify) {
       try {
@@ -632,22 +377,16 @@
     }
   }
 
-  function presentPendingClaim(emailVerified) {
+  function presentPendingClaim() {
     if (!pendingClaimCredential || !recoveryForm) return;
     const recovery = document.querySelector("#purchase-recovery");
     if (recovery) recovery.open = true;
     recoveryForm.elements.accessLink.value = `${window.location.origin}/store/order-access?credential=${encodeURIComponent(pendingClaimCredential)}`;
     if (recoveryStatus) {
-      recoveryStatus.textContent = emailVerified
-        ? "This purchase is ready to claim. Confirm below to add it to My Library."
-        : "Sign in with the purchase email and verify it before claiming.";
+      recoveryStatus.textContent = "Confirm below to add this purchase to My Library.";
       recoveryStatus.classList.remove("discussion-status--error");
     }
-    setStatus(
-      emailVerified
-        ? "Purchase access verified. Confirm the claim in My Library below."
-        : "Sign in or create an account with the same email used for the purchase.",
-    );
+    setStatus("Confirm the purchase claim in My Library below.");
   }
 
   async function refreshRegistrationPanels() {
