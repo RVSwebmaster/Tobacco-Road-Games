@@ -13,7 +13,7 @@ Status verified 2026-11-23 against the current production baseline and the Phase
 
 `renderMemberProfilePage()` is the sole Profile renderer for Customer, Creator, Founding-25, Premium Creator, Admin, and Owner. The six route files are temporary entry points. They retain the accepted cabinet, identity board, approved tier badges, shelves, lighting, framed display, responsive assets, and shared styling. Authenticated account data supplies the identity and class; a URL alone grants no privilege.
 
-The Profile shelf belongs to the logged-in viewer. No persistent shelf-selection system is established, so the shelves remain empty instead of guessing a purchase selection or physical capacity. Detailed visibility rules and persistent shelf selection remain unfinished.
+The Profile shelf belongs to the logged-in viewer. No active persistent shelf-selection path is established, so the shelves remain empty instead of guessing a purchase selection or physical capacity. Staging retains unused schema from historical migration 055 for shelf selections and Profile customization; current application code does not use it, and production does not have those tables. Detailed visibility rules and active persistent shelf selection remain unfinished.
 
 ## Creator Dashboard
 
