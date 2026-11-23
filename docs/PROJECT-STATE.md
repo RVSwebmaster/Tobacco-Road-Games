@@ -1,15 +1,16 @@
 # TRG project state
 
-Status verified 2026-11-23. This record distinguishes the live production baseline, old development line, and the Phase 3A reconstruction candidate.
+Status verified 2026-11-23 after Phase 3B. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work.
 
 ## Git and production truth
 
 - Production source and `main`: `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6`.
 - Active production Pages deployment: `ced34184-fd94-44bc-a9c8-53861774cede`; production is marked clean and the storefront remains **CLOSED**.
 - Production bindings: D1 `TRG_ORDERS` → `7e2cd675-a6f1-4fac-bbc9-03485a806c26`; R2 `TRG_PRODUCTS` → `trg-products`.
-- Ongoing `development` remains at `e796fd8fd8b4aad8eeb61f284eec0d029b2552a6` until Friday accepts the reconstruction. Its complete pre-reconciliation history remains preserved remotely.
-- `reconcile/development-2026-11-23` starts from `main` at `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6`. It is a review candidate only. Phase 3A does not move `development`, deploy, or modify production/staging.
-- Preservation refs for pre-reconciliation `main`, `development`, and production remain the rollback/recovery anchors recorded during Phase 1.
+- Canonical `development` contains the accepted Phase 3A reconstruction, based on `main`, followed by this documentation-only Phase 3B closeout. Phase 3B does not change application behavior, deploy, or modify production/staging.
+- Old pre-reconciliation `development` remains recoverable at `e796fd8fd8b4aad8eeb61f284eec0d029b2552a6` through remote preservation tag `preserve/pre-reconcile-2026-11-23-development-e796fd8`.
+- `reconcile/development-2026-11-23` remains preserved at accepted Phase 3A commit `8288d954cee35c323a577f05f744d94f09801fe8`; it descends from `main` and remains a historical reconstruction reference.
+- Preservation refs for pre-reconciliation `main` and production remain the rollback/recovery anchors recorded during Phase 1.
 
 ## Approved current behavior
 
