@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "description": "Explicit ledger for focused release migrations kept outside the numbered migration sequence.",
+  "migrations": [
+    {
+      "id": "account-profile-072",
+      "file": "ops/releases/account-profile-072/account-profile-072.sql",
+      "sha256": "95a67d3f3c1d09c1dd81b604297f7bf6589174288301f87780dc47b0867f2f0c",
+      "baseline": "Production numbered migration 072",
+      "purpose": "Customer registration state and authoritative Founding-25 assignment lookup required by the focused account/Profile release.",
+      "databaseBinding": "TRG_ORDERS",
+      "preconditions": {
+        "numberedSchemaVersion": 72,
+        "tables": ["users", "marketplace_creators"],
+        "effect": "Create only the two new empty tables and one index; preserve all existing rows."
+      },
+      "postconditions": {
+        "tables": ["customer_registration_states", "creator_commission_category_assignments"],
+        "indexes": ["idx_creator_commission_assignments_current"],
+        "customer_registration_statesColumns": ["user_id", "state", "activated_at", "created_at", "updated_at"],
+        "creator_commission_category_assignmentsColumns": ["id", "creator_id", "category", "effective_at", "revoked_at", "assigned_by_user_id", "reason", "created_at"]
+      },
+      "historicalVerification": {
+        "staging": {
+          "databaseId": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+          "verifiedAt": "2026-11-22T21:00:18Z",
+          "evidence": "Read-only sqlite_master and PRAGMA table_info checks confirmed both tables, all listed columns, and the required index."
+        },
+        "production": {
+          "databaseId": "7e2cd675-a6f1-4fac-bbc9-03485a806c26",
+          "verifiedAt": "2026-11-22T21:00:18Z",
+          "evidence": "Read-only sqlite_master and PRAGMA table_info checks confirmed both tables, all listed columns, and the required index."
+        }
+      }
+    }
+  ]
+}

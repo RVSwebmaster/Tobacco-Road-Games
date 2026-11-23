@@ -20,9 +20,16 @@ async function main() {
     for (const relativePath of builder.publicDirectories) {
       assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing public directory: ${relativePath}`);
     }
-    const creatorDashboard = fs.readFileSync(path.join(outputDirectory, "temp-creator", "index.html"), "utf8");
+    const redirects = fs.readFileSync(path.join(outputDirectory, "_redirects"), "utf8");
+    assert.match(redirects, /^\/temp-creator\/ \/creator-dashboard\/ 301\s*$/m, "The former temporary Dashboard URL must resolve to the canonical route.");
+    assert.doesNotMatch(redirects, /^\/creator-dashboard\/ \/temp-creator\//m, "The canonical Dashboard route must not redirect back to the temporary URL.");
+    assert.equal(builder.publicDirectories.includes("temp-creator"), false, "The retired temporary Dashboard directory must not be published.");
+    const creatorDashboard = fs.readFileSync(path.join(outputDirectory, "creator-dashboard", "index.html"), "utf8");
     assert.match(creatorDashboard, /creator-dashboard\.js\?v=/, "Creator Dashboard runtime is missing from its actual route.");
     assert.match(creatorDashboard, /id="creator-pdf-intake"/, "Creator PDF Intake is missing from the Dashboard.");
+    assert.match(creatorDashboard, /creator-dashboard-shop-wall/, "Accepted Creator furniture is missing from the Dashboard.");
+    assert.match(creatorDashboard, /upper-cabinet-creator-desktop\.png/, "Creator furniture must use its approved responsive cabinet artwork.");
+    assert.doesNotMatch(creatorDashboard, /creator-connect-dashboard|Open Stripe Express Dashboard/, "Shelved Stripe Express Dashboard UI must not be activated by route reconciliation.");
     const creatorProfile = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
     assert.match(creatorProfile, /<title>Member Profile \| Tobacco Road Games<\/title>/, "The /creator/ route must be the shared Creator Profile.");
     assert.match(creatorProfile, /data-member-profile-page/);

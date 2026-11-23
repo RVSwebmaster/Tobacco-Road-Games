@@ -1,0 +1,27 @@
+# TRG page architecture
+
+Status verified 2026-11-23 against the current production baseline and the Phase 3A candidate.
+
+## Storefront and account navigation
+
+- Guest is the canonical storefront composition. `scripts/build-store.js` owns the shared cabinet, page structure, and generated Guest/Customer pages.
+- Guest Login/Signup opens the compact approved login popup, which uses native TRG authentication. Successful login lands at `/customer`.
+- `/customer` is a session-protected Customer Storefront. Authenticated navigation keeps Account, Profile, and Logout actions; Profile routing follows the authenticated account class. Logout uses the existing server flow and returns to the public site. Signed-out requests do not receive Customer access.
+- Registration and login are native email/password. Normal Customer access does not require email verification or an email provider. Password recovery remains a separate email-dependent flow and is not required for login.
+
+## Shared Member Profile Base
+
+`renderMemberProfilePage()` is the sole Profile renderer for Customer, Creator, Founding-25, Premium Creator, Admin, and Owner. The six route files are temporary entry points. They retain the accepted cabinet, identity board, approved tier badges, shelves, lighting, framed display, responsive assets, and shared styling. Authenticated account data supplies the identity and class; a URL alone grants no privilege.
+
+The Profile shelf belongs to the logged-in viewer. No persistent shelf-selection system is established, so the shelves remain empty instead of guessing a purchase selection or physical capacity. Detailed visibility rules and persistent shelf selection remain unfinished.
+
+## Creator Dashboard
+
+`/creator-dashboard/` is a distinct Dashboard surface, separate from a Profile. Its template is `templates/creator-dashboard.html`; the generator inserts shared approved Creator furniture. `assets/js/creator-dashboard.js` owns Dashboard behavior, including PDF intake draft persistence checks. `assets/css/creator-dashboard.css` is a compatibility import of `assets/css/member-profile.css`, not a second furniture implementation. `/temp-creator/` is only a legacy redirect.
+
+## Boundaries
+
+- Customer Storefront and Guest storefront retain the production-approved behavior from `main`.
+- Creator catalog-cover rotation stays behind its existing default-off opt-in and is not activated by this reconstruction.
+- Forum, saved-card UI, D1-split Open Rules shelf presentation, Stripe Express sandbox, SMTP prototype, and other shelved or superseded variants are not restored as active page behavior.
+- Member account policy and membership relationships are defined in `MEMBER-ACCOUNT-ARCHITECTURE.md`; implementation status is kept separately in `PROJECT-STATE.md`.

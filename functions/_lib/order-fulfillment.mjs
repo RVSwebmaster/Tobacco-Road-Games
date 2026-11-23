@@ -4,6 +4,75 @@ import {
   getLegacyContinuityDelivery,
   isAgencyContinuitySlug
 } from "./legacy-product-continuity.mjs";
+import { getNativeOrderItemSnapshots } from "./native-orders-d1.mjs";
+import {
+  getNativeOrderEntitlements,
+  grantNativePaidOrderEntitlements,
+  markNativeDeliveryFailure,
+  markNativeEntitlementFailure
+} from "./native-entitlements-d1.mjs";
+
+export async function repairNativePaidOrderFulfillment(database, productsBucket, orderId, options = {}) {
+  const id = positiveInteger(orderId);
+  if (!id) return { ready: false, result: "order_not_found" };
+  const order = await getOrderById(database, id);
+  if (!order) return { ready: false, result: "order_not_found" };
+  if (order.payment_status !== "paid" || order.native_order_state !== "paid"
+    || order.catalog_source !== "native_d1" || order.payment_source !== "stripe"
+    || order.settlement_method !== "external_provider" || !order.stripe_payment_intent_id) {
+    return { order, ready: false, result: "order_not_paid" };
+  }
+  const items = await getNativeOrderItemSnapshots(database, id);
+  if (!items.length || items.some(item => !isValidNativeDeliverySnapshot(item))) {
+    const failedOrder = await markNativeEntitlementFailure(database, id, "native_entitlement_snapshot_invalid", options);
+    return { order: failedOrder, ready: false, result: "native_entitlement_snapshot_invalid" };
+  }
+  if (typeof productsBucket?.head !== "function") {
+    const failedOrder = await markNativeDeliveryFailure(database, id, "storage_binding_unavailable", options);
+    return { order: failedOrder, ready: false, result: "storage_binding_unavailable" };
+  }
+  try {
+    for (const item of items) {
+      const object = await productsBucket.head(item.delivery_r2_key_snapshot);
+      if (!object) {
+        const failedOrder = await markNativeDeliveryFailure(database, id, "object_missing", options);
+        return { order: failedOrder, ready: false, result: "object_missing" };
+      }
+    }
+  } catch {
+    const failedOrder = await markNativeDeliveryFailure(database, id, "storage_unavailable", options);
+    return { order: failedOrder, ready: false, result: "storage_unavailable" };
+  }
+
+  let entitlementResult;
+  try {
+    entitlementResult = await grantNativePaidOrderEntitlements(database, id, options);
+    if (!entitlementResult.ready) throw new Error(entitlementResult.result || "native_entitlement_not_ready");
+  } catch (error) {
+    await markNativeEntitlementFailure(database, id, "native_entitlement_processing_failed", options).catch(() => {});
+    throw error;
+  }
+  const updatedAt = nowIso(options.nowMs);
+  await database.prepare(`
+    UPDATE orders
+    SET fulfillment_status='ready',fulfillment_failure_code=NULL,fulfillment_updated_at=?
+    WHERE id=? AND catalog_source='native_d1' AND payment_status='paid'
+      AND native_order_state='paid' AND native_entitlement_status='ready'
+  `).bind(updatedAt, id).run();
+  const repairedOrder = await getOrderById(database, id);
+  const entitlements = await getNativeOrderEntitlements(database, id, { activeOnly: true });
+  if (repairedOrder?.fulfillment_status !== "ready" || entitlements.length !== items.length) {
+    const failedOrder = await markNativeDeliveryFailure(database, id, "native_fulfillment_reconciliation_failed", options);
+    return { entitlements, order: failedOrder, ready: false, result: "native_fulfillment_reconciliation_failed" };
+  }
+  return {
+    entitlementCount: entitlements.length,
+    entitlements,
+    order: repairedOrder,
+    ready: true,
+    result: entitlementResult.result
+  };
+}
 
 export async function repairPaidOrderFulfillment(database, productsBucket, orderId, options = {}) {
   const normalizedOrderId = positiveInteger(orderId);
@@ -265,6 +334,20 @@ async function allRows(statement) {
 function positiveInteger(value) {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function isValidNativeDeliverySnapshot(item) {
+  const key = String(item?.delivery_r2_key_snapshot || "");
+  const filename = String(item?.delivery_filename_snapshot || "");
+  return item?.catalog_source === "native_d1"
+    && key.startsWith("catalog-publications/")
+    && key.endsWith("/delivery.pdf")
+    && !key.includes("\\")
+    && !key.split("/").includes("..")
+    && filename.length > 4 && filename.length <= 180
+    && filename.toLowerCase().endsWith(".pdf")
+    && !/[\\/\r\n\"]/.test(filename)
+    && String(item?.delivery_content_type_snapshot || "").toLowerCase() === "application/pdf";
 }
 
 function nonNegativeInteger(value) {

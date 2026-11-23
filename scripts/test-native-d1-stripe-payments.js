@@ -17,6 +17,7 @@ async function main() {
   const preparation = await load("functions/_lib/native-order-preparation.mjs");
   const payment = await load("functions/_lib/native-stripe-payment.mjs");
   const webhook = await load("functions/_lib/stripe-webhook.mjs");
+  const liabilityModule = await load("functions/_lib/creator-liability.mjs");
   const { raw, db } = database();
   raw.exec("UPDATE runtime_settings SET setting_value='OPEN' WHERE setting_key='store_state'");
   const base = {
@@ -75,16 +76,71 @@ async function main() {
   storedOrder = orderByAttempt(raw, fixed.attempt);
   assert.equal(storedOrder.payment_status, "paid");
   assert.equal(storedOrder.native_order_state, "paid");
-  assert.equal(storedOrder.fulfillment_status, "pending", "Native payment must not activate fulfillment.");
+  assert.equal(storedOrder.fulfillment_status, "ready", "Paid native fulfillment should activate only after the purchased object is verified.");
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM native_product_entitlements WHERE order_id=?").get(storedOrder.id).n, 1);
   assert.equal(count(raw, "download_entitlements"), 0);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM creator_sale_snapshots WHERE order_id=?").get(storedOrder.id).n, 0);
-  assert.equal(raw.prepare("SELECT COUNT(*) n FROM creator_earnings_ledger WHERE order_id=?").get(storedOrder.id).n, 0);
+  const firstNativeSale = raw.prepare("SELECT * FROM creator_sale_snapshots WHERE order_id=?").get(storedOrder.id);
+  assert.equal(firstNativeSale.creator_id, "creator-rv-sawyer");
+  assert.equal(firstNativeSale.gross_cents, 500);
+  assert.equal(firstNativeSale.fee_basis_points, 2000);
+  assert.equal(firstNativeSale.marketplace_fee_cents, 100);
+  assert.equal(firstNativeSale.creator_net_cents, 400);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM creator_earnings_ledger WHERE order_id=? AND entry_type='sale_earning'").get(storedOrder.id).n, 1);
+  assert.equal(raw.prepare("SELECT SUM(amount_cents) amount FROM creator_earnings_ledger WHERE order_id=? AND entry_type='sale_earning'").get(storedOrder.id).amount, 400);
+
+  // Exercise fee delay through a paid native order webhook. Confirmation and
+  // delivery succeed, but the versioned Creator earning remains held until a
+  // signed charge.updated event supplies matching Balance Transaction data.
+  const feeNow = Date.parse("2026-11-19T22:00:00.000Z");
+  const priorLiability = await liabilityModule.getCreatorLiability(db, "creator-rv-sawyer", { nowMs: feeNow });
+  const feeOrder = await prepareOrder(preparation, db, "task2h-fixed", undefined, feeNow);
+  const feeStripe = stripeHarness("cs_test_task2h_fee_delayed");
+  assert.equal((await payOrder(payment, db, feeOrder, feeStripe, {}, { now: feeNow })).status, 201);
+  const feePendingOrder = await db.prepare("SELECT * FROM orders WHERE id=?").bind(feeOrder.order.id).first();
+  const feePaymentEvent = stripeEvent(feePendingOrder, { id: "evt_task2h_fee_order_paid" });
+  feePaymentEvent.created = Math.floor(feeNow / 1000);
+  const feePaid = await deliver(webhook, db, feePaymentEvent, feeNow);
+  assert.equal(feePaid.status, 200, JSON.stringify(await feePaid.clone().json()));
+  const feePaidOrder = await db.prepare("SELECT * FROM orders WHERE id=?").bind(feeOrder.order.id).first();
+  const feeSaleSnapshot = await db.prepare("SELECT account_category,account_category_verified FROM creator_sale_snapshots WHERE order_id=?").bind(feePaidOrder.id).first();
+  assert.equal(feeSaleSnapshot.account_category, "standard");
+  assert.equal(feeSaleSnapshot.account_category_verified, 1, "New policy snapshots carry a verified sale-time category.");
+  assert.equal((await db.prepare("SELECT status FROM stripe_order_fee_reconciliations WHERE order_id=?").bind(feePaidOrder.id).first()).status, "pending");
+  const heldLiability = await liabilityModule.getCreatorLiability(db, "creator-rv-sawyer", { nowMs: feeNow });
+  assert.equal(heldLiability.heldBalanceCents, 450);
+  assert.equal(heldLiability.availableBalanceCents, priorLiability.availableBalanceCents,
+    "Unreconciled native earnings must not increase the Creator's available balance.");
+  assert.equal(heldLiability.payoutEligibleCents, priorLiability.payoutEligibleCents,
+    "Unreconciled native earnings cannot become payable alongside existing earnings.");
+  const chargeEvent = { api_version: API_VERSION, created: Math.floor(feeNow / 1000), data: { object: {
+    object: "charge", id: "ch_task2h_delayed_fee", payment_intent: feePaidOrder.stripe_payment_intent_id,
+    amount: 500, amount_captured: 500, currency: "usd", balance_transaction: "txn_task2hdelayedfee"
+  } }, id: "evt_task2h_delayed_fee", livemode: false, object: "event", type: "charge.updated" };
+  const feeResponse = await deliver(webhook, db, chargeEvent, feeNow, async url => {
+    assert.match(String(url), /\/balance_transactions\/txn_task2hdelayedfee$/);
+    return { ok: true, status: 200, async json() { return { id: "txn_task2hdelayedfee", object: "balance_transaction", source: "ch_task2h_delayed_fee",
+      amount: 500, currency: "usd", fee: 5, net: 495,
+      fee_details: [{ type: "stripe_fee", amount: 5, currency: "usd" }] }; } };
+  });
+  assert.equal(feeResponse.status, 200, JSON.stringify(await feeResponse.clone().json()));
+  const reconciledFee = await db.prepare("SELECT status,processing_fee_cents FROM stripe_order_fee_reconciliations WHERE order_id=?").bind(feePaidOrder.id).first();
+  assert.deepEqual(Object.fromEntries(Object.entries(reconciledFee)), { status: "reconciled", processing_fee_cents: 5 });
+  const reconciledLiability = await liabilityModule.getCreatorLiability(db, "creator-rv-sawyer", { nowMs: feeNow });
+  assert.equal(reconciledLiability.heldBalanceCents, 0);
+  assert.equal(reconciledLiability.pendingBalanceCents, 445, "After fee reconciliation, the ordinary sale reserve still prevents premature payability.");
+  assert.equal(reconciledLiability.payoutEligibleCents, priorLiability.payoutEligibleCents);
 
   response = await deliver(webhook, db, event);
   body = await response.json();
   assert.equal(response.status, 200);
   assert.equal(body.duplicate, true);
   assert.equal(raw.prepare("SELECT COUNT(*) n FROM webhook_events WHERE provider_event_id='evt_task2h_fixed_paid'").get().n, 1);
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM native_product_entitlements WHERE order_id=?").get(storedOrder.id).n, 1,
+    "A duplicate paid webhook must not create another native entitlement.");
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM creator_sale_snapshots WHERE order_id=?").get(storedOrder.id).n, 1,
+    "A duplicate paid webhook must not create another Creator sale snapshot.");
+  assert.equal(raw.prepare("SELECT COUNT(*) n FROM creator_earnings_ledger WHERE order_id=? AND entry_type='sale_earning'").get(storedOrder.id).n, 1,
+    "A duplicate paid webhook must not create another Creator earning.");
   response = await deliver(webhook, db, stripeEvent(storedOrder, {
     id: "evt_task2h_fixed_late_expired", paymentIntent: storedOrder.stripe_payment_intent_id,
     paymentStatus: "unpaid", type: "checkout.session.expired"
@@ -212,7 +268,7 @@ async function main() {
   console.log("Native D1 Stripe payment tests passed.");
 }
 
-async function prepareOrder(preparation, db, slug, amountCents) {
+async function prepareOrder(preparation, db, slug, amountCents, nowMs = NOW) {
   sequence += 1;
   const attempt = `trgca_2${String(sequence).padStart(7, "0")}-0000-4000-8000-${String(sequence).padStart(12, "0")}`;
   const items = [{ slug, quantity: 1 }];
@@ -222,7 +278,7 @@ async function prepareOrder(preparation, db, slug, amountCents) {
       checkoutAttemptId: attempt, email: "buyer@example.test", emailConfirmation: "buyer@example.test", items
     })
   }), { ORDER_EMAIL_HASH_SECRET: EMAIL_SECRET, TRG_ORDERS: db }, {
-    accountSession: null, includeNative: true, now: NOW,
+    accountSession: null, includeNative: true, now: nowMs,
     publicIdGenerator: () => `TRG-TASK2H-${String(sequence).padStart(4, "0")}`,
     skipIdentityChecks: true
   });
@@ -285,13 +341,25 @@ function stripeEvent(order, overrides = {}) {
   };
 }
 
-async function deliver(webhook, db, event) {
+async function deliver(webhook, db, event, nowMs = NOW, stripeFetchImpl) {
   const raw = JSON.stringify(event);
-  return webhook.handleStripeWebhookRequest(webhookRequest(raw, await signature(raw)), webhookEnv(db), { nowMs: NOW });
+  return webhook.handleStripeWebhookRequest(webhookRequest(raw, await signature(raw, nowMs)), webhookEnv(db), {
+    nowMs, stripeFetchImpl, stripeSecretKey: "sk_test_isolated", pipelineStage: "staging"
+  });
 }
 
 function webhookEnv(db) {
-  return { PAYMENT_PIPELINE_STAGE: "staging", STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET, TRG_ORDERS: db };
+  return {
+    PAYMENT_PIPELINE_STAGE: "staging",
+    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
+    STRIPE_SECRET_KEY: "sk_test_isolated",
+    TRG_ORDERS: db,
+    TRG_PRODUCTS: {
+      async head(key) {
+        return key === "catalog-publications/task2h/delivery.pdf" ? { size: 1 } : null;
+      }
+    }
+  };
 }
 
 function webhookRequest(body, stripeSignature) {
@@ -300,8 +368,8 @@ function webhookRequest(body, stripeSignature) {
   });
 }
 
-async function signature(body) {
-  const timestamp = Math.floor(NOW / 1000);
+async function signature(body, nowMs = NOW) {
+  const timestamp = Math.floor(nowMs / 1000);
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(WEBHOOK_SECRET), { hash: "SHA-256", name: "HMAC" }, false, ["sign"]);
   const signed = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${body}`));
   return `t=${timestamp},v1=${Buffer.from(new Uint8Array(signed)).toString("hex")}`;

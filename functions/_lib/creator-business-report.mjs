@@ -1,3 +1,4 @@
+
 export function resolveReportPeriod({
   period = "month",
   value = "",
@@ -313,8 +314,4 @@ function sum(rows, key) {
 async function rows(statement) {
   const result = await statement.all();
   return result.results || [];
-}
-function csv(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

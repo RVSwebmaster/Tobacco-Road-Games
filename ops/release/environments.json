@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "preview": {
+    "projectName": "trg-member-tier-test-20261120",
+    "deploymentBranch": "test",
+    "deploymentEnvironment": "Preview",
+    "projectProductionBranch": "trg-member-tier-production-guard",
+    "publicOrigin": "https://trg-member-tier-test-20261120.pages.dev",
+    "bindings": {
+      "preview": {
+        "d1": { "TRG_ORDERS": "6248efe2-c96d-457e-b705-376cf5485c04" },
+        "r2": {}
+      },
+      "production": {
+        "d1": { "TRG_ORDERS": "6248efe2-c96d-457e-b705-376cf5485c04" },
+        "r2": {}
+      }
+    },
+    "vars": {
+      "preview": {
+        "MARKETPLACE_WRITE_POLICY": "enabled",
+        "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
+        "NATIVE_GUEST_CLAIM_MODE": "disabled",
+        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
+        "PAYMENT_PIPELINE_STAGE": "staging",
+        "PUBLIC_SITE_ORIGIN": "https://trg-member-tier-test-20261120.pages.dev",
+        "RESEND_DELIVERY_ENABLED": "false"
+      },
+      "production": {
+        "MARKETPLACE_WRITE_POLICY": "enabled",
+        "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
+        "NATIVE_GUEST_CLAIM_MODE": "disabled",
+        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
+        "PAYMENT_PIPELINE_STAGE": "staging",
+        "PUBLIC_SITE_ORIGIN": "https://trg-member-tier-test-20261120.pages.dev",
+        "RESEND_DELIVERY_ENABLED": "false"
+      }
+    }
+  },
+  "staging": {
+    "projectName": "tobacco-road-games-staging",
+    "deploymentBranch": "staging",
+    "deploymentEnvironment": "Production",
+    "projectProductionBranch": "staging",
+    "publicOrigin": "https://tobacco-road-games-staging.pages.dev",
+    "bindings": {
+      "preview": {
+        "d1": { "TRG_ORDERS": "d92594e8-a45c-4f84-8f48-7c3aeba17f29" },
+        "r2": { "TRG_PRODUCTS": "trg-products-staging" }
+      },
+      "production": {
+        "d1": {
+          "TRG_OFFICE": "4c3ae60a-da41-4d65-aee5-a53179fc53f8",
+          "TRG_ORDERS": "d92594e8-a45c-4f84-8f48-7c3aeba17f29"
+        },
+        "r2": {
+          "TRG_FORUM_AVATARS": "trg-forum-avatars-staging",
+          "TRG_OFFICE_ARCHIVE": "trg-office-archive-staging",
+          "TRG_PRODUCTS": "trg-products-staging"
+        }
+      }
+    },
+    "vars": {
+      "preview": {
+        "MARKETPLACE_WRITE_POLICY": "disabled",
+        "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
+        "NATIVE_GUEST_CLAIM_MODE": "disabled",
+        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
+        "PAYMENT_PIPELINE_STAGE": "preview",
+        "RESEND_DELIVERY_ENABLED": "false"
+      },
+      "production": {
+        "MARKETPLACE_WRITE_POLICY": "enabled",
+        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
+        "PAYMENT_PIPELINE_STAGE": "staging",
+        "PUBLIC_SITE_ORIGIN": "https://tobacco-road-games-staging.pages.dev",
+        "RESEND_DELIVERY_ENABLED": "true"
+      }
+    }
+  },
+  "production": {
+    "projectName": "tobacco-road-games",
+    "deploymentBranch": "main",
+    "deploymentEnvironment": "Production",
+    "projectProductionBranch": "main",
+    "publicOrigin": "https://tobaccoroadgames.com",
+    "bindings": {
+      "preview": { "d1": {}, "r2": {} },
+      "production": {
+        "d1": { "TRG_ORDERS": "7e2cd675-a6f1-4fac-bbc9-03485a806c26" },
+        "r2": { "TRG_PRODUCTS": "trg-products" }
+      }
+    },
+    "vars": {
+      "preview": {
+        "MARKETPLACE_WRITE_POLICY": "disabled",
+        "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
+        "NATIVE_GUEST_CLAIM_MODE": "disabled",
+        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
+        "PAYMENT_PIPELINE_STAGE": "preview",
+        "RESEND_DELIVERY_ENABLED": "false"
+      },
+      "production": {
+        "MARKETPLACE_WRITE_POLICY": "enabled",
+        "NATIVE_GUEST_CHECKOUT_MODE": "disabled",
+        "NATIVE_GUEST_CLAIM_MODE": "disabled",
+        "NATIVE_LIVE_CHECKOUT_MODE": "disabled",
+        "PAYMENT_PIPELINE_STAGE": "production",
+        "PUBLIC_SITE_ORIGIN": "https://tobaccoroadgames.com",
+        "RESEND_DELIVERY_ENABLED": "false"
+      }
+    }
+  },
+  "secretPolicy": {
+    "nativeRegistrationAndLoginRequired": [],
+    "optionalForPasswordResetEmail": ["RESEND_API_KEY", "RESEND_REPLY_TO"],
+    "googleAuthenticationRequired": false,
+    "valuesAreNeverStoredHere": true
+  },
+  "configurationClasses": {
+    "repositorySafeVariables": ["PUBLIC_SITE_ORIGIN", "PAYMENT_PIPELINE_STAGE", "STAGING_CHECKOUT_PRODUCT_SLUG", "OFFICE_MAX_BATCH_BYTES", "OFFICE_MAX_BATCH_FILES", "OFFICE_MAX_FILE_BYTES", "OFFICE_UPLOAD_RESERVATION_TTL_SECONDS"],
+    "featureFlags": ["MARKETPLACE_WRITE_POLICY", "NATIVE_GUEST_CHECKOUT_MODE", "NATIVE_GUEST_CLAIM_MODE", "NATIVE_LIVE_CHECKOUT_MODE", "RESEND_DELIVERY_ENABLED"],
+    "previewEncryptedSecretNames": [],
+    "stagingEncryptedSecretNames": [
+      "CHECKOUT_ACCESS_COOKIE_SECRET", "DOWNLOAD_SIGNING_SECRET", "FORUM_RATE_LIMIT_SECRET", "MAIL_SMTP_PASSWORD", "OFFICE_CSRF_SECRET", "ORDER_EMAIL_HASH_SECRET", "OWNER_ACCESS_AUD", "OWNER_ACCESS_EMAIL", "OWNER_ACCESS_TEAM_DOMAIN", "OWNER_CSRF_SECRET", "OWNER_PASSWORD_HASH", "OWNER_SESSION_SECRET", "OWNER_USERNAME", "RESEND_API_KEY", "RESEND_REPLY_TO", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"
+    ],
+    "productionEncryptedSecretNames": [
+      "CHECKOUT_ACCESS_COOKIE_SECRET", "DOWNLOAD_SIGNING_SECRET", "ORDER_ACCESS_SIGNING_SECRET", "ORDER_EMAIL_HASH_SECRET", "OWNER_ACCESS_AUD", "OWNER_ACCESS_EMAIL", "OWNER_ACCESS_TEAM_DOMAIN", "OWNER_CSRF_SECRET", "OWNER_PASSWORD_HASH", "OWNER_SESSION_SECRET"
+    ],
+    "d1Bindings": "Environment-specific IDs are listed in each environment's bindings map.",
+    "r2Bindings": "Environment-specific bucket names are listed in each environment's bindings map."
+  }
+}

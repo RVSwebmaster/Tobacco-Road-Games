@@ -99,10 +99,13 @@ export async function recordFeePolicy(database, input) {
 export async function creatorSaleStatements(database, order, policy, paidAt) {
   let result,
     aligned = true;
+  const nativeOrder = order?.catalog_source === "native_d1";
   try {
     result = await database
       .prepare(
-        `SELECT oi.*,COALESCE(cl.creator_id,cb.creator_id) creator_id,cl.id product_identity_id,COALESCE((SELECT corrected_timestamp FROM creator_first_publication_corrections c WHERE c.listing_id=cl.id ORDER BY c.id DESC LIMIT 1),cl.first_published_at) first_published_at FROM order_items oi LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published' WHERE oi.order_id=?`,
+        nativeOrder
+          ? `SELECT oi.*,oi.native_creator_id creator_id,oi.native_product_id product_identity_id,oi.creator_first_published_at_snapshot first_published_at FROM order_items oi WHERE oi.order_id=? AND oi.catalog_source='native_d1'`
+          : `SELECT oi.*,COALESCE(cl.creator_id,cb.creator_id) creator_id,cl.id product_identity_id,COALESCE((SELECT corrected_timestamp FROM creator_first_publication_corrections c WHERE c.listing_id=cl.id ORDER BY c.id DESC LIMIT 1),cl.first_published_at) first_published_at FROM order_items oi LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published' WHERE oi.order_id=?`,
       )
       .bind(Number(order.id))
       .all();
@@ -124,8 +127,21 @@ export async function creatorSaleStatements(database, order, policy, paidAt) {
     ).toISOString(),
     statements = [];
   for (const line of result.results || []) {
-    if (!line.creator_id) continue;
-    const applied = aligned
+    if (!line.creator_id || Number(line.line_total_cents) <= 0) continue;
+    const nativeSnapshotComplete = nativeOrder
+      && Number.isInteger(line.creator_fee_basis_points_snapshot)
+      && Number.isInteger(line.creator_fixed_fee_cents_snapshot)
+      && Number.isInteger(line.creator_reserve_days_snapshot)
+      && typeof line.creator_fee_policy_reason_snapshot === "string"
+      && line.creator_fee_policy_reason_snapshot.length > 0
+      && typeof line.creator_commission_category_snapshot === "string"
+      && typeof line.creator_commission_policy_version_snapshot === "string";
+    if (nativeOrder && !nativeSnapshotComplete) {
+      throw new Error(`Native Creator fee policy snapshot is missing for order item ${line.id}.`);
+    }
+    const applied = nativeOrder
+        ? { basisPoints: Number(line.creator_fee_basis_points_snapshot), reason: line.creator_fee_policy_reason_snapshot, category: line.creator_commission_category_snapshot }
+        : aligned
         ? await resolveSalePolicy(database, {
             creatorId: line.creator_id,
             firstPublishedAt: line.first_published_at,
@@ -135,18 +151,27 @@ export async function creatorSaleStatements(database, order, policy, paidAt) {
       quantity = Number(line.quantity),
       gross = Number(line.line_total_cents),
       discount = Math.max(0, Number(line.list_price_cents) * quantity - gross),
+      fixedFeeCents = nativeOrder
+        ? Number(line.creator_fixed_fee_cents_snapshot)
+        : applied.policyVersion === "owner-approved-commission-v1" ? 0 : policy.fixedLineFeeCents,
+      reserveDays = nativeOrder ? Number(line.creator_reserve_days_snapshot) : policy.reserveDays,
+      houseRevenue = Boolean(applied.houseRevenue)
+        || ["owner", "admin"].includes(String(applied.category || line.creator_commission_category_snapshot || "")),
       fee = Math.min(
         gross,
         Math.round((gross * applied.basisPoints) / 10000) +
-          policy.fixedLineFeeCents,
+          fixedFeeCents,
       ),
       net = gross - fee,
+      lineAvailableAt = new Date(Date.parse(paidAt) + reserveDays * 86400000).toISOString(),
       key = `sale:${order.id}:${line.id}`;
+    const awaitingStripeFee = nativeOrder
+      && line.creator_commission_policy_version_snapshot === "owner-approved-commission-v1";
     statements.push(
       aligned
         ? database
             .prepare(
-              `INSERT OR IGNORE INTO creator_sale_snapshots(order_id,order_item_id,creator_id,product_slug,product_title,unit_list_price_cents,unit_price_paid_cents,quantity,discount_cents,gross_cents,fee_basis_points,fixed_fee_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at,product_identity_id,policy_reason) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              `INSERT OR IGNORE INTO creator_sale_snapshots(order_id,order_item_id,creator_id,product_slug,product_title,unit_list_price_cents,unit_price_paid_cents,quantity,discount_cents,gross_cents,fee_basis_points,fixed_fee_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at,product_identity_id,policy_reason,account_category,account_category_verified) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             )
             .bind(
               Number(order.id),
@@ -160,17 +185,19 @@ export async function creatorSaleStatements(database, order, policy, paidAt) {
               discount,
               gross,
               applied.basisPoints,
-              policy.fixedLineFeeCents,
+              fixedFeeCents,
               fee,
               net,
               String(line.currency).toUpperCase(),
               paidAt,
               line.product_identity_id,
               applied.reason,
+              applied.category || "standard",
+              nativeOrder && line.creator_commission_policy_version_snapshot === "owner-approved-commission-v1" ? 1 : 0,
             )
         : database
             .prepare(
-              `INSERT OR IGNORE INTO creator_sale_snapshots(order_id,order_item_id,creator_id,product_slug,product_title,unit_list_price_cents,unit_price_paid_cents,quantity,discount_cents,gross_cents,fee_basis_points,fixed_fee_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              `INSERT OR IGNORE INTO creator_sale_snapshots(order_id,order_item_id,creator_id,product_slug,product_title,unit_list_price_cents,unit_price_paid_cents,quantity,discount_cents,gross_cents,fee_basis_points,fixed_fee_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at,account_category,account_category_verified) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             )
             .bind(
               Number(order.id),
@@ -184,13 +211,16 @@ export async function creatorSaleStatements(database, order, policy, paidAt) {
               discount,
               gross,
               applied.basisPoints,
-              policy.fixedLineFeeCents,
+              fixedFeeCents,
               fee,
               net,
               String(line.currency).toUpperCase(),
               paidAt,
+              applied.category || "standard",
+              0,
             ),
     );
+    if (houseRevenue) continue;
     statements.push(
       database
         .prepare(
@@ -203,14 +233,70 @@ export async function creatorSaleStatements(database, order, policy, paidAt) {
           Number(order.id),
           Number(line.id),
           line.product_slug,
-          availableAt,
-          policy.reserveDays ? "pending" : "available",
+          nativeOrder ? lineAvailableAt : availableAt,
+          awaitingStripeFee ? "held" : reserveDays ? "pending" : "available",
           key,
           paidAt,
         ),
     );
   }
   return statements;
+}
+
+export async function repairNativePaidOrderAccounting(database, orderId, options = {}) {
+  const id = Number(orderId);
+  if (!Number.isSafeInteger(id) || id <= 0) throw new Error("Native accounting order ID is invalid.");
+  const order = await database.prepare("SELECT id,catalog_source,payment_status,paid_at,currency FROM orders WHERE id=?").bind(id).first();
+  if (!order || order.catalog_source !== "native_d1" || !["paid", "refunded", "disputed"].includes(order.payment_status)) {
+    return { ready: false, repaired: false, reason: "native_paid_order_required" };
+  }
+  const policyRows = await rows(database.prepare(`
+    SELECT id,creator_reserve_days_snapshot,creator_fee_basis_points_snapshot,
+      creator_fixed_fee_cents_snapshot,creator_fee_policy_reason_snapshot,
+      creator_commission_category_snapshot,creator_commission_policy_version_snapshot
+    FROM order_items
+    WHERE order_id=? AND catalog_source='native_d1' AND native_creator_id IS NOT NULL
+      AND line_total_cents>0 AND COALESCE(creator_commission_category_snapshot,'') NOT IN ('owner','admin')
+  `).bind(id));
+  const missingPolicy = policyRows.filter(row => !Number.isInteger(row.creator_fee_basis_points_snapshot)
+    || !Number.isInteger(row.creator_fixed_fee_cents_snapshot)
+    || !Number.isInteger(row.creator_reserve_days_snapshot)
+    || !row.creator_fee_policy_reason_snapshot
+    || !row.creator_commission_category_snapshot
+    || !row.creator_commission_policy_version_snapshot);
+  if (missingPolicy.length) {
+    return {
+      ready: false,
+      repaired: false,
+      reason: "native_sale_policy_snapshot_missing",
+      orderItemIds: missingPolicy.map(row => Number(row.id))
+    };
+  }
+  const reserveDays = policyRows.length
+    ? Number(policyRows[0].creator_reserve_days_snapshot)
+    : resolveFeePolicy({}, Date.parse(order.paid_at || new Date().toISOString())).reserveDays;
+  const statements = await creatorSaleStatements(database, order, {
+    ...resolveFeePolicy({}, options.nowMs),
+    reserveDays
+  }, order.paid_at);
+  const missingBefore = await rows(database.prepare(`
+    SELECT oi.id FROM order_items oi
+    LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id
+    LEFT JOIN creator_earnings_ledger l ON l.order_item_id=oi.id AND l.entry_type='sale_earning'
+    WHERE oi.order_id=? AND oi.catalog_source='native_d1' AND oi.native_creator_id IS NOT NULL
+      AND oi.line_total_cents>0 AND COALESCE(oi.creator_commission_category_snapshot,'') NOT IN ('owner','admin')
+      AND (s.id IS NULL OR l.id IS NULL)
+  `).bind(id));
+  if (statements.length) await database.batch(statements);
+  const exceptions = await rows(database.prepare(`
+    SELECT oi.id order_item_id FROM order_items oi
+    LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id
+    LEFT JOIN creator_earnings_ledger l ON l.order_item_id=oi.id AND l.entry_type='sale_earning'
+    WHERE oi.order_id=? AND oi.catalog_source='native_d1' AND oi.native_creator_id IS NOT NULL
+      AND oi.line_total_cents>0 AND COALESCE(oi.creator_commission_category_snapshot,'') NOT IN ('owner','admin')
+      AND (s.id IS NULL OR l.id IS NULL)
+  `).bind(id));
+  return { ready: exceptions.length === 0, repaired: missingBefore.length > 0 && statements.length > 0, reason: exceptions.length ? "native_sale_accounting_incomplete" : null };
 }
 
 export async function recordOrderReversal(
@@ -343,18 +429,18 @@ export async function getCreatorFinance(
 ) {
   const where = ["creator_id=?"],
     bind = [creatorId],
-    saleWhere = ["creator_id=?"],
+    saleWhere = ["s.creator_id=?"],
     saleBind = [creatorId];
   if (from) {
     where.push("created_at>=?");
     bind.push(from);
-    saleWhere.push("sold_at>=?");
+    saleWhere.push("s.sold_at>=?");
     saleBind.push(from);
   }
   if (to) {
     where.push("created_at<?");
     bind.push(to);
-    saleWhere.push("sold_at<?");
+    saleWhere.push("s.sold_at<?");
     saleBind.push(to);
   }
   const entries = await rows(
@@ -367,7 +453,13 @@ export async function getCreatorFinance(
     sales = await rows(
       database
         .prepare(
-          `SELECT product_slug,product_title,quantity,gross_cents,marketplace_fee_cents,creator_net_cents,currency,sold_at FROM creator_sale_snapshots WHERE ${saleWhere.join(" AND ")} ORDER BY sold_at,id`,
+          `SELECT s.product_slug,s.product_title,s.quantity,s.gross_cents,s.marketplace_fee_cents,s.creator_net_cents,s.currency,s.sold_at,
+             COALESCE(a.creator_absorbed_fee_cents,0) processing_fee_cents,
+             s.creator_net_cents-COALESCE(a.creator_absorbed_fee_cents,0) creator_net_after_processing_fee_cents,
+             CASE WHEN f.status='reconciled' THEN 'reconciled' ELSE 'pending_fee_reconciliation' END processing_fee_status
+           FROM creator_sale_snapshots s LEFT JOIN stripe_order_fee_allocations a ON a.order_item_id=s.order_item_id
+           LEFT JOIN stripe_order_fee_reconciliations f ON f.order_id=s.order_id
+           WHERE ${saleWhere.join(" AND ")} AND s.account_category NOT IN ('owner','admin') ORDER BY s.sold_at,s.id`,
         )
         .bind(...saleBind),
     ),
@@ -381,6 +473,8 @@ export async function getCreatorFinance(
     (sum, row) => sum + Number(row.marketplace_fee_cents),
     0,
   );
+  result.summary.processingFeesCents = sales.reduce((sum, row) => sum + Number(row.processing_fee_cents || 0), 0);
+  result.summary.creatorNetAfterProcessingFeesCents = sales.reduce((sum, row) => sum + Number(row.creator_net_after_processing_fee_cents || 0), 0);
   result.summary.unitsSold = sales.reduce(
     (sum, row) => sum + Number(row.quantity),
     0,
@@ -416,14 +510,37 @@ export async function getOperatorFinance(
         .first();
     balances.push({ ...creator, ...finance.summary, lastPayout: last || null });
   }
-  const house = await database
-    .prepare(
-      `SELECT COALESCE(SUM(oi.line_total_cents),0) revenue FROM order_items oi JOIN orders o ON o.id=oi.order_id LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id WHERE o.payment_status IN ('paid','refunded','disputed') AND s.id IS NULL`,
-    )
-    .first();
+  let house;
+  try {
+    house = await database
+      .prepare(
+        `SELECT
+           COALESCE((SELECT SUM(s.gross_cents) FROM creator_sale_snapshots s JOIN orders o ON o.id=s.order_id LEFT JOIN creator_balance_settlements b ON b.order_id=o.id WHERE s.account_category_verified=1 AND s.account_category IN ('owner','admin') AND o.payment_status IN ('paid','refunded','disputed') AND b.id IS NULL),0)
+           -COALESCE((SELECT SUM(r.gross_reversed_cents) FROM creator_reversal_snapshots r JOIN creator_sale_snapshots s ON s.order_item_id=r.order_item_id JOIN orders o ON o.id=r.order_id LEFT JOIN creator_balance_settlements b ON b.order_id=o.id WHERE s.account_category_verified=1 AND s.account_category IN ('owner','admin') AND b.id IS NULL),0)
+           +COALESCE((SELECT SUM(oi.line_total_cents) FROM order_items oi JOIN orders o ON o.id=oi.order_id LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published' WHERE o.payment_status IN ('paid','refunded','disputed') AND s.id IS NULL AND COALESCE(oi.native_creator_id,cl.creator_id,cb.creator_id) IS NULL),0) revenue`,
+      )
+      .first();
+  } catch {
+    // Keep legacy-only finance reports usable against databases predating native
+    // D1 order-item columns; current schema reports include native attribution.
+    house = await database
+      .prepare(
+        `SELECT COALESCE(SUM(oi.line_total_cents),0) revenue FROM order_items oi JOIN orders o ON o.id=oi.order_id
+         LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id
+         LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug
+         LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published'
+         WHERE o.payment_status IN ('paid','refunded','disputed') AND s.id IS NULL
+           AND COALESCE(cl.creator_id,cb.creator_id) IS NULL`,
+      )
+      .first();
+  }
+  let unclassified = { gross: 0, count: 0 };
+  try { unclassified = await database.prepare("SELECT COALESCE(SUM(gross_cents),0) gross,COUNT(*) count FROM creator_sale_snapshots WHERE account_category_verified=0").first(); } catch {}
   return {
     balances,
     houseRevenueCents: Number(house?.revenue || 0),
+    unclassifiedHistoricalSaleGrossCents: Number(unclassified?.gross || 0),
+    unclassifiedHistoricalSaleCount: Number(unclassified?.count || 0),
     reconciliation: await reconcileCreatorFinance(database),
   };
 }
@@ -677,20 +794,93 @@ export async function setCreatorLedgerHold(database, input) {
 }
 export async function reconcileCreatorFinance(database) {
   const exceptions = [];
-  const missing = await rows(
-    database.prepare(
-      `SELECT oi.order_id,oi.id order_item_id,oi.product_slug FROM order_items oi JOIN orders o ON o.id=oi.order_id LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published' LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id WHERE o.payment_status IN ('paid','refunded','disputed') AND COALESCE(cl.creator_id,cb.creator_id) IS NOT NULL AND s.id IS NULL`,
-    ),
-  );
+  let missing;
+  try {
+    missing = await rows(
+      database.prepare(
+        `SELECT oi.order_id,oi.id order_item_id,oi.product_slug,
+                CASE WHEN oi.catalog_source='native_d1' THEN oi.native_creator_id ELSE COALESCE(cl.creator_id,cb.creator_id) END creator_id
+         FROM order_items oi JOIN orders o ON o.id=oi.order_id
+         LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug
+         LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published'
+         LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id
+         WHERE o.payment_status IN ('paid','refunded','disputed') AND oi.line_total_cents>0 AND s.id IS NULL
+           AND ((oi.catalog_source='native_d1' AND oi.native_creator_id IS NOT NULL AND COALESCE(o.native_order_state,'')<>'free_acquired')
+             OR (oi.catalog_source<>'native_d1' AND COALESCE(cl.creator_id,cb.creator_id) IS NOT NULL))`,
+      ),
+    );
+  } catch {
+    missing = await rows(database.prepare(
+      `SELECT oi.order_id,oi.id order_item_id,oi.product_slug,COALESCE(cl.creator_id,cb.creator_id) creator_id
+       FROM order_items oi JOIN orders o ON o.id=oi.order_id
+       LEFT JOIN creator_listings cl ON cl.source_product_slug=oi.product_slug OR cl.public_product_slug=oi.product_slug
+       LEFT JOIN creator_bundles cb ON cb.public_bundle_slug=oi.product_slug AND cb.publication_state='published'
+       LEFT JOIN creator_sale_snapshots s ON s.order_item_id=oi.id
+       WHERE o.payment_status IN ('paid','refunded','disputed') AND s.id IS NULL
+         AND COALESCE(cl.creator_id,cb.creator_id) IS NOT NULL`,
+    ));
+  }
   for (const row of missing)
     exceptions.push({ code: "paid_line_missing_sale", ...row });
   const missingLedger = await rows(
     database.prepare(
-      `SELECT s.order_id,s.order_item_id,s.product_slug FROM creator_sale_snapshots s LEFT JOIN creator_earnings_ledger l ON l.order_item_id=s.order_item_id AND l.entry_type='sale_earning' WHERE l.id IS NULL`,
+      `SELECT s.order_id,s.order_item_id,s.product_slug FROM creator_sale_snapshots s LEFT JOIN creator_earnings_ledger l ON l.order_item_id=s.order_item_id AND l.entry_type='sale_earning' WHERE s.account_category_verified=1 AND s.account_category NOT IN ('owner','admin') AND l.id IS NULL`,
     ),
   );
   for (const row of missingLedger)
-    exceptions.push({ code: "paid_line_missing_sale", ...row });
+    exceptions.push({ code: "paid_line_missing_sale_ledger", ...row });
+  let unverifiedCategories = [];
+  try { unverifiedCategories = await rows(database.prepare(`
+    SELECT order_id,order_item_id,product_slug,creator_id,gross_cents,account_category
+    FROM creator_sale_snapshots WHERE account_category_verified=0 ORDER BY order_id,order_item_id
+  `)); } catch { /* Migration 076 has not been applied to this isolated legacy schema. */ }
+  for (const row of unverifiedCategories)
+    exceptions.push({ code: "historical_sale_category_unverified", ...row });
+  let nativePolicyMissing = [];
+  try { nativePolicyMissing = await rows(database.prepare(`
+    SELECT oi.order_id,oi.id order_item_id,oi.product_slug,oi.native_creator_id creator_id
+    FROM order_items oi JOIN orders o ON o.id=oi.order_id
+    WHERE oi.catalog_source='native_d1' AND oi.native_creator_id IS NOT NULL
+      AND oi.line_total_cents>0 AND o.payment_status IN ('paid','refunded','disputed')
+      AND COALESCE(oi.creator_commission_category_snapshot,'') NOT IN ('owner','admin')
+      AND (oi.creator_fee_basis_points_snapshot IS NULL OR oi.creator_fixed_fee_cents_snapshot IS NULL
+        OR oi.creator_reserve_days_snapshot IS NULL OR oi.creator_fee_policy_reason_snapshot IS NULL)
+  `)); } catch { /* This database predates native order-item snapshots. */ }
+  for (const row of nativePolicyMissing)
+    exceptions.push({ code: "native_sale_policy_snapshot_missing", ...row });
+  let pendingFees = [];
+  try { pendingFees = await rows(database.prepare(`
+    SELECT r.order_id,r.payment_intent_id,r.status,r.created_at,o.public_id order_reference,
+      (SELECT COUNT(*) FROM creator_earnings_ledger l WHERE l.order_id=r.order_id AND l.entry_type='sale_earning' AND l.payout_state='held') held_creator_earnings
+    FROM stripe_order_fee_reconciliations r JOIN orders o ON o.id=r.order_id
+    WHERE r.status<>'reconciled' ORDER BY r.created_at,r.order_id
+  `)); } catch {}
+  for (const row of pendingFees) exceptions.push({ code: "stripe_processing_fee_reconciliation_pending", ...row });
+  let feeAllocationMismatches = [];
+  try { feeAllocationMismatches = await rows(database.prepare(`
+    SELECT r.order_id,r.processing_fee_cents,COALESCE(SUM(a.processing_fee_cents),0)+r.non_product_processing_fee_cents allocated_fee_cents
+    FROM stripe_order_fee_reconciliations r LEFT JOIN stripe_order_fee_allocations a ON a.order_id=r.order_id
+    WHERE r.status='reconciled' GROUP BY r.order_id
+    HAVING allocated_fee_cents<>r.processing_fee_cents
+  `)); } catch {}
+  for (const row of feeAllocationMismatches) exceptions.push({ code: "stripe_processing_fee_allocation_mismatch", ...row });
+  let nativeMismatches = [];
+  try { nativeMismatches = await rows(database.prepare(`
+    SELECT s.order_id,s.order_item_id,s.product_slug,s.creator_id snapshot_creator_id,
+      oi.native_creator_id item_creator_id,s.gross_cents,s.marketplace_fee_cents,s.creator_net_cents,
+      oi.line_total_cents,oi.currency
+    FROM creator_sale_snapshots s JOIN order_items oi ON oi.id=s.order_item_id
+    WHERE oi.catalog_source='native_d1' AND (
+      s.creator_id<>oi.native_creator_id OR s.gross_cents<>oi.line_total_cents
+      OR upper(s.currency)<>upper(oi.currency)
+      OR s.marketplace_fee_cents+s.creator_net_cents<>s.gross_cents
+      OR s.fee_basis_points<>oi.creator_fee_basis_points_snapshot
+      OR s.fixed_fee_cents<>oi.creator_fixed_fee_cents_snapshot
+      OR s.policy_reason<>oi.creator_fee_policy_reason_snapshot
+    )
+  `)); } catch { /* This database predates native order-item snapshots. */ }
+  for (const row of nativeMismatches)
+    exceptions.push({ code: "native_sale_snapshot_mismatch", ...row });
   const missingReversal = await rows(
     database.prepare(
       `SELECT DISTINCT o.id order_id,o.payment_status FROM orders o JOIN creator_sale_snapshots s ON s.order_id=o.id LEFT JOIN creator_reversal_snapshots r ON r.order_id=o.id WHERE o.payment_status IN ('refunded','disputed') AND r.id IS NULL`,
@@ -824,8 +1014,4 @@ function summarize(entries, now) {
 async function rows(statement) {
   const result = await statement.all();
   return result.results || [];
-}
-function csv(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }

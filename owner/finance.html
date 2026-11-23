@@ -78,6 +78,19 @@
           <h2>Dedicated Creator Money account support</h2>
           <p id="bank"></p>
         </section>
+        <section aria-labelledby="founding25-heading">
+          <h2 id="founding25-heading">Founding-25 commission assignments</h2>
+          <p>Owner-assigned financial status is separate from the historical Founding Creator badge. Assignment changes affect future transactions only. Revoked assignments remain in the audit history and are never reassigned automatically.</p>
+          <p id="founding25-status" role="status">Loading assignment history…</p>
+          <form id="founding25-form">
+            <label>Creator ID <input name="creatorId" required maxlength="128" autocomplete="off"></label>
+            <label>Action <select name="action"><option value="assign">Assign</option><option value="revoke">Revoke</option></select></label>
+            <label>Reason <input name="reason" required minlength="8" maxlength="500"></label>
+            <label>Confirmation phrase <input name="confirmation" required autocomplete="off" placeholder="ASSIGN FOUNDING-25 or REVOKE FOUNDING-25"></label>
+            <button class="button button--secondary" type="submit">Apply audited assignment action</button>
+          </form>
+          <div class="finance-table-wrap"><table><thead><tr><th>Creator</th><th>Assignment</th><th>Effective</th><th>Revoked</th><th>Owner reason</th></tr></thead><tbody id="founding25-history"></tbody></table></div>
+        </section>
         <section>
           <h2>Creator liability by identity</h2>
           <div class="finance-table-wrap">
@@ -193,5 +206,6 @@
       </main>
     </div>
     <script src="/assets/js/owner-finance.js"></script>
+    <script src="/assets/js/owner-founding25.js"></script>
   </body>
 </html>

@@ -145,6 +145,7 @@ function main() {
   }
 
   buildFocusedPages(publicCatalogProducts);
+  buildCreatorDashboardPage();
   buildAccountPage();
   buildStaticPublicPage("support.html", "");
 
@@ -1313,6 +1314,28 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     throw new Error("Member Profile configuration could not be applied to the shared Guest page.");
   }
   return memberProfile.replace(/^[ \t]+$/gm, "");
+}
+
+function buildCreatorDashboardPage() {
+  const creatorDashboardTemplate = fs.readFileSync(path.join(ROOT, "templates", "creator-dashboard.html"), "utf8");
+  const marker = "<!-- Shared approved Creator furniture is emitted by scripts/build-store.js. -->";
+  if (!creatorDashboardTemplate.includes(marker)) {
+    throw new Error("Creator Dashboard template is missing its shared-furniture marker.");
+  }
+  writeFile("creator-dashboard/index.html", creatorDashboardTemplate
+    .replace(marker, renderCreatorFurniture())
+    .replace(/^[ \t]+$/gm, ""));
+}
+
+function renderCreatorFurniture() {
+  return `<section class="creator-dashboard-shop-wall" data-creator-identity-page aria-label="Creator furniture">
+          ${renderStorefrontUpperCabinet({
+            creatorTitleBoard: true,
+            libraryBay: renderGuestLibraryBay({ role: "creator" }),
+            identityBay: renderHomepageIdentityBay({ memberIdentity: true }),
+            openRulesBay: renderRoleOpenRulesBay("creator")
+          })}
+        </section>`;
 }
 
 function renderGuestLandingShopWallMain(products, options = {}) {

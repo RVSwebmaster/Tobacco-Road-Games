@@ -3,7 +3,7 @@ const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { renderStorefrontUpperCabinet } = require("./build-store.js");
+const buildStore = require("./build-store.js");
 
 const ROOT = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -482,7 +482,7 @@ for (const [label, source] of [["homepage", yourLibraryBay], ["homepage generato
 // RV requested the permanent composite on October 4, 2026, with the ROAD leaf gone.
 const frozenPicture = source => source.match(/<picture class="shop-wall-cabinet-art"[\s\S]*?<\/picture>/)?.[0];
 assert.ok(frozenPicture(homepage), "The homepage must render the frozen cabinet background.");
-assert.equal(normalizeDressing(frozenPicture(homepage)), normalizeDressing(frozenPicture(renderStorefrontUpperCabinet())), "Homepage builds must preserve the resolved frozen picture and responsive asset URLs.");
+assert.equal(normalizeDressing(frozenPicture(homepage)), normalizeDressing(frozenPicture(buildStore.renderStorefrontUpperCabinet())), "Guest homepage must preserve the exact frozen picture and responsive sources.");
 assert.match(homepage, /class="shop-wall-fixed-cabinet" data-fixed-cabinet/);
 assert.match(build, /class="shop-wall-fixed-cabinet" data-fixed-cabinet/);
 assert.equal((homepage.match(/data-fill-library/g) || []).length, 4, "All four book rows must remain live, outside the raster background.");

@@ -180,15 +180,20 @@ function testClientWiring() {
   const preview = fs.readFileSync(path.join(ROOT, "assets", "js", "guest-product-preview.js"), "utf8");
   const routes = JSON.parse(fs.readFileSync(path.join(ROOT, "_routes.json"), "utf8"));
   const redirects = fs.readFileSync(path.join(ROOT, "_redirects"), "utf8");
-  const dashboard = fs.readFileSync(path.join(ROOT, "temp-creator", "index.html"), "utf8");
-  assert.match(redirects, /^\/creator-dashboard\/\s+\/temp-creator\/\s+302\s*$/m,
-    "The legacy Creator Dashboard route redirects to the current Dashboard.");
+  const dashboard = fs.readFileSync(path.join(ROOT, "creator-dashboard", "index.html"), "utf8");
+  assert.match(redirects, /^\/temp-creator\/\s+\/creator-dashboard\/\s+301\s*$/m,
+    "The former temporary Dashboard route redirects to the canonical Dashboard.");
+  assert.doesNotMatch(redirects, /^\/creator-dashboard\/\s+\/temp-creator\//m,
+    "The canonical Dashboard route does not redirect to the former temporary route.");
   assert.match(dashboard, /<link rel="stylesheet" href="\/styles\.css"\s*\/>/,
     "The current Creator Dashboard loads the shared site stylesheet.");
   assert.match(dashboard, /\/assets\/js\/creator-dashboard\.js\?v=/,
     "The current Creator Dashboard loads its dashboard runtime.");
-  assert.doesNotMatch(dashboard, /assets\/css\/creator-dashboard\.css/,
-    "The current Dashboard does not depend on the retired compatibility stylesheet.");
+  assert.match(dashboard, /assets\/css\/creator-dashboard\.css/,
+    "The current Dashboard retains its compatibility stylesheet entry point.");
+  const dashboardCss = fs.readFileSync(path.join(ROOT, "assets", "css", "creator-dashboard.css"), "utf8");
+  assert.match(dashboardCss, /@import url\('\/assets\/css\/member-profile\.css'\)/,
+    "Dashboard presentation uses the shared Profile stylesheet through the compatibility import.");
   for (const route of [
     "customer-profile", "creator", "founding-25-profile", "premium-creator-profile", "admin-profile", "owner-profile"
   ]) {

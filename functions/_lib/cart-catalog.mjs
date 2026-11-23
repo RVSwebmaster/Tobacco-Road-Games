@@ -44,7 +44,10 @@ export async function toNativeCartProduct(database, product) {
   let listing = null;
   if (product.creatorListingId) {
     listing = await database.prepare(`SELECT lifecycle_state,publication_state,owner_review_hold,
-        inactivity_state FROM creator_listings WHERE id=?`)
+        inactivity_state,first_published_at,
+        (SELECT corrected_timestamp FROM creator_first_publication_corrections c
+          WHERE c.listing_id=creator_listings.id ORDER BY c.id DESC LIMIT 1) corrected_first_published_at
+      FROM creator_listings WHERE id=?`)
       .bind(product.creatorListingId).first();
   }
   const metadata = product.metadata && typeof product.metadata === "object" ? product.metadata : {};
@@ -82,6 +85,7 @@ export async function toNativeCartProduct(database, product) {
     nativeAvailabilityCode,
     nativeCreatorId: product.creatorId,
     nativeProductId: product.id,
+    firstPublishedAt: listing?.corrected_first_published_at || listing?.first_published_at || product.publishedAt || null,
     priceCents: product.priceCents,
     pricingModel: product.pricingModel,
     publicationState: product.publicationState,

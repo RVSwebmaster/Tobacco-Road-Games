@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "auth-no-email-2026-11-22",
+  "releaseSha": "1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6",
+  "releaseBranch": "release/account-profile-2026-11-21",
+  "pipelinePolicySha": "19fe995b64b30613ddf4b9c06f20c44d7833498e",
+  "authority": {
+    "phase": "Phase 1",
+    "promotion": "Owner-directed staging pass followed by production promotion",
+    "previewApproval": "Not claimed. The Phase 1 instruction explicitly authorized direct promotion after staging passed."
+  },
+  "build": {
+    "manifestSha256": "a3be4d849c2731514645f65ae6aad9d2a8037b4273392d5a7b95d3224b8d47bc",
+    "pagesOutputSha256": "d5999f8ba5b17e635c23ae3041c13674074fe27711a8fa8dc4ae04b0aa6ffa8c",
+    "pagesFileCount": 251,
+    "functionsSourceSha256": "d2dafeae62538d09bf9f14029329cb210454141870a24a1b4de8673321c56ec0",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "createdFrom": "git archive of the exact pushed release SHA; dependencies installed with npm ci --ignore-scripts from committed lockfile",
+    "applicationVsPreservedPhase1Build": "250 of 250 static paths matched. The 102 raw-byte differences were CRLF/LF line endings only; zero normalized content differences.",
+    "deploymentMarker": "Not present: the Phase 1 deployments predate this release pipeline and were not uploaded from this manifest.",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "df1987544e2f0cdf22b19bff915ea5083820710bb0377da3578d57852a1d1c4e",
+      "account.html": "47d5e843a148449a831c2b42e6a9b07869cbc88399cc8c7efbb7753cec25b2f9",
+      "customer.html": "1a7dd69615c5ae32a12c94e4c730248caf91e8a2ffa3d16c2e83f814bd80e139",
+      "customer-profile/index.html": "3e082b47b0a8b37b1eca36753ff7c0415e1feced39cdf053f05debe4838d75ca",
+      "creator/index.html": "2aacd76164e37ff3a5e485b575fe923f7efd68c0ebae6f73f9390f21ed7867e9",
+      "assets/css/member-profile.css": "3f253e43058d3925ff9f16393942306d45572b080da1adaf58ac26e13b04eff3",
+      "assets/js/account.js": "d120472b60d4dee94a9e5fd4c93fa9e13e4dfd3c38c24c3003e103f26211224a",
+      "trg-release.json": "b5f2b5b564d85a37977fbfd63468f60a5ae3b44f4cb63b9bf4b41cfdf628ea9b"
+    },
+    "releaseManifest": {
+      "schemaVersion": 1,
+      "releaseId": "auth-no-email-2026-11-22",
+      "commitSha": "1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6",
+      "releaseBranch": "release/account-profile-2026-11-21",
+      "commitMessage": "Remove email verification from Customer sign-in",
+      "createdAt": "2026-11-22T21:45:24.050Z",
+      "buildCommand": "npm run release:build -- --ref 1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6 --release-branch release/account-profile-2026-11-21 --release-id auth-no-email-2026-11-22 --migration account-profile-072",
+      "pipelinePolicySha": "19fe995b64b30613ddf4b9c06f20c44d7833498e",
+      "pagesFileCount": 251,
+      "sourceOutputSha256": "b0051799cdab7bb06285923878a45200b1475c8fd7614ce7c50979c194b72ed5",
+      "pagesOutputSha256": "d5999f8ba5b17e635c23ae3041c13674074fe27711a8fa8dc4ae04b0aa6ffa8c",
+      "criticalAssets": {
+        "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+        "guest/index.html": "df1987544e2f0cdf22b19bff915ea5083820710bb0377da3578d57852a1d1c4e",
+        "account.html": "47d5e843a148449a831c2b42e6a9b07869cbc88399cc8c7efbb7753cec25b2f9",
+        "customer.html": "1a7dd69615c5ae32a12c94e4c730248caf91e8a2ffa3d16c2e83f814bd80e139",
+        "customer-profile/index.html": "3e082b47b0a8b37b1eca36753ff7c0415e1feced39cdf053f05debe4838d75ca",
+        "creator/index.html": "2aacd76164e37ff3a5e485b575fe923f7efd68c0ebae6f73f9390f21ed7867e9",
+        "assets/css/member-profile.css": "3f253e43058d3925ff9f16393942306d45572b080da1adaf58ac26e13b04eff3",
+        "assets/js/account.js": "d120472b60d4dee94a9e5fd4c93fa9e13e4dfd3c38c24c3003e103f26211224a",
+        "trg-release.json": "b5f2b5b564d85a37977fbfd63468f60a5ae3b44f4cb63b9bf4b41cfdf628ea9b"
+      },
+      "functionsSourceSha256": "d2dafeae62538d09bf9f14029329cb210454141870a24a1b4de8673321c56ec0",
+      "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+      "migrations": [
+        {
+          "id": "account-profile-072",
+          "file": "ops/releases/account-profile-072/account-profile-072.sql",
+          "sha256": "95a67d3f3c1d09c1dd81b604297f7bf6589174288301f87780dc47b0867f2f0c",
+          "databaseBinding": "TRG_ORDERS",
+          "databaseIds": {
+            "preview": "6248efe2-c96d-457e-b705-376cf5485c04",
+            "staging": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+            "production": "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+          },
+          "baseline": "Production numbered migration 072",
+          "preconditions": {
+            "numberedSchemaVersion": 72,
+            "tables": [
+              "users",
+              "marketplace_creators"
+            ],
+            "effect": "Create only the two new empty tables and one index; preserve all existing rows."
+          },
+          "postconditions": {
+            "tables": [
+              "customer_registration_states",
+              "creator_commission_category_assignments"
+            ],
+            "indexes": [
+              "idx_creator_commission_assignments_current"
+            ],
+            "customer_registration_statesColumns": [
+              "user_id",
+              "state",
+              "activated_at",
+              "created_at",
+              "updated_at"
+            ],
+            "creator_commission_category_assignmentsColumns": [
+              "id",
+              "creator_id",
+              "category",
+              "effective_at",
+              "revoked_at",
+              "assigned_by_user_id",
+              "reason",
+              "created_at"
+            ]
+          }
+        }
+      ],
+      "artifact": {
+        "sourceRoot": ".wrangler/release-pipeline/auth-no-email-2026-11-22/source",
+        "pagesOutput": ".wrangler/release-pipeline/auth-no-email-2026-11-22/source/.wrangler/release-pages-output"
+      },
+      "manifestSha256": "a3be4d849c2731514645f65ae6aad9d2a8037b4273392d5a7b95d3224b8d47bc"
+    }
+  },
+  "preview": {
+    "status": "not-used-for-this-explicit-Phase-1-promotion",
+    "latestObservedDeployment": {
+      "id": "9d2a9f5e-59b3-4b01-ba64-9cce3ad8e2a0",
+      "url": "https://9d2a9f5e.trg-member-tier-test-20261120.pages.dev",
+      "branch": "test",
+      "sourcePrefix": "c01626d",
+      "dirty": true,
+      "approvalForReleaseSha": false
+    }
+  },
+  "staging": {
+    "project": "tobacco-road-games-staging",
+    "deploymentId": "f9f94dba-0292-4e18-90d9-65e96846cdaa",
+    "url": "https://f9f94dba.tobacco-road-games-staging.pages.dev",
+    "environment": "Production",
+    "branch": "staging",
+    "sourcePrefix": "1b1a8a7",
+    "dirty": false,
+    "d1": {
+      "TRG_ORDERS": "d92594e8-a45c-4f84-8f48-7c3aeba17f29"
+    },
+    "r2": {
+      "TRG_PRODUCTS": "trg-products-staging",
+      "TRG_FORUM_AVATARS": "trg-forum-avatars-staging",
+      "TRG_OFFICE_ARCHIVE": "trg-office-archive-staging"
+    },
+    "smoke": {
+      "registration": 201,
+      "registrationActive": true,
+      "emailVerified": false,
+      "immediateLogin": 200,
+      "customerAccess": 200,
+      "logout": 200,
+      "sessionRevoked": true,
+      "signedOutCustomerRedirect": "/guest/",
+      "loginAfterLogout": 200,
+      "wrongPasswordRejected": 401,
+      "duplicateRegistrationRejected": 409,
+      "emailProviderContactedByRegistration": false,
+      "controlledAccountCleanup": "verified no test account or dependent auth rows remained"
+    },
+    "releaseSourceRegressions": "All six focused candidate tests passed from a clean archive of the release SHA with dependencies installed from its lockfile."
+  },
+  "production": {
+    "project": "tobacco-road-games",
+    "deploymentId": "cdad3de6-b4da-47e2-b639-f3aca1a6646b",
+    "url": "https://cdad3de6.tobacco-road-games.pages.dev",
+    "customDomain": "https://tobaccoroadgames.com",
+    "environment": "Production",
+    "branch": "main",
+    "sourcePrefix": "1b1a8a7",
+    "dirty": false,
+    "d1": {
+      "TRG_ORDERS": "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+    },
+    "r2": {
+      "TRG_PRODUCTS": "trg-products"
+    },
+    "storeState": "CLOSED",
+    "smoke": {
+      "homepage": 200,
+      "guestStorefront": 200,
+      "accountPage": 200,
+      "customerSignedOutRedirect": "/guest/",
+      "registration": 201,
+      "registrationActive": true,
+      "emailVerified": false,
+      "immediateLogin": 200,
+      "customerAccess": 200,
+      "customerProfile": 200,
+      "logout": 200,
+      "sessionRevoked": true,
+      "signedOutCustomerBlocked": true,
+      "loginAfterLogout": 200,
+      "wrongPasswordRejected": 401,
+      "duplicateRegistrationRejected": 409,
+      "emailProviderContactedByRegistration": false,
+      "controlledAccountCleanup": "verified no test account or dependent auth rows remained"
+    },
+    "previousProductionDeployment": {
+      "id": "1a44e956-7700-4f9f-bac7-9c2edb705612",
+      "url": "https://1a44e956.tobacco-road-games.pages.dev"
+    },
+    "rollbackProcedure": "Restore the previous Pages deployment in Cloudflare; retain D1 schema/data and use a forward migration if code requires correction."
+  },
+  "migrations": [
+    {
+      "id": "account-profile-072",
+      "file": "ops/releases/account-profile-072/account-profile-072.sql",
+      "sha256": "95a67d3f3c1d09c1dd81b604297f7bf6589174288301f87780dc47b0867f2f0c",
+      "baseline": "Production numbered migration 072",
+      "staging": {
+        "databaseId": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+        "status": "applied and verified before account-flow tests"
+      },
+      "production": {
+        "databaseId": "7e2cd675-a6f1-4fac-bbc9-03485a806c26",
+        "status": "present and verified; no migration write in this pipeline work"
+      },
+      "postconditions": [
+        "customer_registration_states",
+        "creator_commission_category_assignments",
+        "idx_creator_commission_assignments_current"
+      ]
+    }
+  ],
+  "accountEmailPolicy": {
+    "nativeRegistrationAndLoginRequiresProvider": false,
+    "passwordResetMayRemainEmailDependent": true,
+    "resendOrSmtpConfigurationChanged": false,
+    "googleAuthenticationRequired": false
+  },
+  "cleanup": {
+    "stagingTestAccount": "removed",
+    "productionTestAccount": "removed",
+    "unrelatedAccountsModified": false
+  },
+  "recordedAt": "2026-11-22T21:49:44.1928393Z"
+}

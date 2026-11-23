@@ -16,13 +16,19 @@ function main() {
   const forumNavigation = read("functions/_lib/public-navigation.mjs");
 
   assert.match(build, /const PUBLIC_NAV_ITEMS = Object\.freeze/, "Static public pages must share one generator-owned navigation definition.");
-  for (const label of ["Explore", "Community Forum", "Creators", "Creator Login / Sign Up", "AI Policy", "Support", "Join / Sign In", "Cart"]) {
-    assert.match(build, new RegExp(label.replace(/[&/]/g, "\\$&")), `Static navigation must include ${label}.`);
-    assert.match(forumNavigation, new RegExp(label.replace(/[&/]/g, "\\$&").replace("&", "&(?:amp;)?")), `Function navigation must include ${label}.`);
-  }
-  for (const legacyLabel of ["Marketplace", "New This Week", "Sales & Bundles", "Physical Goods", "About Tobacco Road Games", "Account / My Library"]) {
-    assert.equal(build.includes(`label: "${legacyLabel}"`), false, `Static navigation must not retain legacy label ${legacyLabel}.`);
-    assert.equal(forumNavigation.includes(`label: "${legacyLabel}"`), false, `Function navigation must not retain legacy label ${legacyLabel}.`);
+  const staticNav = build.match(/const PUBLIC_NAV_ITEMS = Object\.freeze\(\[([\s\S]*?)\]\);/);
+  const functionNav = forumNavigation.match(/export const PUBLIC_NAV_ITEMS = Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(staticNav, "Static pages must expose their canonical public navigation list.");
+  assert.ok(functionNav, "Function pages must expose their canonical public navigation list.");
+  for (const [sourceName, nav] of [["static", staticNav[1]], ["Function", functionNav[1]]]) {
+    assert.match(nav, /key: "explore", href: "\/store\/catalog\/", label: "Explore"/);
+    assert.match(nav, sourceName === "static"
+      ? /key: "support", href: SUPPORT_URL, label: "Support"/
+      : /key: "support", href: "\/support\.html", label: "Support"/);
+    assert.match(nav, /key: "account", href: "\/account\.html", label: "Login\/Signup"/);
+    assert.match(nav, /key: "cart", href: "\/store\/cart\//);
+    assert.equal((nav.match(/\{ key:/g) || []).length, 4, `${sourceName} public navigation must contain exactly the four approved items.`);
+    assert.doesNotMatch(nav, /forum|creator login|join \/ sign in/i, `${sourceName} public navigation must preserve the approved labels.`);
   }
 
   assert.equal(creators[0].profileTemplate, "bookshelf", "RV Sawyer must retain the bookshelf creator template.");
@@ -34,7 +40,9 @@ function main() {
   assert.match(alias, /compatibility alias/, "The creators URL must remain a safe compatibility alias.");
   assert.match(build, /renderIdentityItem\("Creator", product\.authors\.join/, "The product-page generator must render Creator separately.");
   assert.match(build, /renderIdentityItem\("Publisher \/ Imprint", product\.publisher\)/, "The product-page generator must render Publisher / Imprint separately.");
-  assert.match(account, /Account \/ My Library/, "The account page body must preserve current account behavior.");
+  assert.match(account, /id="signin-form"/, "The existing native sign-in form must remain available.");
+  assert.match(account, /id="register-form"/, "The existing native registration form must remain available.");
+  assert.doesNotMatch(account, /Account \/ My Library/, "A superseded account-page presentation must not be treated as required current behavior.");
   assert.doesNotMatch(account, />Authors<\/a>/, "Public navigation must not expose Author terminology.");
   assert.match(build, /function renderAiPolicyPage\(/, "The generated AI Policy route must remain generator-owned.");
   assert.match(read("ai-policy.html"), /id="ai-policy-heading"/, "The generated AI Policy page must retain its accessible heading.");
