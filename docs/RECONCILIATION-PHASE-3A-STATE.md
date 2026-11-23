@@ -1,4 +1,6 @@
-# Phase 3A reconciliation state
+# Historical snapshot: Phase 3A reconciliation state
+
+This records the classification and source state at Phase 3A on 2026-11-23. It is superseded by [the Phase 6 reconciliation closeout](RECONCILIATION-CLOSEOUT-2026-11-23.md); current branch and deployment state must be read from Git refs and Cloudflare metadata.
 
 Date: 2026-11-23. Source baseline: corrected `main` at `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6`. Old `development` remains preserved at `e796fd8fd8b4aad8eeb61f284eec0d029b2552a6`.
 

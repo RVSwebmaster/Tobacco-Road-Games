@@ -1,6 +1,6 @@
 # TRG project state
 
-Status updated 2026-11-23 for Phase 5 release-pipeline enforcement. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work. Current SHAs are read from Git refs rather than duplicated here.
+Status updated 2026-11-23 for Phase 6 structural closeout. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work. Current SHAs are read from Git refs rather than duplicated here. See [the reconciliation closeout record](RECONCILIATION-CLOSEOUT-2026-11-23.md) for preservation anchors, migration dispositions, and final structural verification.
 
 ## Git and production truth
 

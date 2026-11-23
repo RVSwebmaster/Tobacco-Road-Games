@@ -7,6 +7,8 @@
 - `reconcile/*` branches are review candidates. They are not release authorization and are never promoted merely by being pushed.
 - A `release/*` branch is temporary release evidence, never a permanent third source of truth. Its candidate must be an exact pushed SHA that descends from canonical `development`, except for an explicitly documented emergency or reconciliation release.
 
+Normal work starts from the current `development` branch. Do not base work or releases on preservation tags, historical reconciliation/release branches, or the `staging` deployment branch. Create a temporary `release/*` ref only for the exact pushed candidate SHA; the release gates reject candidates that do not descend from current `development`.
+
 The current accepted source relationship is `main = live` and `development = next`. Git refs and verified Pages deployment metadata are authoritative; this guide does not duplicate their moving SHAs. As recorded for Phase 4, `main` is `1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6`, Pages deployment `ced34184-fd94-44bc-a9c8-53861774cede`, and `development` is the accepted reconstructed line based on `main`.
 
 ## Release gates
