@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -19,6 +20,8 @@ export const publicDirectories = Object.freeze([
 export const excludedPublicFiles = Object.freeze([
   "media/ads/README.md", "owner/downloads/README.md",
 ]);
+
+const FULL_GIT_SHA = /^[a-f0-9]{40}$/i;
 
 function assertSafeOutputDirectory(outputDirectory) {
   const resolved = path.resolve(outputDirectory);
@@ -45,7 +48,7 @@ function countFiles(directory) {
   return count;
 }
 
-export function buildPagesOutput(outputDirectory = path.join(wranglerDirectory, "production-pages-output")) {
+export function buildPagesOutput(outputDirectory = path.join(wranglerDirectory, "production-pages-output"), buildMetadata = {}) {
   const resolvedOutput = assertSafeOutputDirectory(outputDirectory);
   fs.rmSync(resolvedOutput, { recursive: true, force: true });
   fs.mkdirSync(resolvedOutput, { recursive: true });
@@ -71,7 +74,46 @@ export function buildPagesOutput(outputDirectory = path.join(wranglerDirectory, 
     }
   }
   assertSourcePath("functions");
-  return { outputDirectory: resolvedOutput, fileCount: countFiles(resolvedOutput) };
+  const sourceOutputSha256 = hashPagesSourceOutput(resolvedOutput);
+  const commitSha = buildMetadata.commitSha ?? process.env.CF_PAGES_COMMIT_SHA;
+  if (commitSha) {
+    if (!FULL_GIT_SHA.test(commitSha)) throw new Error("CF_PAGES_COMMIT_SHA must contain a full Git SHA.");
+    const branch = buildMetadata.branch ?? process.env.CF_PAGES_BRANCH;
+    if (!branch) throw new Error("CF_PAGES_BRANCH is required to record the Cloudflare Pages source marker.");
+    fs.writeFileSync(path.join(resolvedOutput, "trg-release.json"), `${JSON.stringify({
+      schemaVersion: 1,
+      commitSha,
+      branch,
+      buildProvider: "cloudflare-pages",
+      generatedAt: new Date().toISOString(),
+      sourceOutputSha256,
+    }, null, 2)}\n`);
+  }
+  return { outputDirectory: resolvedOutput, fileCount: countFiles(resolvedOutput), sourceOutputSha256 };
+}
+
+export function hashPagesSourceOutput(directory) {
+  const files = collectPagesFiles(directory);
+  return crypto.createHash("sha256").update(JSON.stringify(files)).digest("hex");
+}
+
+function collectPagesFiles(directory, root = directory) {
+  const files = [];
+  const entries = fs.readdirSync(directory, { withFileTypes: true })
+    .sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  for (const entry of entries) {
+    const candidate = path.join(directory, entry.name);
+    if (entry.isSymbolicLink()) throw new Error(`Symbolic links are not allowed in Pages output: ${candidate}`);
+    if (entry.isDirectory()) files.push(...collectPagesFiles(candidate, root));
+    else if (entry.isFile()) {
+      if (candidate === path.join(root, "trg-release.json")) continue;
+      files.push({
+        path: path.relative(root, candidate).split(path.sep).join("/"),
+        sha256: crypto.createHash("sha256").update(fs.readFileSync(candidate)).digest("hex"),
+      });
+    }
+  }
+  return files;
 }
 
 function parseOutputArgument(argv) {

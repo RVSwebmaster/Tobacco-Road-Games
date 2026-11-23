@@ -29,6 +29,9 @@ const REQUIRED_STAGING_CHECKS = Object.freeze([
   "duplicateRegistrationRejected",
   "accountCleanup"
 ]);
+const FULL_GIT_SHA = /^[a-f0-9]{40}$/i;
+const SHA256 = /^[a-f0-9]{64}$/i;
+const LINEAGE_EXCEPTION_TYPES = new Set(["emergency", "reconciliation"]);
 
 export function parseWranglerConfig(text) {
   const tables = new Map();
@@ -156,10 +159,83 @@ export function validateEnvironmentConfig(configText, target, environmentMap = r
   return { ok: errors.length === 0, errors, projectName: config.name, config };
 }
 
-export function validatePromotion({ target, trackedDirty = false, commitSha, remoteSha, approval, stagingAttestation, rollbackDeploymentId }) {
+export function validateSourceLineage({ mainSha, developmentSha, candidateSha, developmentDescendsFromMain, candidateDescendsFromDevelopment, lineageException }) {
+  const errors = [];
+  if (!FULL_GIT_SHA.test(String(mainSha || ""))) errors.push("Canonical main must resolve to a full Git SHA.");
+  if (!FULL_GIT_SHA.test(String(developmentSha || ""))) errors.push("Canonical development must resolve to a full Git SHA.");
+  if (!FULL_GIT_SHA.test(String(candidateSha || ""))) errors.push("Release candidate must resolve to a full Git SHA.");
+
+  const exceptionType = lineageException?.type || null;
+  const exceptionReason = String(lineageException?.reason || "").trim();
+  const hasException = Boolean(exceptionType || exceptionReason);
+  const validException = LINEAGE_EXCEPTION_TYPES.has(exceptionType) && exceptionReason.length >= 20;
+  if (hasException && !validException) errors.push("A lineage exception must be emergency or reconciliation and include a documented reason of at least 20 characters.");
+  if (!developmentDescendsFromMain && !(validException && exceptionType === "reconciliation")) {
+    errors.push("Canonical development must descend from current main; use an explicitly documented reconciliation path to repair lineage.");
+  }
+  if (!candidateDescendsFromDevelopment && !validException) {
+    errors.push("The release candidate must descend from current development unless its manifest records an explicit emergency or reconciliation exception.");
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+export function validateRollbackSnapshot(snapshot) {
+  const errors = [];
+  if (!snapshot?.deploymentId) errors.push("Rollback snapshot is missing the previous production deployment ID.");
+  if (!snapshot?.deploymentUrl) errors.push("Rollback snapshot is missing the previous production deployment URL.");
+  else {
+    try {
+      if (new URL(snapshot.deploymentUrl).protocol !== "https:") errors.push("Rollback deployment URL must use HTTPS.");
+    } catch { errors.push("Rollback snapshot deployment URL is invalid."); }
+  }
+  if (snapshot?.branch !== "main") errors.push("Rollback snapshot must identify the current production main branch.");
+  if (snapshot?.environment !== "Production") errors.push("Rollback snapshot must identify the current Production environment.");
+  if (!snapshot?.source) errors.push("Rollback snapshot is missing the previous deployment source identifier.");
+  if (!snapshot?.capturedAt || !Number.isFinite(Date.parse(snapshot.capturedAt))) errors.push("Rollback snapshot is missing a valid capture timestamp.");
+  return { ok: errors.length === 0, errors };
+}
+
+export function validateProductionClosure({ mainSha, developmentSha, developmentDescendsFromMain, production, expectedSourceOutputSha256 }) {
+  const errors = [];
+  if (!FULL_GIT_SHA.test(String(mainSha || "")) || production?.commitSha !== mainSha) {
+    errors.push("Production cannot be considered closed unless origin/main exactly matches the accepted production source SHA.");
+  }
+  if (!SHA256.test(String(expectedSourceOutputSha256 || "")) || production?.sourceOutputSha256 !== expectedSourceOutputSha256) {
+    errors.push("Production deployment does not match the exact static source output fingerprint in the approved release manifest.");
+  }
+  if (production?.branch !== "main" || production?.deploymentEnvironment !== "Production") {
+    errors.push("Accepted production deployment metadata must identify the main branch in the Production environment.");
+  }
+  if (!production?.deploymentId || !production?.deploymentUrl || !SHA256.test(String(production?.manifestSha256 || "")) || !SHA256.test(String(production?.sourceOutputSha256 || ""))) {
+    errors.push("Accepted production deployment metadata is missing its ID, URL, exact source fingerprint, or artifact fingerprint.");
+  }
+  if (!FULL_GIT_SHA.test(String(developmentSha || "")) || !developmentDescendsFromMain) {
+    errors.push("Canonical development must descend from current main before the release can be closed for further work.");
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+export function validateReleaseEvidence({ manifest, preview, approval, staging, stagingChecks, production, productionChecks }) {
+  const errors = [];
+  const sha = manifest?.commitSha;
+  const artifact = manifest?.manifestSha256;
+  if (!FULL_GIT_SHA.test(String(sha || "")) || !SHA256.test(String(artifact || ""))) {
+    errors.push("The release manifest must provide a full source SHA and artifact fingerprint.");
+  }
+  for (const [name, evidence] of Object.entries({ preview, approval, staging, stagingChecks, production, productionChecks })) {
+    if (evidence?.commitSha !== sha) errors.push(`${name} evidence does not match the exact release source SHA.`);
+    if (evidence?.manifestSha256 !== artifact) errors.push(`${name} evidence does not match the exact release artifact fingerprint.`);
+  }
+  if (approval?.approved !== true) errors.push("Owner approval must explicitly record approved=true.");
+  if (stagingChecks?.passed !== true) errors.push("Staging checks must explicitly record passed=true.");
+  if (productionChecks?.passed !== true) errors.push("Production checks must explicitly record passed=true.");
+  return { ok: errors.length === 0, errors };
+}
+
+export function validatePromotion({ target, dirtyWorktree = false, commitSha, remoteSha, mainSha, approval, stagingAttestation, rollbackSnapshot }) {
   const errors = [];
   if (!commitSha || !/^[a-f0-9]{40}$/i.test(commitSha)) errors.push("Candidate must use a full 40-character Git SHA.");
-  if (trackedDirty) errors.push("Tracked working-tree changes block release promotion.");
+  if (dirtyWorktree) errors.push("Modified or untracked working-tree files block release promotion.");
   if (!remoteSha || remoteSha.toLowerCase() !== String(commitSha || "").toLowerCase()) {
     errors.push("The release branch must be pushed to origin at the exact candidate SHA.");
   }
@@ -168,11 +244,15 @@ export function validatePromotion({ target, trackedDirty = false, commitSha, rem
     if (!approval?.deploymentId || !approval?.previewUrl || !approval?.manifestSha256) errors.push("Owner Preview approval is missing its deployment, URL, or manifest fingerprint.");
   }
   if (target === "production") {
+    const mainPrefix = String(mainSha || "").slice(0, 7).toLowerCase();
+    if (!mainPrefix || !String(rollbackSnapshot?.source || "").toLowerCase().startsWith(mainPrefix)) {
+      errors.push("The current live production deployment source must match canonical main before promotion.");
+    }
     if (!stagingAttestation?.passed || stagingAttestation.commitSha !== commitSha) errors.push("A passing staging attestation for this exact SHA is required.");
     if (!stagingAttestation?.deploymentId || stagingAttestation.manifestSha256 !== approval?.manifestSha256) {
       errors.push("Staging deployment and Preview manifest must identify the same release.");
     }
-    if (!rollbackDeploymentId) errors.push("A previous production deployment must be recorded before promotion.");
+    errors.push(...validateRollbackSnapshot(rollbackSnapshot).errors);
   }
   if (!["preview", "staging", "production"].includes(target)) errors.push(`Unknown promotion target: ${target}`);
   return { ok: errors.length === 0, errors };
@@ -189,7 +269,12 @@ export function validateDeploymentRecord({ target, manifest, deployment, publicM
     errors.push("Pages deployment source SHA prefix does not match the release manifest.");
   }
   if (publicMarker?.commitSha !== manifest.commitSha) errors.push("Deployed trg-release.json does not report the full release SHA.");
-  if (publicMarker?.releaseId !== manifest.releaseId) errors.push("Deployed trg-release.json has a different release ID.");
+  const exactReleaseMarker = publicMarker?.releaseId === manifest.releaseId;
+  const exactCloudflareMainMarker = target === "production"
+    && publicMarker?.buildProvider === "cloudflare-pages"
+    && !publicMarker?.releaseId
+    && publicMarker?.branch === expected?.deploymentBranch;
+  if (!exactReleaseMarker && !exactCloudflareMainMarker) errors.push("Deployed trg-release.json is not tied to this release or an exact Cloudflare main build.");
   if (publicMarker?.sourceOutputSha256 !== manifest.sourceOutputSha256) errors.push("Deployed static build fingerprint does not match the release manifest.");
   return { ok: errors.length === 0, errors };
 }
@@ -240,7 +325,7 @@ export function hashDirectory(directory) {
 
 function collectFiles(directory, root = directory) {
   const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {
     const candidate = path.join(directory, entry.name);
     if (entry.isSymbolicLink()) throw new Error(`Symlinks are not allowed in a release artifact: ${candidate}`);
     if (entry.isDirectory()) files.push(...collectFiles(candidate, root));
@@ -272,6 +357,53 @@ function git(args) {
   return execFileSync("git", args, { cwd: REPOSITORY_ROOT, encoding: "utf8" }).trim();
 }
 
+function refreshCanonicalRefs() {
+  git([
+    "fetch", "--no-tags", "origin",
+    "+refs/heads/main:refs/remotes/origin/main",
+    "+refs/heads/development:refs/remotes/origin/development"
+  ]);
+  const mainSha = git(["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"]);
+  const developmentSha = git(["rev-parse", "--verify", "refs/remotes/origin/development^{commit}"]);
+  const remoteRefs = git(["ls-remote", "--heads", "origin", "refs/heads/main", "refs/heads/development"])
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(/\s+/))
+    .filter((parts) => parts.length === 2);
+  const remote = Object.fromEntries(remoteRefs.map(([sha, ref]) => [ref, sha]));
+  if (remote["refs/heads/main"] !== mainSha || remote["refs/heads/development"] !== developmentSha) {
+    throw new Error("Canonical Git refs changed while they were being checked; retry from a stable origin state.");
+  }
+  return { mainSha, developmentSha };
+}
+
+function isGitAncestor(ancestor, descendant) {
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", ancestor, descendant], { cwd: REPOSITORY_ROOT, stdio: "ignore" });
+    return true;
+  } catch (error) {
+    if (error.status === 1) return false;
+    throw error;
+  }
+}
+
+function checkSourceLineage({ mainSha, developmentSha, candidateSha, lineageException }) {
+  return validateSourceLineage({
+    mainSha,
+    developmentSha,
+    candidateSha,
+    developmentDescendsFromMain: isGitAncestor(mainSha, developmentSha),
+    candidateDescendsFromDevelopment: isGitAncestor(developmentSha, candidateSha),
+    lineageException
+  });
+}
+
+function parseLineageException(args) {
+  const type = args.get("lineage-exception");
+  const reason = args.get("lineage-reason");
+  if (!type && !reason) return null;
+  return { type, reason };
+}
+
 function installReleaseDependencies(sourceRoot) {
   const npmArguments = ["ci", "--ignore-scripts", "--no-audit", "--no-fund"];
   const npmCli = process.env.npm_execpath;
@@ -293,14 +425,25 @@ function runBuild(argv) {
   const releaseId = required(args, "release-id");
   if (!/^[a-z0-9][a-z0-9._-]{2,80}$/i.test(releaseId)) throw new Error("Release ID must be a short alphanumeric label with dots, underscores, or hyphens.");
   if (!releaseBranch.startsWith("release/")) throw new Error("Release builds must name a release/* branch.");
-  const status = git(["status", "--porcelain=v1", "--untracked-files=no"]);
-  if (status) throw new Error("Tracked working-tree changes block release builds.");
+  const status = git(["status", "--porcelain=v1", "--untracked-files=all"]);
+  if (status) throw new Error("Modified or untracked working-tree files block release builds.");
   const commitSha = git(["rev-parse", "--verify", `${ref}^{commit}`]);
   const localBranchSha = git(["rev-parse", "--verify", `refs/heads/${releaseBranch}`]);
   if (localBranchSha !== commitSha) throw new Error("The release branch must point to the requested candidate commit.");
   const remoteLine = git(["ls-remote", "--heads", "origin", `refs/heads/${releaseBranch}`]);
   const remoteSha = remoteLine.split(/\s+/)[0] || "";
   if (remoteSha !== commitSha) throw new Error("The release branch must be pushed to origin at the requested candidate commit.");
+  const canonical = refreshCanonicalRefs();
+  const lineageException = parseLineageException(args);
+  const lineageGate = checkSourceLineage({ ...canonical, candidateSha: commitSha, lineageException });
+  if (!lineageGate.ok) throw new Error(lineageGate.errors.join("\n"));
+  const lineage = {
+    mainSha: canonical.mainSha,
+    developmentSha: canonical.developmentSha,
+    developmentDescendsFromMain: isGitAncestor(canonical.mainSha, canonical.developmentSha),
+    candidateDescendsFromDevelopment: isGitAncestor(canonical.developmentSha, commitSha),
+    exception: lineageException
+  };
 
   const releaseRoot = path.join(WRANGLER_ROOT, releaseId);
   if (fs.existsSync(releaseRoot)) throw new Error(`Release workspace already exists; choose a new release ID: ${releaseRoot}`);
@@ -315,7 +458,11 @@ function runBuild(argv) {
   installReleaseDependencies(sourceRoot);
 
   const outputDirectory = path.join(sourceRoot, ".wrangler", "release-pages-output");
-  execFileSync(process.execPath, [path.join(sourceRoot, "scripts", "build-pages-output.mjs"), "--output", outputDirectory], { cwd: sourceRoot, stdio: "inherit" });
+  execFileSync(process.execPath, [path.join(sourceRoot, "scripts", "build-pages-output.mjs"), "--output", outputDirectory], {
+    cwd: sourceRoot,
+    stdio: "inherit",
+    env: { ...process.env, CF_PAGES_COMMIT_SHA: "", CF_PAGES_BRANCH: "" }
+  });
   const createdAt = new Date().toISOString();
   const sourceFiles = collectFiles(outputDirectory);
   const sourceOutputSha256 = hashJson(sourceFiles);
@@ -352,8 +499,9 @@ function runBuild(argv) {
     releaseBranch,
     commitMessage: git(["show", "-s", "--format=%s", commitSha]),
     createdAt,
-    buildCommand: `npm run release:build -- --ref ${commitSha} --release-branch ${releaseBranch} --release-id ${releaseId}${migrationIds.length ? ` --migration ${migrationIds.join(" --migration ")}` : ""}`,
+    buildCommand: `npm run release:build -- --ref ${commitSha} --release-branch ${releaseBranch} --release-id ${releaseId}${migrationIds.length ? ` --migration ${migrationIds.join(" --migration ")}` : ""}${lineageException ? ` --lineage-exception ${lineageException.type} --lineage-reason ${JSON.stringify(lineageException.reason)}` : ""}`,
     pipelinePolicySha: policySha,
+    lineage,
     pagesFileCount: pagesFiles.length,
     sourceOutputSha256,
     pagesOutputSha256: hashJson(pagesFiles),
@@ -420,9 +568,11 @@ function runCheckPromotion(argv) {
   const releaseId = required(args, "release-id");
   const result = verifyArtifact(releaseId);
   if (!result.ok) throw new Error(result.errors.join("\n"));
-  const status = git(["status", "--porcelain=v1", "--untracked-files=no"]);
+  const status = git(["status", "--porcelain=v1", "--untracked-files=all"]);
   const remoteLine = git(["ls-remote", "--heads", "origin", `refs/heads/${result.manifest.releaseBranch}`]);
   const remoteSha = remoteLine.split(/\s+/)[0] || "";
+  const canonical = refreshCanonicalRefs();
+  const lineageGate = checkSourceLineage({ ...canonical, candidateSha: result.manifest.commitSha, lineageException: result.manifest.lineage?.exception });
   const approvalPath = path.join(WRANGLER_ROOT, releaseId, "owner-approval.json");
   const stagingPath = path.join(WRANGLER_ROOT, releaseId, "staging-attestation.json");
   const rollbackPath = path.join(WRANGLER_ROOT, releaseId, "rollback-snapshot.json");
@@ -432,13 +582,18 @@ function runCheckPromotion(argv) {
   const rollback = fs.existsSync(rollbackPath) ? readJson(rollbackPath) : null;
   const gate = validatePromotion({
     target,
-    trackedDirty: Boolean(status),
+    dirtyWorktree: Boolean(status),
     commitSha: result.manifest.commitSha,
     remoteSha,
+    mainSha: canonical.mainSha,
     approval: approval && { ...approval, manifestSha256: approval.manifestSha256 },
     stagingAttestation: staging,
-    rollbackDeploymentId: rollback?.deploymentId
+    rollbackSnapshot: rollback
   });
+  if (!result.manifest.lineage?.mainSha || !result.manifest.lineage?.developmentSha) {
+    gate.errors.push("Release manifest predates canonical main/development lineage evidence; rebuild it from the pushed candidate.");
+  }
+  gate.errors.push(...lineageGate.errors);
   if ((target === "staging" || target === "production") && approval?.manifestSha256 !== result.manifest.manifestSha256) {
     gate.errors.push("Owner Preview approval manifest does not match the candidate artifact.");
   }
@@ -510,6 +665,7 @@ async function runRecordDeployment(argv) {
     branch: deployment.Branch,
     commitSha: result.manifest.commitSha,
     manifestSha256: result.manifest.manifestSha256,
+    sourceOutputSha256: result.manifest.sourceOutputSha256,
     staticOutputSha256: result.manifest.pagesOutputSha256,
     verifiedAt: new Date().toISOString()
   };
@@ -561,12 +717,27 @@ function runFinalizeRecord(argv) {
   const production = load("production-deployment.json");
   const productionChecks = load("production-checks.json");
   const rollback = load("rollback-snapshot.json");
-  if (preview.commitSha !== verified.manifest.commitSha || approval.commitSha !== verified.manifest.commitSha || staging.commitSha !== verified.manifest.commitSha || production.commitSha !== verified.manifest.commitSha) {
-    throw new Error("Release record inputs do not all refer to one source SHA.");
+  const status = git(["status", "--porcelain=v1", "--untracked-files=all"]);
+  if (status) throw new Error("Modified or untracked working-tree files block release closeout.");
+  const releaseRemote = git(["ls-remote", "--heads", "origin", `refs/heads/${verified.manifest.releaseBranch}`]).split(/\s+/)[0] || "";
+  if (releaseRemote !== verified.manifest.commitSha) throw new Error("Release closeout requires the exact candidate SHA to remain pushed on its release branch.");
+  const canonical = refreshCanonicalRefs();
+  const lineageGate = checkSourceLineage({ ...canonical, candidateSha: verified.manifest.commitSha, lineageException: verified.manifest.lineage?.exception });
+  if (!verified.manifest.lineage?.mainSha || !verified.manifest.lineage?.developmentSha) {
+    lineageGate.errors.push("Release manifest predates canonical main/development lineage evidence; rebuild it from the pushed candidate.");
+    lineageGate.ok = false;
   }
-  if (!stagingChecks.passed || stagingChecks.commitSha !== verified.manifest.commitSha || !productionChecks.passed || productionChecks.commitSha !== verified.manifest.commitSha) {
-    throw new Error("Both staging and production focused checks must pass before writing a completed release record.");
-  }
+  const evidenceGate = validateReleaseEvidence({ manifest: verified.manifest, preview, approval, staging, stagingChecks, production, productionChecks });
+  const closureGate = validateProductionClosure({
+    mainSha: canonical.mainSha,
+    developmentSha: canonical.developmentSha,
+    developmentDescendsFromMain: isGitAncestor(canonical.mainSha, canonical.developmentSha),
+    production,
+    expectedSourceOutputSha256: verified.manifest.sourceOutputSha256
+  });
+  const rollbackGate = validateRollbackSnapshot(rollback);
+  const closeoutErrors = [...lineageGate.errors, ...evidenceGate.errors, ...closureGate.errors, ...rollbackGate.errors];
+  if (closeoutErrors.length) throw new Error(closeoutErrors.join("\n"));
   const migrationReceipts = {};
   for (const target of ["staging", "production"]) {
     const receiptPath = path.join(releaseRoot, `${target}-migrations.json`);

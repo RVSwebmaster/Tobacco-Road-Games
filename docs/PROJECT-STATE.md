@@ -1,6 +1,6 @@
 # TRG project state
 
-Status verified 2026-11-23 after Phase 4 read-only migration and binding checks. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work.
+Status updated 2026-11-23 for Phase 5 release-pipeline enforcement. `main` is the live production line; `development` is the accepted next-development line reconstructed from `main` plus approved continuing and deferred work. Current SHAs are read from Git refs rather than duplicated here.
 
 ## Git and production truth
 
@@ -8,8 +8,8 @@ Status verified 2026-11-23 after Phase 4 read-only migration and binding checks.
 - Active production Pages deployment: `ced34184-fd94-44bc-a9c8-53861774cede`; production is marked clean and the storefront remains **CLOSED**.
 - Production bindings: D1 `TRG_ORDERS` → `7e2cd675-a6f1-4fac-bbc9-03485a806c26`; R2 `TRG_PRODUCTS` → `trg-products`.
 - Staging Pages binds D1 `TRG_ORDERS` → `d92594e8-a45c-4f84-8f48-7c3aeba17f29` (`trg-orders-staging`) and `TRG_OFFICE` → `4c3ae60a-da41-4d65-aee5-a53179fc53f8` (`trg-office-staging`); its R2 buckets are `trg-products-staging`, `trg-forum-avatars-staging`, and `trg-office-archive-staging`.
-- The production Pages Preview configuration has no D1 or R2 bindings. The separate acceptance project uses D1 `trg-orders-acceptance` and R2 `trg-products-acceptance`; reconciliation Preview cannot bind production D1 or R2 through these configurations.
-- Canonical `development` contains the accepted Phase 3A reconstruction, based on `main`, followed by this documentation-only Phase 3B closeout. Phase 3B does not change application behavior, deploy, or modify production/staging.
+- The production Pages Preview configuration has no D1 or R2 bindings. The release map still names disposable Preview project `trg-member-tier-test-20261120`, which Cloudflare currently reports as not found. The separate acceptance project uses D1 `trg-orders-acceptance` and R2 `trg-products-acceptance` and is not silently substituted; release Preview remains blocked until an active isolated target is selected. The wrapper fails closed on the missing/mismatched project.
+- Canonical `development` is the accepted reconstructed line based on `main`, followed by the Phase 3B closeout and Phase 5 release/build metadata enforcement. Phase 5 does not alter application behavior, deploy, or modify production/staging.
 - Old pre-reconciliation `development` remains recoverable at `e796fd8fd8b4aad8eeb61f284eec0d029b2552a6` through remote preservation tag `preserve/pre-reconcile-2026-11-23-development-e796fd8`.
 - `reconcile/development-2026-11-23` remains preserved at accepted Phase 3A commit `8288d954cee35c323a577f05f744d94f09801fe8`; it descends from `main` and remains a historical reconstruction reference.
 - Preservation refs for pre-reconciliation `main` and production remain the rollback/recovery anchors recorded during Phase 1.
@@ -51,3 +51,12 @@ No database was written during Phase 4. There is no applied 073–079 migration 
 ## Build limitation observed during Phase 3A
 
 `node scripts/build-store.js` completed but reported zero active products and zero historical records from the checked-in build inputs. It consequently rewrote several generated catalog/storefront pages and removed five checked-in Guest preview-product pages. Those unrelated generated changes were restored and excluded. `npm run build:pages` successfully packaged the committed page set (252 allowlisted files), including the generated canonical Creator Dashboard. The immutable release pipeline builds from the exact committed static artifact; full product-page regeneration from the repository alone remains unfinished and must not be treated as verified by the Pages packaging result.
+
+## Release-state invariants (Phase 5)
+
+- `ops/release/README.md` is the operating guide; Git refs and verified Pages deployment metadata are the state authorities. `main = live`; `development = next`; `release/*` branches are temporary candidate evidence.
+- `scripts/release-pipeline.mjs` checks that remote `development` descends from remote `main`, a normal release candidate descends from remote `development`, and the candidate release branch is pushed at the exact full SHA. Emergency/reconciliation lineage exceptions must be typed and reasoned in the hashed build manifest.
+- Promotion rejects modified or untracked worktree files. Preview approval, staging verification, production deployment, and focused checks must match the same full source SHA and artifact fingerprint. Before promotion, the rollback snapshot's live source prefix must match `main`; release closeout requires `main` to equal the accepted production SHA and `development` to descend from `main`.
+- Environment checks compare the downloaded Pages configuration with the complete checked-in environment binding map. Production D1/R2 resource IDs and buckets cannot appear in the Preview or staging configuration without failing the gate. The wrapper records the previous production deployment ID, URL, branch, environment, source, and capture time before production preflight.
+- `[CF-Pages-Skip]` may leave a Cloudflare record marked skipped with idle stages. That is harmless metadata and does not require manual deletion or cleanup automation; investigate only if a build/deploy stage or alias was created.
+- Phase 4 migration decisions remain active: staging-only 055 tables are preserved as inert historical residue and 055 is not in the active migration sequence. Migrations 075 and 079 remain unchanged and unapplied; deferred work must use future forward-only collision-safe migrations. Phase 5 performs no migration.

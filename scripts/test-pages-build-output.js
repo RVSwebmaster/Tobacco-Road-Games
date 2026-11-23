@@ -8,10 +8,12 @@ const outputDirectory = path.join(repositoryRoot, ".wrangler", "test-pages-outpu
 
 async function main() {
   const builder = await import(pathToFileURL(path.join(__dirname, "build-pages-output.mjs")));
+  const pipeline = await import(pathToFileURL(path.join(__dirname, "release-pipeline.mjs")));
   try {
     const result = builder.buildPagesOutput(outputDirectory);
     assert.equal(result.outputDirectory, outputDirectory);
     assert.ok(result.fileCount > 0);
+    assert.equal(result.sourceOutputSha256, pipeline.hashDirectory(outputDirectory), "Build source fingerprint must use the release pipeline's canonical file hashing.");
     assert.match(fs.readFileSync(path.join(outputDirectory, "_redirects"), "utf8"), /^\/ \/guest\/ 200\s*$/m, "Pages output must preserve the Guest homepage rewrite.");
 
     for (const relativePath of builder.publicRootFiles) {
@@ -76,6 +78,15 @@ async function main() {
       () => builder.buildPagesOutput(path.join(repositoryRoot, "unsafe-output")),
       /dedicated \*pages-output directory/,
     );
+
+    const commitSha = "1b1a8a78e5cf24885b2ab24e3a30b7aacefb18a6";
+    builder.buildPagesOutput(outputDirectory, { commitSha, branch: "main" });
+    const marker = JSON.parse(fs.readFileSync(path.join(outputDirectory, "trg-release.json"), "utf8"));
+    assert.equal(marker.commitSha, commitSha, "Cloudflare build marker must expose the exact full source SHA.");
+    assert.equal(marker.branch, "main", "Cloudflare build marker must expose its source branch.");
+    assert.equal(marker.buildProvider, "cloudflare-pages", "Automatic Pages builds must be distinguishable from release artifacts.");
+    assert.equal(marker.sourceOutputSha256, result.sourceOutputSha256, "Cloudflare marker must fingerprint the same static source files as the release pipeline.");
+    assert.equal(builder.hashPagesSourceOutput(outputDirectory), result.sourceOutputSha256, "The release marker itself must not alter the source output fingerprint.");
   } finally {
     fs.rmSync(outputDirectory, { recursive: true, force: true });
   }

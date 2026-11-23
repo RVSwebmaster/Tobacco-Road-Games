@@ -103,6 +103,8 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
 
   const previewWithProdD1 = previewToml.replace("6248efe2-c96d-457e-b705-376cf5485c04", "7e2cd675-a6f1-4fac-bbc9-03485a806c26");
   assert.equal(pipeline.validateEnvironmentConfig(previewWithProdD1, "preview").ok, false, "Preview cannot bind production D1");
+  const previewWithProdR2 = `${previewToml}\n[[env.production.r2_buckets]]\nbinding = "TRG_PRODUCTS"\nbucket_name = "trg-products"\n`;
+  assert.equal(pipeline.validateEnvironmentConfig(previewWithProdR2, "preview").ok, false, "Preview cannot bind production R2");
   const stageWithProdD1 = stagingToml.replace("d92594e8-a45c-4f84-8f48-7c3aeba17f29", "7e2cd675-a6f1-4fac-bbc9-03485a806c26");
   assert.equal(pipeline.validateEnvironmentConfig(stageWithProdD1, "staging").ok, false, "staging cannot bind production D1");
   const stageWithProdR2 = stagingToml.replace("trg-products-staging", "trg-products");
@@ -126,6 +128,14 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   assert.equal(migrationSha, focusedMigration.sha256, "Migration ledger hash must match the tracked SQL file.");
   assert.ok(focusedMigration.historicalVerification.staging.verifiedAt && focusedMigration.historicalVerification.production.verifiedAt, "Migration history should retain previously verified staging and production application.");
 
+  const developmentSha = "2".repeat(40);
+  const candidateSha = "3".repeat(40);
+  assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: true, candidateDescendsFromDevelopment: true }).ok, true, "normal development and release ancestry should pass");
+  assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: false, candidateDescendsFromDevelopment: true }).ok, false, "development not descending from main must fail closed");
+  assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: true, candidateDescendsFromDevelopment: false }).ok, false, "candidate not descending from development must fail without a documented exception");
+  assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: true, candidateDescendsFromDevelopment: false, lineageException: { type: "reconciliation", reason: "Friday-approved source reconciliation recorded in release evidence." } }).ok, true, "documented reconciliation exception should be explicit and machine-readable");
+  assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: false, candidateDescendsFromDevelopment: true, lineageException: { type: "emergency", reason: "Emergency source fix with recorded incident and approval." } }).ok, false, "an emergency candidate exception must not waive development-to-main reconciliation");
+
   const approval = { approved: true, commitSha: sha, deploymentId: "preview-id", previewUrl: "https://preview.trg-member-tier-test-20261120.pages.dev", manifestSha256: manifestSha };
   const stagingAttestation = {
     passed: true,
@@ -136,12 +146,17 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   };
   assert.equal(pipeline.validatePromotion({ target: "preview", commitSha: sha, remoteSha: sha }).ok, true, "clean pushed Preview candidate should pass");
   assert.equal(pipeline.validatePromotion({ target: "staging", commitSha: sha, remoteSha: sha, approval }).ok, true, "matching Owner approval gates staging");
-  assert.equal(pipeline.validatePromotion({ target: "staging", commitSha: sha, remoteSha: sha, trackedDirty: true, approval }).ok, false, "dirty tracked worktree must block deployment");
+  assert.equal(pipeline.validatePromotion({ target: "staging", commitSha: sha, remoteSha: sha, dirtyWorktree: true, approval }).ok, false, "modified or untracked source worktree must block deployment");
   assert.equal(pipeline.validatePromotion({ target: "staging", commitSha: sha, remoteSha: "0".repeat(40), approval }).ok, false, "unpushed release branch must block deployment");
   assert.equal(pipeline.validatePromotion({ target: "staging", commitSha: sha, remoteSha: sha, approval: { ...approval, commitSha: "0".repeat(40) } }).ok, false, "stale Preview approval must block staging");
-  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, approval, stagingAttestation, rollbackDeploymentId: "previous-id" }).ok, true, "same approved and staging-tested SHA plus rollback should pass");
-  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, approval, stagingAttestation: { ...stagingAttestation, commitSha: "0".repeat(40) }, rollbackDeploymentId: "previous-id" }).ok, false, "different staging SHA must block production");
-  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, approval, stagingAttestation }).ok, false, "missing rollback deployment must block production");
+  const rollbackSnapshot = { deploymentId: "previous-id", deploymentUrl: "https://previous.pages.dev", branch: "main", environment: "Production", source: sha.slice(0, 7), capturedAt: "2026-11-23T12:00:00.000Z" };
+  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, mainSha: sha, approval, stagingAttestation, rollbackSnapshot }).ok, true, "same pushed, approved and staging-tested SHA, main source, and complete rollback snapshot should pass");
+  const differentCandidateSha = "4".repeat(40);
+  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: differentCandidateSha, remoteSha: differentCandidateSha, mainSha: sha, approval: { ...approval, commitSha: differentCandidateSha }, stagingAttestation: { ...stagingAttestation, commitSha: differentCandidateSha }, rollbackSnapshot }).ok, true, "a staged candidate may promote from development while the pre-promotion live baseline still matches main");
+  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, mainSha: sha, approval, stagingAttestation, rollbackSnapshot: { ...rollbackSnapshot, source: "0".repeat(7) } }).ok, false, "stale main relative to the captured live production source must block promotion");
+  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, mainSha: sha, approval, stagingAttestation: { ...stagingAttestation, commitSha: "0".repeat(40) }, rollbackSnapshot }).ok, false, "different staging SHA must block production");
+  assert.equal(pipeline.validatePromotion({ target: "production", commitSha: sha, remoteSha: sha, mainSha: sha, approval, stagingAttestation }).ok, false, "missing rollback metadata must block production");
+  assert.equal(pipeline.validateRollbackSnapshot({ ...rollbackSnapshot, branch: "development" }).ok, false, "rollback metadata for a non-production branch must fail");
 
   const manifest = { commitSha: sha, releaseId: "pipeline-test", sourceOutputSha256: "a".repeat(64) };
   const manifestBody = { schemaVersion: 1, ...manifest };
@@ -153,6 +168,40 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   assert.equal(pipeline.validateDeploymentRecord({ target: "preview", manifest, deployment, publicMarker: marker }).ok, true, "Exact Preview deployment and full-SHA marker should pass.");
   assert.equal(pipeline.validateDeploymentRecord({ target: "preview", manifest, deployment: { ...deployment, Environment: "Production" }, publicMarker: marker }).ok, false, "Wrong deployment classification must fail.");
   assert.equal(pipeline.validateDeploymentRecord({ target: "preview", manifest, deployment, publicMarker: { ...marker, commitSha: "0".repeat(40) } }).ok, false, "Deployed marker with a different full SHA must fail.");
+  const automaticMainMarker = { schemaVersion: 1, commitSha: sha, branch: "main", buildProvider: "cloudflare-pages", sourceOutputSha256: manifest.sourceOutputSha256 };
+  assert.equal(pipeline.validateDeploymentRecord({ target: "production", manifest, deployment: { Environment: "Production", Branch: "main", Source: sha.slice(0, 7) }, publicMarker: automaticMainMarker }).ok, true, "Git-connected main deployment must prove its exact full SHA and static source fingerprint");
+  assert.equal(pipeline.validateDeploymentRecord({ target: "production", manifest, deployment: { Environment: "Production", Branch: "main", Source: sha.slice(0, 7) }, publicMarker: { ...automaticMainMarker, branch: "development" } }).ok, false, "Automatic deployment marker from another branch must fail production verification");
+  assert.equal(pipeline.validateDeploymentRecord({ target: "production", manifest, deployment: { Environment: "Production", Branch: "main", Source: sha.slice(0, 7) }, publicMarker: { ...automaticMainMarker, releaseId: "other-release" } }).ok, false, "Conflicting release identity must not be accepted as a Cloudflare main marker");
+
+  const sourceRecord = { commitSha: sha, manifestSha256: manifestSha };
+  const stagingRecord = { ...sourceRecord, deploymentId: "staging-id", deploymentUrl: "https://staging.pages.dev", deploymentEnvironment: "Production", branch: "staging" };
+  const stagingEvidence = { ...sourceRecord, passed: true };
+  const productionRecord = { ...sourceRecord, sourceOutputSha256: manifest.sourceOutputSha256, deploymentId: "production-id", deploymentUrl: "https://live.pages.dev", deploymentEnvironment: "Production", branch: "main" };
+  const productionEvidence = { ...sourceRecord, passed: true };
+  const releaseEvidence = pipeline.validateReleaseEvidence({
+    manifest: { commitSha: sha, manifestSha256: manifestSha },
+    preview: sourceRecord,
+    approval: { ...sourceRecord, approved: true },
+    staging: stagingRecord,
+    stagingChecks: stagingEvidence,
+    production: productionRecord,
+    productionChecks: productionEvidence
+  });
+  assert.equal(releaseEvidence.ok, true, "Preview approval, staging, and production must identify the same exact source and artifact");
+  assert.equal(pipeline.validateReleaseEvidence({
+    manifest: { commitSha: sha, manifestSha256: manifestSha },
+    preview: sourceRecord,
+    approval: { ...sourceRecord, approved: true },
+    staging: stagingRecord,
+    stagingChecks: { ...stagingEvidence, manifestSha256: "0".repeat(64) },
+    production: productionRecord,
+    productionChecks: productionEvidence
+  }).ok, false, "different staging artifact fingerprint must fail release closeout");
+
+  assert.equal(pipeline.validateProductionClosure({ mainSha: sha, developmentSha, developmentDescendsFromMain: true, production: productionRecord, expectedSourceOutputSha256: manifest.sourceOutputSha256 }).ok, true, "main at exact accepted live SHA, matching static fingerprint, and development descended from main should close successfully");
+  assert.equal(pipeline.validateProductionClosure({ mainSha: "0".repeat(40), developmentSha, developmentDescendsFromMain: true, production: productionRecord, expectedSourceOutputSha256: manifest.sourceOutputSha256 }).ok, false, "main stale relative to the recorded live production source must not close");
+  assert.equal(pipeline.validateProductionClosure({ mainSha: sha, developmentSha, developmentDescendsFromMain: true, production: productionRecord, expectedSourceOutputSha256: "0".repeat(64) }).ok, false, "production with a different static artifact fingerprint must not close");
+  assert.equal(pipeline.validateProductionClosure({ mainSha: sha, developmentSha, developmentDescendsFromMain: false, production: productionRecord, expectedSourceOutputSha256: manifest.sourceOutputSha256 }).ok, false, "release closeout must stop if development no longer descends from main");
 
   const accountMigration = { id: "account-profile-072", sha256: focusedMigration.sha256, databaseIds: { staging: environments.staging.bindings.production.d1.TRG_ORDERS } };
   const migrationManifest = { commitSha: sha, manifestSha256: manifestSha, migrations: [accountMigration] };
@@ -167,7 +216,7 @@ database_id = "6248efe2-c96d-457e-b705-376cf5485c04"
   assert.ok(map.optionalForPasswordResetEmail.every((name) => /^[A-Z0-9_]+$/.test(name)), "provider names are metadata only");
   assert.equal(pipeline.validateStagingChecks({ passed: true, commitSha: sha, manifestSha256: manifestSha, checks: Object.fromEntries(["registration", "immediateLogin", "customerAccess", "logout", "signedOutCustomerBlocked", "loginAfterLogout", "duplicateRegistrationRejected", "accountCleanup"].map((key) => [key, true])) }, { commitSha: sha, manifestSha256: manifestSha }).ok, true, "complete staging check set should pass");
 
-  console.log("Release pipeline gates passed: environment isolation, immutable candidate, Preview approval, staging attestation, production SHA/rollback gate, and no email/Google secret requirement for native auth.");
+  console.log("Release pipeline gates passed: canonical Git ancestry, exact pushed source/artifact, isolated environments, same-artifact promotion, main/live closure, migration receipts, and complete rollback metadata.");
 }
 
 main().catch((error) => {
