@@ -1088,6 +1088,11 @@ function renderStorefrontSponsorMarquee() {
         </aside>`;
 }
 
+function renderCustomerProfileAdvertisingDisplays() {
+  return `${renderHomepageBricABracShelf({ postingWall: true })}
+      ${renderHomepageAdMarquee()}`;
+}
+
 function renderStorefrontNewThisWeek({ newThisWeek }) {
   return renderBookshelfSection({ id: "new-this-week-heading", kicker: "Just unpacked", title: "New This Week", description: "Recently released, currently eligible books in canonical marketplace order.", products: newThisWeek, centerExamination: true, emptyMessage: "No eligible new releases are on the public shelf yet." });
 }
@@ -1202,7 +1207,7 @@ function buildGuestLandingPage(products) {
   if (!navPattern.test(html)) throw new Error("Approved homepage navigation could not be found for the Guest Landing Page.");
   if (!mainPattern.test(html)) throw new Error("Approved homepage content could not be found for the Guest Landing Page.");
 
-  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=${OPEN_RULES_LIBRARY_CACHE_BUST}" defer></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_EXAMINATION_STYLE_CACHE_BUST}">\n`;
+  const guestStylesheet = `  <script src="/assets/js/magical-bookshelf.js?v=${GUEST_FEATURE_CACHE_BUST}"></script>\n  <script src="/assets/js/open-rules-library.js?v=${OPEN_RULES_LIBRARY_CACHE_BUST}" defer></script>\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=${GUEST_EXAMINATION_STYLE_CACHE_BUST}">\n  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n`;
   const next = html
     .replace("<title>Tobacco Road Games</title>", "<title>Guest Landing Page | Tobacco Road Games</title>")
     .replace('content="Tobacco Road Games is a marketplace for tabletop games, creator releases, bundles, and physical goods."', 'content="Browse and shop Tobacco Road Games as a Guest without creating an account."')
@@ -1249,6 +1254,7 @@ function withoutGuestLoginPopup(page) {
 
 function renderCustomerLandingPage(guestLandingPage) {
   guestLandingPage = withoutGuestLoginPopup(guestLandingPage);
+  const lineBreak = guestLandingPage.match(/\r?\n/)?.[0] || "\n";
   const profileRoutes = Object.fromEntries(MEMBER_PROFILE_ROUTES.map(({ accountClass, route }) => [accountClass, route]));
   let customerPage = guestLandingPage
     .replace('class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo', 'class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo data-customer-storefront')
@@ -1258,11 +1264,19 @@ function renderCustomerLandingPage(guestLandingPage) {
     .replace('aria-label="Empty Guest personal library shelves"', 'aria-label="Your personal library shelves"')
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"')
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right"');
+  customerPage = customerPage
+    .replace('<div class="shop-wall-bric-shelf">', '<div class="shop-wall-bric-shelf" data-curio-shelf="bric-a-brac-1">')
+    .replace('<div class="shop-wall-bric-shelf__surface"></div>', `<img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">${lineBreak}          <div class="shop-wall-bric-shelf__surface"></div>${lineBreak}          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>`);
+  customerPage = customerPage
+    .replace(/<script type="module" src="\/assets\/js\/creator-plateboard\.js\?v=[^"]+"><\/script>\s*/g, "")
+    .replace(/<link rel="stylesheet" href="\/assets\/css\/creator-plateboard\.css\?v=[^"]+">\s*/g, "")
+    .replace(/ data-creator-plateboard(?: data-interval-seconds="\d+")?/g, "")
+    .replace(/ data-plateboard-preview="true" data-creator-id="[^"]+" data-creator-name="[^"]*" data-title="[^"]*" data-tagline="[^"]*" data-secondary-copy="[^"]*" data-callout="[^"]*" data-theme="[^"]*" data-artwork="[^"]*"/g, "");
   if (customerPage === guestLandingPage) throw new Error("Customer storefront markers could not be added.");
   customerPage = customerPage
     .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}-${CUSTOMER_NAV_CACHE_BUST}`)
     .replace(/<script src="\/assets\/js\/guest-product-preview\.js\?v=[^"]+" defer><\/script>/, `<script src="/assets/js/guest-product-preview.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>`)
-    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>\n</body>`);
+    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>${lineBreak}</body>`);
   return customerPage;
 }
 
@@ -1276,6 +1290,12 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     throw new Error("Guest page is missing the shared storefront main or navigation.");
   }
 
+  const profileAdvertising = new Set([
+    "/customer-profile/",
+    "/creator/",
+    "/founding-25-profile/",
+    "/premium-creator-profile/",
+  ]).has(canonicalPath);
   let memberProfile = withoutGuestLoginPopup(guestLandingPage)
     .replace("<title>Guest Landing Page | Tobacco Road Games</title>", "<title>Member Profile | Tobacco Road Games</title>")
     .replace('content="Browse and shop Tobacco Road Games as a Guest without creating an account."', 'content="Member profile and personal library for Tobacco Road Games."')
@@ -1291,13 +1311,16 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       libraryBay: renderGuestLibraryBay({ role: "member-profile" }),
       identityBay: renderHomepageIdentityBay({ memberIdentity: true, memberTierBadge: true }),
       openRulesBay: renderRoleOpenRulesBay("member-profile", { rotateCatalogCovers: creatorCatalogRotation }),
+      afterCabinetMarkup: profileAdvertising ? renderCustomerProfileAdvertisingDisplays() : "",
       includeLowerContent: false,
       creatorTitleBoard: true
     }))
+    .replace(/\s*<script type="module" src="\/assets\/js\/creator-plateboard\.js\?v=[^"]+"><\/script>/g, "")
+    .replace(/\s*<link rel="stylesheet" href="\/assets\/css\/creator-plateboard\.css\?v=[^"]+">/g, "")
     .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", '  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n</head>')
+    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
     .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer member-profile-footer"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>')
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
@@ -1334,8 +1357,9 @@ function renderGuestLandingShopWallMain(products, options = {}) {
   return `    <main id="${pageId}" class="homepage-shop-wall shelf-storefront guest-landing-page${pageClass}" ${pageAttributes} aria-labelledby="homepage-shop-wall-heading">
       ${pageHeading}
       ${renderStorefrontUpperCabinet(options)}
+      ${options.afterCabinetMarkup || ""}
       ${includeLowerContent ? `
-      ${renderHomepageBricABracShelf({ sumo: true })}
+      ${renderHomepageBricABracShelf({ postingWall: true })}
       ${renderHomepageAdMarquee()}
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Featured shop shelves">
         ${renderHomepageProductBay({ title: "FEATURED CREATOR", id: "featured-creator-wall-heading", products: featuredProducts, heroProductId: featuredConfig.heroProductId, singleShelf: true, bambooIncense: true, wallArt: [{ src: "/assets/white-plume-mountain-framed.png", alt: "Framed White Plume Mountain module cover on the shelf back wall" }, { src: "/assets/dragon-battle-framed-poster.png", alt: "Framed dragon and adventurers illustration on the shelf back wall", placement: "center" }, { src: "/assets/cape-fear-framed-poster.png", alt: "Framed Cape Fear movie poster on the shelf back wall", placement: "right" }], magicalShelfOrder: 5, magicalDirection: "outer-inward" })}
@@ -1463,10 +1487,11 @@ function renderHomepageShopWallMain(products) {
     </main>`;
 }
 
-function renderHomepageBricABracShelf({ sumo = false } = {}) {
-  const postingWall = sumo ? `<div class="bb1-posting-wall" role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">
+function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo } = {}) {
+  const postingWallAttributes = postingWall && !sumo ? ' data-creator-plateboard data-interval-seconds="60"' : "";
+  const postingWallMarkup = postingWall ? `<div class="bb1-posting-wall"${postingWallAttributes} role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">
             ${HOMEPAGE_BB1_AD_PREVIEW.map(ad => `<div class="bb1-ad-territory">
-              <article class="bb1-poster bb1-poster--${escapeAttribute(ad.theme)}" aria-labelledby="bb1-${escapeAttribute(ad.id)}-title">
+              <article class="bb1-poster bb1-poster--${escapeAttribute(ad.theme)}" data-plateboard-preview="true" data-creator-id="${escapeAttribute(ad.creatorId)}" data-creator-name="${escapeAttribute(ad.creator)}" data-title="${escapeAttribute(ad.title)}" data-tagline="${escapeAttribute(ad.tagline)}" data-secondary-copy="${escapeAttribute(ad.secondaryCopy)}" data-callout="${escapeAttribute(ad.callout)}" data-theme="${escapeAttribute(ad.theme)}" data-artwork="${escapeAttribute(ad.artwork)}" aria-labelledby="bb1-${escapeAttribute(ad.id)}-title">
                 <img class="bb1-poster__art" src="${escapeAttribute(ad.artwork)}" alt="" loading="eager" decoding="async" draggable="false">
                 <div class="bb1-poster__copy">
                   <p class="bb1-poster__creator">${escapeHtml(ad.creator)}</p>
@@ -1479,8 +1504,8 @@ function renderHomepageBricABracShelf({ sumo = false } = {}) {
             </div>`).join("\n            ")}
           </div>` : "";
   return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
-        <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : ' aria-hidden="true"'}>
-          <div class="shop-wall-bric-shelf__back"${sumo ? ' data-bb1-posting-wall' : ""}>${postingWall}</div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
+        <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : postingWall ? "" : ' aria-hidden="true"'}>
+          <div class="shop-wall-bric-shelf__back"${postingWall ? ' data-bb1-posting-wall' : ""}>${postingWallMarkup}</div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
           <div class="shop-wall-bric-shelf__surface"></div>${sumo ? '\n          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>' : ""}
         </div>
       </section>`;
@@ -3738,7 +3763,13 @@ function buildRuntimeCatalog() {
 }
 
 if (require.main === module) {
-  if (process.argv.includes("--homepage-only")) {
+  if (process.argv.includes("--advertising-creator-profiles-only")) {
+    buildAdvertisingCreatorProfilePages();
+    console.log("Built Creator, Founding-25, and Premium Creator Profiles only.");
+  } else if (process.argv.includes("--customer-profile-only")) {
+    buildCustomerProfilePage();
+    console.log("Built Customer Profile only.");
+  } else if (process.argv.includes("--homepage-only")) {
     const products = loadProducts(buildAuthorLookup(loadAuthors()));
     writeHomepageProductCatalog(products);
     buildHomepage(products.filter(isCatalogBrowsable));
@@ -3762,4 +3793,24 @@ function buildFocusedPages(publicCatalogProducts = loadProducts(buildAuthorLooku
   }
 }
 
-module.exports = { buildFocusedPages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };
+function buildCustomerProfilePage() {
+  const guestLandingPage = fs.readFileSync(path.join(ROOT, "guest/index.html"), "utf8");
+  writeFile("customer-profile/index.html", renderMemberProfilePage(guestLandingPage, {
+    canonicalPath: "/customer-profile/",
+  }));
+}
+
+function buildAdvertisingCreatorProfilePages() {
+  const guestLandingPage = fs.readFileSync(path.join(ROOT, "guest/index.html"), "utf8");
+  for (const profile of MEMBER_PROFILE_ROUTES.filter(({ accountClass }) => ["creator", "founding25", "premiumCreator"].includes(accountClass))) {
+    const output = profile.route === "/creator/"
+      ? "creator/index.html"
+      : `${profile.route.slice(1)}index.html`;
+    writeFile(output, renderMemberProfilePage(guestLandingPage, {
+      canonicalPath: profile.route,
+      creatorCatalogRotation: profile.accountClass === "creator",
+    }));
+  }
+}
+
+module.exports = { buildFocusedPages, buildCustomerProfilePage, buildAdvertisingCreatorProfilePages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderStorefrontBackRoom, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };

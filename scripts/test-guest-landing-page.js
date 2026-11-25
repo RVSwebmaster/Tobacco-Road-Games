@@ -17,7 +17,7 @@ const nav = guest.match(/<nav class="site-nav" aria-label="Primary">([\s\S]*?)<\
 const navLabels = [...nav.matchAll(/<a [^>]*>([\s\S]*?)<\/a>/g)].map((match) => match[1].replace(/<span[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
 assert.deepEqual(navLabels, ["Explore", "Support", "Login/Signup", "Cart"]);
 assert.notEqual(customer, guest, "Customer adds authenticated navigation and library wiring to the shared Guest source.");
-assert.equal(customer, renderCustomerLandingPage(guest), "Customer output must be generated from the approved Guest source.");
+assert.equal(customer.replace(/\r\n/g, "\n"), renderCustomerLandingPage(guest).replace(/\r\n/g, "\n"), "Customer output must be generated from the approved Guest source, allowing platform line endings.");
 assert.match(customer, /data-customer-storefront/);
 assert.match(customer, /data-progressive-navigation/);
 assert.match(customer, /data-homepage-library/);

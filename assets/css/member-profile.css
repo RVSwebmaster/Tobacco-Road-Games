@@ -35,6 +35,16 @@ body:has(.member-profile-shop-wall) .shelf-dressing {
   display: none !important;
 }
 
+/* Keep advertising Profiles' shared ad rows at storefront dimensions. Their
+   shorter content would otherwise stretch grid rows to fill the viewport. */
+.member-profile-shop-wall:has([data-creator-plateboard]) {
+  align-content: start;
+}
+
+.member-profile-shop-wall:has([data-creator-plateboard]) > .shop-wall-row--bric-a-brac {
+  z-index: 7;
+}
+
 /* Creator-only replacement for the retired Open Rules sign. This hangs an
    existing Guest-style framed poster on the bay's back wall while the frozen
    cabinet artwork and live shelf geometry remain unchanged. */
