@@ -13,6 +13,8 @@ async function main() {
     assert.equal(result.outputDirectory, outputDirectory);
     assert.ok(result.fileCount > 0);
     assert.match(fs.readFileSync(path.join(outputDirectory, "_redirects"), "utf8"), /^\/ \/guest\/ 200\s*$/m, "Pages output must preserve the Guest homepage rewrite.");
+    const routes = JSON.parse(fs.readFileSync(path.join(outputDirectory, "_routes.json"), "utf8"));
+    assert.ok(routes.include.includes("/api/creator-plateboard"), "Pages Functions must route the free Creator plateboard feed.");
 
     for (const relativePath of builder.publicRootFiles) {
       assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing root file: ${relativePath}`);
