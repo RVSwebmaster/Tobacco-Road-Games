@@ -1,6 +1,7 @@
 [
   {
     "id": "witch-road",
+    "creatorId": "preview-blackbriar-games",
     "theme": "folk",
     "creator": "Blackbriar Games",
     "title": "THE WITCH ROAD",
@@ -11,6 +12,7 @@
   },
   {
     "id": "starfall-frontier",
+    "creatorId": "preview-iron-lantern-press",
     "theme": "frontier",
     "creator": "Iron Lantern Press",
     "title": "STARFALL FRONTIER",
@@ -21,6 +23,7 @@
   },
   {
     "id": "goblin-bundle",
+    "creatorId": "preview-mud-and-blood-games",
     "theme": "goblin",
     "creator": "Mud & Blood Games",
     "title": "THE COMPLETE GOBLIN BUNDLE",

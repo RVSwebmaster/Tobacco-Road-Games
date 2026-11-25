@@ -1,0 +1,53 @@
+.bb1-posting-wall[data-creator-plateboard] {
+  display: block;
+  overflow: hidden;
+}
+
+.bb1-posting-wall[data-creator-plateboard] .bb1-poster--scheduled {
+  position: absolute;
+  top: 5px;
+  left: -25%;
+  width: 25%;
+  height: 88px;
+  transform: none;
+  animation: creator-plateboard-traverse var(--plateboard-transit-duration, 180000ms) linear both;
+}
+
+.bb1-posting-wall[data-creator-plateboard] .bb1-poster--scheduled .bb1-poster__link {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: inherit;
+}
+
+.bb1-posting-wall[data-creator-plateboard] .bb1-poster--creator {
+  color: #f5e6c8;
+  background: #183b38;
+}
+
+.bb1-posting-wall[data-creator-plateboard] .bb1-poster--creator .bb1-poster__art {
+  object-position: center;
+}
+
+.bb1-posting-wall[data-creator-plateboard] .bb1-poster--creator .bb1-poster__copy {
+  width: 76%;
+  background: linear-gradient(90deg, rgba(10, 22, 20, .96) 72%, transparent);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.bb1-posting-wall[data-creator-plateboard] .bb1-poster--creator h3 {
+  max-width: 90%;
+  font: 700 15px/1.1 Georgia, "Times New Roman", serif;
+  color: #f4e5c0;
+}
+
+@keyframes creator-plateboard-traverse {
+  from { left: -25%; }
+  to { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb1-posting-wall[data-creator-plateboard] .bb1-poster--scheduled {
+    animation: none;
+  }
+}
