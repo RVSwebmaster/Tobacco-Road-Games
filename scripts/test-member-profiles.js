@@ -40,6 +40,14 @@ const customerCarousel = extract(customerMain, /<aside class="storefront-ad-marq
 const guestMain = builder.renderGuestLandingShopWallMain([]);
 const guestPlateboard = extract(guestMain, /<section class="shop-wall-row shop-wall-row--bric-a-brac"[\s\S]*?<\/section>/);
 const guestCarousel = extract(guestMain, /<aside class="storefront-ad-marquee"[\s\S]*?<\/aside>/);
+const storefrontCss = read("styles.css");
+const sharedPlateboardScope = storefrontCss.match(/\.homepage-shop-wall,\s*\.member-profile-shop-wall\s*\{([^}]+)\}/)?.[1] || "";
+assert.match(sharedPlateboardScope, /--shop-wall-bric-row-height:\s*148px/,
+  "Guest Storefront and Profile pages share the approved plateboard row height.");
+assert.match(sharedPlateboardScope, /--shop-wall-bric-surface-height:\s*48px/,
+  "Guest Storefront and Profile pages share the approved shelf surface height.");
+assert.match(sharedPlateboardScope, /--shop-wall-bric-back-height:\s*100px/,
+  "Guest Storefront and Profile pages share the illuminated plaster backing height.");
 assert.ok(customerPlateboard, "Customer Profile retains the approved Creator plateboard.");
 assert.equal(normalizeEol(customerPlateboard), normalizeEol(guestPlateboard),
   "Customer Profile reuses Guest Storefront plateboard markup.");

@@ -3745,17 +3745,13 @@ body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:focu
   box-shadow: none;
 }
 
-.homepage-shop-wall {
-  /* Accepted storefront geometry lock: keep these values in sync with scripts/test-storefront-visual-alignment.js. */
+.homepage-shop-wall,
+.member-profile-shop-wall {
+  /* Shared storefront and Profile plateboard geometry. Keep board backing and
+     shelf tokens with the component's page contexts, not one page alone. */
   --shop-wall-bric-row-height: 148px; /* 148px + 2px top border + 5px bottom border = 155px rendered Bric-a-Brac shelf. */
   --shop-wall-bric-surface-height: 48px;
   --shop-wall-bric-back-height: 100px;
-  --shop-wall-merch-bay-height: 378px;
-  --shop-wall-merch-product-space: 320px;
-  --shop-wall-merch-shelf-construction: 52px;
-  --shop-wall-merch-shelf-top: 30px;
-  --shop-wall-merch-shelf-fascia: 18px;
-  --shop-wall-fixture-height: 120px;
   --shop-wall-recessed-light-width: 14px;
   --shop-wall-recessed-light-height: 8px;
   --shop-wall-recessed-light-background: radial-gradient(ellipse at 50% 62%, rgba(255, 223, 139, 0.95) 0%, rgba(238, 154, 57, 0.7) 32%, rgba(89, 43, 19, 0.82) 58%, rgba(30, 13, 6, 0.92) 100%);
@@ -3765,7 +3761,6 @@ body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:focu
     0 0 6px rgba(255, 190, 82, 0.46),
     0 6px 18px rgba(244, 143, 38, 0.34),
     0 1px 2px rgba(16, 7, 3, 0.42);
-  /* The accepted upper light shape repeated in thirds of a full-width recess. */
   --shop-wall-three-downlight-pools:
     radial-gradient(ellipse 2.666% 6% at 16.666% 0%, rgba(255, 244, 201, 0.96) 0%, rgba(255, 208, 106, 0.64) 42%, transparent 100%),
     radial-gradient(ellipse 6% 19% at 16.666% 11%, rgba(255, 225, 142, 0.68) 0%, rgba(246, 165, 62, 0.32) 44%, transparent 80%),
@@ -3776,6 +3771,16 @@ body:has(.homepage-shop-wall) .site-header .site-nav [data-customer-logout]:focu
     radial-gradient(ellipse 2.666% 6% at 83.333% 0%, rgba(255, 244, 201, 0.96) 0%, rgba(255, 208, 106, 0.64) 42%, transparent 100%),
     radial-gradient(ellipse 6% 19% at 83.333% 11%, rgba(255, 225, 142, 0.68) 0%, rgba(246, 165, 62, 0.32) 44%, transparent 80%),
     radial-gradient(ellipse 12.333% 76% at 83.333% 44%, rgba(255, 207, 105, 0.26) 0%, rgba(212, 113, 37, 0.12) 42%, rgba(84, 35, 12, 0.03) 62%, transparent 82%);
+}
+
+.homepage-shop-wall {
+  /* Accepted storefront geometry lock: keep these values in sync with scripts/test-storefront-visual-alignment.js. */
+  --shop-wall-merch-bay-height: 378px;
+  --shop-wall-merch-product-space: 320px;
+  --shop-wall-merch-shelf-construction: 52px;
+  --shop-wall-merch-shelf-top: 30px;
+  --shop-wall-merch-shelf-fascia: 18px;
+  --shop-wall-fixture-height: 120px;
   /* Center the reflection 15px into the 30px horizontal top, above the fascia. */
   --shop-wall-three-shelf-catches:
     radial-gradient(ellipse 8% 14px at 16.666% 15px, rgba(255, 244, 198, 0.86) 0%, rgba(255, 190, 82, 0.48) 38%, rgba(178, 79, 22, 0.13) 62%, transparent 84%),
