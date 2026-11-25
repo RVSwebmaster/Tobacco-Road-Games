@@ -26,6 +26,7 @@ const GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261116-open-rules-master-shelf4";
 const PROGRESSIVE_NAV_CACHE_BUST = "20261116-open-rules-master-shelf1";
 const STOREFRONT_STYLES_CACHE_BUST = "20261116-open-rules-spine-title-fit2";
+const PROFILE_STOREFRONT_STYLES_CACHE_BUST = "20261125-profile-plateboard-cache1";
 const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
 const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
@@ -1332,6 +1333,12 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
     ].join("\n"));
+  if (profileAdvertising) {
+    memberProfile = memberProfile.replace(
+      /styles\.css\?v=[^"\s]+/,
+      `styles.css?v=${PROFILE_STOREFRONT_STYLES_CACHE_BUST}`
+    );
+  }
   if (!memberProfile.includes('data-member-profile-page') || !memberProfile.includes('member-profile-footer')) {
     throw new Error("Member Profile configuration could not be applied to the shared Guest page.");
   }
