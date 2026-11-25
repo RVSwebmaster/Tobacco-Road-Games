@@ -348,14 +348,31 @@ assert.match(guestPage, /\/assets\/js\/creator-plateboard\.js\?v=creator-platebo
 assert.match(guestPage, /\/assets\/css\/creator-plateboard\.css\?v=creator-plateboard1/);
 assert.equal((guestPage.match(/<article class="bb1-poster /g) || []).length, 3, "Removing the Guest figurine must preserve all three advertising panels.");
 assert.doesNotMatch(guestPage, /data-curio-shelf="bric-a-brac-1"|data-curio-status/, "The Guest Storefront must not leave an empty curio placeholder.");
-assert.equal(sumoTags(customerPage).length, 1, "The Customer Storefront must retain its existing sumo figurine.");
-assert.doesNotMatch(customerPage, /data-creator-plateboard|creator-plateboard\.(?:js|css)|data-plateboard-preview/, "The Customer Storefront must not receive the Guest plateboard policy implementation.");
+assert.equal(sumoTags(customerPage).length, 0, "The Customer Storefront must not render the sumo figurine.");
+assert.match(customerPage, /<title>Customer Storefront \| Tobacco Road Games<\/title>/);
+assert.match(guestPage, /<title>Guest Landing Page \| Tobacco Road Games<\/title>/,
+  "The Guest Storefront retains its own browser title.");
+assert.match(customerPage, /class="bb1-posting-wall" data-creator-plateboard data-interval-seconds="60"/,
+  "The Customer Storefront uses the shared live Creator plateboard at the configurable 60-second interval.");
+assert.match(customerPage, /creator-plateboard\.js\?v=20261125-customer-plateboard1/);
+assert.match(customerPage, /creator-plateboard\.css\?v=20261125-customer-plateboard1/);
+assert.match(customerPage, /guest-landing\.css\?v=20261125-customer-plateboard1/);
+assert.match(customerPage, /styles\.css\?v=20261125-customer-plateboard1/);
+assert.doesNotMatch(customerPage, /data-plateboard-preview|class="bb1-poster /,
+  "The Customer Storefront does not retain the obsolete static plateboard advertisements.");
+assert.ok(customerPage.indexOf('data-creator-plateboard') < customerPage.indexOf('class="storefront-ad-marquee"'),
+  "The Customer Storefront keeps the outside advertiser carousel below the shared Creator plateboard.");
 const generatedGuest = buildStore.renderGuestLandingShopWallMain([]);
 assert.equal(sumoTags(generatedGuest).length, 0, "Regenerated Guest pages must omit the sumo figurine.");
 assert.match(generatedGuest, /class="bb1-posting-wall" data-creator-plateboard data-interval-seconds="60"/);
 assert.equal((generatedGuest.match(/<article class="bb1-poster /g) || []).length, 3, "Regenerated Guest pages must preserve the three advertising panels.");
-assert.equal(sumoTags(buildStore.renderCustomerLandingPage(generatedGuest)).length, 1, "Customer page generation must preserve the existing sumo figurine.");
-assert.doesNotMatch(buildStore.renderCustomerLandingPage(generatedGuest), /data-creator-plateboard|creator-plateboard\.(?:js|css)|data-plateboard-preview/, "Customer page generation must strip Guest plateboard runtime markers.");
+const generatedCustomer = buildStore.renderCustomerLandingPage(guestPage);
+assert.equal(sumoTags(generatedCustomer).length, 0, "Customer page generation must omit the sumo figurine.");
+assert.match(generatedCustomer, /<title>Customer Storefront \| Tobacco Road Games<\/title>/);
+assert.match(generatedCustomer, /class="bb1-posting-wall" data-creator-plateboard data-interval-seconds="60"/);
+assert.match(generatedCustomer, /creator-plateboard\.js\?v=20261125-customer-plateboard1/);
+assert.match(generatedCustomer, /creator-plateboard\.css\?v=20261125-customer-plateboard1/);
+assert.doesNotMatch(generatedCustomer, /data-plateboard-preview|class="bb1-poster /);
 const bb1Posters = source => (source.match(/<article class="bb1-poster [^>]+>[\s\S]*?<\/article>/g) || []).map(poster => poster.replaceAll("\r\n", "\n").replace(/(<article class="bb1-poster [^"]+")[^>]*( aria-labelledby="[^"]+")>/, "$1$2>"));
 assert.equal(previewBB1Ads.length, 3, "BB-1 must have exactly three current faux creator ads.");
 assert.equal(new Set(previewBB1Ads.map(ad => ad.theme)).size, 3, "The BB-1 publishers must retain distinct poster designs.");

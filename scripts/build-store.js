@@ -32,6 +32,7 @@ const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
+const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1258,6 +1259,7 @@ function renderCustomerLandingPage(guestLandingPage) {
   const lineBreak = guestLandingPage.match(/\r?\n/)?.[0] || "\n";
   const profileRoutes = Object.fromEntries(MEMBER_PROFILE_ROUTES.map(({ accountClass, route }) => [accountClass, route]));
   let customerPage = guestLandingPage
+    .replace("<title>Guest Landing Page | Tobacco Road Games</title>", "<title>Customer Storefront | Tobacco Road Games</title>")
     .replace('class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo', 'class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo data-customer-storefront')
     .replace('<nav class="site-nav" aria-label="Primary">', `<nav class="site-nav" aria-label="Primary" data-progressive-navigation data-member-profile-routes="${escapeAttribute(JSON.stringify(profileRoutes))}">`)
     .replace('<a href="/account.html">Login/Signup</a>', "")
@@ -1266,16 +1268,14 @@ function renderCustomerLandingPage(guestLandingPage) {
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"')
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right"');
   customerPage = customerPage
-    .replace('<div class="shop-wall-bric-shelf">', '<div class="shop-wall-bric-shelf" data-curio-shelf="bric-a-brac-1">')
-    .replace('<div class="shop-wall-bric-shelf__surface"></div>', `<img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">${lineBreak}          <div class="shop-wall-bric-shelf__surface"></div>${lineBreak}          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>`);
-  customerPage = customerPage
-    .replace(/<script type="module" src="\/assets\/js\/creator-plateboard\.js\?v=[^"]+"><\/script>\s*/g, "")
-    .replace(/<link rel="stylesheet" href="\/assets\/css\/creator-plateboard\.css\?v=[^"]+">\s*/g, "")
-    .replace(/ data-creator-plateboard(?: data-interval-seconds="\d+")?/g, "")
-    .replace(/ data-plateboard-preview="true" data-creator-id="[^"]+" data-creator-name="[^"]*" data-title="[^"]*" data-tagline="[^"]*" data-secondary-copy="[^"]*" data-callout="[^"]*" data-theme="[^"]*" data-artwork="[^"]*"/g, "");
+    .replace(/<section class="shop-wall-row shop-wall-row--bric-a-brac"[\s\S]*?<\/section>/,
+      renderHomepageBricABracShelf({ postingWall: true, previewAds: [] }));
   if (customerPage === guestLandingPage) throw new Error("Customer storefront markers could not be added.");
   customerPage = customerPage
-    .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}-${CUSTOMER_NAV_CACHE_BUST}`)
+    .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
+    .replace(/creator-plateboard\.js\?v=[^"]+/, `creator-plateboard.js?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
+    .replace(/creator-plateboard\.css\?v=[^"]+/, `creator-plateboard.css?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
+    .replace(/guest-landing\.css\?v=[^"]+/, `guest-landing.css?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
     .replace(/<script src="\/assets\/js\/guest-product-preview\.js\?v=[^"]+" defer><\/script>/, `<script src="/assets/js/guest-product-preview.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>`)
     .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>${lineBreak}</body>`);
   return customerPage;
@@ -1494,10 +1494,9 @@ function renderHomepageShopWallMain(products) {
     </main>`;
 }
 
-function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo } = {}) {
+function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo, previewAds = HOMEPAGE_BB1_AD_PREVIEW } = {}) {
   const postingWallAttributes = postingWall && !sumo ? ' data-creator-plateboard data-interval-seconds="60"' : "";
-  const postingWallMarkup = postingWall ? `<div class="bb1-posting-wall"${postingWallAttributes} role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">
-            ${HOMEPAGE_BB1_AD_PREVIEW.map(ad => `<div class="bb1-ad-territory">
+  const previewMarkup = previewAds.map(ad => `<div class="bb1-ad-territory">
               <article class="bb1-poster bb1-poster--${escapeAttribute(ad.theme)}" data-plateboard-preview="true" data-creator-id="${escapeAttribute(ad.creatorId)}" data-creator-name="${escapeAttribute(ad.creator)}" data-title="${escapeAttribute(ad.title)}" data-tagline="${escapeAttribute(ad.tagline)}" data-secondary-copy="${escapeAttribute(ad.secondaryCopy)}" data-callout="${escapeAttribute(ad.callout)}" data-theme="${escapeAttribute(ad.theme)}" data-artwork="${escapeAttribute(ad.artwork)}" aria-labelledby="bb1-${escapeAttribute(ad.id)}-title">
                 <img class="bb1-poster__art" src="${escapeAttribute(ad.artwork)}" alt="" loading="eager" decoding="async" draggable="false">
                 <div class="bb1-poster__copy">
@@ -1508,8 +1507,10 @@ function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo } = {})
                   <p class="bb1-poster__callout">${escapeHtml(ad.callout)}</p>
                 </div>
               </article>
-            </div>`).join("\n            ")}
-          </div>` : "";
+            </div>`).join("\n            ");
+  const postingWallMarkup = postingWall
+    ? `<div class="bb1-posting-wall"${postingWallAttributes} role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">${previewMarkup ? `\n            ${previewMarkup}\n          ` : ""}</div>`
+    : "";
   return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
         <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : postingWall ? "" : ' aria-hidden="true"'}>
           <div class="shop-wall-bric-shelf__back"${postingWall ? ' data-bb1-posting-wall' : ""}>${postingWallMarkup}</div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
