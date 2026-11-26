@@ -9,6 +9,8 @@
   let currentRequest = 0;
   let saving = false;
   let csrfToken = "";
+  let selectedCreator = null;
+  let loadedState = null;
 
   function node(tag, className, text) {
     const element = document.createElement(tag);
@@ -18,39 +20,29 @@
   }
 
   function createBook(product) {
-    const link = node("a", "bookshelf-book creator-profile-shelf-book");
+    const template = document.querySelector("[data-creator-profile-book-template]");
+    const link = template?.content.firstElementChild.cloneNode(true);
+    if (!link) return node("span", "bookshelf-book");
     link.href = product.detailUrl;
     link.setAttribute("aria-label", `Open ${product.title} product page`);
-    link.dataset.spineWidth = "68";
-    link.dataset.spineSource = "catalog-cover";
-    link.style.setProperty("--book-spine-width", "68px");
-    link.style.setProperty("--book-height", "268px");
-    const scene = node("span", "bookshelf-book__scene");
-    const spine = node("span", "bookshelf-book__spine");
-    spine.append(node("span", "bookshelf-book__status", product.creatorName || "CREATOR"));
-    spine.append(node("span", "bookshelf-book__title", product.title));
-    spine.append(node("span", "bookshelf-book__author", product.creatorName || ""));
-    const frame = node("span", "bookshelf-book__cover-frame");
-    if (product.coverUrl) {
-      const image = node("img", "bookshelf-book__cover");
-      image.src = product.coverUrl;
-      image.alt = `${product.title} cover`;
-      image.loading = "lazy";
-      image.decoding = "async";
-      frame.append(image);
-    }
-    scene.append(spine, frame);
-    link.append(scene);
+    link.querySelectorAll(".bookshelf-book__title, .bookshelf-book__mobile-title, .bookshelf-book__details strong")
+      .forEach(title => { title.textContent = product.title; });
+    link.querySelectorAll(".bookshelf-book__author, .bookshelf-book__creator")
+      .forEach(author => { author.textContent = product.creatorName || ""; });
+    link.querySelectorAll(".bookshelf-book__subtitle, .bookshelf-book__mobile-subtitle")
+      .forEach(subtitle => { subtitle.textContent = product.subtitle || ""; });
+    link.querySelectorAll(".bookshelf-book__cover").forEach(image => {
+      image.src = product.coverUrl || "/assets/tobacco-road-games-logo.png";
+      image.alt = image.closest(".bookshelf-book__mobile-media") ? "" : `${product.title} cover`;
+    });
     return link;
   }
 
   function renderBooks(root, products) {
     const shelf = root.querySelector("[data-creator-profile-shelf-books]");
     if (!shelf) return;
-    const fragment = document.createDocumentFragment();
-    products.forEach(product => fragment.append(createBook(product)));
-    shelf.replaceChildren(fragment);
-    root.hidden = products.length === 0;
+    shelf.replaceChildren(...products.map(createBook));
+    root.hidden = false;
   }
 
   async function loadPublicShelf(root, creatorSlug) {
@@ -68,23 +60,19 @@
   publicRoots.forEach(root => loadPublicShelf(root, root.dataset.publicCreatorShelf));
   if (!memberRoot || !catalog) return;
 
-  const identitySelect = catalog.querySelector("[data-creator-shelf-identity]");
-  const identityWrap = catalog.querySelector("[data-creator-shelf-identity-wrap]");
   const cards = catalog.querySelector("[data-creator-profile-catalog-cards]");
   const counters = catalog.querySelector("[data-creator-shelf-counters]");
   const status = catalog.querySelector("[data-creator-shelf-status]");
-  let selectedCreator = null;
-  let loadedState = null;
 
-  function allowance(label, allowanceState) {
-    const max = allowanceState.limit === null ? "Unlimited" : allowanceState.limit;
-    return `${label}: ${allowanceState.used} / ${max}`;
+  function allowance(label, state) {
+    const max = state.limit === null ? "Unlimited" : state.limit;
+    return `${label}: ${state.used} / ${max}`;
   }
 
   function renderCounters(state) {
     counters.replaceChildren(
-      node("p", "creator-profile-shelf-counter", allowance("Catalog allowance", state.catalog)),
-      node("p", "creator-profile-shelf-counter", allowance("Shelf allowance", state.shelf))
+      node("p", "creator-profile-shelf-counter", allowance("Catalog", state.catalog)),
+      node("p", "creator-profile-shelf-counter", allowance("Shelf", state.shelf))
     );
   }
 
@@ -94,39 +82,51 @@
 
   function renderCatalogCards(state) {
     const fragment = document.createDocumentFragment();
-    for (const product of state.products || []) {
-      const card = node("article", "creator-profile-catalog-card");
-      const image = product.coverImage ? node("img", "creator-profile-catalog-card__cover") : null;
-      if (image) {
+    const products = state.products || [];
+    const capacity = state.catalog.limit === null
+      ? products.length
+      : Math.max(state.catalog.limit, products.length);
+    for (let index = 0; index < capacity; index += 1) {
+      const product = products[index];
+      if (!product) {
+        fragment.append(node("div", "creator-profile-catalog-slot--empty"));
+        continue;
+      }
+      const slot = node("div", "creator-profile-catalog-slot");
+      const card = node("article", "product-card creator-profile-catalog-card");
+      if (product.coverImage) {
+        const media = node("div", "product-card__media");
+        const image = node("img", "creator-profile-catalog-card__cover");
         image.src = product.coverImage;
         image.alt = `${product.title} cover`;
         image.loading = "lazy";
         image.decoding = "async";
+        media.append(image);
+        card.append(media);
+      } else {
+        card.append(node("div", "creator-profile-catalog-card__cover"));
       }
-      const title = node("h3", "creator-profile-catalog-card__title", product.title);
-      const meta = node("p", "creator-profile-catalog-card__meta", `${product.publicationState} · ${product.status || "status unavailable"}`);
+      card.append(node("h3", "creator-profile-catalog-card__title", product.title));
       const label = node("label", "creator-profile-catalog-card__shelve");
       const checkbox = node("input");
       checkbox.type = "checkbox";
       checkbox.checked = product.shelved === true;
       checkbox.dataset.profileShelved = "";
       checkbox.dataset.productId = product.id;
-      checkbox.setAttribute("aria-label", `Shelved: ${product.title}`);
-      label.append(checkbox, document.createTextNode(" Shelved"));
-      card.append(...(image ? [image] : []), title, meta, label);
-      if (!product.public && product.shelved) {
-        card.append(node("p", "creator-profile-catalog-card__notice", "Not currently available to visitors; its shelf assignment is retained."));
-      } else if (!product.public) {
-        card.append(node("p", "creator-profile-catalog-card__notice", "This title is not currently visible to visitors. Its shelf assignment can be prepared here."));
+      checkbox.setAttribute("aria-label", `Place ${product.title} on the Profile bookshelf`);
+      label.append(checkbox, document.createTextNode("Shelf"));
+      slot.append(card, label);
+      if (!product.public) {
+        slot.append(node("p", "creator-profile-catalog-card__notice", "Not visible to visitors until published and available."));
       }
-      fragment.append(card);
+      fragment.append(slot);
     }
     cards.replaceChildren(fragment);
   }
 
   async function loadCreatorShelf(creator) {
     const requestId = ++currentRequest;
-    status.textContent = "Loading Creator catalog…";
+    status.textContent = "Loading catalog…";
     const query = `?creator=${encodeURIComponent(creator.id)}`;
     const [publicShelf, privateShelf] = await Promise.all([
       fetch(`/api/public/creator-shelf?creatorSlug=${encodeURIComponent(creator.slug)}`, { credentials: "omit", cache })
@@ -146,7 +146,9 @@
     renderBooks(memberRoot, publicShelf.products || []);
     renderCounters(loadedState);
     renderCatalogCards(loadedState);
-    status.textContent = loadedState.products.length ? "Choose Shelved titles to update the public bookshelf." : "No products are associated with this Creator yet.";
+    status.textContent = loadedState.products.length
+      ? "Choose a checkbox to place or remove a title from the bookshelf."
+      : "Your catalog is ready for its first title.";
   }
 
   async function initializeOwnerControls() {
@@ -154,46 +156,14 @@
     const account = accountResponse.ok ? await accountResponse.json() : null;
     csrfToken = String(account?.csrfToken || "");
     const profileTier = memberRoot.dataset.creatorProfileTier;
-    if (!account?.authenticated || !accountClasses.has(account.user?.accountClass) || account.user.accountClass !== profileTier) {
-      const slug = new URL(location.href).searchParams.get("creator") || "";
-      if (slug) {
-        const identity = await fetch(`/api/public/creator-shelf?creatorSlug=${encodeURIComponent(slug)}`, { credentials: "omit", cache })
-          .then(async response => response.ok ? response.json() : null).catch(() => null);
-        renderBooks(memberRoot, identity?.products || []);
-      }
-      return;
-    }
+    if (!account?.authenticated || !accountClasses.has(account.user?.accountClass) || account.user.accountClass !== profileTier) return;
+
     const optionsResponse = await fetch("/api/creator/identity-options", { credentials: "same-origin", cache });
     const options = optionsResponse.ok ? await optionsResponse.json() : null;
     const identities = (options?.creators || []).filter(identity => identity.permission === "manager");
     if (!identities.length) return;
-    identityWrap.hidden = identities.length < 2;
-    identitySelect.replaceChildren(...identities.map(identity => {
-      const option = new Option(identity.displayName, identity.id);
-      option.dataset.slug = identity.slug;
-      return option;
-    }));
-    let chosen = identities.find(identity => identity.id === localStorage.getItem("trg_current_creator_identity"));
-    if (!chosen) chosen = identities.length === 1 ? identities[0] : null;
-    if (!chosen) {
-      identityWrap.hidden = false;
-      identitySelect.add(new Option("Choose a Creator identity", ""), 0);
-      identitySelect.value = "";
-      status.textContent = "Choose the Creator identity whose shelf you want to manage.";
-      memberRoot.hidden = true;
-      catalog.hidden = false;
-      identitySelect.onchange = () => {
-        selectedCreator = identities.find(identity => identity.id === identitySelect.value) || null;
-        if (selectedCreator) loadCreatorShelf(selectedCreator);
-      };
-      return;
-    }
-    selectedCreator = chosen;
-    identitySelect.value = chosen.id;
-    identitySelect.onchange = () => {
-      selectedCreator = identities.find(identity => identity.id === identitySelect.value) || null;
-      if (selectedCreator) loadCreatorShelf(selectedCreator);
-    };
+    const rememberedId = localStorage.getItem("trg_current_creator_identity");
+    selectedCreator = identities.find(identity => identity.id === rememberedId) || identities[0];
     await loadCreatorShelf(selectedCreator);
   }
 
@@ -202,10 +172,10 @@
     if (!checkbox || !selectedCreator || !loadedState || saving) return;
     const beforeIds = loadedState.productIds.slice();
     const requestedIds = selectedIds();
-    const publicCount = loadedState.shelf.used;
-    if (checkbox.checked && loadedState.shelf.limit !== null && publicCount >= loadedState.shelf.limit) {
+    const shelfCount = loadedState.shelf.used;
+    if (checkbox.checked && loadedState.shelf.limit !== null && shelfCount >= loadedState.shelf.limit) {
       checkbox.checked = false;
-      status.textContent = `Shelf allowance reached (${publicCount} / ${loadedState.shelf.limit}). Unshelve a product first.`;
+      status.textContent = `Shelf allowance reached (${shelfCount} / ${loadedState.shelf.limit}). Remove another title first.`;
       return;
     }
     saving = true;

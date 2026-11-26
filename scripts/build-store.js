@@ -33,7 +33,7 @@ const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
-const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf1";
+const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf2";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1097,10 +1097,28 @@ function renderCustomerProfileAdvertisingDisplays() {
       ${renderHomepageAdMarquee()}`;
 }
 
+function renderCreatorProfileBookTemplate() {
+  const product = {
+    slug: "creator-profile-book-template",
+    url: "#",
+    title: "Creator Title",
+    status: "available-direct",
+    statusLabel: "CREATOR",
+    authors: ["Creator"],
+    publisher: "",
+    subtitle: "",
+    shortDescription: "",
+    assetSet: { cover: "/assets/tobacco-road-games-logo.png" },
+    format: []
+  };
+  return `<template data-creator-profile-book-template>${renderBookshelfBook(product, { centerExamination: true })}</template>`;
+}
+
 function renderCreatorPublicBookshelf(creatorSlug) {
-  return `<section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="${escapeAttribute(creatorSlug)}" aria-labelledby="public-creator-bookshelf-heading" hidden>
-      <div class="section-heading"><p class="section-heading__kicker">Creator Bookshelf</p><h2 id="public-creator-bookshelf-heading">Shelved Titles</h2></div>
-      <div class="creator-profile-bookshelf__surface" data-creator-profile-shelf-books aria-label="Publicly available shelved titles"></div>
+  return `<section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="${escapeAttribute(creatorSlug)}" aria-label="Creator bookshelf">
+      <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Creator bookshelf">
+        ${renderHomepageProductBay({ title: "CREATOR BOOKSHELF", id: `public-${creatorSlug}-bookshelf-heading`, products: [], singleShelf: true, hidePlaque: true, creatorProfileShelf: true })}
+      </section>
     </section>`;
 }
 
@@ -1110,14 +1128,13 @@ function renderCreatorProfileShelfSections(canonicalPath) {
     : canonicalPath === "/premium-creator-profile/"
       ? "premiumCreator"
       : "creator";
-  return `<section class="creator-profile-bookshelf" data-member-creator-shelf data-creator-profile-tier="${profileTier}" aria-labelledby="creator-profile-bookshelf-heading" hidden>
-      <div class="section-heading"><p class="section-heading__kicker">Your public display</p><h2 id="creator-profile-bookshelf-heading">Creator Bookshelf</h2><p>Selected eligible titles appear here for visitors.</p></div>
-      <div class="creator-profile-bookshelf__surface" data-creator-profile-shelf-books aria-label="Publicly available shelved titles"></div>
+  return `<section class="creator-profile-bookshelf" data-member-creator-shelf data-creator-profile-tier="${profileTier}" aria-label="Creator bookshelf">
+      <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Creator bookshelf">
+        ${renderHomepageProductBay({ title: "CREATOR BOOKSHELF", id: "creator-profile-bookshelf-heading", products: [], singleShelf: true, hidePlaque: true, creatorProfileShelf: true })}
+      </section>
     </section>
     <section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
-      <div class="creator-profile-catalog-desktop__heading"><p class="section-heading__kicker">Private Creator workspace</p><h2 id="creator-profile-catalog-heading">Catalog Desktop</h2><p>Choose which of your products appear on your Profile bookshelf. These selections do not change marketplace listing or sale status.</p></div>
-      <label class="creator-profile-catalog-desktop__identity" data-creator-shelf-identity-wrap hidden>Creator identity<select data-creator-shelf-identity></select></label>
-      <div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div>
+      <div class="creator-profile-catalog-desktop__heading"><h2 id="creator-profile-catalog-heading">Catalog Desktop</h2><div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div></div>
       <div class="creator-profile-catalog-cards" data-creator-profile-catalog-cards></div>
       <p class="creator-profile-shelf-status" data-creator-shelf-status role="status" aria-live="polite"></p>
     </section>`;
@@ -1660,7 +1677,7 @@ function renderHomepageIdentityBay({ memberIdentity = false, memberTierBadge = f
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right", liveShelf = "" }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right", liveShelf = "", creatorProfileShelf = false }) {
   const visibleProducts = products.slice(0, 5);
   const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
   const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
@@ -1686,6 +1703,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
   const shelves = singleShelf
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
+              ${creatorProfileShelf ? `${renderCreatorProfileBookTemplate()}<div class="bookshelf-grid shop-wall-books creator-profile-books" data-creator-profile-shelf-books aria-label="Publicly shelved Creator books"></div>` : ""}
               ${wallArtMarkup}
               ${bambooIncenseMarkup}
               ${dogwoodBonsaiMarkup}
@@ -1694,7 +1712,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
               ${puzzleCubeMarkup}
               ${dicePileMarkup}
               ${dragonFigurineMarkup}
-              ${renderHomepageShelfFixtures()}
+              ${creatorProfileShelf ? "" : renderHomepageShelfFixtures()}
             </div>
           </div>`
     : `<div class="shop-wall-shelves" aria-label="${escapeAttribute(title)} shelves">

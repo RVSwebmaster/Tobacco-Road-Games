@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261116-guest-examination-close1">
   <meta name="robots" content="noindex,nofollow">
   <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">
-  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=creator-profile-shelf1">
+  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=creator-profile-shelf2">
   <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">
   <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>
 </head>
@@ -202,14 +202,57 @@
             </div>
           </div>
         </div>
-      </aside><section class="creator-profile-bookshelf" data-member-creator-shelf data-creator-profile-tier="founding25" aria-labelledby="creator-profile-bookshelf-heading" hidden>
-      <div class="section-heading"><p class="section-heading__kicker">Your public display</p><h2 id="creator-profile-bookshelf-heading">Creator Bookshelf</h2><p>Selected eligible titles appear here for visitors.</p></div>
-      <div class="creator-profile-bookshelf__surface" data-creator-profile-shelf-books aria-label="Publicly available shelved titles"></div>
+      </aside><section class="creator-profile-bookshelf" data-member-creator-shelf data-creator-profile-tier="founding25" aria-label="Creator bookshelf">
+      <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Creator bookshelf">
+
+        <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="creator-profile-bookshelf-heading">
+          <h2 class="shop-wall-heading-hidden" id="creator-profile-bookshelf-heading">CREATOR BOOKSHELF</h2>
+
+          <div class="shop-wall-shelves shop-wall-shelves--single" aria-label="CREATOR BOOKSHELF shelf">
+            <div class="shop-wall-shelf-level">
+              <template data-creator-profile-book-template>
+    <a class="bookshelf-book" href="#"  data-spine-width="60.5" data-spine-source="catalog-fallback" style="--book-spine-width:60.5px;--book-height:290px" aria-label="Open Creator Title product page">
+      <span class="bookshelf-book__scene">
+        <span class="bookshelf-book__spine">
+          <span class="bookshelf-book__status">CREATOR</span>
+          <span class="bookshelf-book__title">Creator Title</span>
+          <span class="bookshelf-book__author">Creator</span>
+        </span>
+        <span class="bookshelf-book__cover-frame">
+          <img class="bookshelf-book__cover" src="/assets/tobacco-road-games-logo.png" alt="Creator Title cover" loading="lazy" decoding="async">
+        </span>
+        <span class="bookshelf-book__details"><span class="bookshelf-book__badges"><span class="status-badge status-badge--available-direct">CREATOR</span></span><strong>Creator Title</strong><span class="bookshelf-book__creator">Creator</span><span class="bookshelf-book__price">$NaN</span><span></span><small></small><em>Open product page</em></span>
+        <span class="bookshelf-book__mobile">
+          <span class="bookshelf-book__mobile-media">
+            <img class="bookshelf-book__cover" src="/assets/tobacco-road-games-logo.png" alt="">
+          </span>
+          <span class="bookshelf-book__mobile-copy">
+            <span class="status-badge status-badge--available-direct">CREATOR</span>
+            <span class="bookshelf-book__mobile-title">Creator Title</span>
+            <span class="bookshelf-book__mobile-subtitle"></span>
+            <span class="bookshelf-book__mobile-meta">undefined</span>
+          </span>
+        </span>
+      </span>
+    </a>
+  </template><div class="bookshelf-grid shop-wall-books creator-profile-books" data-creator-profile-shelf-books aria-label="Publicly shelved Creator books"></div>
+
+
+
+
+
+
+
+
+
+
+            </div>
+          </div>
+        </section>
+      </section>
     </section>
     <section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
-      <div class="creator-profile-catalog-desktop__heading"><p class="section-heading__kicker">Private Creator workspace</p><h2 id="creator-profile-catalog-heading">Catalog Desktop</h2><p>Choose which of your products appear on your Profile bookshelf. These selections do not change marketplace listing or sale status.</p></div>
-      <label class="creator-profile-catalog-desktop__identity" data-creator-shelf-identity-wrap hidden>Creator identity<select data-creator-shelf-identity></select></label>
-      <div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div>
+      <div class="creator-profile-catalog-desktop__heading"><h2 id="creator-profile-catalog-heading">Catalog Desktop</h2><div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div></div>
       <div class="creator-profile-catalog-cards" data-creator-profile-catalog-cards></div>
       <p class="creator-profile-shelf-status" data-creator-shelf-status role="status" aria-live="polite"></p>
     </section>
@@ -224,6 +267,6 @@
   <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>
   <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>
   <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>
-  <script src="/assets/js/creator-profile-shelf.js?v=creator-profile-shelf1" defer></script>
+  <script src="/assets/js/creator-profile-shelf.js?v=creator-profile-shelf2" defer></script>
 </body>
 </html>
