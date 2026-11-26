@@ -43,7 +43,8 @@ function Get-MigrationSchemaState {
 
   $tableNames = @(@($Migration.preconditions.tables) + @($Migration.postconditions.tables) | Select-Object -Unique)
   $indexNames = @($Migration.postconditions.indexes)
-  foreach ($name in @($tableNames + $indexNames)) {
+  $triggerNames = @($Migration.postconditions.triggers)
+  foreach ($name in @($tableNames + $indexNames + $triggerNames)) {
     if ($name -notmatch '^[A-Za-z0-9_]+$') { throw "Unexpected schema identifier in migration ledger: $name" }
   }
   $clauses = @()
@@ -54,6 +55,10 @@ function Get-MigrationSchemaState {
   if ($indexNames.Count -gt 0) {
     $quoted = ($indexNames | ForEach-Object { "'$_'" }) -join ","
     $clauses += "(type='index' AND name IN ($quoted))"
+  }
+  if ($triggerNames.Count -gt 0) {
+    $quoted = ($triggerNames | ForEach-Object { "'$_'" }) -join ","
+    $clauses += "(type='trigger' AND name IN ($quoted))"
   }
   $selects = @("SELECT type AS kind,name AS object_name,'' AS detail FROM sqlite_master WHERE $($clauses -join ' OR ')")
   foreach ($table in @($Migration.postconditions.tables)) {
@@ -77,10 +82,14 @@ function Get-MigrationSchemaState {
   foreach ($index in @($Migration.postconditions.indexes)) {
     if (-not @($objects | Where-Object { $_.kind -eq "index" -and $_.object_name -eq $index }).Count) { $missingObjects += $index }
   }
+  foreach ($trigger in @($Migration.postconditions.triggers)) {
+    if (-not @($objects | Where-Object { $_.kind -eq "trigger" -and $_.object_name -eq $trigger }).Count) { $missingObjects += $trigger }
+  }
   $allObjectsPresent = $missingObjects.Count -eq 0
   $anyMigrationObjectPresent = @($objects | Where-Object {
     ($_.kind -eq "table" -and $Migration.postconditions.tables -contains $_.object_name) -or
-    ($_.kind -eq "index" -and $Migration.postconditions.indexes -contains $_.object_name)
+    ($_.kind -eq "index" -and $Migration.postconditions.indexes -contains $_.object_name) -or
+    ($_.kind -eq "trigger" -and $Migration.postconditions.triggers -contains $_.object_name)
   }).Count -gt 0
   $preconditionsPresent = @($Migration.preconditions.tables | Where-Object {
     $preconditionTable = $_

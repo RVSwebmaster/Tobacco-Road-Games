@@ -32,6 +32,25 @@
           "evidence": "Read-only sqlite_master and PRAGMA table_info checks confirmed both tables, all listed columns, and the required index."
         }
       }
+    },
+    {
+      "id": "creator-profile-shelf-081",
+      "file": "ops/releases/creator-profile-shelf-081/creator-profile-shelf-081.sql",
+      "sha256": "3ace92dd381ef26beeb2e8c964d8d16c65cef1e760e52cc736c2a0d956b03104",
+      "baseline": "Production D1 schema exported 2026-11-25; numbered migrations 073-079 remain deferred and unapplied",
+      "purpose": "Add Creator Profile shelf assignments and enforce the existing per-tier shelf allowance without depending on the deferred creator_effective_capacity_categories view.",
+      "databaseBinding": "TRG_ORDERS",
+      "preconditions": {
+        "numberedSchemaVersion": 72,
+        "tables": ["users", "marketplace_creators", "marketplace_products", "creator_identity_ownership", "creator_commission_category_assignments", "creator_preferred_terms", "preferred_billing_commitments", "preferred_billing_installments", "preferred_service_charges", "marketplace_service_purchases"],
+        "effect": "Create one empty shelf-assignment table, one index, and three insert/update guards; do not update or delete any existing row. Shelf capacity mirrors existing standard (6), Founding-25 (12), Preferred (12), Owner (14), and Admin policies."
+      },
+      "postconditions": {
+        "tables": ["creator_profile_shelf_selections"],
+        "indexes": ["idx_creator_profile_shelf_creator_position"],
+        "triggers": ["creator_profile_shelf_owner_insert", "creator_profile_shelf_capacity_insert", "creator_profile_shelf_identity_immutable"],
+        "creator_profile_shelf_selectionsColumns": ["creator_id", "product_id", "position", "selected_at", "updated_at"]
+      }
     }
   ]
 }
