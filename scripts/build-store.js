@@ -33,7 +33,7 @@ const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
-const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf2";
+const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf3";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1130,7 +1130,7 @@ function renderCreatorProfileShelfSections(canonicalPath) {
       : "creator";
   return `<section class="creator-profile-bookshelf" data-member-creator-shelf data-creator-profile-tier="${profileTier}" aria-label="Creator bookshelf">
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Creator bookshelf">
-        ${renderHomepageProductBay({ title: "CREATOR BOOKSHELF", id: "creator-profile-bookshelf-heading", products: [], singleShelf: true, hidePlaque: true, creatorProfileShelf: true })}
+        ${renderHomepageProductBay({ title: "CREATOR BOOKSHELF", id: "creator-profile-bookshelf-heading", products: [], singleShelf: true, hidePlaque: true, creatorProfileShelf: true, creatorProfileBookstops: profileTier === "creator" })}
       </section>
     </section>
     <section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
@@ -1677,7 +1677,7 @@ function renderHomepageIdentityBay({ memberIdentity = false, memberTierBadge = f
         </section>`;
 }
 
-function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right", liveShelf = "", creatorProfileShelf = false }) {
+function renderHomepageProductBay({ title, id, products, viewAllHref, singleShelf = false, wallArt = null, productMock = null, bambooIncense = false, heroProductId = null, plaqueHref = "", hidePlaque = false, magicalShelfOrder = null, magicalDirection = "left-to-right", liveShelf = "", creatorProfileShelf = false, creatorProfileBookstops = false }) {
   const visibleProducts = products.slice(0, 5);
   const merchandising = singleShelf && ["featured-creator-wall-heading", "new-this-week-wall-heading", "best-sellers-wall-heading", "free-pwyw-wall-heading"].includes(id);
   const configuredHero = heroProductId ?? (typeof HOMEPAGE_MERCHANDISING !== "undefined" ? HOMEPAGE_MERCHANDISING[id]?.heroProductId : null);
@@ -1704,6 +1704,7 @@ function renderHomepageProductBay({ title, id, products, viewAllHref, singleShel
     ? `<div class="shop-wall-shelves shop-wall-shelves--single" aria-label="${escapeAttribute(title)} shelf">
             <div class="shop-wall-shelf-level">
               ${creatorProfileShelf ? `${renderCreatorProfileBookTemplate()}<div class="bookshelf-grid shop-wall-books creator-profile-books" data-creator-profile-shelf-books aria-label="Publicly shelved Creator books"></div>` : ""}
+              ${creatorProfileBookstops ? `<span class="creator-profile-bookstop creator-profile-bookstop--outer creator-profile-bookstop--left" aria-hidden="true"></span><span class="creator-profile-bookstop creator-profile-bookstop--inner creator-profile-bookstop--left" aria-hidden="true"></span><span class="creator-profile-bookstop creator-profile-bookstop--inner creator-profile-bookstop--right" aria-hidden="true"></span><span class="creator-profile-bookstop creator-profile-bookstop--outer creator-profile-bookstop--right" aria-hidden="true"></span>` : ""}
               ${wallArtMarkup}
               ${bambooIncenseMarkup}
               ${dogwoodBonsaiMarkup}
