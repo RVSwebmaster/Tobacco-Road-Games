@@ -33,7 +33,7 @@ const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
-const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf3";
+const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf4";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1375,7 +1375,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
       '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>',
-      ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}" defer></script>`] : []),
+      ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-catalog-layout.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}" defer></script>`, `  <script src="/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}" defer></script>`] : []),
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
     ].join("\n"));
@@ -2383,7 +2383,7 @@ function renderAuthorProfilePage(author) {
     description: author.shortBio || `Meet ${author.name} at Tobacco Road Games.`,
     canonicalPath: author.url,
     currentNav: "authors",
-    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js", `/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}`],
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js", `/assets/js/creator-profile-catalog-layout.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}`, `/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}`],
     extraStyles: [`/assets/css/creator-profile-shelf.css?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}`],
     structuredData: [
       renderBreadcrumbSchema([
@@ -3876,7 +3876,7 @@ function buildFocusedPages(publicCatalogProducts = loadProducts(buildAuthorLooku
     writeFile(output, renderMemberProfilePage(guestLandingPage, {
       canonicalPath: profile.route,
       creatorCatalogRotation: profile.accountClass === "creator",
-      creatorShelfProfile: true,
+      creatorShelfProfile: ["creator", "founding25", "premiumCreator"].includes(profile.accountClass),
     }));
   }
 }

@@ -5,6 +5,8 @@
   if (!publicRoots.length && !memberRoot) return;
 
   const cache = "no-store";
+  const catalogSlotCount = 30;
+  const createCatalogSlots = window.createCreatorProfileCatalogSlots;
   const accountClasses = new Set(["creator", "founding25", "premiumCreator"]);
   let currentRequest = 0;
   let saving = false;
@@ -77,24 +79,16 @@
   }
 
   function selectedIds() {
-    return Array.from(cards.querySelectorAll("input[data-profile-shelved]:checked"), input => input.dataset.productId);
+    return Array.from(cards.querySelectorAll("button[data-profile-shelved][aria-pressed='true']"), button => button.dataset.productId);
   }
 
   function renderCatalogCards(state) {
     const fragment = document.createDocumentFragment();
-    const products = state.products || [];
-    const capacity = state.catalog.limit === null
-      ? products.length
-      : Math.max(state.catalog.limit, products.length);
-    for (let index = 0; index < capacity; index += 1) {
-      const product = products[index];
-      if (!product) {
-        fragment.append(node("div", "creator-profile-catalog-slot--empty"));
-        continue;
-      }
+    const slots = createCatalogSlots(state.products || [], state.catalog.limit, catalogSlotCount);
+    for (const { index, product, hasShelfControl } of slots) {
       const slot = node("div", "creator-profile-catalog-slot");
-      const card = node("article", "product-card creator-profile-catalog-card");
-      if (product.coverImage) {
+      const card = node("article", `product-card creator-profile-catalog-card${product ? "" : " creator-profile-catalog-card--empty"}`);
+      if (product?.coverImage) {
         const media = node("div", "product-card__media");
         const image = node("img", "creator-profile-catalog-card__cover");
         image.src = product.coverImage;
@@ -106,17 +100,24 @@
       } else {
         card.append(node("div", "creator-profile-catalog-card__cover"));
       }
-      card.append(node("h3", "creator-profile-catalog-card__title", product.title));
-      const label = node("label", "creator-profile-catalog-card__shelve");
-      const checkbox = node("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = product.shelved === true;
-      checkbox.dataset.profileShelved = "";
-      checkbox.dataset.productId = product.id;
-      checkbox.setAttribute("aria-label", `Place ${product.title} on the Profile bookshelf`);
-      label.append(checkbox, document.createTextNode("Shelf"));
-      slot.append(card, label);
-      if (!product.public) {
+      if (product) card.append(node("h3", "creator-profile-catalog-card__title", product.title));
+      else card.setAttribute("aria-label", `Empty catalog slot ${index + 1}`);
+      slot.append(card);
+      if (hasShelfControl) {
+        const button = node("button", "creator-profile-catalog-card__shelve", "Shelf");
+        button.type = "button";
+        button.dataset.profileShelved = "";
+        button.setAttribute("aria-pressed", product?.shelved === true ? "true" : "false");
+        button.disabled = !product;
+        if (product) {
+          button.dataset.productId = product.id;
+          button.setAttribute("aria-label", `${product.shelved ? "Remove" : "Place"} ${product.title} ${product.shelved ? "from" : "on"} the Profile bookshelf`);
+        } else {
+          button.setAttribute("aria-label", `Shelf button for empty catalog slot ${index + 1}`);
+        }
+        slot.append(button);
+      }
+      if (product && !product.public) {
         slot.append(node("p", "creator-profile-catalog-card__notice", "Not visible to visitors until published and available."));
       }
       fragment.append(slot);
@@ -167,19 +168,21 @@
     await loadCreatorShelf(selectedCreator);
   }
 
-  cards.addEventListener("change", async event => {
-    const checkbox = event.target.closest("input[data-profile-shelved]");
-    if (!checkbox || !selectedCreator || !loadedState || saving) return;
+  cards.addEventListener("click", async event => {
+    const button = event.target.closest("button[data-profile-shelved]");
+    if (!button || button.disabled || !selectedCreator || !loadedState || saving) return;
     const beforeIds = loadedState.productIds.slice();
+    const wasShelved = button.getAttribute("aria-pressed") === "true";
+    button.setAttribute("aria-pressed", wasShelved ? "false" : "true");
     const requestedIds = selectedIds();
     const shelfCount = loadedState.shelf.used;
-    if (checkbox.checked && loadedState.shelf.limit !== null && shelfCount >= loadedState.shelf.limit) {
-      checkbox.checked = false;
+    if (!wasShelved && loadedState.shelf.limit !== null && shelfCount >= loadedState.shelf.limit) {
+      button.setAttribute("aria-pressed", "false");
       status.textContent = `Shelf allowance reached (${shelfCount} / ${loadedState.shelf.limit}). Remove another title first.`;
       return;
     }
     saving = true;
-    cards.querySelectorAll("input[data-profile-shelved]").forEach(input => { input.disabled = true; });
+    cards.querySelectorAll("button[data-profile-shelved]").forEach(control => { control.disabled = true; });
     status.textContent = "Saving shelf selection…";
     try {
       const response = await fetch(`/api/creator/profile-shelf?creator=${encodeURIComponent(selectedCreator.id)}`, {

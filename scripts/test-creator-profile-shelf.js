@@ -1,10 +1,32 @@
 const assert = require("node:assert/strict");
 const { DatabaseSync } = require("node:sqlite");
 const { NOW_MS, CREATOR_A, CREATOR_B, createCreator, creatorRequest, applyMigrations, createD1, load } = require("./test-creator-product-withdrawal.js");
+const { createCatalogSlots } = require("../assets/js/creator-profile-catalog-layout.js");
+const fs = require("node:fs");
+const path = require("node:path");
 const CREATOR_F = Object.freeze({ id: "creator-profile-shelf-founder", userId: "user-profile-shelf-founder", slug: "profile-shelf-founder", session: "profile-shelf-founder-session", csrf: "profile-shelf-founder-csrf" });
 const CREATOR_P = Object.freeze({ id: "creator-profile-shelf-premium", userId: "user-profile-shelf-premium", slug: "profile-shelf-premium", session: "profile-shelf-premium-session", csrf: "profile-shelf-premium-csrf" });
 
 async function main() {
+  const emptyStandardSlots = createCatalogSlots([], 12);
+  assert.equal(emptyStandardSlots.length, 30, "An empty Creator catalog still renders all 30 slots.");
+  assert.equal(emptyStandardSlots.filter(slot => slot.hasShelfControl).length, 12, "A standard Creator gets Shelf controls for 12 catalog slots.");
+  assert.ok(emptyStandardSlots.slice(0, 10).every(slot => slot.hasShelfControl), "All ten first-row slots have controls.");
+  assert.ok(emptyStandardSlots.slice(10, 12).every(slot => slot.hasShelfControl), "The first two second-row slots have controls.");
+  assert.ok(emptyStandardSlots.slice(12).every(slot => !slot.hasShelfControl && slot.product === null), "Remaining empty slots have no controls.");
+  const populatedSlots = createCatalogSlots(Array.from({ length: 12 }, (_, index) => ({ id: `slot-${index}` })), 12);
+  assert.deepEqual(populatedSlots.slice(0, 12).map(slot => slot.product.id), Array.from({ length: 12 }, (_, index) => `slot-${index}`), "Products fill slots left to right, top to bottom.");
+  assert.equal(populatedSlots.slice(12).filter(slot => slot.product).length, 0);
+  assert.equal(createCatalogSlots([], 24).filter(slot => slot.hasShelfControl).length, 24, "Higher catalog tiers receive controls for 24 slots.");
+  assert.equal(createCatalogSlots([], null).filter(slot => slot.hasShelfControl).length, 30, "Unlimited catalog accounts remain bounded to the visible 30 slots.");
+  const catalogCss = fs.readFileSync(path.join(__dirname, "..", "assets", "css", "creator-profile-shelf.css"), "utf8");
+  assert.match(catalogCss, /grid-template-columns:\s*repeat\(10,\s*minmax\(0,\s*1fr\)\)/, "Desktop catalog uses ten columns.");
+  assert.match(catalogCss, /@media\s*\(max-width:\s*700px\)[\s\S]*?grid-template-columns:\s*repeat\(3,/, "Mobile catalog reflows into three columns.");
+  assert.doesNotMatch(catalogCss, /creator-profile-catalog-slot--empty\s*\{[^}]*display:\s*none/, "Empty slots remain visible at mobile widths.");
+  const catalogRenderer = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "creator-profile-shelf.js"), "utf8");
+  assert.match(catalogRenderer, /button\.disabled\s*=\s*!product/, "Shelf controls are disabled for empty slots.");
+  assert.match(catalogRenderer, /button\.type\s*=\s*"button"/, "Shelf controls render as buttons.");
+
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON;");
   applyMigrations(raw);
