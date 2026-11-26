@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "creator-bookstops-2026-11-26",
+  "releaseSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+  "releaseBranch": "release/creator-bookstops-2026-11-26",
+  "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f",
+  "releaseManifest": {
+    "schemaVersion": 1,
+    "releaseId": "creator-bookstops-2026-11-26",
+    "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+    "releaseBranch": "release/creator-bookstops-2026-11-26",
+    "commitMessage": "Add oak bookstops to Creator Profile shelf",
+    "createdAt": "2026-11-26T12:04:11.930Z",
+    "buildCommand": "npm run release:build -- --ref 7698e857dacf6f470727976296fa69d24ba77eb2 --release-branch release/creator-bookstops-2026-11-26 --release-id creator-bookstops-2026-11-26",
+    "pipelinePolicySha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+    "lineage": {
+      "mainSha": "934c4472d5d5896c809d8d61bc2addd1138cac78",
+      "developmentSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+      "developmentDescendsFromMain": true,
+      "candidateDescendsFromDevelopment": true,
+      "exception": null
+    },
+    "pagesFileCount": 258,
+    "sourceOutputSha256": "106428e96f5d655ec065b23b30ba97e033f5cde5d465b9d5afee487695b253ba",
+    "pagesOutputSha256": "bff1cfaf65940fea1a8249fd3a2023eda8754ce135fa32f158333d561a7a0bba",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "3bb382dc8c668a0205ceecfbff30f139ff5605363dc790eaaab2262fdda9a55a",
+      "customer.html": "8b714898e24979f996472ad03d8d97824077ad98bfa48fe0da52fb5b5678f2e9",
+      "customer-profile/index.html": "d7b3e2c7d7ecb0019db98b943b55989583a20135f7bf7d71245e089f9387f158",
+      "creator/index.html": "59d01b48ef7034736b027168e442dc30fe0d1e9a0b18c20c43095743dbb41d82",
+      "assets/css/member-profile.css": "8264045ef82f66c0d53d36fb4c00e915c071248e87d80cf5cdf40f046bff1556",
+      "assets/js/account.js": "97c2833fcc9d5c45dd8b0c463bf288f046a8ab31c825eb7d15255ef0c51fa770",
+      "trg-release.json": "2bc9fd4b04e28ae0f5bfd236bbf8a2c9ce9023f6f0babe82c04368049d6862ce"
+    },
+    "functionsSourceSha256": "660e9544115891c405344df66efa61d07e5adc4829ee72abde5bf25d3d7c004e",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "migrations": [],
+    "artifact": {
+      "sourceRoot": ".wrangler/release-pipeline/creator-bookstops-2026-11-26/source",
+      "pagesOutput": ".wrangler/release-pipeline/creator-bookstops-2026-11-26/source/.wrangler/release-pages-output"
+    },
+    "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f"
+  },
+  "build": {
+    "createdAt": "2026-11-26T12:04:11.930Z",
+    "buildCommand": "npm run release:build -- --ref 7698e857dacf6f470727976296fa69d24ba77eb2 --release-branch release/creator-bookstops-2026-11-26 --release-id creator-bookstops-2026-11-26",
+    "pagesFileCount": 258,
+    "pagesOutputSha256": "bff1cfaf65940fea1a8249fd3a2023eda8754ce135fa32f158333d561a7a0bba",
+    "functionsSourceSha256": "660e9544115891c405344df66efa61d07e5adc4829ee72abde5bf25d3d7c004e",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "3bb382dc8c668a0205ceecfbff30f139ff5605363dc790eaaab2262fdda9a55a",
+      "customer.html": "8b714898e24979f996472ad03d8d97824077ad98bfa48fe0da52fb5b5678f2e9",
+      "customer-profile/index.html": "d7b3e2c7d7ecb0019db98b943b55989583a20135f7bf7d71245e089f9387f158",
+      "creator/index.html": "59d01b48ef7034736b027168e442dc30fe0d1e9a0b18c20c43095743dbb41d82",
+      "assets/css/member-profile.css": "8264045ef82f66c0d53d36fb4c00e915c071248e87d80cf5cdf40f046bff1556",
+      "assets/js/account.js": "97c2833fcc9d5c45dd8b0c463bf288f046a8ab31c825eb7d15255ef0c51fa770",
+      "trg-release.json": "2bc9fd4b04e28ae0f5bfd236bbf8a2c9ce9023f6f0babe82c04368049d6862ce"
+    }
+  },
+  "preview": {
+    "target": "preview",
+    "projectName": "tobacco-road-games-acceptance",
+    "deploymentId": "75df5900-5449-4d3f-ba92-4ef33a39ae33",
+    "deploymentUrl": "https://75df5900.tobacco-road-games-acceptance.pages.dev",
+    "deploymentEnvironment": "Preview",
+    "branch": "acceptance",
+    "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+    "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f",
+    "sourceOutputSha256": "106428e96f5d655ec065b23b30ba97e033f5cde5d465b9d5afee487695b253ba",
+    "staticOutputSha256": "bff1cfaf65940fea1a8249fd3a2023eda8754ce135fa32f158333d561a7a0bba",
+    "verifiedAt": "2026-11-26T12:05:49.700Z",
+    "ownerApproval": {
+      "approved": true,
+      "approvedBy": "RV Sawyer",
+      "approvedAt": "2026-11-26T12:07:17.388Z",
+      "projectName": "tobacco-road-games-acceptance",
+      "deploymentId": "75df5900-5449-4d3f-ba92-4ef33a39ae33",
+      "previewUrl": "https://75df5900.tobacco-road-games-acceptance.pages.dev",
+      "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+      "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f"
+    }
+  },
+  "staging": {
+    "target": "staging",
+    "projectName": "tobacco-road-games-staging",
+    "deploymentId": "7673b469-e99a-4692-a48b-982558f38f6a",
+    "deploymentUrl": "https://7673b469.tobacco-road-games-staging.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "staging",
+    "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+    "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f",
+    "sourceOutputSha256": "106428e96f5d655ec065b23b30ba97e033f5cde5d465b9d5afee487695b253ba",
+    "staticOutputSha256": "bff1cfaf65940fea1a8249fd3a2023eda8754ce135fa32f158333d561a7a0bba",
+    "verifiedAt": "2026-11-26T12:08:51.797Z",
+    "verification": {
+      "passed": true,
+      "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+      "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f",
+      "deploymentId": "7673b469-e99a-4692-a48b-982558f38f6a",
+      "deploymentUrl": "https://7673b469.tobacco-road-games-staging.pages.dev",
+      "verifiedAt": "2026-11-26T12:09:05.341Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    }
+  },
+  "production": {
+    "target": "production",
+    "projectName": "tobacco-road-games",
+    "deploymentId": "70e10a5f-e6be-489b-9064-5e162004f15b",
+    "deploymentUrl": "https://70e10a5f.tobacco-road-games.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "main",
+    "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+    "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f",
+    "sourceOutputSha256": "106428e96f5d655ec065b23b30ba97e033f5cde5d465b9d5afee487695b253ba",
+    "staticOutputSha256": "bff1cfaf65940fea1a8249fd3a2023eda8754ce135fa32f158333d561a7a0bba",
+    "verifiedAt": "2026-11-26T12:11:26.947Z",
+    "verification": {
+      "target": "production",
+      "passed": true,
+      "commitSha": "7698e857dacf6f470727976296fa69d24ba77eb2",
+      "manifestSha256": "2ad27827ad1d2446892751c7d79f337059bd93ea0ff7152dafda65168dc5005f",
+      "verifiedAt": "2026-11-26T12:11:42.208Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    },
+    "rollbackDeployment": {
+      "deploymentId": "3d6061ea-d338-416e-af3c-69a9dd6b7fc4",
+      "deploymentUrl": "https://3d6061ea.tobacco-road-games.pages.dev",
+      "branch": "main",
+      "environment": "Production",
+      "source": "934c447",
+      "capturedAt": "2026-11-26T12:10:53.8969071Z"
+    }
+  },
+  "migrations": [],
+  "completedAt": "2026-11-26T12:13:17.655Z"
+}
