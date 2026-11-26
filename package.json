@@ -81,6 +81,7 @@
     "test:account-forum-surface": "node scripts/test-account-forum-surface.js",
     "test:transaction-payout-policy": "node scripts/test-transaction-payout-policy.js",
     "test:creator-profile-shelf": "node scripts/test-creator-profile-shelf.js",
+    "test:creator-profile-shelf-production-migration": "node scripts/test-creator-profile-shelf-production-migration.js",
     "release:build": "node scripts/release-pipeline.mjs build",
     "release:verify-artifact": "node scripts/release-pipeline.mjs verify-artifact",
     "release:check-environment": "node scripts/release-pipeline.mjs check-environment",
