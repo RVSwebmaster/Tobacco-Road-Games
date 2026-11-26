@@ -1367,7 +1367,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
     .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
-    .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer member-profile-footer"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>')
+    .replace(/<\/main>\s*<\/div>/, `</main>\n      <footer class="site-footer member-profile-footer${creatorShelfProfile ? " member-profile-footer--dashboard" : ""}"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>`)
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
       '  <script src="/assets/js/open-rules-library.js?v=shared-open-rules6" defer></script>',

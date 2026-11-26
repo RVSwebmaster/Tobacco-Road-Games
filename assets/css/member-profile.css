@@ -347,6 +347,14 @@ body.member-profile-page .member-profile-footer {
   text-align: right;
 }
 
+body.member-profile-page .member-profile-footer--dashboard p {
+  min-height: 1.35em;
+}
+
+body.member-profile-page .member-profile-footer--dashboard [data-creator-dashboard-link] {
+  white-space: nowrap;
+}
+
 .creator-dashboard-footer p,
 .member-profile-footer p {
   margin: 0;

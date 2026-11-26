@@ -23,6 +23,11 @@ async function main() {
   assert.match(catalogCss, /grid-template-columns:\s*repeat\(10,\s*minmax\(0,\s*1fr\)\)/, "Desktop catalog uses ten columns.");
   assert.match(catalogCss, /@media\s*\(max-width:\s*700px\)[\s\S]*?grid-template-columns:\s*repeat\(3,/, "Mobile catalog reflows into three columns.");
   assert.doesNotMatch(catalogCss, /creator-profile-catalog-slot--empty\s*\{[^}]*display:\s*none/, "Empty slots remain visible at mobile widths.");
+  const profileCss = fs.readFileSync(path.join(__dirname, "..", "assets", "css", "member-profile.css"), "utf8");
+  assert.match(profileCss, /member-profile-footer--dashboard\s+p\s*\{[^}]*min-height:\s*1\.35em/, "The Creator Dashboard footer reserves one link line before the link appears.");
+  assert.match(profileCss, /member-profile-footer--dashboard\s+\[data-creator-dashboard-link\]\s*\{[^}]*white-space:\s*nowrap/, "The reserved dashboard-link footer stays one line at mobile widths.");
+  const creatorPage = fs.readFileSync(path.join(__dirname, "..", "creator", "index.html"), "utf8");
+  assert.match(creatorPage, /member-profile-footer--dashboard[^>]*>[\s\S]*?data-creator-dashboard-link hidden/, "The hidden dashboard link starts in its reserved footer below the profile grid.");
   const catalogRenderer = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "creator-profile-shelf.js"), "utf8");
   assert.match(catalogRenderer, /button\.disabled\s*=\s*!product/, "Shelf controls are disabled for empty slots.");
   assert.match(catalogRenderer, /button\.type\s*=\s*"button"/, "Shelf controls render as buttons.");
