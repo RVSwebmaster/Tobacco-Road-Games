@@ -211,10 +211,12 @@ $deploymentListOutput = & npx wrangler pages deployment list --project-name $tar
 if ($LASTEXITCODE -ne 0) { throw "Could not verify the target project's current deployment branch." }
 $deploymentList = ($deploymentListOutput | Out-String) | ConvertFrom-Json
 $matchingCurrent = @($deploymentList | Where-Object {
-  $_.Environment -eq $targetConfig.deploymentEnvironment -and $_.Branch -eq $targetConfig.deploymentBranch
+  $_.Environment -eq $targetConfig.deploymentEnvironment -and
+  $_.Branch -eq $targetConfig.deploymentBranch -and
+  [string]$_.Status -notmatch '(?i)(failure|failed|cancel|skip|build|deploy|queue|progress)'
 })
 if ($matchingCurrent.Count -eq 0) {
-  throw "No existing deployment proves that $($targetConfig.projectName) maps branch $($targetConfig.deploymentBranch) to $($targetConfig.deploymentEnvironment)."
+  throw "No successful deployment proves that $($targetConfig.projectName) maps branch $($targetConfig.deploymentBranch) to $($targetConfig.deploymentEnvironment)."
 }
 if ($Target -eq "preview") {
   if ($targetConfig.deploymentBranch -eq $targetConfig.projectProductionBranch) {
@@ -235,6 +237,14 @@ if ($Target -eq "preview") {
 
 if ($Target -eq "production") {
   $previous = $matchingCurrent | Select-Object -First 1
+  try {
+    $previousMarker = Invoke-RestMethod -Uri "$($previous.Deployment.TrimEnd('/'))/trg-release.json" -Method Get -TimeoutSec 20
+  } catch {
+    throw "The selected production rollback deployment does not serve a readable release marker."
+  }
+  if (-not $previousMarker.commitSha -or -not $previous.Source.StartsWith([string]$previousMarker.commitSha.Substring(0, [Math]::Min(7, $previousMarker.commitSha.Length)), [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "The selected production rollback deployment marker does not match its Cloudflare source SHA."
+  }
   $rollbackPath = Join-Path $releaseRoot "rollback-snapshot.json"
   $rollback = [ordered]@{
     deploymentId = $previous.Id
