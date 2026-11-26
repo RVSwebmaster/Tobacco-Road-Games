@@ -26,11 +26,13 @@ const GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261116-open-rules-master-shelf4";
 const PROGRESSIVE_NAV_CACHE_BUST = "20261116-open-rules-master-shelf1";
 const STOREFRONT_STYLES_CACHE_BUST = "20261116-open-rules-spine-title-fit2";
+const PROFILE_STOREFRONT_STYLES_CACHE_BUST = "20261125-profile-plateboard-cache1";
 const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
 const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
+const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
 const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
@@ -1282,8 +1284,10 @@ function withoutGuestLoginPopup(page) {
 
 function renderCustomerLandingPage(guestLandingPage) {
   guestLandingPage = withoutGuestLoginPopup(guestLandingPage);
+  const lineBreak = guestLandingPage.match(/\r?\n/)?.[0] || "\n";
   const profileRoutes = Object.fromEntries(MEMBER_PROFILE_ROUTES.map(({ accountClass, route }) => [accountClass, route]));
   let customerPage = guestLandingPage
+    .replace("<title>Guest Landing Page | Tobacco Road Games</title>", "<title>Customer Storefront | Tobacco Road Games</title>")
     .replace('class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo', 'class="homepage-shop-wall shelf-storefront guest-landing-page" data-guest-landing data-magical-bookshelf-demo data-customer-storefront')
     .replace('<nav class="site-nav" aria-label="Primary">', `<nav class="site-nav" aria-label="Primary" data-progressive-navigation data-member-profile-routes="${escapeAttribute(JSON.stringify(profileRoutes))}">`)
     .replace('<a href="/account.html">Login/Signup</a>', "")
@@ -1292,18 +1296,16 @@ function renderCustomerLandingPage(guestLandingPage) {
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="1" data-magical-direction="left-to-right"')
     .replace('class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right" aria-hidden="true"', 'class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-customer-library-row data-magical-bookshelf data-magical-shelf-order="2" data-magical-direction="left-to-right"');
   customerPage = customerPage
-    .replace('<div class="shop-wall-bric-shelf">', '<div class="shop-wall-bric-shelf" data-curio-shelf="bric-a-brac-1">')
-    .replace('<div class="shop-wall-bric-shelf__surface"></div>', '<img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">\n          <div class="shop-wall-bric-shelf__surface"></div>\n          <span class="shelf-curio-status" data-curio-status role="status" aria-live="polite"></span>');
-  customerPage = customerPage
-    .replace(/<script type="module" src="\/assets\/js\/creator-plateboard\.js\?v=[^"]+"><\/script>\s*/g, "")
-    .replace(/<link rel="stylesheet" href="\/assets\/css\/creator-plateboard\.css\?v=[^"]+">\s*/g, "")
-    .replace(/ data-creator-plateboard(?: data-interval-seconds="\d+")?/g, "")
-    .replace(/ data-plateboard-preview="true" data-creator-id="[^"]+" data-creator-name="[^"]*" data-title="[^"]*" data-tagline="[^"]*" data-secondary-copy="[^"]*" data-callout="[^"]*" data-theme="[^"]*" data-artwork="[^"]*"/g, "");
+    .replace(/<section class="shop-wall-row shop-wall-row--bric-a-brac"[\s\S]*?<\/section>/,
+      renderHomepageBricABracShelf({ postingWall: true, previewAds: [] }));
   if (customerPage === guestLandingPage) throw new Error("Customer storefront markers could not be added.");
   customerPage = customerPage
-    .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${STOREFRONT_STYLES_CACHE_BUST}-${CUSTOMER_NAV_CACHE_BUST}`)
+    .replace(/styles\.css\?v=[^"\s]+/, `styles.css?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
+    .replace(/creator-plateboard\.js\?v=[^"]+/, `creator-plateboard.js?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
+    .replace(/creator-plateboard\.css\?v=[^"]+/, `creator-plateboard.css?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
+    .replace(/guest-landing\.css\?v=[^"]+/, `guest-landing.css?v=${CUSTOMER_PLATEBOARD_CACHE_BUST}`)
     .replace(/<script src="\/assets\/js\/guest-product-preview\.js\?v=[^"]+" defer><\/script>/, `<script src="/assets/js/guest-product-preview.js?v=${CUSTOMER_UPPER_SHELVES_CACHE_BUST}" defer></script>`)
-    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>\n</body>`);
+    .replace("</body>", `  <script src="/assets/js/progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}" defer></script>${lineBreak}</body>`);
   return customerPage;
 }
 
@@ -1360,6 +1362,12 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
     ].join("\n"));
+  if (profileAdvertising) {
+    memberProfile = memberProfile.replace(
+      /styles\.css\?v=[^"\s]+/,
+      `styles.css?v=${PROFILE_STOREFRONT_STYLES_CACHE_BUST}`
+    );
+  }
   if (!memberProfile.includes('data-member-profile-page') || !memberProfile.includes('member-profile-footer')) {
     throw new Error("Member Profile configuration could not be applied to the shared Guest page.");
   }
@@ -1369,9 +1377,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
 function buildCreatorDashboardPage() {
   const creatorDashboardTemplate = fs.readFileSync(path.join(ROOT, "templates", "creator-dashboard.html"), "utf8");
   const marker = "<!-- Shared approved Creator furniture is emitted by scripts/build-store.js. -->";
-  if (!creatorDashboardTemplate.includes(marker)) {
-    throw new Error("Creator Dashboard template is missing its shared-furniture marker.");
-  }
+  if (!creatorDashboardTemplate.includes(marker)) throw new Error("Creator Dashboard template is missing its shared-furniture marker.");
   writeFile("creator-dashboard/index.html", creatorDashboardTemplate
     .replace(marker, renderCreatorFurniture())
     .replace(/^[ \t]+$/gm, ""));
@@ -1537,10 +1543,9 @@ function renderHomepageShopWallMain(products) {
     </main>`;
 }
 
-function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo } = {}) {
+function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo, previewAds = HOMEPAGE_BB1_AD_PREVIEW } = {}) {
   const postingWallAttributes = postingWall && !sumo ? ' data-creator-plateboard data-interval-seconds="60"' : "";
-  const postingWallMarkup = postingWall ? `<div class="bb1-posting-wall"${postingWallAttributes} role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">
-            ${HOMEPAGE_BB1_AD_PREVIEW.map(ad => `<div class="bb1-ad-territory">
+  const previewMarkup = previewAds.map(ad => `<div class="bb1-ad-territory">
               <article class="bb1-poster bb1-poster--${escapeAttribute(ad.theme)}" data-plateboard-preview="true" data-creator-id="${escapeAttribute(ad.creatorId)}" data-creator-name="${escapeAttribute(ad.creator)}" data-title="${escapeAttribute(ad.title)}" data-tagline="${escapeAttribute(ad.tagline)}" data-secondary-copy="${escapeAttribute(ad.secondaryCopy)}" data-callout="${escapeAttribute(ad.callout)}" data-theme="${escapeAttribute(ad.theme)}" data-artwork="${escapeAttribute(ad.artwork)}" aria-labelledby="bb1-${escapeAttribute(ad.id)}-title">
                 <img class="bb1-poster__art" src="${escapeAttribute(ad.artwork)}" alt="" loading="eager" decoding="async" draggable="false">
                 <div class="bb1-poster__copy">
@@ -1551,8 +1556,10 @@ function renderHomepageBricABracShelf({ sumo = false, postingWall = sumo } = {})
                   <p class="bb1-poster__callout">${escapeHtml(ad.callout)}</p>
                 </div>
               </article>
-            </div>`).join("\n            ")}
-          </div>` : "";
+            </div>`).join("\n            ");
+  const postingWallMarkup = postingWall
+    ? `<div class="bb1-posting-wall"${postingWallAttributes} role="group" tabindex="0" aria-label="Creator posters: fictional visual test ads">${previewMarkup ? `\n            ${previewMarkup}\n          ` : ""}</div>`
+    : "";
   return `<section class="shop-wall-row shop-wall-row--bric-a-brac" aria-label="Bric-a-Brac display shelf">
         <div class="shop-wall-bric-shelf"${sumo ? ' data-curio-shelf="bric-a-brac-1"' : postingWall ? "" : ' aria-hidden="true"'}>
           <div class="shop-wall-bric-shelf__back"${postingWall ? ' data-bb1-posting-wall' : ""}>${postingWallMarkup}</div>${sumo ? '\n          <img class="shop-wall-bric-shelf__sumo" data-curio-id="harimafuji" data-curio-behavior="movable" role="button" tabindex="0" aria-label="Yokozuna Harimafuji" aria-pressed="false" title="Yokozuna Harimafuji" src="/assets/images/storefront-shelf-dressing/sumo-funko-pop.png" alt="" loading="eager" decoding="async" draggable="false">' : ""}
@@ -2409,11 +2416,11 @@ function renderAuthorProfilePage(author) {
         </section>
 
         <section class="store-section" aria-labelledby="author-products-heading">
-          ${renderCreatorPublicBookshelf(author.slug)}
           <div class="section-heading">
             <p class="section-heading__kicker">Products</p>
             <h2 id="author-products-heading">Creator Catalog</h2>
           </div>
+          ${renderCreatorPublicBookshelf(author.slug)}
           ${renderCreatorProducts(author)}
         </section>
 
@@ -3817,16 +3824,19 @@ function buildRuntimeCatalog() {
 }
 
 if (require.main === module) {
-  if (process.argv.includes("--creator-shelf-profiles-only")) {
-    buildAdvertisingCreatorProfilePages();
-    for (const author of loadAuthors()) writeFile(`authors/${author.slug}/index.html`, renderAuthorProfilePage(author));
-    console.log("Built Creator tier Profiles and public Creator shelf pages only.");
-  } else if (process.argv.includes("--advertising-creator-profiles-only")) {
+  if (process.argv.includes("--advertising-creator-profiles-only")) {
     buildAdvertisingCreatorProfilePages();
     console.log("Built Creator, Founding-25, and Premium Creator Profiles only.");
+  } else if (process.argv.includes("--creator-shelf-profiles-only")) {
+    buildAdvertisingCreatorProfilePages();
+    buildCreatorPublicProfilePages();
+    console.log("Built Creator tier Profiles and public Creator shelf pages only.");
   } else if (process.argv.includes("--customer-profile-only")) {
     buildCustomerProfilePage();
     console.log("Built Customer Profile only.");
+  } else if (process.argv.includes("--creator-public-profiles-only")) {
+    buildCreatorPublicProfilePages();
+    console.log("Built public Creator Profiles only.");
   } else if (process.argv.includes("--homepage-only")) {
     const products = loadProducts(buildAuthorLookup(loadAuthors()));
     writeHomepageProductCatalog(products);
@@ -3847,7 +3857,7 @@ function buildFocusedPages(publicCatalogProducts = loadProducts(buildAuthorLooku
     writeFile(output, renderMemberProfilePage(guestLandingPage, {
       canonicalPath: profile.route,
       creatorCatalogRotation: profile.accountClass === "creator",
-      creatorShelfProfile: ["creator", "founding25", "premiumCreator"].includes(profile.accountClass),
+      creatorShelfProfile: true,
     }));
   }
 }
@@ -3873,4 +3883,14 @@ function buildAdvertisingCreatorProfilePages() {
   }
 }
 
-module.exports = { buildFocusedPages, buildCustomerProfilePage, buildAdvertisingCreatorProfilePages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderStorefrontBackRoom, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };
+function buildCreatorPublicProfilePages() {
+  const authors = loadAuthors();
+  const authorLookup = buildAuthorLookup(authors);
+  const products = loadProducts(authorLookup).filter(isCatalogBrowsable);
+  const activeAuthors = authors.filter((creator) => creator.marketplaceStatus === "active");
+  for (const author of buildIndexes(products, activeAuthors).authors) {
+    writeFile(`authors/${author.slug}/index.html`, renderAuthorProfilePage(author));
+  }
+}
+
+module.exports = { buildFocusedPages, buildCustomerProfilePage, buildAdvertisingCreatorProfilePages, buildCreatorPublicProfilePages, addGuestLoginPopup, selectHomepageShelfBooks, selectNewThisWeek, renderHomepageMerchandisingBooks, renderHomepageProductBay, renderGuestLandingShopWallMain, renderStorefrontUpperCabinet, renderGuestLibraryBay, renderGuestOpenRulesBay, renderHomepageIdentityBay, renderCustomerLandingPage, renderStorefrontBackRoom, renderMemberProfilePage, isOpenRulesProduct, loadProducts, loadAuthors, buildAuthorLookup, renderCreatorIdentityPanel, memberProfileRoutes: MEMBER_PROFILE_ROUTES };

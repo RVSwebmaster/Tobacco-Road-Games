@@ -19,7 +19,7 @@ assert.deepEqual(builder.memberProfileRoutes.map(({ accountClass, route }) => [a
   expectedRoutes.map(([accountClass, route]) => [accountClass, route]),
   "All six account-class routes are registered with the single Member Profile generator.");
 
-const pages = expectedRoutes.map(([accountClass, route, file]) => {
+const pages = expectedRoutes.map(([accountClass, route, file], index) => {
   const page = read(file);
   const expected = builder.renderMemberProfilePage(guest, {
     canonicalPath: route,
@@ -50,6 +50,8 @@ const pages = expectedRoutes.map(([accountClass, route, file]) => {
     "Only the three Creator tier Profiles receive the new shelf and private catalog controls.");
   assert.equal(page.includes("creator-profile-shelf.js"), ["creator", "founding25", "premiumCreator"].includes(accountClass),
     "Only the three Creator tier Profiles load Creator shelf management.");
+  if (index < 4) assert.match(page, /styles\.css\?v=20261125-profile-plateboard-cache1/,
+    `${route} keeps the approved shared Profile plateboard stylesheet cache key.`);
   return page;
 });
 

@@ -8,6 +8,9 @@ async function main() {
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON;");
   applyMigrations(raw);
+  if (!raw.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='creator_commission_category_assignments'").get()) {
+    raw.exec(require("node:fs").readFileSync(require("node:path").join(__dirname, "..", "ops", "releases", "account-profile-072", "account-profile-072.sql"), "utf8"));
+  }
   const auth = await load("functions/_lib/account-auth.mjs");
   const creatorOperations = await load("functions/_lib/creator-operations.mjs");
   const catalog = await load("functions/_lib/product-catalog-d1.mjs");
@@ -69,7 +72,7 @@ async function main() {
     assert.equal(allowance.shelf.limit, shelfLimit, `${creator.slug} receives the configured shelf allowance.`);
   }
   let response = await getState(CREATOR_A);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 200, await response.clone().text());
   let state = await response.json();
   assert.equal(state.catalog.used, 7);
   assert.equal(state.catalog.limit, 12);
@@ -81,7 +84,7 @@ async function main() {
   response = await creatorOperations.handleCreatorRequest(creatorRequest(CREATOR_A, "profile-shelf", {
     productIds: ["shelf-product-0", "shelf-product-6"]
   }), env, options);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 200, await response.clone().text());
   state = await response.json();
   assert.equal(state.shelf.used, 2);
   assert.deepEqual(state.productIds, ["shelf-product-0", "shelf-product-6"]);
