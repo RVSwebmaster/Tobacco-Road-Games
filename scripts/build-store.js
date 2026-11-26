@@ -31,6 +31,7 @@ const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
+const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1094,6 +1095,32 @@ function renderCustomerProfileAdvertisingDisplays() {
       ${renderHomepageAdMarquee()}`;
 }
 
+function renderCreatorPublicBookshelf(creatorSlug) {
+  return `<section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="${escapeAttribute(creatorSlug)}" aria-labelledby="public-creator-bookshelf-heading" hidden>
+      <div class="section-heading"><p class="section-heading__kicker">Creator Bookshelf</p><h2 id="public-creator-bookshelf-heading">Shelved Titles</h2></div>
+      <div class="creator-profile-bookshelf__surface" data-creator-profile-shelf-books aria-label="Publicly available shelved titles"></div>
+    </section>`;
+}
+
+function renderCreatorProfileShelfSections(canonicalPath) {
+  const profileTier = canonicalPath === "/founding-25-profile/"
+    ? "founding25"
+    : canonicalPath === "/premium-creator-profile/"
+      ? "premiumCreator"
+      : "creator";
+  return `<section class="creator-profile-bookshelf" data-member-creator-shelf data-creator-profile-tier="${profileTier}" aria-labelledby="creator-profile-bookshelf-heading" hidden>
+      <div class="section-heading"><p class="section-heading__kicker">Your public display</p><h2 id="creator-profile-bookshelf-heading">Creator Bookshelf</h2><p>Selected eligible titles appear here for visitors.</p></div>
+      <div class="creator-profile-bookshelf__surface" data-creator-profile-shelf-books aria-label="Publicly available shelved titles"></div>
+    </section>
+    <section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
+      <div class="creator-profile-catalog-desktop__heading"><p class="section-heading__kicker">Private Creator workspace</p><h2 id="creator-profile-catalog-heading">Catalog Desktop</h2><p>Choose which of your products appear on your Profile bookshelf. These selections do not change marketplace listing or sale status.</p></div>
+      <label class="creator-profile-catalog-desktop__identity" data-creator-shelf-identity-wrap hidden>Creator identity<select data-creator-shelf-identity></select></label>
+      <div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div>
+      <div class="creator-profile-catalog-cards" data-creator-profile-catalog-cards></div>
+      <p class="creator-profile-shelf-status" data-creator-shelf-status role="status" aria-live="polite"></p>
+    </section>`;
+}
+
 function renderStorefrontNewThisWeek({ newThisWeek }) {
   return renderBookshelfSection({ id: "new-this-week-heading", kicker: "Just unpacked", title: "New This Week", description: "Recently released, currently eligible books in canonical marketplace order.", products: newThisWeek, centerExamination: true, emptyMessage: "No eligible new releases are on the public shelf yet." });
 }
@@ -1280,7 +1307,7 @@ function renderCustomerLandingPage(guestLandingPage) {
   return customerPage;
 }
 
-function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-profile/", creatorCatalogRotation = false } = {}) {
+function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-profile/", creatorCatalogRotation = false, creatorShelfProfile = false } = {}) {
   if (typeof guestLandingPage !== "string" || !guestLandingPage.trim()) {
     throw new Error("Member Profile generation requires the rendered Guest page.");
   }
@@ -1311,7 +1338,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       libraryBay: renderGuestLibraryBay({ role: "member-profile" }),
       identityBay: renderHomepageIdentityBay({ memberIdentity: true, memberTierBadge: true }),
       openRulesBay: renderRoleOpenRulesBay("member-profile", { rotateCatalogCovers: creatorCatalogRotation }),
-      afterCabinetMarkup: profileAdvertising ? renderCustomerProfileAdvertisingDisplays() : "",
+      afterCabinetMarkup: `${profileAdvertising ? renderCustomerProfileAdvertisingDisplays() : ""}${creatorShelfProfile ? renderCreatorProfileShelfSections(canonicalPath) : ""}`,
       includeLowerContent: false,
       creatorTitleBoard: true
     }))
@@ -1320,7 +1347,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
+    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
     .replace(/<\/main>\s*<\/div>/, '</main>\n      <footer class="site-footer member-profile-footer"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>')
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
@@ -1329,6 +1356,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
       '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>',
+      ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}" defer></script>`] : []),
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
     ].join("\n"));
@@ -2329,7 +2357,8 @@ function renderAuthorProfilePage(author) {
     description: author.shortBio || `Meet ${author.name} at Tobacco Road Games.`,
     canonicalPath: author.url,
     currentNav: "authors",
-    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js"],
+    extraScripts: ["/assets/js/creator-reputation.js", "/assets/js/discovery-labels.js", `/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}`],
+    extraStyles: [`/assets/css/creator-profile-shelf.css?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}`],
     structuredData: [
       renderBreadcrumbSchema([
         { label: "Home", href: "/" },
@@ -2380,6 +2409,7 @@ function renderAuthorProfilePage(author) {
         </section>
 
         <section class="store-section" aria-labelledby="author-products-heading">
+          ${renderCreatorPublicBookshelf(author.slug)}
           <div class="section-heading">
             <p class="section-heading__kicker">Products</p>
             <h2 id="author-products-heading">Creator Catalog</h2>
@@ -2436,6 +2466,7 @@ function renderPublicLayout({
   currentNav,
   structuredData,
   extraScripts = [],
+  extraStyles = [],
   content
 }) {
   const canonicalUrl = `${BASE_URL}${canonicalPath}`;
@@ -2462,6 +2493,7 @@ function renderPublicLayout({
   <meta name="theme-color" content="#120c08">
   <link rel="icon" type="image/png" href="/assets/logo.png?v=${CACHE_BUST}">
   <link rel="stylesheet" href="/styles.css?v=${CACHE_BUST}">
+  ${extraStyles.map((href) => `<link rel="stylesheet" href="${escapeAttribute(href)}">`).join("\n  ")}
   ${structuredDataBlocks.map((block) => `<script type="application/ld+json">${block}</script>`).join("\n  ")}
   ${extraScripts.map((src) => `<script src="${escapeAttribute(src)}" defer></script>`).join("\n  ")}
 </head>
@@ -3785,7 +3817,11 @@ function buildRuntimeCatalog() {
 }
 
 if (require.main === module) {
-  if (process.argv.includes("--advertising-creator-profiles-only")) {
+  if (process.argv.includes("--creator-shelf-profiles-only")) {
+    buildAdvertisingCreatorProfilePages();
+    for (const author of loadAuthors()) writeFile(`authors/${author.slug}/index.html`, renderAuthorProfilePage(author));
+    console.log("Built Creator tier Profiles and public Creator shelf pages only.");
+  } else if (process.argv.includes("--advertising-creator-profiles-only")) {
     buildAdvertisingCreatorProfilePages();
     console.log("Built Creator, Founding-25, and Premium Creator Profiles only.");
   } else if (process.argv.includes("--customer-profile-only")) {
@@ -3811,6 +3847,7 @@ function buildFocusedPages(publicCatalogProducts = loadProducts(buildAuthorLooku
     writeFile(output, renderMemberProfilePage(guestLandingPage, {
       canonicalPath: profile.route,
       creatorCatalogRotation: profile.accountClass === "creator",
+      creatorShelfProfile: ["creator", "founding25", "premiumCreator"].includes(profile.accountClass),
     }));
   }
 }
@@ -3831,6 +3868,7 @@ function buildAdvertisingCreatorProfilePages() {
     writeFile(output, renderMemberProfilePage(guestLandingPage, {
       canonicalPath: profile.route,
       creatorCatalogRotation: profile.accountClass === "creator",
+      creatorShelfProfile: true,
     }));
   }
 }

@@ -53,6 +53,10 @@ import {
   listCreatorMembershipIdentities,
   selectCreatorIdentity,
 } from "./creator-identity-selection.mjs";
+import {
+  getCreatorProfileShelfState,
+  saveCreatorProfileShelf,
+} from "./creator-profile-shelf.mjs";
 
 const EDITABLE_STATES = new Set(["draft", "needs_changes", "paused"]);
 const MEDIA_TYPES = new Set(["", "digital", "physical", "hybrid"]);
@@ -184,6 +188,21 @@ export async function handleCreatorRequest(request, env = {}, options = {}) {
     return json({ creator: publicCreator(creator) });
   if (request.method === "POST" && route === "profile")
     return updateProfile(request, database, creator);
+  if (request.method === "GET" && route === "profile-shelf") {
+    try {
+      return json(await getCreatorProfileShelfState(database, creator.id, session.user.id, options.nowMs));
+    } catch (error) {
+      return profileShelfError(error);
+    }
+  }
+  if (request.method === "POST" && route === "profile-shelf") {
+    try {
+      const body = await bodyJson(request);
+      return json(await saveCreatorProfileShelf(database, creator.id, session.user.id, body.productIds, options.nowMs));
+    } catch (error) {
+      return profileShelfError(error);
+    }
+  }
   if (request.method === "POST" && route === "listings")
     return createDraft(request, database, creator);
   if (request.method === "POST" && /^listings\/[^/]+$/.test(route))
@@ -1430,6 +1449,16 @@ function forbidden() {
     },
     403,
   );
+}
+function profileShelfError(error) {
+  const message = String(error?.message || "Creator Profile shelf could not be updated.");
+  if (/capacity|shelf allowance/i.test(message)) {
+    return json({ error: { code: "profile_shelf_capacity", message } }, 409);
+  }
+  if (/authenticated owner|do not belong to this Creator/i.test(message)) {
+    return json({ error: { code: "creator_access_denied", message } }, 403);
+  }
+  return invalid(message);
 }
 function invalid(message) {
   return json({ error: { code: "invalid_creator_input", message } }, 400);

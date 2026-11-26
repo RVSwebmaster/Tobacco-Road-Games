@@ -24,6 +24,7 @@ const pages = expectedRoutes.map(([accountClass, route, file]) => {
   const expected = builder.renderMemberProfilePage(guest, {
     canonicalPath: route,
     creatorCatalogRotation: accountClass === "creator",
+    creatorShelfProfile: ["creator", "founding25", "premiumCreator"].includes(accountClass),
   });
   const normalizeGeneratedWhitespace = (value) => value.replace(/\r\n/g, "\n").replace(/\n(?:[ \t]*\n)+/g, "\n");
   assert.equal(normalizeGeneratedWhitespace(page), normalizeGeneratedWhitespace(expected),
@@ -45,6 +46,10 @@ const pages = expectedRoutes.map(([accountClass, route, file]) => {
     "The Member Profile contains one shared cabinet component.");
   assert.equal(page.includes("creator-profile-catalog-rotation.js"), accountClass === "creator",
     "Creator's preserved catalog rotation remains Profile-specific.");
+  assert.equal(page.includes("data-member-creator-shelf"), ["creator", "founding25", "premiumCreator"].includes(accountClass),
+    "Only the three Creator tier Profiles receive the new shelf and private catalog controls.");
+  assert.equal(page.includes("creator-profile-shelf.js"), ["creator", "founding25", "premiumCreator"].includes(accountClass),
+    "Only the three Creator tier Profiles load Creator shelf management.");
   return page;
 });
 
@@ -62,7 +67,7 @@ const customerOutsideMarquee = customerMain.match(/<aside class="storefront-ad-m
 const guestPlateboard = builder.renderGuestLandingShopWallMain([]).match(/<section class="shop-wall-row shop-wall-row--bric-a-brac"[\s\S]*?<\/section>/)?.[0] || "";
 const guestOutsideMarquee = builder.renderGuestLandingShopWallMain([]).match(/<aside class="storefront-ad-marquee"[\s\S]*?<\/aside>/)?.[0] || "";
 assert.ok(customerPlateboard, "Customer Profile must include the Creator plateboard.");
-assert.equal(customerPlateboard, guestPlateboard, "Customer Profile must reuse the existing plateboard component markup.");
+assert.equal(customerPlateboard.replace(/\r\n/g, "\n"), guestPlateboard.replace(/\r\n/g, "\n"), "Customer Profile must reuse the existing plateboard component markup.");
 assert.ok(customerOutsideMarquee, "Customer Profile must include the existing outside advertiser carousel.");
 assert.equal(customerOutsideMarquee.replace(/\s+/g, " ").trim(), guestOutsideMarquee.replace(/\s+/g, " ").trim(), "Customer Profile must reuse the existing outside advertiser carousel markup.");
 assert.match(customerProfile, /creator-plateboard\.js\?v=creator-plateboard1/);
@@ -77,16 +82,23 @@ for (const index of [1, 2, 3]) {
   const main = page.match(/<main id="member-profile"[\s\S]*?<\/main>/)?.[0] || "";
   const plateboard = main.match(/<section class="shop-wall-row shop-wall-row--bric-a-brac"[\s\S]*?<\/section>/)?.[0] || "";
   const outsideMarquee = main.match(/<aside class="storefront-ad-marquee"[\s\S]*?<\/aside>/)?.[0] || "";
-  assert.equal(plateboard, customerPlateboard, `${route} reuses the approved Customer Profile plateboard markup.`);
+  assert.equal(plateboard.replace(/\r\n/g, "\n"), customerPlateboard.replace(/\r\n/g, "\n"), `${route} reuses the approved Customer Profile plateboard markup.`);
   assert.equal(outsideMarquee.replace(/\s+/g, " ").trim(), customerOutsideMarquee.replace(/\s+/g, " ").trim(), `${route} reuses the approved outside carousel markup.`);
   assert.match(page, /creator-plateboard\.js\?v=creator-plateboard1/);
   assert.match(page, /creator-plateboard\.css\?v=creator-plateboard1/);
   assert.ok(main.indexOf("data-fixed-cabinet") < main.indexOf("data-creator-plateboard"), `${route} places Creator advertising under Top Shelf.`);
   assert.ok(main.indexOf("data-creator-plateboard") < main.indexOf("class=\"storefront-ad-marquee\""), `${route} places the outside carousel beneath the plateboard.`);
   assert.ok(main.indexOf("class=\"storefront-ad-marquee\"") < main.indexOf("data-member-profile-status"), `${route} keeps remaining Profile content after both displays.`);
+  const bookshelfPosition = main.indexOf("data-member-creator-shelf");
+  const desktopPosition = main.search(/data-creator-profile-catalog(?:\s|=)/);
+  assert.ok(bookshelfPosition > main.indexOf("class=\"storefront-ad-marquee\""), `${route} places the Creator bookshelf beneath the outside carousel.`);
+  assert.ok(desktopPosition > bookshelfPosition && desktopPosition < main.indexOf("data-member-profile-status"), `${route} places the private catalog desktop below the bookshelf.`);
+  assert.match(main, /data-creator-profile-tier=/, `${route} exposes only its public tier marker, not product data.`);
+  assert.doesNotMatch(main, /data-product-id=|data-product-slug=/, `${route} does not embed private catalog records in static markup.`);
 }
 for (const [index, page] of pages.slice(4).entries()) {
   assert.doesNotMatch(page, /data-creator-plateboard|creator-plateboard\.(?:js|css)|storefront-ad-marquee|sponsor-marquee\.js/, `${expectedRoutes[index + 4][1]} must not receive the advertising displays.`);
+  assert.doesNotMatch(page, /data-member-creator-shelf|data-creator-profile-catalog|creator-profile-shelf\.js/, `${expectedRoutes[index + 4][1]} must not receive Creator shelf controls.`);
 }
 
 const memberCss = read("assets/css/member-profile.css");
