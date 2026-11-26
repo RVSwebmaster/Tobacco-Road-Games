@@ -33,6 +33,7 @@ const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
+const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf1";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";

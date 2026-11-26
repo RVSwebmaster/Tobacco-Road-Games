@@ -75,7 +75,19 @@
     "test:store-kill-switch": "node scripts/test-store-kill-switch.js",
     "test:free-download": "node scripts/test-free-download.js",
     "test:homepage-shelves": "node scripts/test-homepage-shelves.js",
-    "test:open-rules-production-promotion": "node scripts/test-open-rules-production-promotion.js"
+    "test:open-rules-production-promotion": "node scripts/test-open-rules-production-promotion.js",
+    "test:release-pipeline": "node scripts/test-release-pipeline.js",
+    "test:owner-finance-auth": "node scripts/test-owner-finance-auth.js",
+    "test:account-forum-surface": "node scripts/test-account-forum-surface.js",
+    "test:transaction-payout-policy": "node scripts/test-transaction-payout-policy.js",
+    "test:creator-profile-shelf": "node scripts/test-creator-profile-shelf.js",
+    "release:build": "node scripts/release-pipeline.mjs build",
+    "release:verify-artifact": "node scripts/release-pipeline.mjs verify-artifact",
+    "release:check-environment": "node scripts/release-pipeline.mjs check-environment",
+    "release:check-promotion": "node scripts/release-pipeline.mjs check-promotion",
+    "release:approve-preview": "node scripts/release-pipeline.mjs approve-preview",
+    "release:record": "node scripts/release-pipeline.mjs finalize-record",
+    "release:verify": "node scripts/test-release-pipeline.js && node scripts/test-progressive-privilege-navigation.js && node scripts/test-pages-build-output.js && node scripts/test-pages-environment-isolation.js && node scripts/test-storefront-visual-alignment.js && node scripts/test-creator-pdf-intake.js && node scripts/test-member-profile-access.js && node scripts/test-member-profile-library.js && node scripts/test-member-profiles.js && node scripts/test-storefront-shared-cabinet.js"
   },
   "repository": {
     "type": "git",
