@@ -48,12 +48,37 @@ function parseWranglerJson(output) {
   return JSON.parse(output.slice(start));
 }
 
+function resolveWranglerCli() {
+  if (process.platform !== "win32") return null;
+  const cacheRoot = path.join(process.env.LOCALAPPDATA || "", "npm-cache", "_npx");
+  if (!fs.existsSync(cacheRoot)) return null;
+  return fs.readdirSync(cacheRoot).map((entry) => {
+    const cli = path.join(cacheRoot, entry, "node_modules", "wrangler", "bin", "wrangler.js");
+    const packageFile = path.join(cacheRoot, entry, "node_modules", "wrangler", "package.json");
+    if (!fs.existsSync(cli) || !fs.existsSync(packageFile)) return null;
+    const version = JSON.parse(fs.readFileSync(packageFile, "utf8")).version || "0.0.0";
+    return { cli, version: version.split(".").map(Number) };
+  }).filter(Boolean).sort((left, right) => {
+    for (let index = 0; index < 3; index += 1) {
+      const difference = (right.version[index] || 0) - (left.version[index] || 0);
+      if (difference) return difference;
+    }
+    return 0;
+  })[0]?.cli || null;
+}
+
 function wranglerD1(sqlFile, configCwd, envName) {
-  const npx = process.platform === "win32" ? "npx.cmd" : "npx";
-  const output = execFileSync(npx, [
-    "wrangler", "d1", "execute", "TRG_ORDERS", "--remote", "--file", sqlFile,
-    "--cwd", configCwd, "--env", envName, "--yes", "--json"
-  ], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 2 * 1024 * 1024 });
+  const cliArgs = [
+    "d1", "execute", "TRG_ORDERS", "--remote", "--command", fs.readFileSync(sqlFile, "utf8"),
+    "--config", path.join(configCwd, "wrangler.toml"), "--env", envName, "--yes", "--json"
+  ];
+  const wranglerCli = resolveWranglerCli();
+  const command = wranglerCli
+    ? [process.execPath, [wranglerCli, ...cliArgs]]
+    : process.platform === "win32"
+      ? [process.execPath, [path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js"), "--yes", "wrangler", ...cliArgs]]
+      : ["npx", ["wrangler", ...cliArgs]];
+  const output = execFileSync(command[0], command[1], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 2 * 1024 * 1024 });
   return parseWranglerJson(output).flatMap((entry) => entry.results || []);
 }
 
