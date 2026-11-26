@@ -1,4 +1,4 @@
-import { getCreatorCapacity } from "./marketplace-policy.mjs";
+import { getCreatorTier, MARKETPLACE_POLICY } from "./marketplace-policy.mjs";
 import { getApprovedPublicProductsByIds } from "./public-product-catalog.mjs";
 
 export async function getCreatorProfileShelfState(database, creatorId, userId, nowMs = Date.now()) {
@@ -19,7 +19,7 @@ export async function getCreatorProfileShelfState(database, creatorId, userId, n
       .bind(String(creatorId)).first(),
     database.prepare("SELECT COUNT(*) count FROM creator_profile_shelf_selections WHERE creator_id=?")
       .bind(String(creatorId)).first(),
-    getCreatorCapacity(database, creatorId, nowMs)
+    getProfileShelfCapacity(database, creatorId, nowMs)
   ]);
   const publicProducts = await getApprovedPublicProductsByIds(database, (productsResult.results || []).map(row => String(row.id)));
   const publiclyPurchasableIds = new Set(publicProducts
@@ -72,7 +72,7 @@ export async function saveCreatorProfileShelf(database, creatorId, userId, produ
   if (ids.some(id => !id || id.length > 160) || new Set(ids).size !== ids.length) {
     throw new Error("The Profile shelf selection contains an invalid product.");
   }
-  const capacity = await getCreatorCapacity(database, creatorId, nowMs);
+  const capacity = await getProfileShelfCapacity(database, creatorId, nowMs);
   if (capacity.shelfCap !== null && ids.length > capacity.shelfCap) {
     throw new Error(`Shelf allowance is ${capacity.shelfCap}. Unshelve a product before adding another.`);
   }
@@ -95,4 +95,31 @@ async function assertProfileOwner(database, creatorId, userId) {
     WHERE creator_id=? AND owner_user_id=? AND account_status='active' LIMIT 1`)
     .bind(String(creatorId), String(userId)).first();
   if (!owner) throw new Error("Only the authenticated owner of this Creator Profile may manage its shelf.");
+}
+
+async function getProfileShelfCapacity(database, creatorId, nowMs) {
+  let identity = null;
+  let founding25 = null;
+  try {
+    identity = await database.prepare(`SELECT u.role,u.status FROM creator_identity_ownership io
+      JOIN users u ON u.id=io.owner_user_id WHERE io.creator_id=?`).bind(String(creatorId)).first();
+  } catch {}
+  try {
+    const now = new Date(nowMs).toISOString();
+    founding25 = await database.prepare(`SELECT 1 active FROM creator_commission_category_assignments
+      WHERE creator_id=? AND category='founding25' AND effective_at<=?
+        AND (revoked_at IS NULL OR revoked_at>?) ORDER BY effective_at DESC LIMIT 1`)
+      .bind(String(creatorId), now, now).first();
+  } catch {}
+  const tier = await getCreatorTier(database, creatorId, nowMs);
+  const admin = identity?.status === "active" && identity.role === "admin";
+  const owner = identity?.status === "active" && identity.role === "owner";
+  const ownerOverride = Boolean((await database.prepare("SELECT owner_catalog_override FROM marketplace_creators WHERE id=?").bind(String(creatorId)).first())?.owner_catalog_override);
+  const preferred = Boolean(tier.preferred);
+  const isFounding25 = Boolean(founding25);
+  return {
+    activeListingCap: admin || owner || ownerOverride ? null : isFounding25 || preferred
+      ? MARKETPLACE_POLICY.preferredActiveListingCap : MARKETPLACE_POLICY.standardActiveListingCap,
+    shelfCap: admin ? null : owner || ownerOverride ? 14 : isFounding25 || preferred ? 12 : 6
+  };
 }
