@@ -15,12 +15,13 @@
   <meta name="theme-color" content="#120c08">
   <link rel="icon" type="image/png" href="/assets/logo.png?v=20260712-shelf12-hinges">
   <link rel="stylesheet" href="/styles.css?v=20260712-shelf12-hinges">
-  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=creator-profile-shelf2">
+  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=creator-profile-shelf5">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://tobaccoroadgames.com/"},{"@type":"ListItem","position":2,"name":"Creators","item":"https://tobaccoroadgames.com/authors.html"},{"@type":"ListItem","position":3,"name":"RV Sawyer","item":"https://tobaccoroadgames.com/authors/rv-sawyer/"}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"RV Sawyer","description":"RV Sawyer is the founder of Tobacco Road Games, shaped by 46 years behind the screen across fantasy, science fiction, horror, superheroes, pulp, westerns, survival play, and stranger roads besides.","url":"https://tobaccoroadgames.com/authors/rv-sawyer/","jobTitle":"Game Master, writer, and founder of Tobacco Road Games"}</script>
   <script src="/assets/js/creator-reputation.js" defer></script>
   <script src="/assets/js/discovery-labels.js" defer></script>
-  <script src="/assets/js/creator-profile-shelf.js?v=creator-profile-shelf2" defer></script>
+  <script src="/assets/js/creator-profile-catalog-layout.js?v=creator-profile-shelf5" defer></script>
+  <script src="/assets/js/creator-profile-shelf.js?v=creator-profile-shelf5" defer></script>
 </head>
 <body class="view-section">
   <div class="page-shell">
@@ -57,9 +58,9 @@
           </div>
           <aside class="author-hero__aside">
             <article class="note-card">
-              <p class="note-card__label">Catalog Work</p>
-              <h2>0 titles in the public catalog</h2>
-              <p>The catalog links back here so readers can move from a book to the person building it.</p>
+              <p class="note-card__label">Bookshelf and catalog</p>
+              <h2>Books for the table.</h2>
+              <p>Browse titles on the shelf or explore the full public catalog below.</p>
             </article>
             <article class="note-card">
               <p class="note-card__label">Workshop Notes</p>
@@ -69,22 +70,12 @@
           </aside>
         </section>
 
-        <section class="store-section" aria-labelledby="author-bio-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Biography</p>
-            <h2 id="author-bio-heading">From the working side of the screen</h2>
-          </div>
-          <div class="about__panel">
-            <p>RV Sawyer writes tabletop tools, adventures, essays, and game material from the working side of the GM screen. Tobacco Road Games grew out of decades of actual table play: campaigns that survived, systems that taught hard lessons, monsters that became memories, and rules tested against real players doing beautifully unreasonable things.</p>
-          </div>
-        </section>
-
         <section class="store-section" aria-labelledby="author-products-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Products</p>
-            <h2 id="author-products-heading">Creator Catalog</h2>
+            <h2 id="author-products-heading">Creator Bookstore</h2>
           </div>
-          <section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="rv-sawyer" aria-label="Creator bookshelf">
+          <section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="rv-sawyer" data-member-creator-shelf data-creator-profile-tier="public" aria-label="Creator bookshelf">
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Creator bookshelf">
 
         <section class="shop-wall-bay shop-wall-bay--products" aria-labelledby="public-rv-sawyer-bookshelf-heading">
@@ -128,12 +119,31 @@
 
 
 
+
             </div>
           </div>
         </section>
       </section>
     </section>
-          <div class="about__panel"><p>Public catalog titles will appear here as they are added to the marketplace.</p></div>
+          <section class="creator-profile-public-catalog" data-public-creator-catalog="rv-sawyer" aria-labelledby="rv-sawyer-catalog-heading">
+      <div class="creator-profile-public-catalog__heading"><h2 id="rv-sawyer-catalog-heading">Catalog</h2></div>
+      <div class="creator-profile-public-catalog__cards" data-public-creator-catalog-cards></div>
+      <div class="creator-profile-catalog-controls" aria-label="Catalog browsing controls">
+        <label>Sort <select data-catalog-sort><option value="title-asc">Alphabetical: A–Z</option><option value="title-desc">Alphabetical: Z–A</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="series">Series</option></select></label>
+        <label>Show <select data-catalog-filter><option value="all">All available products</option><option value="shelved">Shelved products</option><option value="unshelved">Unshelved products</option></select></label>
+      </div>
+      <p class="creator-profile-public-catalog__empty" data-public-creator-catalog-empty hidden>No products are currently available for sale.</p>
+    </section>
+          <section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
+      <div class="creator-profile-catalog-desktop__heading"><h2 id="creator-profile-catalog-heading">Catalog</h2><div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div></div>
+      <div class="creator-profile-catalog-cards" data-creator-profile-catalog-cards></div>
+      <p class="creator-profile-shelf-status" data-creator-shelf-status role="status" aria-live="polite"></p>
+    </section>
+          <section class="creator-profile-public-info" data-public-creator-info aria-labelledby="author-bio-heading">
+            <div class="section-heading"><p class="section-heading__kicker">Biography</p><h2 id="author-bio-heading">About <span data-creator-info-name>RV Sawyer</span></h2></div>
+            <div class="creator-profile-public-info__identity"><img data-creator-info-image hidden></div>
+            <p data-creator-info-bio>RV Sawyer writes tabletop tools, adventures, essays, and game material from the working side of the GM screen. Tobacco Road Games grew out of decades of actual table play: campaigns that survived, systems that taught hard lessons, monsters that became memories, and rules tested against real players doing beautifully unreasonable things.</p><blockquote data-creator-info-message hidden></blockquote>
+          </section>
         </section>
 
         <section class="store-section" aria-labelledby="author-posts-heading">

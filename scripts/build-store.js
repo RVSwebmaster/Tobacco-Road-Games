@@ -33,7 +33,7 @@ const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
-const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf4";
+const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf5";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1115,10 +1115,37 @@ function renderCreatorProfileBookTemplate() {
 }
 
 function renderCreatorPublicBookshelf(creatorSlug) {
-  return `<section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="${escapeAttribute(creatorSlug)}" aria-label="Creator bookshelf">
+  return `<section class="creator-profile-bookshelf creator-profile-bookshelf--public" data-public-creator-shelf="${escapeAttribute(creatorSlug)}" data-member-creator-shelf data-creator-profile-tier="public" aria-label="Creator bookshelf">
       <section class="shop-wall-row shop-wall-row--merchandising" aria-label="Creator bookshelf">
         ${renderHomepageProductBay({ title: "CREATOR BOOKSHELF", id: `public-${creatorSlug}-bookshelf-heading`, products: [], singleShelf: true, hidePlaque: true, creatorProfileShelf: true })}
       </section>
+    </section>`;
+}
+
+function renderPublicCreatorCatalog(creatorSlug) {
+  return `<section class="creator-profile-public-catalog" data-public-creator-catalog="${escapeAttribute(creatorSlug)}" aria-labelledby="${escapeAttribute(creatorSlug)}-catalog-heading">
+      <div class="creator-profile-public-catalog__heading"><h2 id="${escapeAttribute(creatorSlug)}-catalog-heading">Catalog</h2></div>
+      <div class="creator-profile-public-catalog__cards" data-public-creator-catalog-cards></div>
+      <div class="creator-profile-catalog-controls" aria-label="Catalog browsing controls">
+        <label>Sort <select data-catalog-sort><option value="title-asc">Alphabetical: A–Z</option><option value="title-desc">Alphabetical: Z–A</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="series">Series</option></select></label>
+        <label>Show <select data-catalog-filter><option value="all">All available products</option><option value="shelved">Shelved products</option><option value="unshelved">Unshelved products</option></select></label>
+      </div>
+      <p class="creator-profile-public-catalog__empty" data-public-creator-catalog-empty hidden>No products are currently available for sale.</p>
+    </section>`;
+}
+
+function renderCreatorProfileInfo() {
+  return `<section class="creator-profile-public-info" data-public-creator-info data-member-creator-info hidden aria-labelledby="creator-profile-public-info-heading">
+      <div class="creator-profile-public-info__identity"><img data-creator-info-image hidden><h2 id="creator-profile-public-info-heading">About <span data-creator-info-name></span></h2></div>
+      <p data-creator-info-bio></p><blockquote data-creator-info-message hidden></blockquote>
+    </section>`;
+}
+
+function renderCreatorProfileCatalogDesk() {
+  return `<section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
+      <div class="creator-profile-catalog-desktop__heading"><h2 id="creator-profile-catalog-heading">Catalog</h2><div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div></div>
+      <div class="creator-profile-catalog-cards" data-creator-profile-catalog-cards></div>
+      <p class="creator-profile-shelf-status" data-creator-shelf-status role="status" aria-live="polite"></p>
     </section>`;
 }
 
@@ -1133,11 +1160,8 @@ function renderCreatorProfileShelfSections(canonicalPath) {
         ${renderHomepageProductBay({ title: "CREATOR BOOKSHELF", id: "creator-profile-bookshelf-heading", products: [], singleShelf: true, hidePlaque: true, creatorProfileShelf: true, creatorProfileBookstops: profileTier === "creator" })}
       </section>
     </section>
-    <section class="creator-profile-catalog-desktop" data-creator-profile-catalog hidden aria-labelledby="creator-profile-catalog-heading">
-      <div class="creator-profile-catalog-desktop__heading"><h2 id="creator-profile-catalog-heading">Catalog Desktop</h2><div class="creator-profile-shelf-counters" data-creator-shelf-counters aria-live="polite"></div></div>
-      <div class="creator-profile-catalog-cards" data-creator-profile-catalog-cards></div>
-      <p class="creator-profile-shelf-status" data-creator-shelf-status role="status" aria-live="polite"></p>
-    </section>`;
+    ${renderCreatorProfileCatalogDesk()}
+    ${renderCreatorProfileInfo()}`;
 }
 
 function renderStorefrontNewThisWeek({ newThisWeek }) {
@@ -2412,9 +2436,9 @@ function renderAuthorProfilePage(author) {
           </div>
           <aside class="author-hero__aside">
             <article class="note-card">
-              <p class="note-card__label">Catalog Work</p>
-              <h2>${author.products.length} title${author.products.length === 1 ? "" : "s"} in the public catalog</h2>
-              <p>The catalog links back here so readers can move from a book to the person building it.</p>
+              <p class="note-card__label">Bookshelf and catalog</p>
+              <h2>Books for the table.</h2>
+              <p>Browse titles on the shelf or explore the full public catalog below.</p>
             </article>
             <article class="note-card">
               <p class="note-card__label">Workshop Notes</p>
@@ -2424,23 +2448,19 @@ function renderAuthorProfilePage(author) {
           </aside>
         </section>
 
-        <section class="store-section" aria-labelledby="author-bio-heading">
-          <div class="section-heading">
-            <p class="section-heading__kicker">Biography</p>
-            <h2 id="author-bio-heading">From the working side of the screen</h2>
-          </div>
-          <div class="about__panel">
-            <p>${escapeHtml(author.longBio || author.shortBio || "")}</p>
-          </div>
-        </section>
-
         <section class="store-section" aria-labelledby="author-products-heading">
           <div class="section-heading">
             <p class="section-heading__kicker">Products</p>
-            <h2 id="author-products-heading">Creator Catalog</h2>
+            <h2 id="author-products-heading">Creator Bookstore</h2>
           </div>
           ${renderCreatorPublicBookshelf(author.slug)}
-          ${renderCreatorProducts(author)}
+          ${renderPublicCreatorCatalog(author.slug)}
+          ${renderCreatorProfileCatalogDesk()}
+          <section class="creator-profile-public-info" data-public-creator-info aria-labelledby="author-bio-heading">
+            <div class="section-heading"><p class="section-heading__kicker">Biography</p><h2 id="author-bio-heading">About <span data-creator-info-name>${escapeHtml(author.name)}</span></h2></div>
+            <div class="creator-profile-public-info__identity">${author.profileImage || author.logo ? `<img data-creator-info-image src="${escapeAttribute(author.profileImage || author.logo)}" alt="${escapeAttribute(author.name)} profile image">` : `<img data-creator-info-image hidden>`}</div>
+            <p data-creator-info-bio>${escapeHtml(author.longBio || author.shortBio || "")}</p><blockquote data-creator-info-message hidden></blockquote>
+          </section>
         </section>
 
         <section class="store-section" aria-labelledby="author-posts-heading">

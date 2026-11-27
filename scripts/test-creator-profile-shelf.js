@@ -1,36 +1,48 @@
 const assert = require("node:assert/strict");
 const { DatabaseSync } = require("node:sqlite");
 const { NOW_MS, CREATOR_A, CREATOR_B, createCreator, creatorRequest, applyMigrations, createD1, load } = require("./test-creator-product-withdrawal.js");
-const { createCatalogSlots } = require("../assets/js/creator-profile-catalog-layout.js");
+const { createCatalogSlots, sortAndFilterCatalog } = require("../assets/js/creator-profile-catalog-layout.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const CREATOR_F = Object.freeze({ id: "creator-profile-shelf-founder", userId: "user-profile-shelf-founder", slug: "profile-shelf-founder", session: "profile-shelf-founder-session", csrf: "profile-shelf-founder-csrf" });
 const CREATOR_P = Object.freeze({ id: "creator-profile-shelf-premium", userId: "user-profile-shelf-premium", slug: "profile-shelf-premium", session: "profile-shelf-premium-session", csrf: "profile-shelf-premium-csrf" });
 
 async function main() {
-  const emptyStandardSlots = createCatalogSlots([], 12);
-  assert.equal(emptyStandardSlots.length, 30, "An empty Creator catalog still renders all 30 slots.");
-  assert.equal(emptyStandardSlots.filter(slot => slot.hasShelfControl).length, 12, "A standard Creator gets Shelf controls for 12 catalog slots.");
-  assert.ok(emptyStandardSlots.slice(0, 10).every(slot => slot.hasShelfControl), "All ten first-row slots have controls.");
-  assert.ok(emptyStandardSlots.slice(10, 12).every(slot => slot.hasShelfControl), "The first two second-row slots have controls.");
-  assert.ok(emptyStandardSlots.slice(12).every(slot => !slot.hasShelfControl && slot.product === null), "Remaining empty slots have no controls.");
-  const populatedSlots = createCatalogSlots(Array.from({ length: 12 }, (_, index) => ({ id: `slot-${index}` })), 12);
+  const emptyStandardSlots = createCatalogSlots([], 12, 12);
+  assert.equal(emptyStandardSlots.length, 12, "Empty placeholders represent only unused catalog allowance.");
+  const populatedSlots = createCatalogSlots(Array.from({ length: 12 }, (_, index) => ({ id: `slot-${index}` })), 12, 12);
   assert.deepEqual(populatedSlots.slice(0, 12).map(slot => slot.product.id), Array.from({ length: 12 }, (_, index) => `slot-${index}`), "Products fill slots left to right, top to bottom.");
   assert.equal(populatedSlots.slice(12).filter(slot => slot.product).length, 0);
-  assert.equal(createCatalogSlots([], 24).filter(slot => slot.hasShelfControl).length, 24, "Higher catalog tiers receive controls for 24 slots.");
-  assert.equal(createCatalogSlots([], null).filter(slot => slot.hasShelfControl).length, 30, "Unlimited catalog accounts remain bounded to the visible 30 slots.");
+  assert.equal(createCatalogSlots([], 24, 24).length, 24, "Higher catalog tiers receive only their 24 empty catalog placeholders.");
+  assert.equal(createCatalogSlots([{ id: "unlimited" }], null, 1).length, 1, "Unlimited catalog accounts render only existing products, not infinite placeholders.");
+  const viewProducts = [
+    { id: "b", title: "Beta", publishedAt: "2026-02-01", shelved: false, metadata: { series: "North", volume: 2 } },
+    { id: "a", title: "Alpha", publishedAt: "2026-01-01", shelved: true, metadata: { series: "North", volume: 1 } },
+    { id: "c", title: "Gamma", publishedAt: "2026-03-01", shelved: false, metadata: {} }
+  ];
+  assert.deepEqual(sortAndFilterCatalog(viewProducts, "title-asc", "all").map(item => item.id), ["a", "b", "c"]);
+  assert.deepEqual(sortAndFilterCatalog(viewProducts, "title-desc", "unshelved").map(item => item.id), ["c", "b"],
+    "Alphabetical sorting and the unshelved filter combine without changing saved shelf state.");
+  assert.deepEqual(sortAndFilterCatalog(viewProducts, "newest", "all").map(item => item.id), ["c", "b", "a"]);
+  assert.deepEqual(sortAndFilterCatalog(viewProducts, "oldest", "all").map(item => item.id), ["a", "b", "c"]);
+  assert.deepEqual(sortAndFilterCatalog(viewProducts, "series", "shelved").map(item => item.id), ["a"]);
   const catalogCss = fs.readFileSync(path.join(__dirname, "..", "assets", "css", "creator-profile-shelf.css"), "utf8");
-  assert.match(catalogCss, /grid-template-columns:\s*repeat\(10,\s*minmax\(0,\s*1fr\)\)/, "Desktop catalog uses ten columns.");
-  assert.match(catalogCss, /@media\s*\(max-width:\s*700px\)[\s\S]*?grid-template-columns:\s*repeat\(3,/, "Mobile catalog reflows into three columns.");
-  assert.doesNotMatch(catalogCss, /creator-profile-catalog-slot--empty\s*\{[^}]*display:\s*none/, "Empty slots remain visible at mobile widths.");
+  assert.match(catalogCss, /grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\)/, "Desktop title cards use a modest six-column grid.");
+  assert.match(catalogCss, /@media\s*\(max-width:\s*700px\)[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Mobile catalog cards reflow to two columns.");
   const profileCss = fs.readFileSync(path.join(__dirname, "..", "assets", "css", "member-profile.css"), "utf8");
   assert.match(profileCss, /member-profile-footer--dashboard\s+p\s*\{[^}]*min-height:\s*1\.35em/, "The Creator Dashboard footer reserves one link line before the link appears.");
   assert.match(profileCss, /member-profile-footer--dashboard\s+\[data-creator-dashboard-link\]\s*\{[^}]*white-space:\s*nowrap/, "The reserved dashboard-link footer stays one line at mobile widths.");
   const creatorPage = fs.readFileSync(path.join(__dirname, "..", "creator", "index.html"), "utf8");
   assert.match(creatorPage, /member-profile-footer--dashboard[^>]*>[\s\S]*?data-creator-dashboard-link hidden/, "The hidden dashboard link starts in its reserved footer below the profile grid.");
   const catalogRenderer = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "creator-profile-shelf.js"), "utf8");
-  assert.match(catalogRenderer, /button\.disabled\s*=\s*!product/, "Shelf controls are disabled for empty slots.");
-  assert.match(catalogRenderer, /button\.type\s*=\s*"button"/, "Shelf controls render as buttons.");
+  assert.match(catalogRenderer, /checkbox\.type\s*=\s*"checkbox"/, "Private shelf controls use the requested Shelved checkbox.");
+  assert.match(catalogRenderer, /link\.href\s*=\s*product\.detailUrl/, "Occupied title cards link to their existing product detail page.");
+  assert.match(catalogRenderer, /catalogRoot\._products\s*=\s*payload\?\.catalog/, "Public catalog products are retained for client-side sorting and filtering.");
+  assert.match(catalogRenderer, /identities\.find\(identity => identity\.slug === memberRoot\.dataset\.publicCreatorShelf\)/,
+    "The public Creator page reveals private controls only for the matching signed-in Creator identity.");
+  assert.match(catalogRenderer, /catalog\.hidden = true/, "The private catalog remains hidden for visitors and non-owners.");
+  assert.match(catalogCss, /\.creator-profile-catalog-card--empty/);
+  assert.match(catalogCss, /\.creator-profile-public-catalog__cards/);
 
   const raw = new DatabaseSync(":memory:");
   raw.exec("PRAGMA foreign_keys=ON;");
@@ -52,6 +64,8 @@ async function main() {
   raw.prepare("INSERT INTO creator_preferred_terms(id,creator_id,payment_cadence,price_cents,term_started_at,term_ends_at,renewal_state,status,created_at,updated_at) VALUES('profile-shelf-premium',?,'annual_prepaid',20000,?,?,'renews','active',?,?)")
     .run(CREATOR_P.id, new Date(NOW_MS - 1000).toISOString(), new Date(NOW_MS + 365 * 86400000).toISOString(), now, now);
   const db = createD1(raw), env = { TRG_ORDERS: db }, options = { database: db, nowMs: NOW_MS };
+  raw.prepare("UPDATE marketplace_creators SET short_bio='Short bio',long_bio='Creator biography',profile_image='/creator.webp',logo='/logo.webp' WHERE id=?")
+    .run(CREATOR_A.id);
 
   for (let index = 0; index < 7; index++) {
     await catalog.createProduct(db, {
@@ -128,6 +142,14 @@ async function main() {
   assert.deepEqual(publicState.products.map(item => item.id), ["shelf-product-0"],
     "Only selected, published, listed, purchase-eligible products are visible to visitors.");
   assert.equal(publicState.products[0].coverUrl, "/product-assets/shelf-product-0/cover.webp");
+  assert.deepEqual(publicState.catalog.map(item => item.id), ["shelf-product-0", "shelf-product-1", "shelf-product-2", "shelf-product-3", "shelf-product-4", "shelf-product-5"],
+    "Visitors see every available published product, including unshelved products, and no unlisted products.");
+  assert.equal(publicState.catalog[0].shelved, true);
+  assert.equal(publicState.catalog[1].shelved, false);
+  assert.equal(publicState.creator.name, "Mock mock-withdrawal-a");
+  assert.equal(publicState.creator.longBio, "Creator biography");
+  assert.equal(publicState.creator.profileImage, "/creator.webp");
+  assert.ok(publicState.catalog.every(item => item.detailUrl.startsWith("/store/products/")));
 
   response = await getState(CREATOR_A);
   state = await response.json();
@@ -151,6 +173,16 @@ async function main() {
 
   response = await creatorOperations.handleCreatorRequest(new Request("https://example.com/api/creator/profile-shelf"), {}, options);
   assert.equal(response.status, 401, "Signed-out visitors cannot access private shelf management.");
+
+  const profilePage = fs.readFileSync(path.join(__dirname, "..", "authors", "rv-sawyer", "index.html"), "utf8");
+  assert.match(profilePage, /data-public-creator-catalog="rv-sawyer"/);
+  assert.match(profilePage, /data-public-creator-shelf="rv-sawyer"[^>]*data-member-creator-shelf/);
+  assert.match(profilePage, /data-public-creator-info/);
+  for (const route of ["creator", "founding-25-profile", "premium-creator-profile"]) {
+    const page = fs.readFileSync(path.join(__dirname, "..", route, "index.html"), "utf8");
+    assert.match(page, /data-creator-profile-catalog/);
+    assert.match(page, /data-member-creator-info/);
+  }
 
   raw.close();
   console.log("Creator Profile bookshelf and catalog management tests passed.");
