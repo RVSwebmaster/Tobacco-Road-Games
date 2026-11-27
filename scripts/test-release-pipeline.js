@@ -136,6 +136,12 @@ bucket_name = "trg-products-acceptance"
   assert.equal(migrationSha, focusedMigration.sha256, "Migration ledger hash must match the tracked SQL file.");
   assert.ok(focusedMigration.historicalVerification.staging.verifiedAt && focusedMigration.historicalVerification.production.verifiedAt, "Migration history should retain previously verified staging and production application.");
 
+  const shelfMigration = migrationLedger.migrations.find((entry) => entry.id === "creator-profile-shelf-081");
+  assert.ok(shelfMigration, "The focused Creator shelf migration must be listed in the release migration ledger.");
+  const shelfSql = fs.readFileSync(path.resolve(__dirname, "..", shelfMigration.file), "utf8");
+  assert.equal(pipeline.migrationSqlHashMatches(shelfSql, shelfMigration.sha256), true, "Migration hashes must match across LF and CRLF working-tree/archive forms.");
+  assert.equal(pipeline.migrationSqlHashMatches(shelfSql.replace("creator_profile_shelf_selections", "creator_profile_shelf_assignments"), shelfMigration.sha256), false, "Changing migration SQL must still invalidate its ledger hash.");
+
   const developmentSha = "2".repeat(40);
   const candidateSha = "3".repeat(40);
   assert.equal(pipeline.validateSourceLineage({ mainSha: sha, developmentSha, candidateSha, developmentDescendsFromMain: true, candidateDescendsFromDevelopment: true }).ok, true, "normal development and release ancestry should pass");

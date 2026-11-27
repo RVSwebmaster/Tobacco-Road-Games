@@ -9,6 +9,14 @@ export const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");
 const WRANGLER_ROOT = path.join(REPOSITORY_ROOT, ".wrangler", "release-pipeline");
 const ENVIRONMENT_FILE = path.join(REPOSITORY_ROOT, "ops", "release", "environments.json");
 const MIGRATIONS_FILE = path.join(REPOSITORY_ROOT, "ops", "release", "migrations.json");
+
+export function migrationSqlHashMatches(source, expectedHash) {
+  if (typeof source !== "string") return false;
+  const lfSource = source.replace(/\r\n?/g, "\n");
+  const candidates = [lfSource, lfSource.replace(/\n/g, "\r\n")];
+  return candidates.some((text) => crypto.createHash("sha256").update(text, "utf8").digest("hex") === expectedHash);
+}
+
 const CRITICAL_PAGES_FILES = Object.freeze([
   "index.html",
   "guest/index.html",
@@ -481,7 +489,7 @@ function runBuild(argv) {
     const entry = migrationLedger.migrations.find((item) => item.id === id);
     if (!entry) throw new Error(`Migration is missing from ops/release/migrations.json: ${id}`);
     const candidate = path.join(sourceRoot, entry.file);
-    if (!fs.existsSync(candidate) || hashFile(candidate) !== entry.sha256) throw new Error(`Migration file hash does not match the release ledger: ${id}`);
+    if (!fs.existsSync(candidate) || !migrationSqlHashMatches(fs.readFileSync(candidate, "utf8"), entry.sha256)) throw new Error(`Migration file hash does not match the release ledger: ${id}`);
     const databaseIds = Object.fromEntries(["preview", "staging", "production"].map((target) => {
       const environmentName = target === "preview" ? "preview" : "production";
       const databaseId = readJson(ENVIRONMENT_FILE)[target]?.bindings?.[environmentName]?.d1?.[entry.databaseBinding];
@@ -546,7 +554,7 @@ function verifyArtifact(releaseId) {
       errors.push(`Migration path is missing or outside the release archive: ${migration.id}.`);
       continue;
     }
-    if (hashFile(sourceMigration) !== migration.sha256) errors.push(`Migration SQL hash differs from the release manifest: ${migration.id}.`);
+    if (!migrationSqlHashMatches(fs.readFileSync(sourceMigration, "utf8"), migration.sha256)) errors.push(`Migration SQL hash differs from the release manifest: ${migration.id}.`);
   }
   const marker = readJson(path.join(outputDirectory, "trg-release.json"));
   if (marker.commitSha !== manifest.commitSha || marker.releaseId !== manifest.releaseId || marker.sourceOutputSha256 !== manifest.sourceOutputSha256) {
