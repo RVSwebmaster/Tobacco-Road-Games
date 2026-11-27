@@ -34,6 +34,7 @@ const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
 const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
 const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf5";
+const CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST = "creator-profile-shelf6";
 const SITE_NAME = "Tobacco Road Games";
 const STORE_TITLE = "Tobacco Road Games Store";
 const SUPPORT_URL = "/support.html";
@@ -1354,6 +1355,8 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
   if (typeof guestLandingPage !== "string" || !guestLandingPage.trim()) {
     throw new Error("Member Profile generation requires the rendered Guest page.");
   }
+  const creatorShelfStyleCacheBust = canonicalPath === "/creator/" ? "creator-profile-shelf6" : CREATOR_PROFILE_SHELF_CACHE_BUST;
+  const creatorShelfRendererCacheBust = canonicalPath === "/creator/" ? "creator-profile-shelf7" : CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST;
   const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>/;
   const navPattern = /<nav class="site-nav" aria-label="Primary"[^>]*>[\s\S]*?<\/nav>/;
   if (!mainPattern.test(guestLandingPage) || !navPattern.test(guestLandingPage)) {
@@ -1390,7 +1393,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
+    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${creatorShelfStyleCacheBust}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
     .replace(/<\/main>\s*<\/div>/, `</main>\n      <footer class="site-footer member-profile-footer${creatorShelfProfile ? " member-profile-footer--dashboard" : ""}"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>`)
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
@@ -1399,7 +1402,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
       '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>',
-      ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-catalog-layout.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}" defer></script>`, `  <script src="/assets/js/creator-profile-shelf.js?v=${CREATOR_PROFILE_SHELF_CACHE_BUST}" defer></script>`] : []),
+      ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-catalog-layout.js?v=${CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST}" defer></script>`, `  <script src="/assets/js/creator-profile-shelf.js?v=${creatorShelfRendererCacheBust}" defer></script>`] : []),
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
     ].join("\n"));
