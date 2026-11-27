@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "creator-profile-completion-2026-11-27-v3",
+  "releaseSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+  "releaseBranch": "release/creator-profile-completion-2026-11-27",
+  "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4",
+  "releaseManifest": {
+    "schemaVersion": 1,
+    "releaseId": "creator-profile-completion-2026-11-27-v3",
+    "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+    "releaseBranch": "release/creator-profile-completion-2026-11-27",
+    "commitMessage": "Normalize Creator shelf migration hashes across platforms",
+    "createdAt": "2026-11-27T15:48:27.561Z",
+    "buildCommand": "npm run release:build -- --ref bddf4c42e94c7374295fc10b41e0fe67bba7723c --release-branch release/creator-profile-completion-2026-11-27 --release-id creator-profile-completion-2026-11-27-v3 --migration creator-profile-shelf-081",
+    "pipelinePolicySha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+    "lineage": {
+      "mainSha": "ad15b159116ace44fd901802cbc3e56e8f24920a",
+      "developmentSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+      "developmentDescendsFromMain": true,
+      "candidateDescendsFromDevelopment": true,
+      "exception": null
+    },
+    "pagesFileCount": 259,
+    "sourceOutputSha256": "4c44d5f7104b56122ad61b4231d47d678bc680c77fc912ba88dc0449d286542f",
+    "pagesOutputSha256": "10da20f9d7f09513954a46aa92434162ef970004422e1b234ea8206df6510133",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "3bb382dc8c668a0205ceecfbff30f139ff5605363dc790eaaab2262fdda9a55a",
+      "customer.html": "8b714898e24979f996472ad03d8d97824077ad98bfa48fe0da52fb5b5678f2e9",
+      "customer-profile/index.html": "d7b3e2c7d7ecb0019db98b943b55989583a20135f7bf7d71245e089f9387f158",
+      "creator/index.html": "df87e89b85bc074d4ba4455e75c9dd0f954c3235ba19a10dc2b59f4408d1b5c4",
+      "assets/css/member-profile.css": "44a94bba94c6a29c224dc8f401309f077b2ca723bf982b5ffc1f574abf7c53ff",
+      "assets/js/account.js": "97c2833fcc9d5c45dd8b0c463bf288f046a8ab31c825eb7d15255ef0c51fa770",
+      "trg-release.json": "4de97f3f4f99e182721a5e35d017c5c6dfaf61beafce182567cfd95a8a3c80b6"
+    },
+    "functionsSourceSha256": "add03ba566c4eec81e9e27389fdeb364ddc92aec1049df0ae1d05711f3721e89",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "migrations": [
+      {
+        "id": "creator-profile-shelf-081",
+        "file": "ops/releases/creator-profile-shelf-081/creator-profile-shelf-081.sql",
+        "sha256": "3ace92dd381ef26beeb2e8c964d8d16c65cef1e760e52cc736c2a0d956b03104",
+        "databaseBinding": "TRG_ORDERS",
+        "databaseIds": {
+          "preview": "2fff6e72-4e41-47e7-b497-992dadcab3d6",
+          "staging": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+          "production": "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+        },
+        "baseline": "Production D1 schema exported 2026-11-25; numbered migrations 073-079 remain deferred and unapplied",
+        "preconditions": {
+          "numberedSchemaVersion": 72,
+          "tables": [
+            "users",
+            "marketplace_creators",
+            "marketplace_products",
+            "creator_identity_ownership",
+            "creator_commission_category_assignments",
+            "creator_preferred_terms",
+            "preferred_billing_commitments",
+            "preferred_billing_installments",
+            "preferred_service_charges",
+            "marketplace_service_purchases"
+          ],
+          "effect": "Create one empty shelf-assignment table, one index, and three insert/update guards; do not update or delete any existing row. Shelf capacity mirrors existing standard (6), Founding-25 (12), Preferred (12), Owner (14), and Admin policies."
+        },
+        "postconditions": {
+          "tables": [
+            "creator_profile_shelf_selections"
+          ],
+          "indexes": [
+            "idx_creator_profile_shelf_creator_position"
+          ],
+          "triggers": [
+            "creator_profile_shelf_owner_insert",
+            "creator_profile_shelf_capacity_insert",
+            "creator_profile_shelf_identity_immutable"
+          ],
+          "creator_profile_shelf_selectionsColumns": [
+            "creator_id",
+            "product_id",
+            "position",
+            "selected_at",
+            "updated_at"
+          ]
+        }
+      }
+    ],
+    "artifact": {
+      "sourceRoot": ".wrangler/release-pipeline/creator-profile-completion-2026-11-27-v3/source",
+      "pagesOutput": ".wrangler/release-pipeline/creator-profile-completion-2026-11-27-v3/source/.wrangler/release-pages-output"
+    },
+    "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4"
+  },
+  "build": {
+    "createdAt": "2026-11-27T15:48:27.561Z",
+    "buildCommand": "npm run release:build -- --ref bddf4c42e94c7374295fc10b41e0fe67bba7723c --release-branch release/creator-profile-completion-2026-11-27 --release-id creator-profile-completion-2026-11-27-v3 --migration creator-profile-shelf-081",
+    "pagesFileCount": 259,
+    "pagesOutputSha256": "10da20f9d7f09513954a46aa92434162ef970004422e1b234ea8206df6510133",
+    "functionsSourceSha256": "add03ba566c4eec81e9e27389fdeb364ddc92aec1049df0ae1d05711f3721e89",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "3bb382dc8c668a0205ceecfbff30f139ff5605363dc790eaaab2262fdda9a55a",
+      "customer.html": "8b714898e24979f996472ad03d8d97824077ad98bfa48fe0da52fb5b5678f2e9",
+      "customer-profile/index.html": "d7b3e2c7d7ecb0019db98b943b55989583a20135f7bf7d71245e089f9387f158",
+      "creator/index.html": "df87e89b85bc074d4ba4455e75c9dd0f954c3235ba19a10dc2b59f4408d1b5c4",
+      "assets/css/member-profile.css": "44a94bba94c6a29c224dc8f401309f077b2ca723bf982b5ffc1f574abf7c53ff",
+      "assets/js/account.js": "97c2833fcc9d5c45dd8b0c463bf288f046a8ab31c825eb7d15255ef0c51fa770",
+      "trg-release.json": "4de97f3f4f99e182721a5e35d017c5c6dfaf61beafce182567cfd95a8a3c80b6"
+    }
+  },
+  "preview": {
+    "target": "preview",
+    "projectName": "tobacco-road-games-acceptance",
+    "deploymentId": "6fd5f9af-3497-4c0a-89c6-b6b0231600ef",
+    "deploymentUrl": "https://6fd5f9af.tobacco-road-games-acceptance.pages.dev",
+    "deploymentEnvironment": "Preview",
+    "branch": "acceptance",
+    "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+    "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4",
+    "sourceOutputSha256": "4c44d5f7104b56122ad61b4231d47d678bc680c77fc912ba88dc0449d286542f",
+    "staticOutputSha256": "10da20f9d7f09513954a46aa92434162ef970004422e1b234ea8206df6510133",
+    "verifiedAt": "2026-11-27T15:49:53.270Z",
+    "ownerApproval": {
+      "approved": true,
+      "approvedBy": "RV (Owner standing authorization in Creator Profile Completion assignment)",
+      "approvedAt": "2026-11-27T15:55:29.003Z",
+      "projectName": "tobacco-road-games-acceptance",
+      "deploymentId": "6fd5f9af-3497-4c0a-89c6-b6b0231600ef",
+      "previewUrl": "https://6fd5f9af.tobacco-road-games-acceptance.pages.dev",
+      "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+      "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4"
+    }
+  },
+  "staging": {
+    "target": "staging",
+    "projectName": "tobacco-road-games-staging",
+    "deploymentId": "c6d427d2-7b03-45f6-a541-2ded22090204",
+    "deploymentUrl": "https://c6d427d2.tobacco-road-games-staging.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "staging",
+    "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+    "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4",
+    "sourceOutputSha256": "4c44d5f7104b56122ad61b4231d47d678bc680c77fc912ba88dc0449d286542f",
+    "staticOutputSha256": "10da20f9d7f09513954a46aa92434162ef970004422e1b234ea8206df6510133",
+    "verifiedAt": "2026-11-27T15:57:27.845Z",
+    "verification": {
+      "passed": true,
+      "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+      "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4",
+      "deploymentId": "c6d427d2-7b03-45f6-a541-2ded22090204",
+      "deploymentUrl": "https://c6d427d2.tobacco-road-games-staging.pages.dev",
+      "verifiedAt": "2026-11-27T15:59:51.641Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    }
+  },
+  "production": {
+    "target": "production",
+    "projectName": "tobacco-road-games",
+    "deploymentId": "4d47397f-7615-4427-801d-f1c431df16f9",
+    "deploymentUrl": "https://4d47397f.tobacco-road-games.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "main",
+    "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+    "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4",
+    "sourceOutputSha256": "4c44d5f7104b56122ad61b4231d47d678bc680c77fc912ba88dc0449d286542f",
+    "staticOutputSha256": "10da20f9d7f09513954a46aa92434162ef970004422e1b234ea8206df6510133",
+    "verifiedAt": "2026-11-27T17:22:08.111Z",
+    "verification": {
+      "target": "production",
+      "releaseId": "creator-profile-completion-2026-11-27-v3",
+      "passed": true,
+      "commitSha": "bddf4c42e94c7374295fc10b41e0fe67bba7723c",
+      "manifestSha256": "4c49cd1fe7e70d06a3c2fd722c5f90c6741b54cf1305cfcef0593a72265460c4",
+      "deploymentId": "4d47397f-7615-4427-801d-f1c431df16f9",
+      "deploymentUrl": "https://4d47397f.tobacco-road-games.pages.dev",
+      "verifiedAt": "2026-11-27T17:27:59.8911788Z",
+      "checks": {
+        "liveCreatorMembershipProfileRoute": true,
+        "livePublicCreatorCatalog": true,
+        "releaseMarkerMatchesManifest": true,
+        "storeStateClosedReadOnly": true,
+        "productionDatabaseRowsWritten": 0
+      },
+      "notRun": [
+        "Production account registration/login/logout smoke was skipped because it would create and delete a production account, contrary to the Owner instruction to avoid production data changes. Equivalent authenticated behavior was exercised in staging with a staging-only Creator account."
+      ],
+      "notes": [
+        "Cloudflare Git-connected deployment 0d84abd5-6009-4615-814f-918e0806849d failed because the configured output directory .wrangler\\production-pages-output was not found; successful immutable deployment 4d47397f-7615-4427-801d-f1c431df16f9 remains active and the live domain release marker confirms this commit."
+      ]
+    },
+    "rollbackDeployment": {
+      "deploymentId": "86a3194d-52ea-4e84-b5a4-c7089f2ebb7f",
+      "deploymentUrl": "https://86a3194d.tobacco-road-games.pages.dev",
+      "branch": "main",
+      "environment": "Production",
+      "source": "ad15b15",
+      "capturedAt": "2026-11-27T17:21:32.9282258Z"
+    }
+  },
+  "migrations": [
+    {
+      "id": "creator-profile-shelf-081",
+      "file": "ops/releases/creator-profile-shelf-081/creator-profile-shelf-081.sql",
+      "sha256": "3ace92dd381ef26beeb2e8c964d8d16c65cef1e760e52cc736c2a0d956b03104",
+      "databaseBinding": "TRG_ORDERS",
+      "databaseIds": {
+        "preview": "2fff6e72-4e41-47e7-b497-992dadcab3d6",
+        "staging": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+        "production": "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+      },
+      "baseline": "Production D1 schema exported 2026-11-25; numbered migrations 073-079 remain deferred and unapplied",
+      "preconditions": {
+        "numberedSchemaVersion": 72,
+        "tables": [
+          "users",
+          "marketplace_creators",
+          "marketplace_products",
+          "creator_identity_ownership",
+          "creator_commission_category_assignments",
+          "creator_preferred_terms",
+          "preferred_billing_commitments",
+          "preferred_billing_installments",
+          "preferred_service_charges",
+          "marketplace_service_purchases"
+        ],
+        "effect": "Create one empty shelf-assignment table, one index, and three insert/update guards; do not update or delete any existing row. Shelf capacity mirrors existing standard (6), Founding-25 (12), Preferred (12), Owner (14), and Admin policies."
+      },
+      "postconditions": {
+        "tables": [
+          "creator_profile_shelf_selections"
+        ],
+        "indexes": [
+          "idx_creator_profile_shelf_creator_position"
+        ],
+        "triggers": [
+          "creator_profile_shelf_owner_insert",
+          "creator_profile_shelf_capacity_insert",
+          "creator_profile_shelf_identity_immutable"
+        ],
+        "creator_profile_shelf_selectionsColumns": [
+          "creator_id",
+          "product_id",
+          "position",
+          "selected_at",
+          "updated_at"
+        ]
+      },
+      "appliedTo": {
+        "staging": {
+          "id": "creator-profile-shelf-081",
+          "sha256": "3ace92dd381ef26beeb2e8c964d8d16c65cef1e760e52cc736c2a0d956b03104",
+          "databaseId": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+          "outcome": "applied",
+          "postconditionsVerified": true
+        },
+        "production": {
+          "id": "creator-profile-shelf-081",
+          "sha256": "3ace92dd381ef26beeb2e8c964d8d16c65cef1e760e52cc736c2a0d956b03104",
+          "databaseId": "7e2cd675-a6f1-4fac-bbc9-03485a806c26",
+          "outcome": "already-present",
+          "postconditionsVerified": true
+        }
+      }
+    }
+  ],
+  "completedAt": "2026-11-27T17:28:03.853Z"
+}
