@@ -80,6 +80,7 @@
     "deploymentEnvironment": "Production",
     "projectProductionBranch": "main",
     "publicOrigin": "https://tobaccoroadgames.com",
+    "pagesBuildOutputDirectory": ".wrangler/production-pages-output",
     "bindings": {
       "preview": { "d1": {}, "r2": {} },
       "production": {

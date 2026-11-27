@@ -49,6 +49,7 @@ bucket_name = "trg-products-staging"
 `;
 
   const productionToml = `name = "tobacco-road-games"
+pages_build_output_dir = ".wrangler/production-pages-output"
 [vars]
 MARKETPLACE_WRITE_POLICY = "disabled"
 NATIVE_GUEST_CHECKOUT_MODE = "disabled"
@@ -102,6 +103,10 @@ bucket_name = "trg-products-acceptance"
   assert.equal(pipeline.validateEnvironmentConfig(previewToml, "preview").ok, true, "isolated Preview map should pass");
   assert.equal(pipeline.validateEnvironmentConfig(stagingToml, "staging").ok, true, "staging map should pass");
   assert.equal(pipeline.validateEnvironmentConfig(productionToml, "production").ok, true, "production map should pass");
+  const productionWithWindowsOutput = productionToml.replace(".wrangler/production-pages-output", ".wrangler\\production-pages-output");
+  assert.equal(pipeline.validateEnvironmentConfig(productionWithWindowsOutput, "production").ok, false, "Cloudflare output paths must use POSIX separators");
+  const productionWithoutOutput = productionToml.replace(/pages_build_output_dir\s*=\s*".*"\r?\n/, "");
+  assert.equal(pipeline.validateEnvironmentConfig(productionWithoutOutput, "production").ok, false, "production must declare its Pages build output directory");
 
   const previewWithProdD1 = previewToml.replace("2fff6e72-4e41-47e7-b497-992dadcab3d6", "7e2cd675-a6f1-4fac-bbc9-03485a806c26");
   assert.equal(pipeline.validateEnvironmentConfig(previewWithProdD1, "preview").ok, false, "Preview cannot bind production D1");
