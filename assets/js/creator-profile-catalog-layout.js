@@ -36,10 +36,24 @@
     }));
   }
 
+  function createMemberShelfBooks(products, creatorName = "") {
+    return (Array.isArray(products) ? products : [])
+      .filter(product => product?.shelved === true)
+      .map(product => ({
+        id: product.id,
+        title: product.title,
+        subtitle: product.subtitle,
+        detailUrl: product.detailUrl,
+        coverUrl: product.coverImage || "",
+        creatorName
+      }));
+  }
+
   if (typeof module === "object" && module.exports) {
-    module.exports = { createCatalogSlots, sortAndFilterCatalog };
+    module.exports = { createCatalogSlots, sortAndFilterCatalog, createMemberShelfBooks };
   } else {
     window.createCreatorProfileCatalogSlots = createCatalogSlots;
     window.sortCreatorProfileCatalog = sortAndFilterCatalog;
+    window.createCreatorProfileMemberShelfBooks = createMemberShelfBooks;
   }
 })();
