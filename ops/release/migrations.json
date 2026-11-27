@@ -66,6 +66,8 @@
       },
       "postconditions": {
         "tables": ["creator_test_product_identity_transfers"],
+        "indexes": [],
+        "triggers": [],
         "creator_test_product_identity_transfersColumns": ["migration_id", "product_id", "original_creator_id", "target_creator_id", "transferred_at", "reason"]
       }
     }
