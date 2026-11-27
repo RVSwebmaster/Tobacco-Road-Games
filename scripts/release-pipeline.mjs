@@ -136,6 +136,9 @@ export function validateEnvironmentConfig(configText, target, environmentMap = r
   if (config.name !== expected.projectName) {
     errors.push(`Pages project mismatch: expected ${expected.projectName}, received ${config.name || "missing"}.`);
   }
+  if (expected.pagesBuildOutputDirectory && config.pages_build_output_dir !== expected.pagesBuildOutputDirectory) {
+    errors.push(`Pages build output directory mismatch: expected ${expected.pagesBuildOutputDirectory}, received ${config.pages_build_output_dir || "missing"}. Use POSIX forward slashes for the Linux Pages build.`);
+  }
   for (const environmentName of ["preview", "production"]) {
     const actual = config.bindings[environmentName] || { d1: {}, r2: {} };
     const wanted = expected.bindings[environmentName];
