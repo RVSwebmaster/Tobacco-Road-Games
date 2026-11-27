@@ -193,6 +193,16 @@
   -webkit-line-clamp: 2;
 }
 
+.creator-profile-catalog-card__subtitle {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 4px 0 0;
+  color: #c9b58f;
+  font: 500 .64rem/1.25 Georgia, "Times New Roman", serif;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .creator-profile-catalog-card__shelve {
   display: block;
   width: 100%;

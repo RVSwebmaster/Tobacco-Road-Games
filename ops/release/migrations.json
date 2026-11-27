@@ -51,6 +51,23 @@
         "triggers": ["creator_profile_shelf_owner_insert", "creator_profile_shelf_capacity_insert", "creator_profile_shelf_identity_immutable"],
         "creator_profile_shelf_selectionsColumns": ["creator_id", "product_id", "position", "selected_at", "updated_at"]
       }
+    },
+    {
+      "id": "creator-test-product-transfer-082",
+      "file": "ops/releases/creator-test-product-transfer-082/creator-test-product-transfer-082.sql",
+      "sha256": "9a01132f22ec463bb3fa479454cbd0998647c14156b621f8b24b999130c6aa3d",
+      "baseline": "Production D1 remains at numbered migration 072 with the accepted Creator Profile shelf overlay already present; this focused identity correction does not apply the deferred numbered migration sequence.",
+      "purpose": "Move the two existing TEST / NOT FOR SALE shelving fixtures from the Owner-owned RV Sawyer identity to the active Creator-class TRG test identity so that account can manage its own private catalog.",
+      "databaseBinding": "TRG_ORDERS",
+      "preconditions": {
+        "numberedSchemaVersion": 72,
+        "tables": ["users", "marketplace_creators", "creator_memberships", "creator_identity_ownership", "marketplace_products", "creator_profile_shelf_selections", "order_items", "download_entitlements", "creator_sale_snapshots"],
+        "effect": "Reassign only the two exact unlisted, zero-priced, preview-only test rows if both ownership records and all eligibility guards match; preserve their IDs, slugs, titles, subtitles, cover keys, availability, and delivery state. Do not alter purchases, deliveries, shelf selections, customer-visible listings, or account permissions. Record each transfer, then restore the existing immutable product identity trigger."
+      },
+      "postconditions": {
+        "tables": ["creator_test_product_identity_transfers"],
+        "creator_test_product_identity_transfersColumns": ["migration_id", "product_id", "original_creator_id", "target_creator_id", "transferred_at", "reason"]
+      }
     }
   ]
 }

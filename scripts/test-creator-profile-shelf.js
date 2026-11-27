@@ -45,6 +45,8 @@ async function main() {
   const catalogRenderer = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "creator-profile-shelf.js"), "utf8");
   assert.match(catalogRenderer, /checkbox\.type\s*=\s*"checkbox"/, "Private shelf controls use the requested Shelved checkbox.");
   assert.match(catalogRenderer, /link\.href\s*=\s*product\.detailUrl/, "Occupied title cards link to their existing product detail page.");
+  assert.match(catalogRenderer, /if \(product\.subtitle && memberRoot\.dataset\.creatorProfileTier === "creator"\)[\s\S]*?creator-profile-catalog-card__subtitle/, "Only the standard Creator Profile displays the stored TEST / NOT FOR SALE subtitle.");
+  assert.match(catalogCss, /\.creator-profile-catalog-card__subtitle\s*\{[^}]*-webkit-line-clamp:\s*2/, "The test label is styled and bounded within the title card.");
   assert.match(catalogRenderer, /renderMemberShelf\(loadedState,\s*publicShelf\.creator\)/, "The authenticated Creator shelf renders from the private shelf state.");
   assert.match(catalogRenderer, /renderMemberShelf\(loadedState,\s*publicState\.creator\)/, "Shelf changes redraw the private shelf from saved state.");
   assert.match(catalogRenderer, /root !== memberRoot \|\| !loadedState/, "A late public response cannot replace authenticated shelf selections.");
@@ -194,6 +196,9 @@ async function main() {
     assert.match(page, /data-creator-profile-catalog/);
     assert.match(page, /data-member-creator-info/);
   }
+  assert.match(creatorPage, /creator-profile-shelf\.css\?v=creator-profile-shelf6/, "The Creator Profile requests the refreshed test-label styling.");
+  assert.match(creatorPage, /creator-profile-shelf\.js\?v=creator-profile-shelf7/, "The Creator Profile requests the refreshed title-card renderer.");
+  assert.match(creatorPage, /data-member-creator-shelf data-creator-profile-tier="creator"/, "The test labels are scoped to the standard Creator membership page.");
 
   raw.close();
   console.log("Creator Profile bookshelf and catalog management tests passed.");

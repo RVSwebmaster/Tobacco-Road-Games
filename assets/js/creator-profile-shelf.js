@@ -194,6 +194,9 @@
       }
       if (product) {
         link.append(node("h3", "creator-profile-catalog-card__title", product.title));
+        if (product.subtitle && memberRoot.dataset.creatorProfileTier === "creator") {
+          link.append(node("p", "creator-profile-catalog-card__subtitle", product.subtitle));
+        }
         card.append(link);
       }
       else card.setAttribute("aria-label", `Empty catalog slot ${index + 1}`);
