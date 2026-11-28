@@ -70,6 +70,25 @@
         "triggers": [],
         "creator_test_product_identity_transfersColumns": ["migration_id", "product_id", "original_creator_id", "target_creator_id", "transferred_at", "reason"]
       }
+    },
+    {
+      "id": "customer-payment-management-082",
+      "file": "ops/releases/customer-payment-management-082/customer-payment-management-082.sql",
+      "sha256": "5d27ae8edf1ef40b91793a2913f03265df8e2f823aa9f85a5dc687fc778250fc",
+      "baseline": "Production and staging D1 at their accepted 072/073 states; deferred 079 saved-card migration remains unapplied.",
+      "purpose": "Add isolated Stripe Customer references and Customer Portal configuration IDs for optional Customer payment-method management, without sharing Creator billing references or storing card data.",
+      "databaseBinding": "TRG_ORDERS",
+      "preconditions": {
+        "tables": ["users", "user_account_profiles"],
+        "effect": "Create only two empty, constrained mapping tables; preserve all existing Customer, Creator, payment, and order rows."
+      },
+      "postconditions": {
+        "tables": ["customer_stripe_accounts", "customer_payment_portal_configurations"],
+        "indexes": [],
+        "triggers": [],
+        "customer_stripe_accountsColumns": ["user_id", "stripe_customer_reference", "created_at", "updated_at"],
+        "customer_payment_portal_configurationsColumns": ["stripe_mode", "configuration_reference", "created_at", "updated_at"]
+      }
     }
   ]
 }

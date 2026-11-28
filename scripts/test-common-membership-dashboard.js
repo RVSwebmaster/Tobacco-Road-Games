@@ -18,8 +18,8 @@ const pageNames = [
 const membershipPage = customer.match(/<section class="customer-membership-dashboard"[\s\S]*?<\/section>\s*<\/section>/)?.[0] || "";
 
 assert.ok(membershipPage, "Customer Profile contains a Membership workspace below the existing Profile frontage.");
-assert.match(customer, /customer-membership-dashboard\.css\?v=customer-membership-dashboard1/);
-assert.match(customer, /customer-membership-dashboard\.js\?v=customer-membership-dashboard1/);
+assert.match(customer, /customer-membership-dashboard\.css\?v=customer-membership-dashboard2/);
+assert.match(customer, /customer-membership-dashboard\.js\?v=customer-membership-dashboard2/);
 assert.match(customer, /data-member-identity-board/);
 assert.match(customer, /data-member-tier-badge/);
 assert.match(customer, /upper-cabinet-creator-desktop\.png\?v=creator-title-board3/);
@@ -30,10 +30,16 @@ assert.equal((membershipPage.match(/aria-current="page"/g) || []).length, 1, "Cu
 for (const section of pageNames) assert.match(membershipPage, new RegExp(`id="${section}"`), `Missing Customer Membership section ${section}.`);
 for (const selector of [
   "[data-membership-display-name]", "[data-membership-real-name]", "[data-membership-email]",
-  "[data-membership-billing]", "[data-membership-avatar]", "[data-membership-status-value]",
+  "[data-membership-billing-summary]", "[data-membership-avatar]", "[data-membership-status-value]",
   "[data-membership-joined]", "[data-membership-notices]", "[data-membership-library]"
 ]) assert.ok(membershipPage.includes(selector.replace(/[\[\]]/g, "")), `Missing data binding ${selector}.`);
 assert.match(membershipPage, /data-membership-signout/);
+assert.ok(membershipPage.indexOf('id="payment-methods"') < membershipPage.indexOf('id="purchase-history"'));
+assert.match(membershipPage, /data-payment-method-portal="payment_methods"/);
+assert.match(membershipPage, /data-payment-method-portal="billing_address"/);
+assert.match(membershipPage, /Saving a payment method is optional/);
+assert.match(membershipPage, /data-membership-profile-form/);
+assert.doesNotMatch(membershipPage, /href="\/account\.html/);
 assert.match(membershipPage, /Password changes are not available yet/);
 assert.match(membershipPage, /Session management is not connected yet/);
 assert.match(membershipPage, /transaction details, and receipts are not connected/);
@@ -41,10 +47,11 @@ assert.match(membershipPage, /Follow and unfollow controls are not connected yet
 assert.match(membershipPage, /Accessibility preferences are not available yet/);
 assert.match(membershipPage, /Member opinion requests are not connected yet/);
 assert.doesNotMatch(membershipPage, /creator-dashboard|creator-analytics|owner-financial-controls|creator-listings|advertis(?:ing|ement)|publishing|earnings|admin(?:istration)? controls/i);
-assert.match(runtime, /fetch\("\/api\/account\/me"/);
-assert.match(runtime, /fetch\("\/api\/account\/profile"/);
-assert.match(runtime, /fetch\("\/api\/account\/library"/);
-assert.match(runtime, /fetch\("\/api\/auth\/logout"/);
+assert.match(runtime, /requestJson\("\/api\/account\/me"/);
+assert.match(runtime, /requestJson\("\/api\/account\/profile"/);
+assert.match(runtime, /requestJson\("\/api\/account\/library"/);
+assert.match(runtime, /requestJson\("\/api\/account\/payment-methods"/);
+assert.match(runtime, /requestJson\("\/api\/auth\/logout"/);
 assert.match(runtime, /item\.downloadUrl && item\.downloadAvailable/);
 assert.match(runtime, /item\.currentLastUpdated !== item\.purchasedLastUpdated/);
 assert.match(css, /background: #f5eedc/);

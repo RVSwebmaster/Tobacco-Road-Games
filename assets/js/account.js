@@ -399,18 +399,7 @@
         throw Error(p.error?.message || "Account profile unavailable.");
       return p;
     });
-    for (const key of [
-      "legalName",
-      "birthday",
-      "phone",
-      "displayName",
-      "avatarUrl",
-    ])
-      if (accountProfileForm.elements[key])
-        accountProfileForm.elements[key].value = profile.user[key] || "";
-    accountProfileForm.elements.accountNotices.checked = Boolean(
-      profile.user.notificationPreferences?.accountNotices,
-    );
+    window.TRGAccountProfileEditor?.fill(accountProfileForm, profile.user);
     const registration = await fetch("/api/creator-registration", {
       credentials: "same-origin",
     }).then(async (r) => {
@@ -555,22 +544,10 @@
         ? "Stripe-hosted payment-method collection is intentionally unavailable in this staging build. Tobacco Road Games does not collect or store raw card numbers."
         : "Stripe-hosted payment-method setup is not available yet. Tobacco Road Games does not collect or store raw card numbers.";
   }
-  accountProfileForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const f = event.currentTarget;
-    try {
-      await api("/api/account/profile", {
-        legalName: f.legalName.value,
-        birthday: f.birthday.value || null,
-        phone: f.phone.value,
-        displayName: f.displayName.value,
-        avatarUrl: f.avatarUrl.value,
-        notificationPreferences: { accountNotices: f.accountNotices.checked },
-      });
-      accountProfileStatus.textContent = "Private account profile saved.";
-    } catch (error) {
-      accountProfileStatus.textContent = error.message;
-    }
+  window.TRGAccountProfileEditor?.attach({
+    form: accountProfileForm,
+    status: accountProfileStatus,
+    save: (values) => api("/api/account/profile", values),
   });
   creatorRegistrationForm?.addEventListener("submit", async (event) => {
     event.preventDefault();

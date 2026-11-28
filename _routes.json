@@ -20,6 +20,8 @@
     "/api/navigation",
     "/api/account/me",
     "/api/account/profile",
+    "/api/account/payment-methods",
+    "/api/account/payment-methods/*",
     "/api/account/library",
     "/api/account/library-cover",
     "/api/account/claim-order",

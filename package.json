@@ -81,6 +81,7 @@
     "test:transaction-payout-policy": "node scripts/test-transaction-payout-policy.js",
     "test:member-profiles": "node scripts/test-member-profile-access.js && node scripts/test-member-profile-library.js && node scripts/test-member-profiles.js && node scripts/test-storefront-shared-cabinet.js",
     "test:common-dashboard": "node scripts/test-common-membership-dashboard.js",
+    "test:customer-payments": "node scripts/test-customer-payment-management.js",
     "test:creator-profile-shelf": "node scripts/test-creator-profile-shelf.js",
     "test:creator-profile-shelf-production-migration": "node scripts/test-creator-profile-shelf-production-migration.js",
     "release:build": "node scripts/release-pipeline.mjs build",
@@ -89,7 +90,7 @@
     "release:check-promotion": "node scripts/release-pipeline.mjs check-promotion",
     "release:approve-preview": "node scripts/release-pipeline.mjs approve-preview",
     "release:record": "node scripts/release-pipeline.mjs finalize-record",
-    "release:verify": "node scripts/test-release-pipeline.js && node scripts/test-progressive-privilege-navigation.js && node scripts/test-pages-build-output.js && node scripts/test-pages-environment-isolation.js && node scripts/test-storefront-visual-alignment.js && node scripts/test-creator-pdf-intake.js && node scripts/test-member-profile-access.js && node scripts/test-member-profile-library.js && node scripts/test-member-profiles.js && node scripts/test-storefront-shared-cabinet.js"
+    "release:verify": "node scripts/test-release-pipeline.js && node scripts/test-progressive-privilege-navigation.js && node scripts/test-pages-build-output.js && node scripts/test-pages-environment-isolation.js && node scripts/test-storefront-visual-alignment.js && node scripts/test-creator-pdf-intake.js && node scripts/test-member-profile-access.js && node scripts/test-member-profile-library.js && node scripts/test-member-profiles.js && node scripts/test-common-membership-dashboard.js && node scripts/test-customer-payment-management.js && node scripts/test-storefront-shared-cabinet.js"
   },
   "repository": {
     "type": "git",
