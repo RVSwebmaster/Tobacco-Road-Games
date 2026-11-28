@@ -14,6 +14,21 @@ export async function onRequest(context) {
   if (new URL(context.request.url).pathname.startsWith("/office")) {
     return handleOfficeMiddleware(context);
   }
+  if (isLoginPage(pathname)) {
+    const session = await getCustomerSessionFromRequest(context.request, context.env);
+    if (session.valid) {
+      const membership = await resolveMemberProfileAccess(context.env.TRG_ORDERS, session.user);
+      const profileRoutes = {
+        customer: "/customer-profile/",
+        creator: "/creator/",
+        premiumCreator: "/premium-creator-profile/",
+        founding25: "/founding-25-profile/",
+        owner: "/owner-profile/"
+      };
+      const destination = profileRoutes[membership.accountClass];
+      if (destination) return noStoreDocument(Response.redirect(new URL(destination, context.request.url), 302));
+    }
+  }
   if (isCustomerStorefront(pathname) && !(await getCustomerSessionFromRequest(context.request, context.env)).valid) {
     return noStoreDocument(Response.redirect(new URL("/guest/", context.request.url), 302));
   }
@@ -81,7 +96,7 @@ export async function onRequest(context) {
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
 }
-function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!isCustomerMembershipDashboard(pathname)&&!isMemberDashboard(pathname)&&!isCreatorTools(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
+function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&pathname!=='/account.html'&&!isCustomerMembershipDashboard(pathname)&&!isMemberDashboard(pathname)&&!isCreatorTools(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 
 function shouldNeverReuseDocument(pathname) {
   return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) || isCreatorTools(pathname) || isCustomerMembershipDashboard(pathname) ||
@@ -118,6 +133,10 @@ function dashboardForbidden() {
 
 function isCustomerMembershipDashboard(pathname) {
   return pathname === "/customer-profile" || pathname === "/customer-profile/" || pathname === "/customer-profile/index.html";
+}
+
+function isLoginPage(pathname) {
+  return pathname === "/account.html";
 }
 
 function noStoreDocument(response) {

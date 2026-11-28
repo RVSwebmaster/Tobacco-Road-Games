@@ -9,6 +9,7 @@
     "/customer",
     "/customer/",
     "/customer.html",
+    "/account.html",
     "/customer-profile/*",
     "/dashboard/*",
     "/product-assets/*",

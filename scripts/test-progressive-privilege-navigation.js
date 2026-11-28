@@ -42,6 +42,10 @@ async function assertCreatorSessionBootstrapBehavior() {
     Request,
     Response,
     Headers,
+    HTMLRewriter: class TestHTMLRewriter {
+      on() { return this; }
+      transform(response) { return response; }
+    },
     isMarketplaceWriteDisabled: () => false,
     marketplaceWriteDisabledResponse: () => new Response("writes disabled", { status: 503 }),
     handleOfficeMiddleware: async () => new Response("office"),
@@ -82,6 +86,25 @@ async function assertCreatorSessionBootstrapBehavior() {
     env: { TRG_ORDERS: {} },
     next: async () => new Response("Member document", { headers: { "content-type": "text/html" } })
   });
+  accountClass = "creator";
+  let loginResponse = await nextText("/account.html");
+  assert.equal(loginResponse.status, 302, "Signed-in members are redirected away from the obsolete account login page.");
+  assert.equal(new URL(loginResponse.headers.get("location")).pathname, "/creator/",
+    "The obsolete login destination returns a Creator to the existing Creator Profile.");
+  assert.match(loginResponse.headers.get("cache-control"), /no-store/,
+    "The signed-in account redirect is not cached between members.");
+  accountClass = "customer";
+  loginResponse = await nextText("/account.html");
+  assert.equal(new URL(loginResponse.headers.get("location")).pathname, "/customer-profile/",
+    "A signed-in Customer returns to the existing Customer Profile.");
+  accountClass = "admin";
+  loginResponse = await nextText("/account.html");
+  assert.equal(loginResponse.status, 200, "Admin login routing remains outside the membership Dashboard change.");
+  accountClass = "customer";
+  sessionValid = false;
+  loginResponse = await nextText("/account.html");
+  assert.equal(loginResponse.status, 200, "Signed-out visitors retain the existing Login/Signup page.");
+  sessionValid = true;
   let membershipResponse = await nextText("/customer-profile/");
   assert.equal(membershipResponse.status, 200, "Signed-in Customer can open the Membership Dashboard in their Profile.");
   accountClass = "creator";
@@ -175,23 +198,24 @@ function assertMatrix(build) {
 
   const customer = build({ authenticated: true, role: "user" });
   assert.deepEqual(customer.levels, ["guest", "customer"]);
-  assert.deepEqual(customer.items, guest);
+  assert.deepEqual(customer.items, buildMemberItems());
+  assert.ok(!customer.items.some((item) => item.href === "/account.html"), "Authenticated navigation does not contain the signed-out Login/Signup destination.");
 
   const creator = build({ authenticated: true, creator: true, role: "user" });
   assert.deepEqual(creator.levels, ["guest", "customer", "creator"]);
-  assert.deepEqual(creator.items, guest);
+  assert.deepEqual(creator.items, buildMemberItems());
 
   const admin = build({ authenticated: true, role: "admin" });
   assert.deepEqual(admin.levels, ["guest", "customer", "creator", "admin"]);
-  assert.deepEqual(admin.items, guest);
+  assert.deepEqual(admin.items, buildMemberItems());
 
   const creatorAdmin = build({ authenticated: true, creator: true, role: "admin" });
   assert.deepEqual(creatorAdmin.levels, ["guest", "customer", "creator", "admin"]);
-  assert.deepEqual(creatorAdmin.items, guest);
+  assert.deepEqual(creatorAdmin.items, buildMemberItems());
 
   const owner = build({ authenticated: true, role: "owner" });
   assert.deepEqual(owner.levels, ["guest", "customer", "creator", "admin", "owner"]);
-  assert.deepEqual(owner.items, guest);
+  assert.deepEqual(owner.items, buildMemberItems());
 }
 
 async function assertHandler(handle) {
@@ -215,7 +239,7 @@ async function assertHandler(handle) {
   });
   const owner = await response.json();
   assert.deepEqual(owner.levels, ["guest", "customer", "creator", "admin", "owner"]);
-  assert.deepEqual(owner.items, buildGuestItems());
+  assert.deepEqual(owner.items, buildMemberItems());
 
   response = await handle(new Request("https://example.test/api/navigation"), {}, {
     getSession: async () => ({ valid: false }),
@@ -227,7 +251,7 @@ async function assertHandler(handle) {
   });
   const bridgedOwner = await response.json();
   assert.deepEqual(bridgedOwner.levels, ["guest", "customer", "creator", "admin", "owner"]);
-  assert.deepEqual(bridgedOwner.items, buildGuestItems());
+  assert.deepEqual(bridgedOwner.items, buildMemberItems());
   assert.match(response.headers.get("set-cookie"), /__Host-trg_session=session/);
   assert.match(response.headers.get("set-cookie"), /trg_account_csrf=csrf/);
 
@@ -278,6 +302,7 @@ function assertHomepageIntegration() {
   assert.match(account, /progressive-navigation\.js/);
   assert.doesNotMatch(account, /Creator Login \/ Sign Up/);
   assert.ok(routes.include.includes("/api/navigation"), "Pages Functions must route the navigation endpoint.");
+  assert.ok(routes.include.includes("/account.html"), "Pages Functions must route the account page so signed-in members can be redirected away from the retired login destination.");
   assert.match(client, /prepareAuthenticatedGuestLibrary/);
   assert.match(styles, /\.homepage-library-book[\s\S]*?pointer-events:\s*auto;/);
 }
@@ -381,7 +406,7 @@ async function assertCustomerLibraryUsesSharedOpenRulesBinding() {
         return { ok: true, json: async () => ({
           authenticated: true,
           levels: ["guest", "customer"],
-          items: [{ key: "account", href: "/account.html", label: "Login/Signup" }]
+          items: buildMemberItems()
         }) };
       }
       if (url === "/api/account/library") {
@@ -417,6 +442,11 @@ async function assertCustomerLibraryUsesSharedOpenRulesBinding() {
   vm.runInNewContext(navigationSource, sandbox, { filename: "assets/js/progressive-navigation.js" });
   await new Promise((resolve) => setImmediate(resolve));
 
+  const authenticatedLabels = nav.children.map((child) => child.textContent);
+  assert.ok(authenticatedLabels.includes("Dashboard"), "Authenticated Customers receive the shared Dashboard link.");
+  assert.ok(authenticatedLabels.includes("Logout"), "Authenticated Customers retain sign-out controls.");
+  assert.ok(!authenticatedLabels.includes("Login/Signup"), "Authenticated navigation omits Login/Signup.");
+  assert.ok(!nav.children.some((child) => child.href === "/account.html"), "Authenticated navigation does not link to the obsolete login destination.");
   assert.equal(libraryCalls.length, 1,
     "Authenticated Customer library rendering calls the shared Open Rules book factory.");
   assert.equal(libraryCalls[0].product.slug, "owned-book");
@@ -473,7 +503,7 @@ async function assertCustomerLogoutStaysInStaging() {
         if (url === "/api/navigation") return { ok: true, json: async () => ({
           authenticated: true,
           levels: ["guest", "customer"],
-          items: [{ key: "account", href: "/account.html", label: "Login/Signup" }],
+          items: buildMemberItems(),
         }) };
         if (url === "/api/account/library") return { ok: true, json: async () => ({ items: [] }) };
         if (url === "/api/account/me") return { ok: true, json: async () => ({ authenticated: true, user: { accountClass: "customer" } }) };
@@ -539,6 +569,12 @@ function buildGuestItems() { return [
   { key: "explore", href: "/store/catalog/", label: "Explore" },
   { key: "support", href: "/support.html", label: "Support" },
   { key: "account", href: "/account.html", label: "Login/Signup" },
+  { key: "cart", href: "/store/cart/", label: "Cart" }
+]; }
+function buildMemberItems() { return [
+  { key: "explore", href: "/store/catalog/", label: "Explore" },
+  { key: "support", href: "/support.html", label: "Support" },
+  { key: "member", label: "Member" },
   { key: "cart", href: "/store/cart/", label: "Cart" }
 ]; }
 function read(relative) { return fs.readFileSync(path.join(ROOT, relative), "utf8"); }

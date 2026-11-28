@@ -30,7 +30,7 @@
     const cartCount = nav.querySelector("[data-cart-count]")?.textContent || "0";
     const items = Array.isArray(state.items) ? state.items : [];
     nav.replaceChildren(...items.flatMap((item) => {
-      if (state.authenticated && item.key === "account") {
+      if (state.authenticated && item.key === "member") {
         const hasMembershipDashboard = Array.isArray(state.levels) &&
           state.levels.includes("customer") && (!state.levels.includes("admin") || state.levels.includes("owner"));
         const links = [];
@@ -43,7 +43,7 @@
           }
           links.push(dashboard);
         }
-        return [...links, createAccountLink(item), createLogoutButton()];
+        return [...links, createLogoutButton()];
       }
       if (customerStorefront && item.key === "account" && !state.authenticated) {
         return [createLogoutButton()];
@@ -66,14 +66,6 @@
       return [link];
     }));
     nav.dataset.privilegeLevels = Array.isArray(state.levels) ? state.levels.join(" ") : "guest";
-  }
-
-  function createAccountLink(item) {
-    const link = document.createElement("a");
-    link.href = item.href;
-    link.textContent = item.label;
-    if (new URL(link.href, location.origin).pathname === location.pathname) link.setAttribute("aria-current", "page");
-    return link;
   }
 
   function createLogoutButton() {

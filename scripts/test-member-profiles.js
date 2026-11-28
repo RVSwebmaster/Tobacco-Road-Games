@@ -41,6 +41,13 @@ const pages = expectedRoutes.map(([accountClass, route, file], index) => {
   assert.match(page, /upper-cabinet-creator-mobile\.png\?v=creator-title-board3/);
   assert.match(page, /the-familiar-framed-poster\.png/);
   assert.doesNotMatch(page, /Creator Dashboard \| Tobacco Road Games|data-creator-library-books|data-creator-identity-page|guest-preview-products\.json/);
+  if (accountClass === "admin") {
+    assert.doesNotMatch(page, /href="\/dashboard\/" data-member-dashboard-link/,
+      "Admin remains outside Dashboard navigation.");
+  } else {
+    assert.match(page, /<a href="\/dashboard\/" data-member-dashboard-link hidden>Open Membership Dashboard<\/a>/,
+      `${route} links to the shared Dashboard from the established Profile location.`);
+  }
   assert.doesNotMatch(page, /data-magical-bookshelf|magical-bookshelf\.js|creator-preview-only|data-creator-preview-only/);
   assert.equal((page.match(/<picture class="shop-wall-cabinet-art"/g) || []).length, 1,
     "The Member Profile contains one shared cabinet component.");

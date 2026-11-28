@@ -16,7 +16,9 @@ export function buildProgressiveNavigation({ authenticated = false, creator = fa
   if (creatorAccess) levels.push("creator");
   if (["admin", "owner"].includes(normalizedRole)) levels.push("admin");
   if (normalizedRole === "owner") levels.push("owner");
-  return { authenticated: true, items, levels };
+  const memberItems = items.filter((item) => item.key !== "account");
+  memberItems.splice(2, 0, { key: "member", label: "Member" });
+  return { authenticated: true, items: memberItems, levels };
 }
 
 export function renderPublicNavigation(current = "", ariaLabel = "Primary") {
