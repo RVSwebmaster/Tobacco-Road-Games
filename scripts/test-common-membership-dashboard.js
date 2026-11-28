@@ -28,6 +28,8 @@ assert.match(script, /textContent = String\(item\.productTitle/);
 assert.match(middleware, /isMemberDashboard\(pathname\).*getCustomerSessionFromRequest/);
 assert.match(middleware, /pathname === "\/dashboard\/"/);
 assert.match(page, /Active session review and sign-out-all-devices are not connected yet/);
+assert.match(page, /Password recovery email is currently disabled/);
+assert.doesNotMatch(page, /forgot-form|password recovery.*available/i);
 assert.match(page, /Following and unfollowing are not connected yet/);
 assert.match(page, /Communication, accessibility, and announcement preferences are not connected yet/);
 assert.match(css, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
