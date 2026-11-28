@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { DatabaseSync } = require("node:sqlite");
 const { NOW_MS, CREATOR_A, CREATOR_B, createCreator, creatorRequest, applyMigrations, createD1, load } = require("./test-creator-product-withdrawal.js");
-const { createCatalogSlots, sortAndFilterCatalog } = require("../assets/js/creator-profile-catalog-layout.js");
+const { createCatalogSlots, sortAndFilterCatalog, createMemberShelfBooks } = require("../assets/js/creator-profile-catalog-layout.js");
 const fs = require("node:fs");
 const path = require("node:path");
 const CREATOR_F = Object.freeze({ id: "creator-profile-shelf-founder", userId: "user-profile-shelf-founder", slug: "profile-shelf-founder", session: "profile-shelf-founder-session", csrf: "profile-shelf-founder-csrf" });
@@ -26,6 +26,14 @@ async function main() {
   assert.deepEqual(sortAndFilterCatalog(viewProducts, "newest", "all").map(item => item.id), ["c", "b", "a"]);
   assert.deepEqual(sortAndFilterCatalog(viewProducts, "oldest", "all").map(item => item.id), ["a", "b", "c"]);
   assert.deepEqual(sortAndFilterCatalog(viewProducts, "series", "shelved").map(item => item.id), ["a"]);
+  assert.deepEqual(createMemberShelfBooks([
+    { id: "public", title: "Public Book", shelved: true, coverImage: "/public.webp", detailUrl: "/public/" },
+    { id: "test-a", title: "The Ashen Grimoire", subtitle: "TEST ITEM • NOT FOR SALE", shelved: true, coverImage: "/ashen.webp", detailUrl: "/ashen/" },
+    { id: "test-b", title: "Beyond the Black Stars", shelved: false, coverImage: "/stars.webp", detailUrl: "/stars/" }
+  ], "RV Sawyer"), [
+    { id: "public", title: "Public Book", subtitle: undefined, detailUrl: "/public/", coverUrl: "/public.webp", creatorName: "RV Sawyer" },
+    { id: "test-a", title: "The Ashen Grimoire", subtitle: "TEST ITEM • NOT FOR SALE", detailUrl: "/ashen/", coverUrl: "/ashen.webp", creatorName: "RV Sawyer" }
+  ], "The authenticated physical shelf uses only saved private selections, including unlisted test items.");
   const catalogCss = fs.readFileSync(path.join(__dirname, "..", "assets", "css", "creator-profile-shelf.css"), "utf8");
   assert.match(catalogCss, /grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\)/, "Desktop title cards use a modest six-column grid.");
   assert.match(catalogCss, /@media\s*\(max-width:\s*700px\)[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Mobile catalog cards reflow to two columns.");
@@ -37,6 +45,11 @@ async function main() {
   const catalogRenderer = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "creator-profile-shelf.js"), "utf8");
   assert.match(catalogRenderer, /checkbox\.type\s*=\s*"checkbox"/, "Private shelf controls use the requested Shelved checkbox.");
   assert.match(catalogRenderer, /link\.href\s*=\s*product\.detailUrl/, "Occupied title cards link to their existing product detail page.");
+  assert.match(catalogRenderer, /if \(product\.subtitle && memberRoot\.dataset\.creatorProfileTier === "creator"\)[\s\S]*?creator-profile-catalog-card__subtitle/, "Only the standard Creator Profile displays the stored TEST / NOT FOR SALE subtitle.");
+  assert.match(catalogCss, /\.creator-profile-catalog-card__subtitle\s*\{[^}]*-webkit-line-clamp:\s*2/, "The test label is styled and bounded within the title card.");
+  assert.match(catalogRenderer, /renderMemberShelf\(loadedState,\s*publicShelf\.creator\)/, "The authenticated Creator shelf renders from the private shelf state.");
+  assert.match(catalogRenderer, /renderMemberShelf\(loadedState,\s*publicState\.creator\)/, "Shelf changes redraw the private shelf from saved state.");
+  assert.match(catalogRenderer, /root !== memberRoot \|\| !loadedState/, "A late public response cannot replace authenticated shelf selections.");
   assert.match(catalogRenderer, /catalogRoot\._products\s*=\s*payload\?\.catalog/, "Public catalog products are retained for client-side sorting and filtering.");
   assert.match(catalogRenderer, /identities\.find\(identity => identity\.slug === memberRoot\.dataset\.publicCreatorShelf\)/,
     "The public Creator page reveals private controls only for the matching signed-in Creator identity.");
@@ -183,6 +196,9 @@ async function main() {
     assert.match(page, /data-creator-profile-catalog/);
     assert.match(page, /data-member-creator-info/);
   }
+  assert.match(creatorPage, /creator-profile-shelf\.css\?v=creator-profile-shelf6/, "The Creator Profile requests the refreshed test-label styling.");
+  assert.match(creatorPage, /creator-profile-shelf\.js\?v=creator-profile-shelf7/, "The Creator Profile requests the refreshed title-card renderer.");
+  assert.match(creatorPage, /data-member-creator-shelf data-creator-profile-tier="creator"/, "The test labels are scoped to the standard Creator membership page.");
 
   raw.close();
   console.log("Creator Profile bookshelf and catalog management tests passed.");

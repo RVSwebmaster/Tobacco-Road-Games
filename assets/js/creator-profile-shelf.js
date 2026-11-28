@@ -10,6 +10,7 @@
   const cache = "no-store";
   const createCatalogSlots = window.createCreatorProfileCatalogSlots;
   const sortCreatorCatalog = window.sortCreatorProfileCatalog;
+  const createMemberShelfBooks = window.createCreatorProfileMemberShelfBooks;
   const accountClasses = new Set(["creator", "founding25", "premiumCreator"]);
   let currentRequest = 0;
   let saving = false;
@@ -49,6 +50,11 @@
     if (!shelf) return;
     shelf.replaceChildren(...products.map(createBook));
     root.hidden = false;
+  }
+
+  function renderMemberShelf(state, creator) {
+    const creatorName = String(creator?.name || selectedCreator?.displayName || selectedCreator?.name || "");
+    renderBooks(memberRoot, createMemberShelfBooks ? createMemberShelfBooks(state?.products, creatorName) : []);
   }
 
   function renderPublicCatalog(root, products) {
@@ -121,12 +127,12 @@
         credentials: "omit", cache
       });
       const payload = response.ok ? await response.json() : null;
-      renderBooks(root, payload?.products || []);
+      if (root !== memberRoot || !loadedState) renderBooks(root, payload?.products || []);
       if (catalogRoot) catalogRoot._products = payload?.catalog || [];
       renderPublicCatalog(catalogRoot, payload?.catalog || []);
       renderCreatorInfo(infoRoot, payload?.creator);
     } catch {
-      renderBooks(root, []);
+      if (root !== memberRoot || !loadedState) renderBooks(root, []);
       if (catalogRoot) catalogRoot._products = [];
       renderPublicCatalog(catalogRoot, []);
       renderCreatorInfo(infoRoot, null);
@@ -188,6 +194,9 @@
       }
       if (product) {
         link.append(node("h3", "creator-profile-catalog-card__title", product.title));
+        if (product.subtitle && memberRoot.dataset.creatorProfileTier === "creator") {
+          link.append(node("p", "creator-profile-catalog-card__subtitle", product.subtitle));
+        }
         card.append(link);
       }
       else card.setAttribute("aria-label", `Empty catalog slot ${index + 1}`);
@@ -228,7 +237,7 @@
     loadedState = privateShelf.payload;
     if (publicCatalog) publicCatalog.hidden = true;
     catalog.hidden = false;
-    renderBooks(memberRoot, publicShelf.products || []);
+    renderMemberShelf(loadedState, publicShelf.creator);
     renderCreatorInfo(memberInfo, publicShelf.creator);
     renderCounters(loadedState);
     renderCatalogCards(loadedState);
@@ -285,8 +294,7 @@
       renderCatalogCards(loadedState);
       const publicResponse = await fetch(`/api/public/creator-shelf?creatorSlug=${encodeURIComponent(selectedCreator.slug)}&refresh=${Date.now()}`, { credentials: "omit", cache });
       const publicState = publicResponse.ok ? await publicResponse.json() : { products: [] };
-      renderBooks(memberRoot, publicState.products || []);
-      renderCreatorInfo(memberInfo, publicState.creator);
+      renderMemberShelf(loadedState, publicState.creator);
       renderCreatorInfo(memberInfo, publicState.creator);
       status.textContent = "Shelf selection saved.";
     } catch (error) {
