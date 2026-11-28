@@ -172,7 +172,7 @@ async function run() {
     results.customerAccess = true;
     const dashboard = await request("/dashboard/", { headers: { cookie } });
     const dashboardHtml = await dashboard.text();
-    if (dashboard.status !== 200 || !dashboardHtml.includes("Common Membership Dashboard") || !dashboardHtml.includes("data-dashboard-library")) {
+    if (dashboard.status !== 200 || !dashboardHtml.includes("Member Dashboard") || !dashboardHtml.includes("data-dashboard-library")) {
       throw new Error("Authenticated Common Membership Dashboard did not load its shared sections.");
     }
     results.dashboardAccess = true;
