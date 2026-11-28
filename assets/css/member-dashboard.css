@@ -1,0 +1,29 @@
+body.member-dashboard-page .page-shell { width: min(1320px, 100%); }
+body.member-dashboard-page .site-header { margin-bottom: 12px; }
+.member-dashboard { width: 100%; }
+.member-dashboard-furniture { margin: 0 auto 10px; width: min(100%, 1120px); }
+.member-dashboard-furniture .shop-wall-fixed-cabinet { width: 100%; }
+.member-dashboard-furniture .shop-wall-row--identity { margin: 0; }
+.member-dashboard-furniture .shop-wall-bay--identity > .member-tier-badge { z-index: 3; }
+.member-dashboard-status { min-height: 1.2em; margin: 4px 0 10px; color: #ead9b6; font-size: .88rem; }
+.member-dashboard-pages { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 10px; padding: 5px 7px; border-block: 1px solid rgba(209, 165, 94, .3); }
+.member-dashboard-pages a { padding: 5px 10px; border-radius: 5px; color: #e6d4b4; font-size: .87rem; text-decoration: none; }
+.member-dashboard-pages a[aria-current="page"] { background: rgba(142, 89, 36, .32); color: #ffe0a4; }
+.member-dashboard-pages a:focus-visible { outline: 2px solid #f1cf8c; outline-offset: 2px; }
+.member-dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.member-dashboard-panel { min-width: 0; padding: 14px 16px; border: 1px solid rgba(209, 165, 94, .45); border-radius: 8px; background: linear-gradient(145deg, rgba(39, 25, 16, .97), rgba(23, 16, 12, .97)); color: #f4ead8; box-shadow: 0 4px 14px rgba(0, 0, 0, .2); }
+.member-dashboard-panel h2 { margin: 0 0 9px; color: #e3bd78; font: 600 1.05rem/1.25 Georgia, "Times New Roman", serif; }
+.member-dashboard-panel p { margin: 6px 0; font-size: .9rem; line-height: 1.45; }
+.member-dashboard-panel a { display: inline-block; margin: 5px 14px 0 0; color: #f1cf8c; font-size: .88rem; text-underline-offset: 3px; }
+.member-dashboard-panel a:hover { color: #fff1ce; }
+.member-dashboard-note { color: #c6b69f; }
+.member-dashboard-details { display: grid; gap: 5px; margin: 0 0 9px; }
+.member-dashboard-details > div { display: grid; grid-template-columns: minmax(112px, .7fr) minmax(0, 1.3fr); gap: 10px; padding-bottom: 4px; border-bottom: 1px solid rgba(209, 165, 94, .17); }
+.member-dashboard-details dt { color: #c6b69f; font-size: .84rem; }
+.member-dashboard-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: .9rem; }
+.member-dashboard-panel ul { margin: 4px 0 8px; padding-left: 20px; font-size: .86rem; }
+.member-dashboard-panel li + li { margin-top: 3px; }
+@media (max-width: 720px) {
+  .member-dashboard-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .member-dashboard-panel { padding: 12px 13px; }
+}

@@ -33,6 +33,15 @@
       Array.isArray(state.levels) && state.levels.includes("customer") &&
       !state.levels.some((level) => ["creator", "admin", "owner"].includes(level));
     nav.replaceChildren(...items.flatMap((item) => {
+      if (state.authenticated && item.key === "account") {
+        const dashboard = document.createElement("a");
+        dashboard.href = "/dashboard/";
+        dashboard.textContent = "Dashboard";
+        if (["/dashboard", "/dashboard/", "/dashboard/index.html"].includes(location.pathname)) {
+          dashboard.setAttribute("aria-current", "page");
+        }
+        return [dashboard, createAccountLink(item, signedInCustomer), ...(signedInCustomer ? [createLogoutButton()] : [])];
+      }
       if (customerStorefront && item.key === "account" && !signedInCustomer) {
         return [createLogoutButton()];
       }
@@ -52,10 +61,17 @@
       } else {
         link.textContent = customerAccount ? "Account" : item.label;
       }
-      if (customerAccount) return [link, createLogoutButton()];
       return [link];
     }));
     nav.dataset.privilegeLevels = Array.isArray(state.levels) ? state.levels.join(" ") : "guest";
+  }
+
+  function createAccountLink(item, signedInCustomer) {
+    const link = document.createElement("a");
+    link.href = signedInCustomer ? "/customer-profile/" : item.href;
+    link.textContent = signedInCustomer ? "Account" : item.label;
+    if (new URL(link.href, location.origin).pathname === location.pathname) link.setAttribute("aria-current", "page");
+    return link;
   }
 
   function createLogoutButton() {

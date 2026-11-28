@@ -48,6 +48,7 @@ async function main() {
     const generatedCustomer = fs.readFileSync(path.join(outputDirectory, "customer.html"), "utf8");
     assert.match(generatedCustomer, /data-customer-storefront/);
     assert.match(generatedCustomer, /data-progressive-navigation/);
+    assert.ok(fs.existsSync(path.join(outputDirectory, "dashboard", "index.html")), "Pages output includes the Common Membership Dashboard.");
     assert.match(generatedCustomer, /data-homepage-library/);
     assert.doesNotMatch(generatedCustomer, /href="\/account\.html">Login\/Signup/);
     const section = (page, pattern) => page.match(pattern)?.[0] || "";

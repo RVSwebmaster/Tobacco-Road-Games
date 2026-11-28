@@ -16,6 +16,9 @@ export async function onRequest(context) {
   if (isCustomerStorefront(pathname) && !(await getCustomerSessionFromRequest(context.request, context.env)).valid) {
     return noStoreDocument(Response.redirect(new URL("/guest/", context.request.url), 302));
   }
+  if (isMemberDashboard(pathname) && !(await getCustomerSessionFromRequest(context.request, context.env)).valid) {
+    return noStoreDocument(Response.redirect(new URL("/account.html", context.request.url), 302));
+  }
   if (isPublicStorePage(pathname)) {
     const storeState = await readStoreState(context.env);
     if (storeState.available && storeState.state === "MAINTENANCE") {
@@ -49,12 +52,16 @@ function ownerResponse(response, context) {
 function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 
 function shouldNeverReuseDocument(pathname) {
-  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) ||
+  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) ||
     pathname === "/guest/" || pathname === "/guest/index.html" || pathname.startsWith("/creator");
 }
 
 function isCustomerStorefront(pathname) {
   return pathname === "/customer" || pathname === "/customer/" || pathname === "/customer.html";
+}
+
+function isMemberDashboard(pathname) {
+  return pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard/index.html";
 }
 
 function noStoreDocument(response) {

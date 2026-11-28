@@ -228,6 +228,7 @@ async function testRegistrationLoginSessionLogout(auth) {
   payload = await response.json();
   assert.equal(payload.user.email, "player@example.com");
   assert.equal(payload.user.emailVerified, false);
+  assert.ok(payload.user.createdAt, "The signed-in account summary should expose the account creation date for the member dashboard.");
   const memberId = payload.user.id;
   const credential = await env.TRG_ORDERS.prepare("SELECT password_hash FROM password_credentials WHERE user_id = ?").bind(memberId).first();
   assert.match(credential.password_hash, /^scrypt\$/);

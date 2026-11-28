@@ -23,6 +23,9 @@ const CRITICAL_PAGES_FILES = Object.freeze([
   "account.html",
   "customer.html",
   "customer-profile/index.html",
+  "dashboard/index.html",
+  "assets/css/member-dashboard.css",
+  "assets/js/member-dashboard.js",
   "creator/index.html",
   "assets/css/member-profile.css",
   "assets/js/account.js"

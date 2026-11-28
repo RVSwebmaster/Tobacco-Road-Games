@@ -2,7 +2,7 @@
   const status = document.querySelector("[data-member-profile-status]");
   const profilePage = document.querySelector("[data-member-profile-page]");
   const profileHeading = document.querySelector("[data-member-profile-heading]");
-  const tierBadge = profilePage?.querySelector("[data-member-tier-badge]");
+  const tierBadge = document.querySelector("[data-member-tier-badge]");
   const tierBadgeFiles = new Map([
     ["customer", "customer.png"],
     ["creator", "creator.png"],

@@ -593,6 +593,7 @@ function publicUser(user) {
   return {
     email: user.email_normalized,
     emailVerified: Number(user.email_verified) === 1,
+    createdAt: user.created_at || null,
     id: user.id,
     role: user.role,
     status: user.status
