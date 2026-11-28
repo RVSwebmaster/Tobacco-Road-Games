@@ -96,10 +96,10 @@ export async function onRequest(context) {
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
 }
-function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&pathname!=='/account.html'&&!isCustomerMembershipDashboard(pathname)&&!isMemberDashboard(pathname)&&!isCreatorTools(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
+function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!isLoginPage(pathname)&&!isCustomerMembershipDashboard(pathname)&&!isMemberDashboard(pathname)&&!isCreatorTools(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 
 function shouldNeverReuseDocument(pathname) {
-  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) || isCreatorTools(pathname) || isCustomerMembershipDashboard(pathname) ||
+  return pathname === "/" || pathname === "/index.html" || isLoginPage(pathname) || isCustomerStorefront(pathname) || isMemberDashboard(pathname) || isCreatorTools(pathname) || isCustomerMembershipDashboard(pathname) ||
     pathname === "/guest/" || pathname === "/guest/index.html" || pathname.startsWith("/creator");
 }
 
@@ -136,7 +136,7 @@ function isCustomerMembershipDashboard(pathname) {
 }
 
 function isLoginPage(pathname) {
-  return pathname === "/account.html";
+  return pathname === "/account.html" || pathname === "/account" || pathname === "/account/" || pathname === "/account/index.html";
 }
 
 function noStoreDocument(response) {

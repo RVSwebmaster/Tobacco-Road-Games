@@ -24,14 +24,14 @@ const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261116-open-rules-master-shelf4";
-const PROGRESSIVE_NAV_CACHE_BUST = "customer-membership-dashboard1";
+const PROGRESSIVE_NAV_CACHE_BUST = "membership-navigation-cf2eb9a";
 const STOREFRONT_STYLES_CACHE_BUST = "20261116-open-rules-spine-title-fit2";
 const PROFILE_STOREFRONT_STYLES_CACHE_BUST = "20261125-profile-plateboard-cache1";
 const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
 const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
-const CUSTOMER_NAV_CACHE_BUST = "customer-membership-dashboard2";
+const CUSTOMER_NAV_CACHE_BUST = "membership-navigation-cf2eb9a";
 const CUSTOMER_MEMBERSHIP_DASHBOARD_CACHE_BUST = "customer-membership-dashboard3";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
 const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf5";
@@ -2075,6 +2075,7 @@ function buildAccountPage() {
   if (!navPattern.test(html)) throw new Error("Account navigation could not be found.");
   const next = html
     .replace(navPattern, `${renderSharedPublicNav("account", "Primary", GUEST_NAV_ITEMS)}\n    `)
+    .replace(/progressive-navigation\.js\?v=[^"\s]+/, `progressive-navigation.js?v=${CUSTOMER_NAV_CACHE_BUST}`)
     .replace("Your Tobacco Road Games Account", "Account / My Library")
     .replace("Shared account foundation", "Customer account");
   fs.writeFileSync(accountPath, stripPublicBrandTag(next));

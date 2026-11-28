@@ -94,6 +94,9 @@ async function assertCreatorSessionBootstrapBehavior() {
   assert.match(loginResponse.headers.get("cache-control"), /no-store/,
     "The signed-in account redirect is not cached between members.");
   accountClass = "customer";
+  loginResponse = await nextText("/account");
+  assert.equal(new URL(loginResponse.headers.get("location")).pathname, "/customer-profile/",
+    "Cloudflare Pages clean URLs for the account page return a signed-in Customer to their Profile.");
   loginResponse = await nextText("/account.html");
   assert.equal(new URL(loginResponse.headers.get("location")).pathname, "/customer-profile/",
     "A signed-in Customer returns to the existing Customer Profile.");
@@ -302,7 +305,9 @@ function assertHomepageIntegration() {
   assert.match(account, /progressive-navigation\.js/);
   assert.doesNotMatch(account, /Creator Login \/ Sign Up/);
   assert.ok(routes.include.includes("/api/navigation"), "Pages Functions must route the navigation endpoint.");
-  assert.ok(routes.include.includes("/account.html"), "Pages Functions must route the account page so signed-in members can be redirected away from the retired login destination.");
+  for (const route of ["/account.html", "/account", "/account/"]) {
+    assert.ok(routes.include.includes(route), `Pages Functions must route ${route} so signed-in members can be redirected away from the retired login destination.`);
+  }
   assert.match(client, /prepareAuthenticatedGuestLibrary/);
   assert.match(styles, /\.homepage-library-book[\s\S]*?pointer-events:\s*auto;/);
 }
