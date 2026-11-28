@@ -10,6 +10,7 @@ const css = read("assets/css/customer-membership-dashboard.css");
 const middleware = read("functions/_middleware.js");
 const navigation = read("assets/js/progressive-navigation.js");
 const builder = read("scripts/build-store.js");
+const functionRoutes = JSON.parse(read("_routes.json"));
 const pageNames = [
   "personal-information", "account-security", "purchase-history", "personal-library",
   "favorite-creators", "customer-support", "preferences", "membership-information", "trg-announcements"
@@ -52,6 +53,8 @@ assert.match(css, /@media \(max-width: 760px\)/);
 assert.match(middleware, /isCustomerMembershipDashboard\(pathname\)/);
 assert.match(middleware, /membership\.accountClass !== "customer"/);
 assert.match(middleware, /membership\.accountClass === "customer"/);
+assert.ok(functionRoutes.include.includes("/customer-profile/*"), "Pages Functions must invoke access middleware for the Customer Profile workspace.");
+assert.ok(functionRoutes.include.includes("/dashboard/*"), "Pages Functions must route the legacy Dashboard through Customer redirection.");
 assert.match(navigation, /dashboard\.href = signedInCustomer \? "\/customer-profile\/" : "\/dashboard\/"/);
 assert.match(builder, /canonicalPath === "\/customer-profile\/"/);
 

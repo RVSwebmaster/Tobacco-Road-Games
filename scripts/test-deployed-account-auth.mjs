@@ -180,7 +180,7 @@ async function run() {
     }
     const previousDashboard = await request("/dashboard/", { headers: { cookie } });
     if (previousDashboard.status !== 302 || new URL(previousDashboard.headers.get("location")).pathname !== "/customer-profile/") {
-      throw new Error("Customer account can still open a separate Common Membership Dashboard page.");
+      throw new Error(`Customer /dashboard/ did not redirect to the Profile workspace (status ${previousDashboard.status}, location ${previousDashboard.headers.get("location") || "none"}).`);
     }
     results.dashboardAccess = true;
 
