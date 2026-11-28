@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "customer-payment-management-2026-11-28-r3",
+  "releaseSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+  "releaseBranch": "release/customer-payment-management-2026-11-28-r3",
+  "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50",
+  "releaseManifest": {
+    "schemaVersion": 1,
+    "releaseId": "customer-payment-management-2026-11-28-r3",
+    "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+    "releaseBranch": "release/customer-payment-management-2026-11-28-r3",
+    "commitMessage": "Disable unavailable Customer payment controls",
+    "createdAt": "2026-11-28T16:13:01.644Z",
+    "buildCommand": "npm run release:build -- --ref 4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439 --release-branch release/customer-payment-management-2026-11-28-r3 --release-id customer-payment-management-2026-11-28-r3 --migration customer-payment-management-082",
+    "pipelinePolicySha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+    "lineage": {
+      "mainSha": "9fecfa6db0787b565749174cfddc90782e4de4c7",
+      "developmentSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+      "developmentDescendsFromMain": true,
+      "candidateDescendsFromDevelopment": true,
+      "exception": null
+    },
+    "pagesFileCount": 265,
+    "sourceOutputSha256": "110c610903879c1a9fa5446a52fddcddd546c51340a4dc0bdd8f2e726148c8c7",
+    "pagesOutputSha256": "5e2675a755db7db8df0332a31c5b145c6eefd4bb4effeafa6e1e58bf8de0da6f",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "424ec9d285fcccf11ba23e13ea01634fe3851f7db67540dc2db6645c1a659c7c",
+      "customer.html": "8b714898e24979f996472ad03d8d97824077ad98bfa48fe0da52fb5b5678f2e9",
+      "customer-profile/index.html": "9b93d6ca50026221ab37eebc32932c56a30fb7b951814c9e11cd8637e8ae2ffd",
+      "dashboard/index.html": "d1488b87d06602f2dc19c26cf4b84a4369feed832e84cae5e51db528e40c9299",
+      "assets/css/member-dashboard.css": "19c789b673121e35ac0b70b1ba3e47291d434aa5d8c3d9f1cdb34874bd237c02",
+      "assets/js/member-dashboard.js": "34ca960e7c48359f8a48e72293aa748046283fb84b52cbdca8e766229e96b66a",
+      "creator/index.html": "ba4321a0df50086f381f23e244fb73c6e3a7c9c35d6ce303a8df641a5d3203a9",
+      "assets/css/member-profile.css": "44a94bba94c6a29c224dc8f401309f077b2ca723bf982b5ffc1f574abf7c53ff",
+      "assets/js/account.js": "e7a89b85582d0b8fa99f8abff3d7e10f065c0310b21d85656174eca4a15c5b9c",
+      "trg-release.json": "b5145e59962eda48c3b9c31b5bab531f9a0299dfde14fc5675edf0c549fdcc06"
+    },
+    "functionsSourceSha256": "a04d51bb6cca0e0451b5b9648ff5d56a720e5445c99c8e81daeb6a96da15578c",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "migrations": [
+      {
+        "id": "customer-payment-management-082",
+        "file": "ops/releases/customer-payment-management-082/customer-payment-management-082.sql",
+        "sha256": "5d27ae8edf1ef40b91793a2913f03265df8e2f823aa9f85a5dc687fc778250fc",
+        "databaseBinding": "TRG_ORDERS",
+        "databaseIds": {
+          "preview": "2fff6e72-4e41-47e7-b497-992dadcab3d6",
+          "staging": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+          "production": "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+        },
+        "baseline": "Production and staging D1 at their accepted 072/073 states; deferred 079 saved-card migration remains unapplied.",
+        "preconditions": {
+          "tables": [
+            "users",
+            "user_account_profiles"
+          ],
+          "effect": "Create only two empty, constrained mapping tables; preserve all existing Customer, Creator, payment, and order rows."
+        },
+        "postconditions": {
+          "tables": [
+            "customer_stripe_accounts",
+            "customer_payment_portal_configurations"
+          ],
+          "indexes": [],
+          "triggers": [],
+          "customer_stripe_accountsColumns": [
+            "user_id",
+            "stripe_customer_reference",
+            "created_at",
+            "updated_at"
+          ],
+          "customer_payment_portal_configurationsColumns": [
+            "stripe_mode",
+            "configuration_reference",
+            "created_at",
+            "updated_at"
+          ]
+        }
+      }
+    ],
+    "artifact": {
+      "sourceRoot": ".wrangler/release-pipeline/customer-payment-management-2026-11-28-r3/source",
+      "pagesOutput": ".wrangler/release-pipeline/customer-payment-management-2026-11-28-r3/source/.wrangler/release-pages-output"
+    },
+    "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50"
+  },
+  "build": {
+    "createdAt": "2026-11-28T16:13:01.644Z",
+    "buildCommand": "npm run release:build -- --ref 4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439 --release-branch release/customer-payment-management-2026-11-28-r3 --release-id customer-payment-management-2026-11-28-r3 --migration customer-payment-management-082",
+    "pagesFileCount": 265,
+    "pagesOutputSha256": "5e2675a755db7db8df0332a31c5b145c6eefd4bb4effeafa6e1e58bf8de0da6f",
+    "functionsSourceSha256": "a04d51bb6cca0e0451b5b9648ff5d56a720e5445c99c8e81daeb6a96da15578c",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "criticalAssets": {
+      "index.html": "7e25ad9d2874606940a04666c0a6e3b6a04d70c5312ece662babecd433467872",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "424ec9d285fcccf11ba23e13ea01634fe3851f7db67540dc2db6645c1a659c7c",
+      "customer.html": "8b714898e24979f996472ad03d8d97824077ad98bfa48fe0da52fb5b5678f2e9",
+      "customer-profile/index.html": "9b93d6ca50026221ab37eebc32932c56a30fb7b951814c9e11cd8637e8ae2ffd",
+      "dashboard/index.html": "d1488b87d06602f2dc19c26cf4b84a4369feed832e84cae5e51db528e40c9299",
+      "assets/css/member-dashboard.css": "19c789b673121e35ac0b70b1ba3e47291d434aa5d8c3d9f1cdb34874bd237c02",
+      "assets/js/member-dashboard.js": "34ca960e7c48359f8a48e72293aa748046283fb84b52cbdca8e766229e96b66a",
+      "creator/index.html": "ba4321a0df50086f381f23e244fb73c6e3a7c9c35d6ce303a8df641a5d3203a9",
+      "assets/css/member-profile.css": "44a94bba94c6a29c224dc8f401309f077b2ca723bf982b5ffc1f574abf7c53ff",
+      "assets/js/account.js": "e7a89b85582d0b8fa99f8abff3d7e10f065c0310b21d85656174eca4a15c5b9c",
+      "trg-release.json": "b5145e59962eda48c3b9c31b5bab531f9a0299dfde14fc5675edf0c549fdcc06"
+    }
+  },
+  "preview": {
+    "target": "preview",
+    "projectName": "tobacco-road-games-acceptance",
+    "deploymentId": "95ac9d97-9ab4-47a1-9087-7f455d9bc25c",
+    "deploymentUrl": "https://95ac9d97.tobacco-road-games-acceptance.pages.dev",
+    "deploymentEnvironment": "Preview",
+    "branch": "acceptance",
+    "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+    "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50",
+    "sourceOutputSha256": "110c610903879c1a9fa5446a52fddcddd546c51340a4dc0bdd8f2e726148c8c7",
+    "staticOutputSha256": "5e2675a755db7db8df0332a31c5b145c6eefd4bb4effeafa6e1e58bf8de0da6f",
+    "verifiedAt": "2026-11-28T16:14:04.792Z",
+    "ownerApproval": {
+      "approved": true,
+      "approvedBy": "RV",
+      "approvedAt": "2026-11-28T16:14:13.587Z",
+      "projectName": "tobacco-road-games-acceptance",
+      "deploymentId": "95ac9d97-9ab4-47a1-9087-7f455d9bc25c",
+      "previewUrl": "https://95ac9d97.tobacco-road-games-acceptance.pages.dev",
+      "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+      "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50"
+    }
+  },
+  "staging": {
+    "target": "staging",
+    "projectName": "tobacco-road-games-staging",
+    "deploymentId": "6980fc1a-2a41-4881-a544-07895a3254c3",
+    "deploymentUrl": "https://6980fc1a.tobacco-road-games-staging.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "staging",
+    "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+    "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50",
+    "sourceOutputSha256": "110c610903879c1a9fa5446a52fddcddd546c51340a4dc0bdd8f2e726148c8c7",
+    "staticOutputSha256": "5e2675a755db7db8df0332a31c5b145c6eefd4bb4effeafa6e1e58bf8de0da6f",
+    "verifiedAt": "2026-11-28T16:15:03.405Z",
+    "verification": {
+      "passed": true,
+      "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+      "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50",
+      "deploymentId": "6980fc1a-2a41-4881-a544-07895a3254c3",
+      "deploymentUrl": "https://6980fc1a.tobacco-road-games-staging.pages.dev",
+      "verifiedAt": "2026-11-28T16:15:17.007Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "dashboardAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    }
+  },
+  "production": {
+    "target": "production",
+    "projectName": "tobacco-road-games",
+    "deploymentId": "354b7667-ae6f-4187-acac-5c653913c5e8",
+    "deploymentUrl": "https://354b7667.tobacco-road-games.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "main",
+    "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+    "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50",
+    "sourceOutputSha256": "110c610903879c1a9fa5446a52fddcddd546c51340a4dc0bdd8f2e726148c8c7",
+    "staticOutputSha256": "5e2675a755db7db8df0332a31c5b145c6eefd4bb4effeafa6e1e58bf8de0da6f",
+    "verifiedAt": "2026-11-28T16:16:34.398Z",
+    "verification": {
+      "target": "production",
+      "passed": true,
+      "commitSha": "4c2a1e13ee46dd64a1b9c4f95b818a67fbe6f439",
+      "manifestSha256": "e0d3f0d230a4292505d9884e16963b792e243dc2cae28d151450328c0d8d5f50",
+      "verifiedAt": "2026-11-28T16:16:47.003Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "dashboardAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    },
+    "rollbackDeployment": {
+      "deploymentId": "6d8384e7-3914-4f0b-8abe-a4e0a481dff6",
+      "deploymentUrl": "https://6d8384e7.tobacco-road-games.pages.dev",
+      "branch": "main",
+      "environment": "Production",
+      "source": "9fecfa6",
+      "capturedAt": "2026-11-28T16:15:51.7890880Z"
+    }
+  },
+  "migrations": [
+    {
+      "id": "customer-payment-management-082",
+      "file": "ops/releases/customer-payment-management-082/customer-payment-management-082.sql",
+      "sha256": "5d27ae8edf1ef40b91793a2913f03265df8e2f823aa9f85a5dc687fc778250fc",
+      "databaseBinding": "TRG_ORDERS",
+      "databaseIds": {
+        "preview": "2fff6e72-4e41-47e7-b497-992dadcab3d6",
+        "staging": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+        "production": "7e2cd675-a6f1-4fac-bbc9-03485a806c26"
+      },
+      "baseline": "Production and staging D1 at their accepted 072/073 states; deferred 079 saved-card migration remains unapplied.",
+      "preconditions": {
+        "tables": [
+          "users",
+          "user_account_profiles"
+        ],
+        "effect": "Create only two empty, constrained mapping tables; preserve all existing Customer, Creator, payment, and order rows."
+      },
+      "postconditions": {
+        "tables": [
+          "customer_stripe_accounts",
+          "customer_payment_portal_configurations"
+        ],
+        "indexes": [],
+        "triggers": [],
+        "customer_stripe_accountsColumns": [
+          "user_id",
+          "stripe_customer_reference",
+          "created_at",
+          "updated_at"
+        ],
+        "customer_payment_portal_configurationsColumns": [
+          "stripe_mode",
+          "configuration_reference",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "appliedTo": {
+        "staging": {
+          "id": "customer-payment-management-082",
+          "sha256": "5d27ae8edf1ef40b91793a2913f03265df8e2f823aa9f85a5dc687fc778250fc",
+          "databaseId": "d92594e8-a45c-4f84-8f48-7c3aeba17f29",
+          "outcome": "already-present",
+          "postconditionsVerified": true
+        },
+        "production": {
+          "id": "customer-payment-management-082",
+          "sha256": "5d27ae8edf1ef40b91793a2913f03265df8e2f823aa9f85a5dc687fc778250fc",
+          "databaseId": "7e2cd675-a6f1-4fac-bbc9-03485a806c26",
+          "outcome": "applied",
+          "postconditionsVerified": true
+        }
+      }
+    }
+  ],
+  "completedAt": "2026-11-28T16:17:15.038Z"
+}
