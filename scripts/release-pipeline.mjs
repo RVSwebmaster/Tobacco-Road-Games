@@ -34,6 +34,7 @@ const REQUIRED_STAGING_CHECKS = Object.freeze([
   "registration",
   "immediateLogin",
   "customerAccess",
+  "dashboardAccess",
   "logout",
   "signedOutCustomerBlocked",
   "loginAfterLogout",

@@ -181,6 +181,7 @@ $checks = @(
   "test-member-profile-access.js",
   "test-member-profile-library.js",
   "test-member-profiles.js",
+  "test-common-membership-dashboard.js",
   "test-storefront-shared-cabinet.js",
   "test-progressive-privilege-navigation.js",
   "test-pages-build-output.js",

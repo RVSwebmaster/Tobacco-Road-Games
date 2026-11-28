@@ -119,6 +119,7 @@ async function run() {
     registration: false,
     immediateLogin: false,
     customerAccess: false,
+    dashboardAccess: false,
     logout: false,
     signedOutCustomerBlocked: false,
     loginAfterLogout: false,
@@ -164,10 +165,17 @@ async function run() {
     }
     results.registration = true;
     const me = await request("/api/account/me", { headers: { cookie } });
-    if ((await me.json()).authenticated !== true) throw new Error("Registration session was not authenticated.");
+    const memberSummary = await me.json();
+    if (memberSummary.authenticated !== true || !memberSummary.user?.createdAt) throw new Error("Registration session was not authenticated or account creation date was unavailable.");
     const customer = await request("/customer", { headers: { cookie } });
     if (customer.status !== 200) throw new Error("Authenticated Customer Storefront did not load.");
     results.customerAccess = true;
+    const dashboard = await request("/dashboard/", { headers: { cookie } });
+    const dashboardHtml = await dashboard.text();
+    if (dashboard.status !== 200 || !dashboardHtml.includes("Common Membership Dashboard") || !dashboardHtml.includes("data-dashboard-library")) {
+      throw new Error("Authenticated Common Membership Dashboard did not load its shared sections.");
+    }
+    results.dashboardAccess = true;
 
     const logout = await request("/api/auth/logout", { method: "POST", headers: { ...headers, cookie }, body: "{}" });
     if (logout.status !== 200 || !getCookies(logout).some((item) => /__Host-trg_session=;/.test(item))) throw new Error("Logout did not clear the session cookie.");

@@ -233,7 +233,7 @@ bucket_name = "trg-products-acceptance"
   assert.deepEqual(map.nativeRegistrationAndLoginRequired, [], "native auth must not require provider secrets");
   assert.equal(map.googleAuthenticationRequired, false, "Google must not be a release requirement");
   assert.ok(map.optionalForPasswordResetEmail.every((name) => /^[A-Z0-9_]+$/.test(name)), "provider names are metadata only");
-  assert.equal(pipeline.validateStagingChecks({ passed: true, commitSha: sha, manifestSha256: manifestSha, checks: Object.fromEntries(["registration", "immediateLogin", "customerAccess", "logout", "signedOutCustomerBlocked", "loginAfterLogout", "duplicateRegistrationRejected", "accountCleanup"].map((key) => [key, true])) }, { commitSha: sha, manifestSha256: manifestSha }).ok, true, "complete staging check set should pass");
+  assert.equal(pipeline.validateStagingChecks({ passed: true, commitSha: sha, manifestSha256: manifestSha, checks: Object.fromEntries(["registration", "immediateLogin", "customerAccess", "dashboardAccess", "logout", "signedOutCustomerBlocked", "loginAfterLogout", "duplicateRegistrationRejected", "accountCleanup"].map((key) => [key, true])) }, { commitSha: sha, manifestSha256: manifestSha }).ok, true, "complete staging check set should pass");
 
   console.log("Release pipeline gates passed: canonical Git ancestry, exact pushed source/artifact, isolated environments, same-artifact promotion, main/live closure, migration receipts, and complete rollback metadata.");
 }
