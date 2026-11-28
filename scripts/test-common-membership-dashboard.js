@@ -51,6 +51,8 @@ assert.match(runtime, /requestJson\("\/api\/account\/me"/);
 assert.match(runtime, /requestJson\("\/api\/account\/profile"/);
 assert.match(runtime, /requestJson\("\/api\/account\/library"/);
 assert.match(runtime, /requestJson\("\/api\/account\/payment-methods"/);
+assert.match(runtime, /Payment management is unavailable right now/);
+assert.match(runtime, /data-payment-method-portal.*button\.disabled = true|button\.disabled = true/);
 assert.match(runtime, /requestJson\("\/api\/auth\/logout"/);
 assert.match(runtime, /item\.downloadUrl && item\.downloadAvailable/);
 assert.match(runtime, /item\.currentLastUpdated !== item\.purchasedLastUpdated/);

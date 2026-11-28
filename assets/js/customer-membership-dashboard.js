@@ -70,8 +70,9 @@
       }
       if (returned) setFeedback("Payment settings were updated with Stripe.");
     } catch (error) {
-      if (message) message.textContent = "Saved payment methods are temporarily unavailable.";
+      if (message) message.textContent = "Payment management is unavailable right now.";
       if (address) address.textContent = "Billing address status is temporarily unavailable.";
+      for (const button of root.querySelectorAll("[data-payment-method-portal]")) button.disabled = true;
       if (returned) setFeedback(error.message);
     }
   }
