@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "membership-navigation-2026-11-28-r2",
+  "releaseSha": "89906701b122571040dc35ad6e47b8628fa68588",
+  "releaseBranch": "release/membership-navigation-2026-11-28-r2",
+  "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d",
+  "releaseManifest": {
+    "schemaVersion": 1,
+    "releaseId": "membership-navigation-2026-11-28-r2",
+    "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+    "releaseBranch": "release/membership-navigation-2026-11-28-r2",
+    "commitMessage": "Guard clean account routes and refresh member navigation",
+    "createdAt": "2026-11-28T18:06:59.072Z",
+    "buildCommand": "npm run release:build -- --ref 89906701b122571040dc35ad6e47b8628fa68588 --release-branch release/membership-navigation-2026-11-28-r2 --release-id membership-navigation-2026-11-28-r2",
+    "pipelinePolicySha": "89906701b122571040dc35ad6e47b8628fa68588",
+    "lineage": {
+      "mainSha": "cf2eb9a820aedbf1fef50a1d1a9f42a0e068d20f",
+      "developmentSha": "89906701b122571040dc35ad6e47b8628fa68588",
+      "developmentDescendsFromMain": true,
+      "candidateDescendsFromDevelopment": true,
+      "exception": null
+    },
+    "pagesFileCount": 263,
+    "sourceOutputSha256": "34f855605a36c34f6dfda84434ae2dedf19cd70e5f574a6fa9e1a8566bcd330a",
+    "pagesOutputSha256": "0e5f2a30a2be780cbe4d459a7e3128ef6aa33be0c496c10d87dd8607bce09582",
+    "criticalAssets": {
+      "index.html": "86ee2707a0cb3ef0d0df014c08e6a472fdda7a2e688973792e35aea8a441c880",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "1210c0edb11277d31318cb5cab8d076bd62f05959759d4935a0380f926b0931b",
+      "customer.html": "932d2d62043ff04e074a52ea5112e996893cbaacfe442ee7cdc27a3fc3349105",
+      "customer-profile/index.html": "b4a53a13196750e4aab060fcc31a4665d13a4f214df67d365867381741905513",
+      "dashboard/index.html": "7d08ab31550a2f3eca21d7a7f9a77ef49de5d1be359ea03f5dd39b8706150b22",
+      "creator-tools/index.html": "ec855d46a2921a010719c9ea3625dcabe5336ef3a404fca387d3ffb12f0f1536",
+      "assets/css/customer-membership-dashboard.css": "f67c89ae0bc4148e6b08e4d5315c92d3e740f4f1206b9d161148f08760be1276",
+      "assets/js/customer-membership-dashboard.js": "6e0d262eb4470658564dbcbe58befb2d2de01cd8071dd13be6b44014a958c355",
+      "creator/index.html": "2a1619ddbe8761380dddcd8fb5283c767a38e8859e12a376417dab391bcfdf82",
+      "assets/css/member-profile.css": "44a94bba94c6a29c224dc8f401309f077b2ca723bf982b5ffc1f574abf7c53ff",
+      "assets/js/account.js": "e7a89b85582d0b8fa99f8abff3d7e10f065c0310b21d85656174eca4a15c5b9c",
+      "trg-release.json": "c571123438fa8c6df7abb25aa89e9f8e986149a9e94b6edd519e2e617bc4e312"
+    },
+    "functionsSourceSha256": "547d096886dd59050db20488a2a3136d8a4aecedcabc582338fff66a1dbd4860",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "migrations": [],
+    "artifact": {
+      "sourceRoot": ".wrangler/release-pipeline/membership-navigation-2026-11-28-r2/source",
+      "pagesOutput": ".wrangler/release-pipeline/membership-navigation-2026-11-28-r2/source/.wrangler/release-pages-output"
+    },
+    "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d"
+  },
+  "build": {
+    "createdAt": "2026-11-28T18:06:59.072Z",
+    "buildCommand": "npm run release:build -- --ref 89906701b122571040dc35ad6e47b8628fa68588 --release-branch release/membership-navigation-2026-11-28-r2 --release-id membership-navigation-2026-11-28-r2",
+    "pagesFileCount": 263,
+    "pagesOutputSha256": "0e5f2a30a2be780cbe4d459a7e3128ef6aa33be0c496c10d87dd8607bce09582",
+    "functionsSourceSha256": "547d096886dd59050db20488a2a3136d8a4aecedcabc582338fff66a1dbd4860",
+    "packageLockSha256": "8cad9b2af4e70752fce280a875d32cbfe74f2a66b1e876f7db78be9537ef9761",
+    "criticalAssets": {
+      "index.html": "86ee2707a0cb3ef0d0df014c08e6a472fdda7a2e688973792e35aea8a441c880",
+      "guest/index.html": "b3434a56afa0f05e9148e2778643f1eb5cff1c5022c9b35aac045c8d6aff4a0d",
+      "account.html": "1210c0edb11277d31318cb5cab8d076bd62f05959759d4935a0380f926b0931b",
+      "customer.html": "932d2d62043ff04e074a52ea5112e996893cbaacfe442ee7cdc27a3fc3349105",
+      "customer-profile/index.html": "b4a53a13196750e4aab060fcc31a4665d13a4f214df67d365867381741905513",
+      "dashboard/index.html": "7d08ab31550a2f3eca21d7a7f9a77ef49de5d1be359ea03f5dd39b8706150b22",
+      "creator-tools/index.html": "ec855d46a2921a010719c9ea3625dcabe5336ef3a404fca387d3ffb12f0f1536",
+      "assets/css/customer-membership-dashboard.css": "f67c89ae0bc4148e6b08e4d5315c92d3e740f4f1206b9d161148f08760be1276",
+      "assets/js/customer-membership-dashboard.js": "6e0d262eb4470658564dbcbe58befb2d2de01cd8071dd13be6b44014a958c355",
+      "creator/index.html": "2a1619ddbe8761380dddcd8fb5283c767a38e8859e12a376417dab391bcfdf82",
+      "assets/css/member-profile.css": "44a94bba94c6a29c224dc8f401309f077b2ca723bf982b5ffc1f574abf7c53ff",
+      "assets/js/account.js": "e7a89b85582d0b8fa99f8abff3d7e10f065c0310b21d85656174eca4a15c5b9c",
+      "trg-release.json": "c571123438fa8c6df7abb25aa89e9f8e986149a9e94b6edd519e2e617bc4e312"
+    }
+  },
+  "preview": {
+    "target": "preview",
+    "projectName": "tobacco-road-games-acceptance",
+    "deploymentId": "0d0c3726-404f-4c6a-b630-d48c64f1fdf5",
+    "deploymentUrl": "https://0d0c3726.tobacco-road-games-acceptance.pages.dev",
+    "deploymentEnvironment": "Preview",
+    "branch": "acceptance",
+    "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+    "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d",
+    "sourceOutputSha256": "34f855605a36c34f6dfda84434ae2dedf19cd70e5f574a6fa9e1a8566bcd330a",
+    "staticOutputSha256": "0e5f2a30a2be780cbe4d459a7e3128ef6aa33be0c496c10d87dd8607bce09582",
+    "verifiedAt": "2026-11-28T18:08:06.048Z",
+    "ownerApproval": {
+      "approved": true,
+      "approvedBy": "RV",
+      "approvedAt": "2026-11-28T18:09:04.627Z",
+      "projectName": "tobacco-road-games-acceptance",
+      "deploymentId": "0d0c3726-404f-4c6a-b630-d48c64f1fdf5",
+      "previewUrl": "https://0d0c3726.tobacco-road-games-acceptance.pages.dev",
+      "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+      "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d"
+    }
+  },
+  "staging": {
+    "target": "staging",
+    "projectName": "tobacco-road-games-staging",
+    "deploymentId": "2f3db346-4fe7-4dfd-b7e2-c5829a771746",
+    "deploymentUrl": "https://2f3db346.tobacco-road-games-staging.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "staging",
+    "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+    "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d",
+    "sourceOutputSha256": "34f855605a36c34f6dfda84434ae2dedf19cd70e5f574a6fa9e1a8566bcd330a",
+    "staticOutputSha256": "0e5f2a30a2be780cbe4d459a7e3128ef6aa33be0c496c10d87dd8607bce09582",
+    "verifiedAt": "2026-11-28T18:10:09.474Z",
+    "verification": {
+      "passed": true,
+      "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+      "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d",
+      "deploymentId": "2f3db346-4fe7-4dfd-b7e2-c5829a771746",
+      "deploymentUrl": "https://2f3db346.tobacco-road-games-staging.pages.dev",
+      "verifiedAt": "2026-11-28T18:10:24.787Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "dashboardAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    }
+  },
+  "production": {
+    "target": "production",
+    "projectName": "tobacco-road-games",
+    "deploymentId": "8ef0e148-3534-419b-972a-c54f8f9ad878",
+    "deploymentUrl": "https://8ef0e148.tobacco-road-games.pages.dev",
+    "deploymentEnvironment": "Production",
+    "branch": "main",
+    "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+    "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d",
+    "sourceOutputSha256": "34f855605a36c34f6dfda84434ae2dedf19cd70e5f574a6fa9e1a8566bcd330a",
+    "staticOutputSha256": "0e5f2a30a2be780cbe4d459a7e3128ef6aa33be0c496c10d87dd8607bce09582",
+    "verifiedAt": "2026-11-28T18:11:29.901Z",
+    "verification": {
+      "target": "production",
+      "passed": true,
+      "commitSha": "89906701b122571040dc35ad6e47b8628fa68588",
+      "manifestSha256": "84f5d86005c547e38fa3ea225ab6bb799048e5f1bd3223455a2060ae25785d4d",
+      "verifiedAt": "2026-11-28T18:11:44.681Z",
+      "checks": {
+        "registration": true,
+        "immediateLogin": true,
+        "customerAccess": true,
+        "dashboardAccess": true,
+        "logout": true,
+        "signedOutCustomerBlocked": true,
+        "loginAfterLogout": true,
+        "duplicateRegistrationRejected": true,
+        "accountCleanup": true
+      }
+    },
+    "rollbackDeployment": {
+      "deploymentId": "aa48e6f4-55e0-4c37-9010-7fc3fe48f458",
+      "deploymentUrl": "https://aa48e6f4.tobacco-road-games.pages.dev",
+      "branch": "main",
+      "environment": "Production",
+      "source": "cf2eb9a",
+      "capturedAt": "2026-11-28T18:11:01.6148284Z"
+    }
+  },
+  "migrations": [],
+  "completedAt": "2026-11-28T18:12:03.048Z"
+}
