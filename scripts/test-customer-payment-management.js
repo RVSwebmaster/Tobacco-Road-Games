@@ -57,6 +57,7 @@ async function main() {
   assert.equal(calls[0].params.get("metadata[trg_user_id]"), "cust-1");
   assert.equal(calls[0].headers["idempotency-key"], "trg-customer-payment-cust-1");
   assert.equal(calls.find((call) => call.path.endsWith("/billing_portal/configurations")).params.get("features[payment_method_update][enabled]"), "true");
+  assert.match(calls.find((call) => call.path.endsWith("/billing_portal/sessions")).params.get("return_url"), /\/dashboard\/\?page=membership&payment_methods=returned#payment-methods$/);
 
   const listResponse = await handleCustomerPaymentMethods(new Request("https://trg-staging.pages.dev/api/account/payment-methods"), env, options);
   const listing = await listResponse.json();
@@ -66,18 +67,25 @@ async function main() {
   assert.deepEqual(listing.billingAddress, { city: "Raleigh", state: "NC", postal_code: "27601", country: "US" });
 
   let stripeCalls = 0;
+  for (const accountClass of ["creator", "premiumCreator", "founding25", "owner"]) {
+    const inheritedListing = await handleCustomerPaymentMethods(new Request("https://trg-staging.pages.dev/api/account/payment-methods"), env, {
+      ...options, resolveAccess: async () => ({ accountClass }), fetchImpl: async (...args) => { stripeCalls++; return fetchImpl(...args); },
+    });
+    assert.equal(inheritedListing.status, 200, `${accountClass} inherits Customer payment management.`);
+    assert.equal((await inheritedListing.json()).methods.length, 2);
+  }
   const forbidden = await handleCustomerPaymentMethods(portalRequest, env, {
-    ...options, resolveAccess: async () => ({ accountClass: "creator" }), fetchImpl: async () => { stripeCalls++; },
+    ...options, resolveAccess: async () => ({ accountClass: "admin" }), fetchImpl: async () => { stripeCalls++; },
   });
   assert.equal(forbidden.status, 403);
-  assert.equal(stripeCalls, 0, "Creator-class accounts cannot access Customer payment management.");
+  assert.equal(stripeCalls, 8, "Admin remains excluded, and Stripe is never contacted for a forbidden tier.");
 
   const missingKey = await handleCustomerPaymentMethods(new Request("https://trg-staging.pages.dev/api/account/payment-methods/portal", {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ purpose: "payment_methods" }),
   }), { ...env, STRIPE_SECRET_KEY: "sk_live_wrong_mode" }, options);
   assert.equal(missingKey.status, 503, "Staging must fail closed when configured with a live key.");
 
-  const generated = fs.readFileSync("customer-profile/index.html", "utf8");
+  const generated = fs.readFileSync("dashboard/index.html", "utf8");
   assert.match(generated, /id="payment-methods"[\s\S]*?id="purchase-history"/);
   assert.match(generated, /Add, remove or choose a default payment method/);
   assert.match(generated, /data-membership-profile-form/);

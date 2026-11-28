@@ -1,107 +1,204 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Stylesheet cache-bust version: 20261005-homepage-cache-fix1. Bump this value when replacing cached CSS. -->
+  <title>Member Profile | Tobacco Road Games</title>
+  <meta
+    name="description"
+    content="Member profile and personal library for Tobacco Road Games."
+  >
+  <link rel="canonical" href="https://tobaccoroadgames.com/dashboard/">
+  <meta name="theme-color" content="#120c08">
+  <link rel="icon" type="image/png" href="/assets/tobacco-road-games-logo.png?v=20261005-homepage-cache-fix1">
+  <link rel="stylesheet" href="/styles.css?v=20261116-open-rules-spine-title-fit2">
+  <link rel="stylesheet" href="/assets/css/guest-landing.css?v=20261116-guest-examination-close1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Member Dashboard | Tobacco Road Games</title>
-  <link rel="stylesheet" href="/styles.css?v=20261125-profile-plateboard-cache1">
   <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">
-  <link rel="stylesheet" href="/assets/css/member-dashboard.css?v=common-dashboard1">
-  <script src="/assets/js/member-dashboard.js?v=common-dashboard1" defer></script>
-  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge2" defer></script>
+  <link rel="stylesheet" href="/assets/css/customer-membership-dashboard.css?v=customer-membership-dashboard3">
 </head>
-<body class="view-section member-profile-page member-dashboard-page">
+<body class="view-section member-profile-page">
   <div class="page-shell">
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Tobacco Road Games home"><img class="brand__logo" src="/assets/tobacco-road-games-logo.png" alt=""><span class="brand__name">Tobacco Road Games</span></a>
-      <nav class="site-nav" aria-label="Dashboard navigation" data-dashboard-navigation>
-        <a href="/dashboard/" aria-current="page">Overview</a>
-        <a href="/customer-profile/">Profile</a>
-        <a href="/account.html">Account</a>
-        <a href="/store/catalog/">Explore</a>
-      </nav>
-    </header>
-    <main class="member-dashboard" data-member-dashboard>
-      <section class="member-dashboard-furniture" aria-label="Member identity furniture">
-        <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
-          <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games identity cabinet">
-            <picture class="shop-wall-cabinet-art" aria-hidden="true">
-              <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-creator-mobile.png?v=creator-title-board3">
-              <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-creator-tablet.png?v=creator-title-board3">
-              <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-creator-desktop.png?v=creator-title-board3" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
-            </picture>
-            <section class="shop-wall-bay shop-wall-bay--identity" aria-label="Member identity">
-              <div class="shop-wall-identity-space"><h1><span>Tobacco Road</span><span>Games</span></h1></div>
-              <div class="creator-dashboard-identity-overlay" aria-label="Member identity">
-                <img class="creator-dashboard-trg-emblem" src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=creator-title-board1" alt="Tobacco Road Games emblem" fetchpriority="high" decoding="async">
-                <div id="member-identity" class="creator-dashboard-creator-identity" data-member-identity-board hidden>
-                  <img class="creator-dashboard-creator-image" data-member-identity-image alt="" hidden>
-                  <span class="creator-dashboard-creator-initials" data-member-identity-initials hidden aria-hidden="true"></span>
-                  <span class="creator-dashboard-creator-name" data-member-identity-name></span>
-                </div>
-              </div>
-              <img class="member-tier-badge" data-member-tier-badge width="512" height="512" alt="" hidden>
-            </section>
-          </section>
+      <a class="brand" href="#top" aria-label="Tobacco Road Games home">
+        <img class="brand__logo" src="/assets/tobacco-road-games-logo.png?v=20261005-homepage-cache-fix1" alt="Tobacco Road Games logo">
+        <div class="brand__copy">
+          <span class="brand__name">Tobacco Road Games</span>
         </div>
+      </a>
+    <nav class="site-nav" aria-label="Member Profile navigation"><span class="creator-menu-placeholder">Menu</span></nav>
+    </header>
+        <main id="member-profile" class="homepage-shop-wall shelf-storefront guest-landing-page member-profile-shop-wall" data-member-profile-page data-member-dashboard-page aria-labelledby="homepage-shop-wall-heading">
+      <h1 class="member-profile-visually-hidden" data-member-profile-heading>Member Profile</h1>
+      <div class="shop-wall-fixed-cabinet" data-fixed-cabinet>
+      <section class="shop-wall-row shop-wall-row--identity" aria-label="Tobacco Road Games shop wall identity and libraries">
+        <picture class="shop-wall-cabinet-art" aria-hidden="true">
+          <source media="(max-width: 699px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-creator-mobile.png?v=creator-title-board3">
+          <source media="(max-width: 1023px)" srcset="/assets/images/storefront-shelf-dressing/upper-cabinet-creator-tablet.png?v=creator-title-board3">
+          <img src="/assets/images/storefront-shelf-dressing/upper-cabinet-creator-desktop.png?v=creator-title-board3" alt="" width="2904" height="1179" fetchpriority="high" decoding="async" draggable="false">
+        </picture>
+
+        <section class="shop-wall-bay shop-wall-bay--library guest-library-bay creator-dashboard-library-bay" aria-labelledby="your-library-heading" data-member-library-bay>
+          <div class="shop-wall-plaque"><h2 id="your-library-heading">YOUR LIBRARY</h2></div>
+          <div class="shop-wall-shelves shop-wall-shelves--library" aria-label="Your personal library shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-member-library-books></div>
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              <div class="shop-wall-product-row shop-wall-product-row--library shop-wall-product-row--right guest-library-empty-row" data-member-library-books></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="shop-wall-bay shop-wall-bay--identity" aria-labelledby="homepage-shop-wall-heading">
+          <div class="shop-wall-identity-space">
+            <h1 id="homepage-shop-wall-heading"><span>Tobacco Road</span><span>Games</span></h1>
+          </div>
+          <div class="creator-dashboard-identity-overlay" aria-label="Member identity">
+            <img class="creator-dashboard-trg-emblem" src="/assets/images/storefront-shelf-dressing/golden-d20-lantern-logo.png?v=creator-title-board1" alt="Tobacco Road Games emblem" loading="eager" decoding="async">
+            <div id="creator-identity" class="creator-dashboard-creator-identity" data-member-identity-board hidden>
+              <img class="creator-dashboard-creator-image" data-member-identity-image alt="" loading="eager" decoding="async" hidden />
+              <span class="creator-dashboard-creator-initials" data-member-identity-initials hidden aria-hidden="true"></span>
+              <span class="creator-dashboard-creator-name" data-member-identity-name></span>
+            </div>
+          </div>
+          <img class="member-tier-badge" data-member-tier-badge width="512" height="512" alt="" hidden>
+        </section>
+
+        <section class="shop-wall-bay shop-wall-bay--products creator-dashboard-open-rules-bay" aria-labelledby="open-rules-library-heading">
+          <h2 class="shop-wall-heading-hidden" id="open-rules-library-heading">OPEN RULES LIBRARY</h2>
+          <div class="shop-wall-shelves" aria-label="OPEN RULES LIBRARY shelves">
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--upper">
+              <span class="creator-dashboard-open-rules-light-cover" aria-hidden="true"></span>
+              <img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="/assets/the-familiar-framed-poster.png" alt="Framed The Familiar poster on the Open Rules Library back wall" loading="eager" decoding="async" draggable="false"><span class="creator-dashboard-open-rules-light-overlay" aria-hidden="true"></span>
+              <div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" aria-hidden="true">
+
+              </div>
+            </div>
+            <div class="shop-wall-shelf-level shop-wall-shelf-level--lower">
+              <div class="shop-wall-product-row shop-wall-product-row--library guest-open-rules-row" aria-hidden="true">
+
+              </div>
+            </div>
+          </div>
+        </section>
+        <span class="shop-wall-shelf-fixtures" aria-hidden="true"><span></span><span></span><span></span></span>
       </section>
-      <p class="member-dashboard-status" data-dashboard-status role="status" aria-live="polite">Loading your dashboard…</p>
-      <nav class="member-dashboard-pages" data-dashboard-pages aria-label="Dashboard pages">
-        <a href="/dashboard/" aria-current="page">Overview</a>
-      </nav>
-      <div class="member-dashboard-grid">
-        <section class="member-dashboard-panel" id="personal-information" aria-labelledby="personal-information-heading">
-          <h2 id="personal-information-heading">Personal Information</h2>
-          <dl class="member-dashboard-details">
-            <div><dt>Display name</dt><dd data-dashboard-display-name>Loading…</dd></div>
-            <div><dt>Real name</dt><dd data-dashboard-real-name>Loading…</dd></div>
-            <div><dt>Email</dt><dd data-dashboard-email>Loading…</dd></div>
-            <div><dt>Billing</dt><dd data-dashboard-billing>Loading…</dd></div>
-          </dl>
-          <a href="/account.html#account-profile-panel">Manage account details</a>
-        </section>
-        <section class="member-dashboard-panel" id="account-security" aria-labelledby="account-security-heading">
-          <h2 id="account-security-heading">Account Security</h2>
-          <p>Password recovery email is currently disabled.</p>
-          <p class="member-dashboard-note">Active session review and sign-out-all-devices are not connected yet.</p>
-          <a href="/account.html#signout-button">Sign out</a>
-        </section>
-        <section class="member-dashboard-panel" id="purchases" aria-labelledby="purchases-heading">
-          <h2 id="purchases-heading">Purchases</h2>
-          <p>Order details and available downloads appear in your library.</p>
-          <p class="member-dashboard-note">Standalone receipts and purchase support tools are not connected yet.</p>
-          <a href="/account.html#library-panel">View purchase history</a>
-          <a href="/support.html">Purchase support</a>
-        </section>
-        <section class="member-dashboard-panel" id="personal-library" aria-labelledby="personal-library-heading">
-          <h2 id="personal-library-heading">Personal Library</h2>
-          <p data-dashboard-library-status>Loading purchased titles…</p>
-          <ul data-dashboard-library></ul>
-          <a href="/account.html#library-panel">Manage downloads and product updates</a>
-        </section>
-        <section class="member-dashboard-panel" id="favorite-creators" aria-labelledby="favorite-creators-heading">
-          <h2 id="favorite-creators-heading">Favorite Creators</h2>
-          <p>Followed Creators will appear here.</p>
-          <p class="member-dashboard-note">Following and unfollowing are not connected yet.</p>
-        </section>
-        <section class="member-dashboard-panel" id="preferences" aria-labelledby="preferences-heading">
-          <h2 id="preferences-heading">Preferences</h2>
-          <p class="member-dashboard-note">Communication, accessibility, and announcement preferences are not connected yet.</p>
-          <a href="/account.html#account-profile-panel">Account notice setting</a>
-        </section>
-        <section class="member-dashboard-panel" id="membership-information" aria-labelledby="membership-information-heading">
-          <h2 id="membership-information-heading">Membership Information</h2>
-          <dl class="member-dashboard-details">
-            <div><dt>Membership tier</dt><dd data-dashboard-tier>Loading…</dd></div>
-            <div><dt>Status</dt><dd data-dashboard-member-status>Loading…</dd></div>
-            <div><dt>Joined</dt><dd data-dashboard-joined>Loading…</dd></div>
-          </dl>
-          <p class="member-dashboard-note">Membership upgrade options will be shown here when available.</p>
-        </section>
       </div>
+
+
+    <p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>
     </main>
-  </div>
-  <script src="/assets/js/progressive-navigation.js?v=20261128-common-dashboard1" defer></script>
+      <section class="customer-membership-dashboard" data-customer-membership aria-labelledby="customer-membership-heading">
+        <nav class="customer-membership-tabs" aria-label="Dashboard pages" data-dashboard-tabs>
+          <a href="/dashboard/?page=membership" data-dashboard-tab="membership" aria-current="page">Membership</a>
+        </nav>
+        <section class="customer-membership-ledger" id="membership" data-dashboard-workspace="membership">
+          <h1 id="customer-membership-heading">Membership</h1>
+          <p class="customer-membership-status" data-membership-status role="status" aria-live="polite">Loading your membership information…</p>
+          <div class="customer-membership-columns">
+            <div class="customer-membership-column">
+              <section class="customer-membership-section" id="personal-information" aria-labelledby="personal-information-heading">
+                <h2 id="personal-information-heading">Personal Information</h2>
+                <div class="customer-membership-avatar"><img data-membership-avatar alt="" hidden><span data-membership-avatar-empty>Profile image not provided.</span></div>
+                <dl class="customer-membership-details">
+                  <div><dt>Display name</dt><dd data-membership-display-name>Loading…</dd></div>
+                  <div><dt>Real name</dt><dd data-membership-real-name>Loading…</dd></div>
+                  <div><dt>Email address</dt><dd data-membership-email>Loading…</dd></div>
+                  <div><dt>Billing information</dt><dd><a href="#payment-methods" data-membership-billing-summary>Open Payment Methods</a></dd></div>
+                </dl>
+                <details class="customer-membership-disclosure" id="account-profile-settings" data-account-profile-settings>
+                  <summary>Edit personal information</summary>
+                  <form class="customer-membership-form" data-membership-profile-form>
+                    <label>Real/legal name <input name="legalName" maxlength="160" autocomplete="name"></label>
+                    <label>Birthday (optional) <input name="birthday" type="date" autocomplete="bday"></label>
+                    <label>Phone (optional) <input name="phone" maxlength="40" autocomplete="tel"></label>
+                    <label>Public display name (optional) <input name="displayName" maxlength="80"></label>
+                    <label>Profile image URL (optional) <input name="avatarUrl" type="url" inputmode="url"></label>
+                    <label class="customer-membership-check"><input name="accountNotices" type="checkbox"> Receive account notices</label>
+                    <button type="submit" class="customer-membership-action">Save account information</button>
+                  </form>
+                  <p class="customer-membership-inline-status" data-profile-save-status role="status" aria-live="polite"></p>
+                </details>
+              </section>
+              <section class="customer-membership-section" id="account-security" aria-labelledby="account-security-heading">
+                <h2 id="account-security-heading">Account Security</h2>
+                <p>Password changes are not available yet. Email password recovery is currently disabled.</p>
+                <p>Session management is not connected yet.</p>
+                <button type="button" class="customer-membership-action" data-membership-signout>Sign out</button>
+              </section>
+              <section class="customer-membership-section" id="payment-methods" aria-labelledby="payment-methods-heading">
+                <h2 id="payment-methods-heading">Payment Methods</h2>
+                <p data-payment-methods-status>Checking saved Customer payment methods…</p>
+                <ul class="customer-membership-payment-list" data-membership-payment-methods></ul>
+                <p data-membership-billing-address>Billing address is managed securely with Stripe.</p>
+                <div class="customer-membership-actions">
+                  <button type="button" class="customer-membership-action" data-payment-method-portal="payment_methods">Add, remove or choose a default payment method</button>
+                  <button type="button" class="customer-membership-action" data-payment-method-portal="billing_address">Manage billing address</button>
+                </div>
+                <p class="customer-membership-inline-status" data-payment-methods-feedback role="status" aria-live="polite"></p>
+                <p class="customer-membership-note">Saving a payment method is optional. Purchases can be made without retaining payment information. Card details stay with Stripe.</p>
+              </section>
+              <section class="customer-membership-section" id="purchase-history" aria-labelledby="purchase-history-heading">
+                <h2 id="purchase-history-heading">Purchase History</h2>
+                <p>Order history, complete transaction details, and receipts are not connected to the Dashboard yet.</p>
+                <a href="#personal-library">View purchased products in Personal Library</a>
+              </section>
+              <section class="customer-membership-section" id="personal-library" aria-labelledby="personal-library-heading">
+                <h2 id="personal-library-heading">Personal Library</h2>
+                <p data-membership-library-status>Loading your library…</p>
+                <ul data-membership-library></ul>
+                <p>Available downloads and product update notices appear with each purchased product.</p>
+              </section>
+            </div>
+            <div class="customer-membership-column">
+              <section class="customer-membership-section" id="favorite-creators" aria-labelledby="favorite-creators-heading">
+                <h2 id="favorite-creators-heading">Favorite Creators</h2>
+                <p>Followed Creators will appear here when following is available.</p>
+                <p>Follow and unfollow controls are not connected yet.</p>
+              </section>
+              <section class="customer-membership-section" id="customer-support" aria-labelledby="customer-support-heading">
+                <h2 id="customer-support-heading">Customer Support</h2>
+                <p>For delivery or refund requests, follow the support contact route in your order confirmation.</p>
+                <a href="/support.html">Read order support information</a>
+              </section>
+              <section class="customer-membership-section" id="preferences" aria-labelledby="preferences-heading">
+                <h2 id="preferences-heading">Preferences</h2>
+                <p>Account notices: <span data-membership-notices>Loading…</span></p>
+                <p>Accessibility preferences are not available yet.</p>
+                <button type="button" class="customer-membership-action" data-open-account-profile>Adjust communication preferences</button>
+              </section>
+              <section class="customer-membership-section" id="membership-information" aria-labelledby="membership-information-heading">
+                <h2 id="membership-information-heading">Membership Information</h2>
+                <dl class="customer-membership-details">
+                  <div><dt>Membership status</dt><dd data-membership-status-value>Loading…</dd></div>
+                  <div><dt>Date joined</dt><dd data-membership-joined>Loading…</dd></div>
+                </dl>
+                <button type="button" class="customer-membership-action" data-open-account-profile>Manage account information</button>
+              </section>
+              <section class="customer-membership-section" id="trg-announcements" aria-labelledby="trg-announcements-heading">
+                <h2 id="trg-announcements-heading">TRG Announcements</h2>
+                <p>Membership announcements and surveys will appear here when available.</p>
+                <p>Member opinion requests are not connected yet.</p>
+              </section>
+            </div>
+          </div>
+        </section>
+        <section class="customer-membership-ledger customer-membership-placeholder" data-dashboard-workspace-placeholder hidden>
+          <h1 data-dashboard-placeholder-heading></h1>
+          <p data-dashboard-placeholder-copy></p>
+          <p data-creator-tools-link hidden><a href="/creator-tools/">Open Creator tools</a></p>
+        </section>
+      </section>
+    </div>
+  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>
+  <script src="/assets/js/open-rules-library.js?v=shared-open-rules6" defer></script>
+  <script src="/assets/js/homepage-shelves.js?v=creator-open-rules7" defer></script>
+  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>
+  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>
+  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge2" defer></script>
+  <script src="/assets/js/account-profile-editor.js?v=customer-membership-dashboard3" defer></script>
+  <script src="/assets/js/customer-membership-dashboard.js?v=customer-membership-dashboard3" defer></script>
 </body>
 </html>

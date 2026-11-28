@@ -13,7 +13,7 @@ export const publicRootFiles = Object.freeze([
 ]);
 
 export const publicDirectories = Object.freeze([
-  "assets", "authors", "admin-profile", "creator", "creator-dashboard", "creators", "customer-profile", "dashboard", "data", "founding-25-profile", "guest", "launch-week", "media", "owner-profile", "premium-creator-profile",
+  "assets", "authors", "admin-profile", "creator", "creator-tools", "creators", "customer-profile", "dashboard", "data", "founding-25-profile", "guest", "launch-week", "media", "owner-profile", "premium-creator-profile",
   "office", "owner", "shared", "store",
 ]);
 

@@ -4,7 +4,8 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
-const customer = read("customer-profile/index.html");
+const dashboard = read("dashboard/index.html");
+const customerProfile = read("customer-profile/index.html");
 const runtime = read("assets/js/customer-membership-dashboard.js");
 const css = read("assets/css/customer-membership-dashboard.css");
 const middleware = read("functions/_middleware.js");
@@ -15,18 +16,19 @@ const pageNames = [
   "personal-information", "account-security", "purchase-history", "personal-library",
   "favorite-creators", "customer-support", "preferences", "membership-information", "trg-announcements"
 ];
-const membershipPage = customer.match(/<section class="customer-membership-dashboard"[\s\S]*?<\/section>\s*<\/section>/)?.[0] || "";
+const membershipPage = dashboard.match(/<section class="customer-membership-dashboard"[\s\S]*?<\/section>\s*<\/section>/)?.[0] || "";
 
-assert.ok(membershipPage, "Customer Profile contains a Membership workspace below the existing Profile frontage.");
-assert.match(customer, /customer-membership-dashboard\.css\?v=customer-membership-dashboard2/);
-assert.match(customer, /customer-membership-dashboard\.js\?v=customer-membership-dashboard2/);
-assert.match(customer, /data-member-identity-board/);
-assert.match(customer, /data-member-tier-badge/);
-assert.match(customer, /upper-cabinet-creator-desktop\.png\?v=creator-title-board3/);
-assert.match(customer, /upper-cabinet-creator-tablet\.png\?v=creator-title-board3/);
-assert.match(customer, /upper-cabinet-creator-mobile\.png\?v=creator-title-board3/);
-assert.match(membershipPage, /<a href="\/customer-profile\/#membership" aria-current="page">Membership<\/a>/);
-assert.equal((membershipPage.match(/aria-current="page"/g) || []).length, 1, "Customer sees Membership as the single selected page tab.");
+assert.ok(membershipPage, "The shared Dashboard route contains the reusable Membership workspace.");
+assert.match(dashboard, /customer-membership-dashboard\.css\?v=customer-membership-dashboard3/);
+assert.match(dashboard, /customer-membership-dashboard\.js\?v=customer-membership-dashboard3/);
+assert.match(dashboard, /data-member-dashboard-page/);
+assert.match(dashboard, /data-member-identity-board/);
+assert.match(dashboard, /data-member-tier-badge/);
+assert.match(dashboard, /upper-cabinet-creator-desktop\.png\?v=creator-title-board3/);
+assert.match(dashboard, /upper-cabinet-creator-tablet\.png\?v=creator-title-board3/);
+assert.match(dashboard, /upper-cabinet-creator-mobile\.png\?v=creator-title-board3/);
+assert.match(membershipPage, /data-dashboard-tab="membership"/);
+assert.equal((membershipPage.match(/aria-current="page"/g) || []).length, 1, "Membership is the sole server-rendered default tab before tier state loads.");
 for (const section of pageNames) assert.match(membershipPage, new RegExp(`id="${section}"`), `Missing Customer Membership section ${section}.`);
 for (const selector of [
   "[data-membership-display-name]", "[data-membership-real-name]", "[data-membership-email]",
@@ -51,6 +53,8 @@ assert.match(runtime, /requestJson\("\/api\/account\/me"/);
 assert.match(runtime, /requestJson\("\/api\/account\/profile"/);
 assert.match(runtime, /requestJson\("\/api\/account\/library"/);
 assert.match(runtime, /requestJson\("\/api\/account\/payment-methods"/);
+assert.match(runtime, /history\.pushState/);
+assert.match(runtime, /showWorkspace\(key, member, allowed, tabs\)/);
 assert.match(runtime, /Payment management is unavailable right now/);
 assert.match(runtime, /data-payment-method-portal.*button\.disabled = true|button\.disabled = true/);
 assert.match(runtime, /requestJson\("\/api\/auth\/logout"/);
@@ -59,17 +63,24 @@ assert.match(runtime, /item\.currentLastUpdated !== item\.purchasedLastUpdated/)
 assert.match(css, /background: #f5eedc/);
 assert.match(css, /grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\)/);
 assert.match(css, /@media \(max-width: 760px\)/);
-assert.match(middleware, /isCustomerMembershipDashboard\(pathname\)/);
-assert.match(middleware, /membership\.accountClass !== "customer"/);
-assert.match(middleware, /membership\.accountClass === "customer"/);
+assert.match(middleware, /dashboardTierAtLeast\(membership\.accountClass, pageTiers\[page\]\)/);
+assert.match(middleware, /isLegacyCreatorDashboard\(pathname\)/);
+assert.match(middleware, /isCreatorTools\(pathname\)/);
 assert.ok(functionRoutes.include.includes("/customer-profile/*"), "Pages Functions must invoke access middleware for the Customer Profile workspace.");
-assert.ok(functionRoutes.include.includes("/dashboard/*"), "Pages Functions must route the legacy Dashboard through Customer redirection.");
-assert.match(navigation, /dashboard\.href = signedInCustomer \? "\/customer-profile\/" : "\/dashboard\/"/);
-assert.match(builder, /canonicalPath === "\/customer-profile\/"/);
+assert.ok(functionRoutes.include.includes("/dashboard/*"), "Pages Functions must protect the shared Dashboard.");
+assert.ok(functionRoutes.include.includes("/creator-dashboard/*"), "Pages Functions must intercept the retired Creator Dashboard route.");
+assert.ok(functionRoutes.include.includes("/creator-tools/*"), "Pages Functions must protect preserved Creator tools.");
+assert.match(navigation, /dashboard\.href = "\/dashboard\/"/);
+assert.match(builder, /dashboardEnabled: true/);
+assert.doesNotMatch(customerProfile, /data-customer-membership|customer-membership-dashboard/,
+  "The membership Profile remains separate from the private Dashboard workspace.");
+for (const profileFile of ["customer-profile/index.html", "creator/index.html", "founding-25-profile/index.html", "premium-creator-profile/index.html", "owner-profile/index.html"]) {
+  assert.match(read(profileFile), /data-member-dashboard-link/, `${profileFile} links to the shared Dashboard.`);
+}
 
 for (const profileFile of ["creator/index.html", "founding-25-profile/index.html", "premium-creator-profile/index.html", "owner-profile/index.html", "admin-profile/index.html"]) {
   assert.doesNotMatch(read(profileFile), /data-customer-membership|customer-membership-dashboard/,
-    `${profileFile} remains unchanged and receives no Customer-only Dashboard workspace.`);
+    `${profileFile} remains a membership Profile rather than a competing Dashboard.`);
 }
 const creatorDashboard = read("creator-dashboard/index.html");
 assert.doesNotMatch(creatorDashboard, /data-customer-membership|customer-membership-dashboard/,

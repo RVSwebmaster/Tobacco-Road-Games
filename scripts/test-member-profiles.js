@@ -55,12 +55,8 @@ const pages = expectedRoutes.map(([accountClass, route, file], index) => {
   return page;
 });
 
-const normalizeProfileMarkup = (page) => page
-  .replace(/<link rel="canonical" href="[^"]+">/, "<link rel=canonical>")
-  .replace(/<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster" src="\/assets\/the-familiar-framed-poster\.png"[\s\S]*?draggable="false">(?:<img class="shop-wall-back-wall-art shop-wall-back-wall-art--right creator-dashboard-open-rules-poster creator-profile-catalog-cover"[\s\S]*?draggable="false">)?/, "<img class=shared-profile-frame src=/assets/the-familiar-framed-poster.png>")
-  .replace(/\s*<script src="\/assets\/js\/creator-profile-catalog-rotation\.js\?v=[^"]+" defer><\/script>/, "");
-assert.ok(pages.slice(4).every((page) => normalizeProfileMarkup(page) === normalizeProfileMarkup(pages[4])),
-  "Admin and Owner Profiles retain their existing shared markup, furniture, stylesheets, and identity behavior.");
+assert.doesNotMatch(pages[4], /data-member-dashboard-link/, "Admin does not receive membership Dashboard navigation.");
+assert.match(pages[5], /data-member-dashboard-link/, "Owner receives the inherited membership Dashboard link.");
 
 const customerProfile = pages[0];
 const customerMain = customerProfile.match(/<main id="member-profile"[\s\S]*?<\/main>/)?.[0] || "";

@@ -25,18 +25,20 @@ async function main() {
       assert.ok(fs.existsSync(path.join(outputDirectory, relativePath)), `missing public directory: ${relativePath}`);
     }
     const redirects = fs.readFileSync(path.join(outputDirectory, "_redirects"), "utf8");
-    assert.match(redirects, /^\/temp-creator\/ \/creator-dashboard\/ 301\s*$/m, "The former temporary Dashboard URL must resolve to the canonical route.");
-    assert.doesNotMatch(redirects, /^\/creator-dashboard\/ \/temp-creator\//m, "The canonical Dashboard route must not redirect back to the temporary URL.");
+    assert.match(redirects, /^\/temp-creator\/ \/creator-dashboard\/ 301\s*$/m, "The former temporary Creator route must resolve through the protected legacy alias.");
+    assert.doesNotMatch(redirects, /^\/creator-dashboard\/ \/temp-creator\//m, "The legacy Creator route must not redirect back to the temporary URL.");
     assert.equal(builder.publicDirectories.includes("temp-creator"), false, "The retired temporary Dashboard directory must not be published.");
-    const creatorDashboard = fs.readFileSync(path.join(outputDirectory, "creator-dashboard", "index.html"), "utf8");
-    assert.match(creatorDashboard, /creator-dashboard\.js\?v=/, "Creator Dashboard runtime is missing from its actual route.");
-    assert.match(creatorDashboard, /id="creator-pdf-intake"/, "Creator PDF Intake is missing from the Dashboard.");
-    assert.match(creatorDashboard, /creator-dashboard-shop-wall/, "Accepted Creator furniture is missing from the Dashboard.");
-    assert.match(creatorDashboard, /upper-cabinet-creator-desktop\.png/, "Creator furniture must use its approved responsive cabinet artwork.");
-    assert.doesNotMatch(creatorDashboard, /creator-connect-dashboard|Open Stripe Express Dashboard/, "Shelved Stripe Express Dashboard UI must not be activated by route reconciliation.");
+    assert.equal(builder.publicDirectories.includes("creator-dashboard"), false, "The retired standalone Creator Dashboard must not be published.");
+    const creatorTools = fs.readFileSync(path.join(outputDirectory, "creator-tools", "index.html"), "utf8");
+    assert.match(creatorTools, /creator-dashboard\.js\?v=/, "Existing Creator tools runtime is missing from its preserved route.");
+    assert.match(creatorTools, /id="creator-pdf-intake"/, "Existing Creator tools remain available.");
+    assert.match(creatorTools, /creator-dashboard-shop-wall/, "Creator tools retain their approved furniture.");
+    assert.match(creatorTools, /upper-cabinet-creator-desktop\.png/, "Creator tools use their approved responsive cabinet artwork.");
+    assert.doesNotMatch(creatorTools, /creator-connect-dashboard|Open Stripe Express Dashboard/, "Shelved Stripe Express Dashboard UI must not be activated by route reconciliation.");
     const creatorProfile = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
     assert.match(creatorProfile, /<title>Member Profile \| Tobacco Road Games<\/title>/, "The /creator/ route must be the shared Creator Profile.");
     assert.match(creatorProfile, /data-member-profile-page/);
+    assert.match(creatorProfile, /data-member-dashboard-link/, "Creator Profile links into the shared Dashboard.");
     assert.doesNotMatch(creatorProfile, /id="creator-pdf-intake"/, "Creator publishing controls belong on the Dashboard, not the Profile.");
     for (const relativePath of builder.excludedPublicFiles) {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `excluded file was copied: ${relativePath}`);
@@ -48,7 +50,9 @@ async function main() {
     const generatedCustomer = fs.readFileSync(path.join(outputDirectory, "customer.html"), "utf8");
     assert.match(generatedCustomer, /data-customer-storefront/);
     assert.match(generatedCustomer, /data-progressive-navigation/);
-    assert.ok(fs.existsSync(path.join(outputDirectory, "dashboard", "index.html")), "Pages output includes the Common Membership Dashboard.");
+    const dashboard = fs.readFileSync(path.join(outputDirectory, "dashboard", "index.html"), "utf8");
+    assert.match(dashboard, /data-customer-membership/, "Pages output includes the single shared Common Membership workspace.");
+    assert.match(dashboard, /data-dashboard-tabs/, "Pages output includes the shared tier tab architecture.");
     assert.match(generatedCustomer, /data-homepage-library/);
     assert.doesNotMatch(generatedCustomer, /href="\/account\.html">Login\/Signup/);
     const section = (page, pattern) => page.match(pattern)?.[0] || "";

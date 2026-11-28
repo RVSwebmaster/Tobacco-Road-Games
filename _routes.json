@@ -4,6 +4,8 @@
     "/office/*",
     "/owner/*",
     "/creator/*",
+    "/creator-dashboard/*",
+    "/creator-tools/*",
     "/customer",
     "/customer/",
     "/customer.html",

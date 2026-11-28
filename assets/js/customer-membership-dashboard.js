@@ -31,6 +31,7 @@
     if (!me?.authenticated || !me.user) { location.replace("/account.html"); return; }
     csrfToken = me.csrfToken || "";
     const member = me.user;
+    renderDashboardPage(member);
     const privateUser = profile?.user || {};
     setText("[data-membership-display-name]", member.displayName);
     setText("[data-membership-real-name]", privateUser.legalName);
@@ -47,6 +48,61 @@
     attachPortalControls();
     await loadPaymentMethods(new URLSearchParams(location.search).has("payment_methods"));
     if (status) status.textContent = "Your Customer membership information is up to date.";
+  }
+
+  function renderDashboardPage(member) {
+    const tiers = ["customer", "creator", "premiumCreator", "founding25", "owner"];
+    const pages = [
+      ["membership", "Membership", "customer"],
+      ["creator", "Creator", "creator"],
+      ["premier", "Premier", "premiumCreator"],
+      ["founding-25", "Founding-25", "founding25"],
+      ["owner", "Owner", "owner"],
+    ];
+    const currentTier = tiers.indexOf(member.accountClass);
+    const allowed = pages.filter(([, , tier]) => currentTier >= tiers.indexOf(tier));
+    const tabs = root.querySelector("[data-dashboard-tabs]");
+    const selectedPage = () => new URLSearchParams(location.search).get("page") || "membership";
+    if (tabs) tabs.replaceChildren(...allowed.map(([key, label]) => {
+      const link = document.createElement("a");
+      link.href = `/dashboard/?page=${encodeURIComponent(key)}`;
+      link.dataset.dashboardTab = key;
+      link.textContent = label;
+      if (selectedPage() === key) link.setAttribute("aria-current", "page");
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        history.pushState({}, "", link.href);
+        showWorkspace(key, member, allowed, tabs);
+      });
+      tabs.append(link);
+      return link;
+    }));
+
+    const showCurrentPage = () => showWorkspace(selectedPage(), member, allowed, tabs);
+    window.addEventListener("popstate", showCurrentPage);
+    showCurrentPage();
+  }
+
+  function showWorkspace(selected, member, allowed, tabs) {
+    const pageKey = allowed.some(([key]) => key === selected) ? selected : "membership";
+    if (tabs) tabs.querySelectorAll("[data-dashboard-tab]").forEach((link) => {
+      if (link.dataset.dashboardTab === pageKey) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    const membershipPage = pageKey === "membership";
+    const ledger = root.querySelector('[data-dashboard-workspace="membership"]');
+    const placeholder = root.querySelector("[data-dashboard-workspace-placeholder]");
+    if (ledger) ledger.hidden = !membershipPage;
+    if (placeholder) placeholder.hidden = membershipPage;
+    if (placeholder && !membershipPage) {
+      const page = allowed.find(([key]) => key === pageKey);
+      const heading = placeholder.querySelector("[data-dashboard-placeholder-heading]");
+      const copy = placeholder.querySelector("[data-dashboard-placeholder-copy]");
+      if (heading) heading.textContent = page?.[1] || "Dashboard";
+      if (copy) copy.textContent = `${page?.[1] || "This"} workspace will be added in a later membership Dashboard layer.`;
+      const creatorToolsLink = placeholder.querySelector("[data-creator-tools-link]");
+      if (creatorToolsLink) creatorToolsLink.hidden = !(pageKey === "creator" && member.creatorDashboardAvailable === true);
+    }
   }
 
   async function loadPaymentMethods(returned = false) {

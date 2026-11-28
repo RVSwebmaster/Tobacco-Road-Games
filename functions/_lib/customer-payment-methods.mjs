@@ -9,7 +9,9 @@ export async function handleCustomerPaymentMethods(request, env = {}, options = 
   const session = await (options.getSession || getCustomerSessionFromRequest)(request, env, options.sessionOptions || {});
   if (!session.valid) return json({ error: { message: "Sign in to manage payment methods." } }, 401);
   const access = await (options.resolveAccess || resolveMemberProfileAccess)(options.database || env.TRG_ORDERS, session.user);
-  if (access.accountClass !== "customer") return json({ error: { message: "Customer payment settings are unavailable for this account." } }, 403);
+  if (!["customer", "creator", "premiumCreator", "founding25", "owner"].includes(access.accountClass)) {
+    return json({ error: { message: "Membership payment settings are unavailable for this account." } }, 403);
+  }
   if (request.method === "GET") return readPaymentMethods(env, session.user, options);
   if (request.method !== "POST") return json({ error: { message: "Use GET or POST." } }, 405);
   if (!(options.validateOrigin || validateSameOriginRequest)(request) || !(await (options.validateCsrf || validateSessionCsrf)(request, session)).valid) {
@@ -34,7 +36,7 @@ export async function handleCustomerPaymentMethods(request, env = {}, options = 
       row = { stripe_customer_reference: customer.id };
     }
     const config = await getPortalConfiguration(db, key, livemode, { ...options, publicSiteOrigin: env.PUBLIC_SITE_ORIGIN || options.publicSiteOrigin });
-    const params = new URLSearchParams({ customer: row.stripe_customer_reference, configuration: config, return_url: `${new URL(request.url).origin}/customer-profile/?payment_methods=returned#payment-methods` });
+    const params = new URLSearchParams({ customer: row.stripe_customer_reference, configuration: config, return_url: `${new URL(request.url).origin}/dashboard/?page=membership&payment_methods=returned#payment-methods` });
     params.set("flow_data[type]", purpose === "billing_address" ? "customer_update" : "payment_method_update");
     const portal = await stripe(key, "billing_portal/sessions", params, `trg-customer-portal-${session.user.id}-${purpose}-${options.nowMs || Date.now()}`, options.fetchImpl);
     if (portal.livemode !== livemode || typeof portal.url !== "string" || !portal.url.startsWith("https://billing.stripe.com/")) throw new Error("Stripe portal response invalid");

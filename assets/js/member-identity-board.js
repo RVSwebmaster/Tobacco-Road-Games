@@ -11,7 +11,7 @@
     ["admin", "admin.png"],
     ["owner", "owner.png"],
   ]);
-  const creatorDashboardLink = document.querySelector("[data-creator-dashboard-link]");
+  const memberDashboardLink = document.querySelector("[data-member-dashboard-link]");
   const defaultTitle = document.title;
 
   function initialsFor(displayName) {
@@ -98,7 +98,7 @@
         document.title = defaultTitle;
         if (profileHeading) profileHeading.textContent = "Member Profile";
       }
-      if (creatorDashboardLink) creatorDashboardLink.hidden = true;
+      if (memberDashboardLink) memberDashboardLink.hidden = true;
     }
 
     function showInitials(displayName) {
@@ -149,13 +149,15 @@
         board.setAttribute("aria-label", `${accountClassLabel} identity`);
         if (profilePage) {
           document.title = `${accountClassLabel} Profile | Tobacco Road Games`;
-          if (profileHeading) profileHeading.textContent = `${accountClassLabel} Profile`;
+        if (profileHeading) profileHeading.textContent = `${accountClassLabel} Profile`;
+        if (profilePage.hasAttribute("data-member-dashboard-page")) {
+          document.title = `${accountClassLabel} Dashboard | Tobacco Road Games`;
+          if (profileHeading) profileHeading.textContent = `${accountClassLabel} Dashboard`;
         }
-        if (creatorDashboardLink) {
-          creatorDashboardLink.hidden = !(
-            member.creatorDashboardAvailable === true &&
-            ["creator", "founding25", "premiumCreator"].includes(accountClass)
-          );
+        }
+        if (memberDashboardLink) {
+          memberDashboardLink.hidden = !["customer", "creator", "premiumCreator", "founding25", "owner"].includes(accountClass);
+          if (accountClass === "owner") memberDashboardLink.hidden = false;
         }
         board.hidden = false;
         const imageUrl = String(member.avatarUrl || "").trim();

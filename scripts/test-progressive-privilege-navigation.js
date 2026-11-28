@@ -12,6 +12,9 @@ async function main() {
   const ownerAccess = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "owner-access-identity.mjs")).href);
   const ownerBootstrap = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "owner-session-bootstrap.mjs")).href);
 
+  const dashboardNavigation = fs.readFileSync(path.join(ROOT, "assets", "js", "progressive-navigation.js"), "utf8");
+  assert.match(dashboardNavigation, /state\.levels\.includes\("customer"\) && \(!state\.levels\.includes\("admin"\) \|\| state\.levels\.includes\("owner"\)\)/,
+    "Owner receives Dashboard navigation while the excluded Admin role does not.");
   assertMatrix(navigation.buildProgressiveNavigation);
   assertPublicHeaders(navigation.renderPublicNavigation);
   await assertOwnerAccess(ownerAccess.verifyOwnerAccessIdentity);
@@ -32,6 +35,7 @@ async function assertCreatorSessionBootstrapBehavior() {
     + "\nglobalThis.trgOnRequest = onRequest;";
   const bootstrappedPaths = [];
   let accountClass = "customer";
+  let creatorDashboardAvailable = false;
   let sessionValid = true;
   const sandbox = {
     URL,
@@ -45,7 +49,7 @@ async function assertCreatorSessionBootstrapBehavior() {
     isPublicStorePage: () => false,
     maintenanceResponse: () => new Response("maintenance"),
     getCustomerSessionFromRequest: async () => ({ valid: sessionValid, user: { id: "test-user", role: "user" } }),
-    resolveMemberProfileAccess: async () => ({ accountClass }),
+    resolveMemberProfileAccess: async () => ({ accountClass, creatorDashboardAvailable }),
     attachOwnerSessionForDocument: async (response, request) => {
       const pathname = new URL(request.url).pathname;
       bootstrappedPaths.push(pathname);
@@ -87,15 +91,44 @@ async function assertCreatorSessionBootstrapBehavior() {
     "Other membership classes stay on their existing Profile routes.");
   accountClass = "customer";
   membershipResponse = await nextText("/dashboard/");
+  assert.equal(membershipResponse.status, 200, "Customer opens the shared Membership Dashboard.");
+  membershipResponse = await nextText("/dashboard/?page=creator");
+  assert.equal(membershipResponse.status, 403, "Customer cannot request a Creator workspace.");
+  for (const [tier, allowedPages] of [
+    ["creator", ["membership", "creator"]],
+    ["premiumCreator", ["membership", "creator", "premier"]],
+    ["founding25", ["membership", "creator", "premier", "founding-25"]],
+    ["owner", ["membership", "creator", "premier", "founding-25", "owner"]],
+  ]) {
+    accountClass = tier;
+    for (const page of allowedPages) {
+      membershipResponse = await nextText(`/dashboard/?page=${page}`);
+      assert.equal(membershipResponse.status, 200, `${tier} can access ${page}.`);
+    }
+    const nextPage = ["creator", "premier", "founding-25", "owner"][allowedPages.length - 1];
+    if (nextPage) {
+      membershipResponse = await nextText(`/dashboard/?page=${nextPage}`);
+      if (!allowedPages.includes(nextPage)) assert.equal(membershipResponse.status, 403, `${tier} cannot access ${nextPage}.`);
+    }
+  }
+  accountClass = "creator";
+  membershipResponse = await nextText("/creator-dashboard/");
   assert.equal(membershipResponse.status, 302);
-  assert.equal(new URL(membershipResponse.headers.get("location")).pathname, "/customer-profile/",
-    "Customer accounts resolve the previous standalone Dashboard route to their Profile.");
+  assert.equal(new URL(membershipResponse.headers.get("location")).searchParams.get("page"), "creator",
+    "The retired Creator Dashboard URL forwards into the shared Creator tab.");
+  creatorDashboardAvailable = true;
+  membershipResponse = await nextText("/creator-tools/");
+  assert.equal(membershipResponse.status, 200, "Existing Creator operations remain available through their preserved tools route.");
+  accountClass = "admin";
+  membershipResponse = await nextText("/dashboard/");
+  assert.equal(membershipResponse.status, 403, "Admin remains outside the membership Dashboard hierarchy.");
+  accountClass = "customer";
   sessionValid = false;
   membershipResponse = await nextText("/customer-profile/");
   assert.equal(membershipResponse.status, 302);
   assert.equal(new URL(membershipResponse.headers.get("location")).pathname, "/account.html",
     "Signed-out visitors cannot open the private Customer Membership workspace.");
-  assert.deepEqual(bootstrappedPaths, ["/creator/"], "Only the Creator Profile request invoked the bootstrap in this check.");
+  assert.deepEqual(bootstrappedPaths, ["/creator/", "/creator-tools/"], "Creator Profile and protected Creator tools use the established identity bootstrap.");
 }
 
 async function assertOwnerDocumentBootstrap(attach) {

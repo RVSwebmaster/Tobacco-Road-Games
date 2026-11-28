@@ -29,28 +29,27 @@
   function renderNavigation(state) {
     const cartCount = nav.querySelector("[data-cart-count]")?.textContent || "0";
     const items = Array.isArray(state.items) ? state.items : [];
-    const signedInCustomer = state.authenticated &&
-      Array.isArray(state.levels) && state.levels.includes("customer") &&
-      !state.levels.some((level) => ["creator", "admin", "owner"].includes(level));
     nav.replaceChildren(...items.flatMap((item) => {
       if (state.authenticated && item.key === "account") {
-        const dashboard = document.createElement("a");
-        dashboard.href = signedInCustomer ? "/customer-profile/" : "/dashboard/";
-        dashboard.textContent = signedInCustomer ? "Membership" : "Dashboard";
-        const dashboardPaths = signedInCustomer
-          ? ["/customer-profile", "/customer-profile/", "/customer-profile/index.html"]
-          : ["/dashboard", "/dashboard/", "/dashboard/index.html"];
-        if (dashboardPaths.includes(location.pathname)) {
-          dashboard.setAttribute("aria-current", "page");
+        const hasMembershipDashboard = Array.isArray(state.levels) &&
+          state.levels.includes("customer") && (!state.levels.includes("admin") || state.levels.includes("owner"));
+        const links = [];
+        if (hasMembershipDashboard) {
+          const dashboard = document.createElement("a");
+          dashboard.href = "/dashboard/";
+          dashboard.textContent = "Dashboard";
+          if (["/dashboard", "/dashboard/", "/dashboard/index.html"].includes(location.pathname)) {
+            dashboard.setAttribute("aria-current", "page");
+          }
+          links.push(dashboard);
         }
-        return [dashboard, createAccountLink(item, signedInCustomer), ...(signedInCustomer ? [createLogoutButton()] : [])];
+        return [...links, createAccountLink(item), createLogoutButton()];
       }
-      if (customerStorefront && item.key === "account" && !signedInCustomer) {
+      if (customerStorefront && item.key === "account" && !state.authenticated) {
         return [createLogoutButton()];
       }
       const link = document.createElement("a");
-      const customerAccount = signedInCustomer && item.key === "account";
-      link.href = customerAccount ? "/customer-profile/" : item.href;
+      link.href = item.href;
       if (new URL(link.href, location.origin).pathname === location.pathname) {
         link.setAttribute("aria-current", "page");
       }
@@ -62,17 +61,17 @@
         badge.textContent = cartCount;
         link.append(badge);
       } else {
-        link.textContent = customerAccount ? "Account" : item.label;
+        link.textContent = item.label;
       }
       return [link];
     }));
     nav.dataset.privilegeLevels = Array.isArray(state.levels) ? state.levels.join(" ") : "guest";
   }
 
-  function createAccountLink(item, signedInCustomer) {
+  function createAccountLink(item) {
     const link = document.createElement("a");
-    link.href = signedInCustomer ? "/customer-profile/" : item.href;
-    link.textContent = signedInCustomer ? "Account" : item.label;
+    link.href = item.href;
+    link.textContent = item.label;
     if (new URL(link.href, location.origin).pathname === location.pathname) link.setAttribute("aria-current", "page");
     return link;
   }

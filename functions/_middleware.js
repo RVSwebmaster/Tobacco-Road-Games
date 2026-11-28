@@ -36,9 +36,20 @@ export async function onRequest(context) {
     const session = await getCustomerSessionFromRequest(context.request, context.env);
     if (!session.valid) return noStoreDocument(Response.redirect(new URL("/account.html", context.request.url), 302));
     const membership = await resolveMemberProfileAccess(context.env.TRG_ORDERS, session.user);
-    if (membership.accountClass === "customer") {
-      return noStoreDocument(Response.redirect(new URL("/customer-profile/", context.request.url), 302));
+    if (isLegacyCreatorDashboard(pathname)) {
+      if (!dashboardTierAtLeast(membership.accountClass, "creator")) return dashboardForbidden();
+      return noStoreDocument(Response.redirect(new URL("/dashboard/?page=creator", context.request.url), 302));
     }
+    if (!dashboardTierAtLeast(membership.accountClass, "customer")) return dashboardForbidden();
+    const page = new URL(context.request.url).searchParams.get("page") || "membership";
+    const pageTiers = { membership: "customer", creator: "creator", premier: "premiumCreator", "founding-25": "founding25", owner: "owner" };
+    if (!Object.hasOwn(pageTiers, page) || !dashboardTierAtLeast(membership.accountClass, pageTiers[page])) return dashboardForbidden();
+  }
+  if (isCreatorTools(pathname)) {
+    const session = await getCustomerSessionFromRequest(context.request, context.env);
+    if (!session.valid) return noStoreDocument(Response.redirect(new URL("/account.html", context.request.url), 302));
+    const membership = await resolveMemberProfileAccess(context.env.TRG_ORDERS, session.user);
+    if (membership.creatorDashboardAvailable !== true) return dashboardForbidden();
   }
   if (isPublicStorePage(pathname)) {
     const storeState = await readStoreState(context.env);
@@ -70,10 +81,10 @@ export async function onRequest(context) {
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
 }
-function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!isCustomerMembershipDashboard(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
+function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!isCustomerMembershipDashboard(pathname)&&!isMemberDashboard(pathname)&&!isCreatorTools(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 
 function shouldNeverReuseDocument(pathname) {
-  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) || isCustomerMembershipDashboard(pathname) ||
+  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) || isCreatorTools(pathname) || isCustomerMembershipDashboard(pathname) ||
     pathname === "/guest/" || pathname === "/guest/index.html" || pathname.startsWith("/creator");
 }
 
@@ -82,7 +93,27 @@ function isCustomerStorefront(pathname) {
 }
 
 function isMemberDashboard(pathname) {
-  return pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard/index.html";
+  return pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard/index.html" || isLegacyCreatorDashboard(pathname);
+}
+
+function isLegacyCreatorDashboard(pathname) {
+  return pathname === "/creator-dashboard" || pathname === "/creator-dashboard/" || pathname === "/creator-dashboard/index.html";
+}
+
+function isCreatorTools(pathname) {
+  return pathname === "/creator-tools" || pathname === "/creator-tools/" || pathname === "/creator-tools/index.html";
+}
+
+function dashboardTierAtLeast(accountClass, required) {
+  const tiers = ["customer", "creator", "premiumCreator", "founding25", "owner"];
+  return tiers.indexOf(accountClass) >= tiers.indexOf(required) && tiers.includes(accountClass);
+}
+
+function dashboardForbidden() {
+  return new Response("Dashboard page not available for this membership tier.", {
+    status: 403,
+    headers: { "cache-control": "no-store", "content-type": "text/plain; charset=utf-8" }
+  });
 }
 
 function isCustomerMembershipDashboard(pathname) {
