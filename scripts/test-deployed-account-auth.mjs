@@ -89,7 +89,7 @@ function writeSql(file, sql) {
 async function run() {
   const args = parseArgs(process.argv.slice(2));
   const target = required(args, "target");
-  if (!["staging", "production"].includes(target)) throw new Error("Deployed account smoke supports staging and production only.");
+  if (!["preview", "staging", "production"].includes(target)) throw new Error("Deployed account smoke supports preview, staging, and production only.");
   if (target === "production" && args.get("allow-production") !== true) throw new Error("Production smoke requires the explicit --allow-production flag.");
   const baseUrl = required(args, "base-url").replace(/\/$/, "");
   const configPath = path.resolve(ROOT, required(args, "config"));
@@ -145,10 +145,13 @@ async function run() {
     const headers = { "content-type": "application/json", origin };
     const anonymousCustomer = await request("/customer");
     const anonymousMembershipDashboard = await request("/customer-profile/");
+    const anonymousSharedDashboard = await request("/dashboard/");
     results.signedOutCustomerBlocked = anonymousCustomer.status === 302
       && new URL(anonymousCustomer.headers.get("location")).pathname === "/guest/"
       && anonymousMembershipDashboard.status === 302
-      && new URL(anonymousMembershipDashboard.headers.get("location")).pathname === "/account.html";
+      && new URL(anonymousMembershipDashboard.headers.get("location")).pathname === "/account.html"
+      && anonymousSharedDashboard.status === 302
+      && new URL(anonymousSharedDashboard.headers.get("location")).pathname === "/account.html";
 
     const registration = await request("/api/auth/register", {
       method: "POST", headers, body: JSON.stringify({ email, password, passwordConfirmation: password })
@@ -173,15 +176,20 @@ async function run() {
     const customer = await request("/customer", { headers: { cookie } });
     if (customer.status !== 200) throw new Error("Authenticated Customer Storefront did not load.");
     results.customerAccess = true;
-    const dashboard = await request("/customer-profile/", { headers: { cookie } });
+    const profile = await request("/customer-profile/", { headers: { cookie } });
+    const profileHtml = await profile.text();
+    if (profile.status !== 200 || !profileHtml.includes("data-member-dashboard-link") || profileHtml.includes("data-customer-membership")) {
+      throw new Error("Authenticated Customer Profile did not link to the separate shared Dashboard.");
+    }
+    const dashboard = await request("/dashboard/", { headers: { cookie } });
     const dashboardHtml = await dashboard.text();
-    if (dashboard.status !== 200 || !dashboardHtml.includes("data-customer-membership") || !dashboardHtml.includes('id="trg-announcements"') || /creator-dashboard\.js|creator-pdf-intake|creator-listings|creator-analytics|owner-financial-controls/i.test(dashboardHtml)) {
-      throw new Error("Authenticated Customer Profile Membership Dashboard did not load the Customer sections or included Creator-specific controls.");
+    if (dashboard.status !== 200 || !dashboardHtml.includes("data-member-dashboard-page") || !dashboardHtml.includes("data-dashboard-tabs")
+      || !dashboardHtml.includes('data-dashboard-workspace="membership"') || !dashboardHtml.includes('id="trg-announcements"')
+      || !dashboardHtml.includes('data-dashboard-tab="membership"') || /creator-dashboard\.js|creator-pdf-intake|creator-listings|creator-analytics|owner-financial-controls/i.test(dashboardHtml)) {
+      throw new Error("Authenticated Customer did not load the shared Membership workspace with Customer-only Dashboard navigation.");
     }
-    const previousDashboard = await request("/dashboard/", { headers: { cookie } });
-    if (previousDashboard.status !== 302 || new URL(previousDashboard.headers.get("location")).pathname !== "/customer-profile/") {
-      throw new Error(`Customer /dashboard/ did not redirect to the Profile workspace (status ${previousDashboard.status}, location ${previousDashboard.headers.get("location") || "none"}).`);
-    }
+    const deniedCreatorPage = await request("/dashboard/?page=creator", { headers: { cookie } });
+    if (deniedCreatorPage.status !== 403) throw new Error("Customer access to the Creator Dashboard workspace was not rejected.");
     results.dashboardAccess = true;
 
     const logout = await request("/api/auth/logout", { method: "POST", headers: { ...headers, cookie }, body: "{}" });
