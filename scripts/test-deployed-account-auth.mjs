@@ -144,8 +144,11 @@ async function run() {
     let cookie = getCookies(anon).map((item) => item.split(";", 1)[0]).join("; ");
     const headers = { "content-type": "application/json", origin };
     const anonymousCustomer = await request("/customer");
+    const anonymousMembershipDashboard = await request("/customer-profile/");
     results.signedOutCustomerBlocked = anonymousCustomer.status === 302
-      && new URL(anonymousCustomer.headers.get("location")).pathname === "/guest/";
+      && new URL(anonymousCustomer.headers.get("location")).pathname === "/guest/"
+      && anonymousMembershipDashboard.status === 302
+      && new URL(anonymousMembershipDashboard.headers.get("location")).pathname === "/account.html";
 
     const registration = await request("/api/auth/register", {
       method: "POST", headers, body: JSON.stringify({ email, password, passwordConfirmation: password })
@@ -166,14 +169,18 @@ async function run() {
     results.registration = true;
     const me = await request("/api/account/me", { headers: { cookie } });
     const memberSummary = await me.json();
-    if (memberSummary.authenticated !== true || !memberSummary.user?.createdAt) throw new Error("Registration session was not authenticated or account creation date was unavailable.");
+    if (memberSummary.authenticated !== true || memberSummary.user?.accountClass !== "customer" || !memberSummary.user?.createdAt) throw new Error("Registration did not produce an authenticated Customer account with a creation date.");
     const customer = await request("/customer", { headers: { cookie } });
     if (customer.status !== 200) throw new Error("Authenticated Customer Storefront did not load.");
     results.customerAccess = true;
-    const dashboard = await request("/dashboard/", { headers: { cookie } });
+    const dashboard = await request("/customer-profile/", { headers: { cookie } });
     const dashboardHtml = await dashboard.text();
-    if (dashboard.status !== 200 || !dashboardHtml.includes("Member Dashboard") || !dashboardHtml.includes("data-dashboard-library")) {
-      throw new Error("Authenticated Common Membership Dashboard did not load its shared sections.");
+    if (dashboard.status !== 200 || !dashboardHtml.includes("data-customer-membership") || !dashboardHtml.includes('id="trg-announcements"') || /creator-dashboard\.js|creator-pdf-intake|creator-listings|creator-analytics|owner-financial-controls/i.test(dashboardHtml)) {
+      throw new Error("Authenticated Customer Profile Membership Dashboard did not load the Customer sections or included Creator-specific controls.");
+    }
+    const previousDashboard = await request("/dashboard/", { headers: { cookie } });
+    if (previousDashboard.status !== 302 || new URL(previousDashboard.headers.get("location")).pathname !== "/customer-profile/") {
+      throw new Error("Customer account can still open a separate Common Membership Dashboard page.");
     }
     results.dashboardAccess = true;
 

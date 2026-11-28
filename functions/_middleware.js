@@ -4,6 +4,7 @@ import { readStoreState } from "./_lib/store-state.mjs";
 import { isPublicStorePage, maintenanceResponse } from "./_lib/store-maintenance.mjs";
 import { attachOwnerSessionForDocument } from "./_lib/owner-session-bootstrap.mjs";
 import { getCustomerSessionFromRequest } from "./_lib/account-auth.mjs";
+import { resolveMemberProfileAccess } from "./_lib/member-profile-access.mjs";
 
 export async function onRequest(context) {
   const pathname = new URL(context.request.url).pathname;
@@ -16,8 +17,28 @@ export async function onRequest(context) {
   if (isCustomerStorefront(pathname) && !(await getCustomerSessionFromRequest(context.request, context.env)).valid) {
     return noStoreDocument(Response.redirect(new URL("/guest/", context.request.url), 302));
   }
-  if (isMemberDashboard(pathname) && !(await getCustomerSessionFromRequest(context.request, context.env)).valid) {
-    return noStoreDocument(Response.redirect(new URL("/account.html", context.request.url), 302));
+  if (isCustomerMembershipDashboard(pathname)) {
+    const session = await getCustomerSessionFromRequest(context.request, context.env);
+    if (!session.valid) return noStoreDocument(Response.redirect(new URL("/account.html", context.request.url), 302));
+    const membership = await resolveMemberProfileAccess(context.env.TRG_ORDERS, session.user);
+    if (membership.accountClass !== "customer") {
+      const profileRoutes = {
+        creator: "/creator/",
+        premiumCreator: "/premium-creator-profile/",
+        founding25: "/founding-25-profile/",
+        admin: "/admin-profile/",
+        owner: "/owner-profile/"
+      };
+      return noStoreDocument(Response.redirect(new URL(profileRoutes[membership.accountClass] || "/account.html", context.request.url), 302));
+    }
+  }
+  if (isMemberDashboard(pathname)) {
+    const session = await getCustomerSessionFromRequest(context.request, context.env);
+    if (!session.valid) return noStoreDocument(Response.redirect(new URL("/account.html", context.request.url), 302));
+    const membership = await resolveMemberProfileAccess(context.env.TRG_ORDERS, session.user);
+    if (membership.accountClass === "customer") {
+      return noStoreDocument(Response.redirect(new URL("/customer-profile/", context.request.url), 302));
+    }
   }
   if (isPublicStorePage(pathname)) {
     const storeState = await readStoreState(context.env);
@@ -49,10 +70,10 @@ export async function onRequest(context) {
 function ownerResponse(response, context) {
   return attachOwnerSessionForDocument(response, context.request, context.env);
 }
-function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
+function requestsPublicBanner(pathname,response){return pathname!=='/store/'&&!isCustomerMembershipDashboard(pathname)&&!pathname.startsWith('/owner')&&!pathname.startsWith('/creator')&&!pathname.startsWith('/office')&&String(response.headers.get('content-type')||'').includes('text/html');}
 
 function shouldNeverReuseDocument(pathname) {
-  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) ||
+  return pathname === "/" || pathname === "/index.html" || isCustomerStorefront(pathname) || isMemberDashboard(pathname) || isCustomerMembershipDashboard(pathname) ||
     pathname === "/guest/" || pathname === "/guest/index.html" || pathname.startsWith("/creator");
 }
 
@@ -62,6 +83,10 @@ function isCustomerStorefront(pathname) {
 
 function isMemberDashboard(pathname) {
   return pathname === "/dashboard" || pathname === "/dashboard/" || pathname === "/dashboard/index.html";
+}
+
+function isCustomerMembershipDashboard(pathname) {
+  return pathname === "/customer-profile" || pathname === "/customer-profile/" || pathname === "/customer-profile/index.html";
 }
 
 function noStoreDocument(response) {

@@ -29,15 +29,18 @@
   function renderNavigation(state) {
     const cartCount = nav.querySelector("[data-cart-count]")?.textContent || "0";
     const items = Array.isArray(state.items) ? state.items : [];
-    const signedInCustomer = customerStorefront && state.authenticated &&
+    const signedInCustomer = state.authenticated &&
       Array.isArray(state.levels) && state.levels.includes("customer") &&
       !state.levels.some((level) => ["creator", "admin", "owner"].includes(level));
     nav.replaceChildren(...items.flatMap((item) => {
       if (state.authenticated && item.key === "account") {
         const dashboard = document.createElement("a");
-        dashboard.href = "/dashboard/";
-        dashboard.textContent = "Dashboard";
-        if (["/dashboard", "/dashboard/", "/dashboard/index.html"].includes(location.pathname)) {
+        dashboard.href = signedInCustomer ? "/customer-profile/" : "/dashboard/";
+        dashboard.textContent = signedInCustomer ? "Membership" : "Dashboard";
+        const dashboardPaths = signedInCustomer
+          ? ["/customer-profile", "/customer-profile/", "/customer-profile/index.html"]
+          : ["/dashboard", "/dashboard/", "/dashboard/index.html"];
+        if (dashboardPaths.includes(location.pathname)) {
           dashboard.setAttribute("aria-current", "page");
         }
         return [dashboard, createAccountLink(item, signedInCustomer), ...(signedInCustomer ? [createLogoutButton()] : [])];

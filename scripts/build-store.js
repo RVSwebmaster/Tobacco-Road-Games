@@ -24,14 +24,14 @@ const NEWS_CHYRON_CACHE_BUST = "20261024-news-feed1";
 const SHELF_CURIO_CACHE_BUST = "20261002-shelf-curios1";
 const GUEST_FEATURE_CACHE_BUST = "20261116-open-rules-master-shelf2";
 const HOMEPAGE_SHELVES_CACHE_BUST = "20261116-open-rules-master-shelf4";
-const PROGRESSIVE_NAV_CACHE_BUST = "20261116-open-rules-master-shelf1";
+const PROGRESSIVE_NAV_CACHE_BUST = "customer-membership-dashboard1";
 const STOREFRONT_STYLES_CACHE_BUST = "20261116-open-rules-spine-title-fit2";
 const PROFILE_STOREFRONT_STYLES_CACHE_BUST = "20261125-profile-plateboard-cache1";
 const OPEN_RULES_LIBRARY_CACHE_BUST = "shared-open-rules6";
 const GUEST_EXAMINATION_CACHE_BUST = "20261116-guest-book-examination7";
 const GUEST_EXAMINATION_STYLE_CACHE_BUST = "20261116-guest-examination-close1";
 const CUSTOMER_UPPER_SHELVES_CACHE_BUST = "20261116-customer-upper-shelves1";
-const CUSTOMER_NAV_CACHE_BUST = "customer-session-navigation4-focused1";
+const CUSTOMER_NAV_CACHE_BUST = "customer-membership-dashboard1";
 const CUSTOMER_PLATEBOARD_CACHE_BUST = "20261125-customer-plateboard1";
 const CREATOR_PROFILE_SHELF_CACHE_BUST = "creator-profile-shelf5";
 const CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST = "creator-profile-shelf6";
@@ -1357,6 +1357,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
   }
   const creatorShelfStyleCacheBust = canonicalPath === "/creator/" ? "creator-profile-shelf6" : CREATOR_PROFILE_SHELF_CACHE_BUST;
   const creatorShelfRendererCacheBust = canonicalPath === "/creator/" ? "creator-profile-shelf7" : CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST;
+  const customerMembershipDashboard = canonicalPath === "/customer-profile/";
   const mainPattern = /<main id="top"[^>]*>[\s\S]*?<\/main>/;
   const navPattern = /<nav class="site-nav" aria-label="Primary"[^>]*>[\s\S]*?<\/nav>/;
   if (!mainPattern.test(guestLandingPage) || !navPattern.test(guestLandingPage)) {
@@ -1393,8 +1394,8 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${creatorShelfStyleCacheBust}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
-    .replace(/<\/main>\s*<\/div>/, `</main>\n      <footer class="site-footer member-profile-footer${creatorShelfProfile ? " member-profile-footer--dashboard" : ""}"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>`)
+    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${creatorShelfStyleCacheBust}">\n` : ""}${customerMembershipDashboard ? '  <link rel="stylesheet" href="/assets/css/customer-membership-dashboard.css?v=customer-membership-dashboard1">\n' : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
+    .replace(/<\/main>\s*<\/div>/, `</main>\n      ${customerMembershipDashboard ? renderCustomerMembershipDashboard() + "\n      " : ""}<footer class="site-footer member-profile-footer${creatorShelfProfile ? " member-profile-footer--dashboard" : ""}"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    </div>`)
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
       '  <script src="/assets/js/open-rules-library.js?v=shared-open-rules6" defer></script>',
@@ -1402,6 +1403,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
       '  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge1" defer></script>',
+      ...(customerMembershipDashboard ? ['  <script src="/assets/js/customer-membership-dashboard.js?v=customer-membership-dashboard1" defer></script>'] : []),
       ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-catalog-layout.js?v=${CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST}" defer></script>`, `  <script src="/assets/js/creator-profile-shelf.js?v=${creatorShelfRendererCacheBust}" defer></script>`] : []),
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),
       "</body>"
@@ -1416,6 +1418,81 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     throw new Error("Member Profile configuration could not be applied to the shared Guest page.");
   }
   return memberProfile.replace(/^[ \t]+$/gm, "");
+}
+
+function renderCustomerMembershipDashboard() {
+  return `<section class="customer-membership-dashboard" data-customer-membership aria-labelledby="customer-membership-heading">
+        <nav class="customer-membership-tabs" aria-label="Dashboard pages">
+          <a href="/customer-profile/#membership" aria-current="page">Membership</a>
+        </nav>
+        <section class="customer-membership-ledger" id="membership">
+          <h1 id="customer-membership-heading">Membership</h1>
+          <p class="customer-membership-status" data-membership-status role="status" aria-live="polite">Loading your membership information…</p>
+          <div class="customer-membership-columns">
+            <div class="customer-membership-column">
+              <section class="customer-membership-section" id="personal-information" aria-labelledby="personal-information-heading">
+                <h2 id="personal-information-heading">Personal Information</h2>
+                <div class="customer-membership-avatar"><img data-membership-avatar alt="" hidden><span data-membership-avatar-empty>Profile image not provided.</span></div>
+                <dl class="customer-membership-details">
+                  <div><dt>Display name</dt><dd data-membership-display-name>Loading…</dd></div>
+                  <div><dt>Real name</dt><dd data-membership-real-name>Loading…</dd></div>
+                  <div><dt>Email address</dt><dd data-membership-email>Loading…</dd></div>
+                  <div><dt>Billing information</dt><dd data-membership-billing>Loading…</dd></div>
+                </dl>
+                <a href="/account.html#account-profile-panel">Manage personal information and profile image</a>
+              </section>
+              <section class="customer-membership-section" id="account-security" aria-labelledby="account-security-heading">
+                <h2 id="account-security-heading">Account Security</h2>
+                <p>Password changes are not available yet. Email password recovery is currently disabled.</p>
+                <p>Session management is not connected yet.</p>
+                <button type="button" class="customer-membership-action" data-membership-signout>Sign out</button>
+              </section>
+              <section class="customer-membership-section" id="purchase-history" aria-labelledby="purchase-history-heading">
+                <h2 id="purchase-history-heading">Purchase History</h2>
+                <p>Order history, complete transaction details, and receipts are not connected to the Dashboard yet.</p>
+                <a href="/account.html#library-panel">Open your current purchase library</a>
+              </section>
+              <section class="customer-membership-section" id="personal-library" aria-labelledby="personal-library-heading">
+                <h2 id="personal-library-heading">Personal Library</h2>
+                <p data-membership-library-status>Loading your library…</p>
+                <ul data-membership-library></ul>
+                <a href="/account.html#library-panel">Manage downloads and check product updates</a>
+              </section>
+            </div>
+            <div class="customer-membership-column">
+              <section class="customer-membership-section" id="favorite-creators" aria-labelledby="favorite-creators-heading">
+                <h2 id="favorite-creators-heading">Favorite Creators</h2>
+                <p>Followed Creators will appear here when following is available.</p>
+                <p>Follow and unfollow controls are not connected yet.</p>
+              </section>
+              <section class="customer-membership-section" id="customer-support" aria-labelledby="customer-support-heading">
+                <h2 id="customer-support-heading">Customer Support</h2>
+                <p>For delivery or refund requests, follow the support contact route in your order confirmation.</p>
+                <a href="/support.html">Read order support information</a>
+              </section>
+              <section class="customer-membership-section" id="preferences" aria-labelledby="preferences-heading">
+                <h2 id="preferences-heading">Preferences</h2>
+                <p>Account notices: <span data-membership-notices>Loading…</span></p>
+                <p>Accessibility preferences are not available yet.</p>
+                <a href="/account.html#account-profile-panel">Manage available account preferences</a>
+              </section>
+              <section class="customer-membership-section" id="membership-information" aria-labelledby="membership-information-heading">
+                <h2 id="membership-information-heading">Membership Information</h2>
+                <dl class="customer-membership-details">
+                  <div><dt>Membership status</dt><dd data-membership-status-value>Loading…</dd></div>
+                  <div><dt>Date joined</dt><dd data-membership-joined>Loading…</dd></div>
+                </dl>
+                <a href="/account.html">Manage your account</a>
+              </section>
+              <section class="customer-membership-section" id="trg-announcements" aria-labelledby="trg-announcements-heading">
+                <h2 id="trg-announcements-heading">TRG Announcements</h2>
+                <p>Membership announcements and surveys will appear here when available.</p>
+                <p>Member opinion requests are not connected yet.</p>
+              </section>
+            </div>
+          </div>
+        </section>
+      </section>`;
 }
 
 function buildCreatorDashboardPage() {

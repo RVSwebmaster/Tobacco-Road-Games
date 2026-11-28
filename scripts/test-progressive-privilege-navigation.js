@@ -31,6 +31,8 @@ async function assertCreatorSessionBootstrapBehavior() {
     .replace("export async function onRequest(context)", "async function onRequest(context)")
     + "\nglobalThis.trgOnRequest = onRequest;";
   const bootstrappedPaths = [];
+  let accountClass = "customer";
+  let sessionValid = true;
   const sandbox = {
     URL,
     Request,
@@ -42,7 +44,8 @@ async function assertCreatorSessionBootstrapBehavior() {
     readStoreState: async () => ({ available: false }),
     isPublicStorePage: () => false,
     maintenanceResponse: () => new Response("maintenance"),
-    getCustomerSessionFromRequest: async () => ({ valid: true }),
+    getCustomerSessionFromRequest: async () => ({ valid: sessionValid, user: { id: "test-user", role: "user" } }),
+    resolveMemberProfileAccess: async () => ({ accountClass }),
     attachOwnerSessionForDocument: async (response, request) => {
       const pathname = new URL(request.url).pathname;
       bootstrappedPaths.push(pathname);
@@ -69,6 +72,29 @@ async function assertCreatorSessionBootstrapBehavior() {
   });
   assert.equal(customerResponse.headers.has("x-test-owner-session-bootstrap"), false,
     "Customer storefront requests do not use the Owner/Creator document bootstrap.");
+
+  const nextText = async (pathname) => sandbox.trgOnRequest({
+    request: request(pathname),
+    env: { TRG_ORDERS: {} },
+    next: async () => new Response("Member document", { headers: { "content-type": "text/html" } })
+  });
+  let membershipResponse = await nextText("/customer-profile/");
+  assert.equal(membershipResponse.status, 200, "Signed-in Customer can open the Membership Dashboard in their Profile.");
+  accountClass = "creator";
+  membershipResponse = await nextText("/customer-profile/");
+  assert.equal(membershipResponse.status, 302);
+  assert.equal(new URL(membershipResponse.headers.get("location")).pathname, "/creator/",
+    "Other membership classes stay on their existing Profile routes.");
+  accountClass = "customer";
+  membershipResponse = await nextText("/dashboard/");
+  assert.equal(membershipResponse.status, 302);
+  assert.equal(new URL(membershipResponse.headers.get("location")).pathname, "/customer-profile/",
+    "Customer accounts resolve the previous standalone Dashboard route to their Profile.");
+  sessionValid = false;
+  membershipResponse = await nextText("/customer-profile/");
+  assert.equal(membershipResponse.status, 302);
+  assert.equal(new URL(membershipResponse.headers.get("location")).pathname, "/account.html",
+    "Signed-out visitors cannot open the private Customer Membership workspace.");
   assert.deepEqual(bootstrappedPaths, ["/creator/"], "Only the Creator Profile request invoked the bootstrap in this check.");
 }
 
