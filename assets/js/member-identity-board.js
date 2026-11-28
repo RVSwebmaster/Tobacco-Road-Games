@@ -11,7 +11,7 @@
     ["admin", "admin.png"],
     ["owner", "owner.png"],
   ]);
-  const memberDashboardLink = document.querySelector("[data-member-dashboard-link]");
+  const memberDashboardMenuLink = document.querySelector("[data-member-dashboard-nav-link]");
   const defaultTitle = document.title;
 
   function initialsFor(displayName) {
@@ -98,7 +98,7 @@
         document.title = defaultTitle;
         if (profileHeading) profileHeading.textContent = "Member Profile";
       }
-      if (memberDashboardLink) memberDashboardLink.hidden = true;
+      if (memberDashboardMenuLink) memberDashboardMenuLink.hidden = true;
     }
 
     function showInitials(displayName) {
@@ -155,10 +155,8 @@
           if (profileHeading) profileHeading.textContent = `${accountClassLabel} Dashboard`;
         }
         }
-        if (memberDashboardLink) {
-          memberDashboardLink.hidden = !["customer", "creator", "premiumCreator", "founding25", "owner"].includes(accountClass);
-          if (accountClass === "owner") memberDashboardLink.hidden = false;
-        }
+        const hasMembershipDashboard = ["customer", "creator", "premiumCreator", "founding25", "owner"].includes(accountClass);
+        if (memberDashboardMenuLink) memberDashboardMenuLink.hidden = !hasMembershipDashboard;
         board.hidden = false;
         const imageUrl = String(member.avatarUrl || "").trim();
         if (!imageUrl) {

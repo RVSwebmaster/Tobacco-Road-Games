@@ -178,8 +178,8 @@ async function run() {
     results.customerAccess = true;
     const profile = await request("/customer-profile/", { headers: { cookie } });
     const profileHtml = await profile.text();
-    if (profile.status !== 200 || !profileHtml.includes("data-member-dashboard-link") || profileHtml.includes("data-customer-membership")) {
-      throw new Error("Authenticated Customer Profile did not link to the separate shared Dashboard.");
+    if (profile.status !== 200 || !profileHtml.includes("data-member-dashboard-nav-link") || profileHtml.includes("data-customer-membership")) {
+      throw new Error("Authenticated Customer Profile did not link to the separate shared Dashboard from its menu bar.");
     }
     const dashboard = await request("/dashboard/", { headers: { cookie } });
     const dashboardHtml = await dashboard.text();

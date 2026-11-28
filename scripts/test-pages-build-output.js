@@ -38,7 +38,7 @@ async function main() {
     const creatorProfile = fs.readFileSync(path.join(outputDirectory, "creator", "index.html"), "utf8");
     assert.match(creatorProfile, /<title>Member Profile \| Tobacco Road Games<\/title>/, "The /creator/ route must be the shared Creator Profile.");
     assert.match(creatorProfile, /data-member-profile-page/);
-    assert.match(creatorProfile, /data-member-dashboard-link/, "Creator Profile links into the shared Dashboard.");
+    assert.match(creatorProfile, /data-member-dashboard-nav-link/, "Creator Profile links into the shared Dashboard from its menu bar.");
     assert.doesNotMatch(creatorProfile, /id="creator-pdf-intake"/, "Creator publishing controls belong on the Dashboard, not the Profile.");
     for (const relativePath of builder.excludedPublicFiles) {
       assert.equal(fs.existsSync(path.join(outputDirectory, relativePath)), false, `excluded file was copied: ${relativePath}`);

@@ -29,6 +29,25 @@ body:has(.member-profile-shop-wall) .creator-menu-placeholder {
   text-shadow: 0 1px 0 rgba(255, 238, 190, 0.55);
 }
 
+body:has(.member-profile-shop-wall) .member-dashboard-menu-link {
+  min-height: 28px;
+  padding: 7px 16px;
+  border: 1px solid rgba(37, 19, 9, 0.42);
+  border-radius: 3px;
+  background: rgba(255, 248, 221, 0.24);
+  font-size: 1.05rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+body:has(.member-profile-shop-wall) .member-dashboard-menu-link:hover,
+body:has(.member-profile-shop-wall) .member-dashboard-menu-link:focus-visible {
+  background: rgba(255, 248, 221, 0.52);
+  color: #160c05;
+  outline: 2px solid rgba(37, 19, 9, 0.75);
+  outline-offset: 2px;
+}
+
 /* The Creator profile does not use the public storefront's rotating shelf dressing. */
 body:has(.creator-dashboard-shop-wall) .shelf-dressing,
 body:has(.member-profile-shop-wall) .shelf-dressing {
@@ -345,14 +364,6 @@ body.member-profile-page .member-profile-footer {
   background: linear-gradient(90deg, #0b1d14, #06120c 60%, #0b1d14);
   color: #aa9d80;
   text-align: right;
-}
-
-body.member-profile-page .member-profile-footer--dashboard p {
-  min-height: 1.35em;
-}
-
-body.member-profile-page .member-profile-footer--dashboard [data-creator-dashboard-link] {
-  white-space: nowrap;
 }
 
 .creator-dashboard-footer p,

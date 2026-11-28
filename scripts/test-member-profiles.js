@@ -35,6 +35,12 @@ const pages = expectedRoutes.map(([accountClass, route, file], index) => {
   assert.match(page, /member-profile-library\.js\?v=member-profile-base1/);
   assert.match(page, /member-identity-board\.js\?v=member-identity-board1/);
   assert.match(page, /data-member-identity-board/);
+  if (accountClass === "admin") {
+    assert.doesNotMatch(page, /data-member-dashboard-nav-link/, "Admin remains outside membership Dashboard navigation in the menu bar.");
+  } else {
+    assert.match(page, /<a class="creator-menu-placeholder member-dashboard-menu-link" href="\/dashboard\/" data-member-dashboard-nav-link hidden>Dashboard<\/a>/,
+      `${route} exposes the shared Dashboard from the existing menu bar after authentication.`);
+  }
   assert.match(page, /data-member-library-books/g);
   assert.match(page, /upper-cabinet-creator-desktop\.png\?v=creator-title-board3/);
   assert.match(page, /upper-cabinet-creator-tablet\.png\?v=creator-title-board3/);
@@ -42,11 +48,14 @@ const pages = expectedRoutes.map(([accountClass, route, file], index) => {
   assert.match(page, /the-familiar-framed-poster\.png/);
   assert.doesNotMatch(page, /Creator Dashboard \| Tobacco Road Games|data-creator-library-books|data-creator-identity-page|guest-preview-products\.json/);
   if (accountClass === "admin") {
+    assert.doesNotMatch(page, /data-member-dashboard-link|data-member-dashboard-nav-link/,
+      "Admin remains outside membership Dashboard navigation.");
     assert.doesNotMatch(page, /href="\/dashboard\/" data-member-dashboard-link/,
       "Admin remains outside Dashboard navigation.");
   } else {
-    assert.match(page, /<a href="\/dashboard\/" data-member-dashboard-link hidden>Open Membership Dashboard<\/a>/,
-      `${route} links to the shared Dashboard from the established Profile location.`);
+    assert.doesNotMatch(page, /data-member-dashboard-link/, `${route} no longer leaves Dashboard access in the small footer link.`);
+    assert.match(page, /<a class="creator-menu-placeholder member-dashboard-menu-link" href="\/dashboard\/" data-member-dashboard-nav-link hidden>Dashboard<\/a>/,
+      `${route} links to the shared Dashboard in the menu bar after authentication.`);
   }
   assert.doesNotMatch(page, /data-magical-bookshelf|magical-bookshelf\.js|creator-preview-only|data-creator-preview-only/);
   assert.equal((page.match(/<picture class="shop-wall-cabinet-art"/g) || []).length, 1,
@@ -62,8 +71,8 @@ const pages = expectedRoutes.map(([accountClass, route, file], index) => {
   return page;
 });
 
-assert.doesNotMatch(pages[4], /data-member-dashboard-link/, "Admin does not receive membership Dashboard navigation.");
-assert.match(pages[5], /data-member-dashboard-link/, "Owner receives the inherited membership Dashboard link.");
+assert.doesNotMatch(pages[4], /data-member-dashboard-link|data-member-dashboard-nav-link/, "Admin does not receive membership Dashboard navigation.");
+assert.match(pages[5], /data-member-dashboard-nav-link/, "Owner receives inherited Dashboard navigation in the menu bar.");
 
 const customerProfile = pages[0];
 const customerMain = customerProfile.match(/<main id="member-profile"[\s\S]*?<\/main>/)?.[0] || "";
@@ -163,6 +172,8 @@ assert.match(identityRuntime, /fetch\("\/api\/account\/me"/);
 assert.match(identityRuntime, /member\?\.displayName/);
 assert.match(identityRuntime, /accountClassLabel/);
 assert.match(identityRuntime, /buildMetalInitials/);
+assert.match(identityRuntime, /memberDashboardMenuLink\.hidden\s*=\s*!hasMembershipDashboard/,
+  "The menu-bar Dashboard link appears only for authenticated membership tiers.");
 assert.match(identityRuntime, /window\.addEventListener\("focus"/,
   "Shared member identity refreshes when a page regains focus.");
 const generator = read("scripts/build-store.js");

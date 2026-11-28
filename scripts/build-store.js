@@ -1374,14 +1374,17 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
   ]).has(canonicalPath);
   const profileFooter = dashboardEnabled ? "" : canonicalPath === "/admin-profile/"
     ? '<footer class="site-footer member-profile-footer"><p><a href="/creator-dashboard/" data-creator-dashboard-link hidden>Open Creator Dashboard</a></p></footer>\n    '
-    : `<footer class="site-footer member-profile-footer${creatorShelfProfile ? " member-profile-footer--dashboard" : ""}"><p><a href="/dashboard/" data-member-dashboard-link hidden>Open Membership Dashboard</a></p></footer>\n    `;
+    : '<footer class="site-footer member-profile-footer" aria-hidden="true"></footer>\n    ';
+  const profileNavigation = canonicalPath === "/admin-profile/"
+    ? '<nav class="site-nav" aria-label="Member Profile navigation"><span class="creator-menu-placeholder">Menu</span></nav>'
+    : '<nav class="site-nav" aria-label="Member Profile navigation"><a class="creator-menu-placeholder member-dashboard-menu-link" href="/dashboard/" data-member-dashboard-nav-link hidden>Dashboard</a></nav>';
   let memberProfile = withoutGuestLoginPopup(guestLandingPage)
     .replace("<title>Guest Landing Page | Tobacco Road Games</title>", "<title>Member Profile | Tobacco Road Games</title>")
     .replace('content="Browse and shop Tobacco Road Games as a Guest without creating an account."', 'content="Member profile and personal library for Tobacco Road Games."')
     .replace('<link rel="canonical" href="https://tobaccoroadgames.com/guest/">', `<link rel="canonical" href="https://tobaccoroadgames.com${canonicalPath}">`)
     .replace(/<body>/, '<body class="view-section member-profile-page">')
     .replace('</head>', '  <meta name="robots" content="noindex,nofollow">\n</head>')
-    .replace(navPattern, '<nav class="site-nav" aria-label="Member Profile navigation"><span class="creator-menu-placeholder">Menu</span></nav>')
+    .replace(navPattern, profileNavigation)
     .replace(mainPattern, renderGuestLandingShopWallMain([], {
       pageClass: "member-profile-shop-wall",
       pageId: "member-profile",
@@ -1399,7 +1402,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
     .replace("</main>", '<p id="member-profile-status" class="member-profile-visually-hidden" data-member-profile-status role="status">Checking member session…</p>\n    </main>')
     .replace(/\s*<script src="\/assets\/js\/[^\"]+"><\/script>/g, "")
     .replace(/\s*<script src="\/assets\/js\/[^\"]+" defer><\/script>/g, "")
-    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge6">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${creatorShelfStyleCacheBust}">\n` : ""}${hasMembershipDashboard ? `  <link rel="stylesheet" href="/assets/css/customer-membership-dashboard.css?v=${CUSTOMER_MEMBERSHIP_DASHBOARD_CACHE_BUST}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
+    .replace("</head>", `  <link rel="stylesheet" href="/assets/css/member-profile.css?v=member-profile-base1-tier-badge7">\n${creatorShelfProfile ? `  <link rel="stylesheet" href="/assets/css/creator-profile-shelf.css?v=${creatorShelfStyleCacheBust}">\n` : ""}${hasMembershipDashboard ? `  <link rel="stylesheet" href="/assets/css/customer-membership-dashboard.css?v=${CUSTOMER_MEMBERSHIP_DASHBOARD_CACHE_BUST}">\n` : ""}${profileAdvertising ? '  <link rel="stylesheet" href="/assets/css/creator-plateboard.css?v=creator-plateboard1">\n  <script type="module" src="/assets/js/creator-plateboard.js?v=creator-plateboard1"></script>\n' : ""}</head>`)
     .replace(/<\/main>\s*<\/div>/, `</main>\n      ${dashboardEnabled ? renderCustomerMembershipDashboard() + "\n    " : ""}${profileFooter}</div>`)
     .replace("</body>", [
       '  <script src="/assets/js/storefront.js?v=20261112-rendered-spines5" defer></script>',
@@ -1407,7 +1410,7 @@ function renderMemberProfilePage(guestLandingPage, { canonicalPath = "/member-pr
       '  <script src="/assets/js/homepage-shelves.js?v=creator-open-rules7" defer></script>',
       '  <script src="/assets/js/member-profile-library.js?v=member-profile-base1" defer></script>',
       '  <script src="/assets/js/guest-product-preview.js?v=creator-identity-library1" defer></script>',
-      `  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge${canonicalPath === "/admin-profile/" ? "1" : "2"}" defer></script>`,
+      `  <script src="/assets/js/member-identity-board.js?v=member-identity-board1-tier-badge${canonicalPath === "/admin-profile/" ? "1" : "3"}" defer></script>`,
       ...(hasMembershipDashboard ? [`  <script src="/assets/js/account-profile-editor.js?v=${CUSTOMER_MEMBERSHIP_DASHBOARD_CACHE_BUST}" defer></script>`, `  <script src="/assets/js/customer-membership-dashboard.js?v=${CUSTOMER_MEMBERSHIP_DASHBOARD_CACHE_BUST}" defer></script>`] : []),
       ...(creatorShelfProfile ? [`  <script src="/assets/js/creator-profile-catalog-layout.js?v=${CREATOR_PROFILE_CATALOG_LAYOUT_CACHE_BUST}" defer></script>`, `  <script src="/assets/js/creator-profile-shelf.js?v=${creatorShelfRendererCacheBust}" defer></script>`] : []),
       ...(creatorCatalogRotation ? ['  <script src="/assets/js/creator-profile-catalog-rotation.js?v=creator-catalog-cover-rotation1" defer></script>'] : []),

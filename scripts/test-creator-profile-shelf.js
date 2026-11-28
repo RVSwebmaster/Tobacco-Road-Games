@@ -38,10 +38,10 @@ async function main() {
   assert.match(catalogCss, /grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\)/, "Desktop title cards use a modest six-column grid.");
   assert.match(catalogCss, /@media\s*\(max-width:\s*700px\)[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Mobile catalog cards reflow to two columns.");
   const profileCss = fs.readFileSync(path.join(__dirname, "..", "assets", "css", "member-profile.css"), "utf8");
-  assert.match(profileCss, /member-profile-footer--dashboard\s+p\s*\{[^}]*min-height:\s*1\.35em/, "The Creator Dashboard footer reserves one link line before the link appears.");
-  assert.match(profileCss, /member-profile-footer--dashboard\s+\[data-creator-dashboard-link\]\s*\{[^}]*white-space:\s*nowrap/, "The reserved dashboard-link footer stays one line at mobile widths.");
+  assert.match(profileCss, /\.member-dashboard-menu-link\s*\{[^}]*min-height:\s*28px[^}]*text-decoration:\s*underline/, "The Dashboard menu link is a readable, underlined target in the existing Profile bar.");
   const creatorPage = fs.readFileSync(path.join(__dirname, "..", "creator", "index.html"), "utf8");
-  assert.match(creatorPage, /member-profile-footer--dashboard[^>]*>[\s\S]*?data-creator-dashboard-link hidden/, "The hidden dashboard link starts in its reserved footer below the profile grid.");
+  assert.match(creatorPage, /<nav class="site-nav" aria-label="Member Profile navigation"><a class="creator-menu-placeholder member-dashboard-menu-link" href="\/dashboard\/" data-member-dashboard-nav-link hidden>Dashboard<\/a><\/nav>/, "The Dashboard link starts in the menu bar and is hidden until member access resolves.");
+  assert.doesNotMatch(creatorPage, /data-member-dashboard-link/, "The tiny footer link has been replaced by the menu-bar link.");
   const catalogRenderer = fs.readFileSync(path.join(__dirname, "..", "assets", "js", "creator-profile-shelf.js"), "utf8");
   assert.match(catalogRenderer, /checkbox\.type\s*=\s*"checkbox"/, "Private shelf controls use the requested Shelved checkbox.");
   assert.match(catalogRenderer, /link\.href\s*=\s*product\.detailUrl/, "Occupied title cards link to their existing product detail page.");

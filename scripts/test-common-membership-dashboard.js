@@ -75,7 +75,7 @@ assert.match(builder, /dashboardEnabled: true/);
 assert.doesNotMatch(customerProfile, /data-customer-membership|customer-membership-dashboard/,
   "The membership Profile remains separate from the private Dashboard workspace.");
 for (const profileFile of ["customer-profile/index.html", "creator/index.html", "founding-25-profile/index.html", "premium-creator-profile/index.html", "owner-profile/index.html"]) {
-  assert.match(read(profileFile), /data-member-dashboard-link/, `${profileFile} links to the shared Dashboard.`);
+  assert.match(read(profileFile), /data-member-dashboard-nav-link/, `${profileFile} links to the shared Dashboard from its menu bar.`);
 }
 
 for (const profileFile of ["creator/index.html", "founding-25-profile/index.html", "premium-creator-profile/index.html", "owner-profile/index.html", "admin-profile/index.html"]) {
