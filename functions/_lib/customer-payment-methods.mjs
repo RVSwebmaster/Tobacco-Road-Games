@@ -39,7 +39,8 @@ export async function handleCustomerPaymentMethods(request, env = {}, options = 
     const portal = await stripe(key, "billing_portal/sessions", params, `trg-customer-portal-${session.user.id}-${purpose}-${options.nowMs || Date.now()}`, options.fetchImpl);
     if (portal.livemode !== livemode || typeof portal.url !== "string" || !portal.url.startsWith("https://billing.stripe.com/")) throw new Error("Stripe portal response invalid");
     return json({ ok: true, url: portal.url });
-  } catch {
+  } catch (error) {
+    console.error("Customer payment management request failed", { stripeStatus: error?.stripeStatus || error?.httpStatus || null, stripeCode: error?.stripeCode || error?.code || null });
     return json({ error: { message: "Secure payment management is temporarily unavailable. Your purchases remain available without saving a payment method." } }, 503);
   }
 }
@@ -95,7 +96,12 @@ async function stripe(key, path, form, idempotencyKey, fetchImpl = globalThis.fe
     ...(form ? { body: form instanceof URLSearchParams ? form : new URLSearchParams(form) } : {}),
   });
   const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload || payload.error) throw new Error("Stripe request failed");
+  if (!response.ok || !payload || payload.error) {
+    const error = new Error("Stripe request failed");
+    error.stripeStatus = Number(response.status) || null;
+    error.stripeCode = /^[a-z0-9_]{1,64}$/i.test(payload?.error?.code || "") ? payload.error.code : null;
+    throw error;
+  }
   return payload;
 }
 
