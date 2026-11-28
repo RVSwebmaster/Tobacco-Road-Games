@@ -104,7 +104,7 @@ bucket_name = "trg-products-acceptance"
   assert.equal(pipeline.validateEnvironmentConfig(stagingToml, "staging").ok, true, "staging map should pass");
   assert.equal(pipeline.validateEnvironmentConfig(productionToml, "production").ok, true, "production map should pass");
   const productionWithWindowsOutput = productionToml.replace(".wrangler/production-pages-output", ".wrangler\\production-pages-output");
-  assert.equal(pipeline.validateEnvironmentConfig(productionWithWindowsOutput, "production").ok, false, "Cloudflare output paths must use POSIX separators");
+  assert.equal(pipeline.validateEnvironmentConfig(productionWithWindowsOutput, "production").ok, true, "Downloaded Windows output paths normalize to the canonical POSIX path");
   const productionWithoutOutput = productionToml.replace(/pages_build_output_dir\s*=\s*".*"\r?\n/, "");
   assert.equal(pipeline.validateEnvironmentConfig(productionWithoutOutput, "production").ok, false, "production must declare its Pages build output directory");
 

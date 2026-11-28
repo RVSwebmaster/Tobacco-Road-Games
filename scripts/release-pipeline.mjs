@@ -140,7 +140,8 @@ export function validateEnvironmentConfig(configText, target, environmentMap = r
   if (config.name !== expected.projectName) {
     errors.push(`Pages project mismatch: expected ${expected.projectName}, received ${config.name || "missing"}.`);
   }
-  if (expected.pagesBuildOutputDirectory && config.pages_build_output_dir !== expected.pagesBuildOutputDirectory) {
+  const pagesBuildOutputDirectory = String(config.pages_build_output_dir || "").replace(/\\/g, "/");
+  if (expected.pagesBuildOutputDirectory && pagesBuildOutputDirectory !== expected.pagesBuildOutputDirectory) {
     errors.push(`Pages build output directory mismatch: expected ${expected.pagesBuildOutputDirectory}, received ${config.pages_build_output_dir || "missing"}. Use POSIX forward slashes for the Linux Pages build.`);
   }
   for (const environmentName of ["preview", "production"]) {
